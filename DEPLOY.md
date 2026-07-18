@@ -1,45 +1,51 @@
 # Deploy — Rocha Cotizador
 
-## Infra recomendada
+## Infra (primera producción)
 
-| Pieza | Notas |
-|-------|--------|
-| Vercel | 1 proyecto |
-| Neon / Postgres | 1 DB |
-| Env | `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` |
+| Pieza | Nombre / URL |
+|-------|----------------|
+| GitHub | [`matiasmorenog/rocha-cotizador`](https://github.com/matiasmorenog/rocha-cotizador) (privado) |
+| Vercel | proyecto `rocha-cotizador` (team `tutemorenos-projects`) → https://rocha-cotizador.vercel.app |
+| Neon | proyecto `rocha-cotizador` (org Nexus), región AWS `us-west-2`, DB `neondb` |
+| Env | `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `AUTH_URL`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` |
 
 ## Variables
 
 ```bash
-DATABASE_URL=postgresql://...
-DIRECT_URL=postgresql://...   # Neon: connection string no-pooled
-AUTH_SECRET=                     # openssl rand -base64 32
-AUTH_URL=https://tu-dominio.vercel.app
-ADMIN_EMAIL=admin@tu-dominio.com
-ADMIN_PASSWORD=                  # solo para seed / bootstrap admin
+DATABASE_URL=postgresql://...   # Neon pooled (-pooler)
+DIRECT_URL=postgresql://...     # Neon direct (sin -pooler)
+AUTH_SECRET=                    # openssl rand -base64 32
+AUTH_URL=https://rocha-cotizador.vercel.app
+ADMIN_EMAIL=admin@rocha.local
+ADMIN_PASSWORD=                 # solo para seed / bootstrap admin
 ```
 
-Build command (Vercel): `prisma generate && next build` (o el script `npm run build`).
+Setear en Vercel para **Production**, **Preview** y (opcional) **Development**. No commitear `.env`.
 
-## Seed en producción
+Build command (Vercel): `npm run build` → `prisma generate && next build` (`postinstall` también corre `prisma generate`).
 
-Correr una vez con el Excel en `prisma/data/rocha_data.xlsx`:
+## Seed
+
+Una vez contra Neon (local con `.env` apuntando a Neon):
 
 ```bash
+npx prisma db push
 npm run db:seed
 ```
 
-Guardar `prisma/data/seed-pins.csv` de forma segura (no subir a git) y entregar PINs a clientes.
+PINs de clientes: `prisma/data/seed-pins.csv` (gitignored). Entregar PINs a clientes de forma segura.
+
+Admin seed default: `admin@rocha.local` / ver `ADMIN_PASSWORD` en Vercel o `.env.example`.
 
 ## Branches
 
-- `development` — integración / preview
-- `main` — producción (solo vía release PR)
+- `development` — integración / preview (default del repo)
+- `main` — producción (Vercel Production branch; releases vía PR `development` → `main`)
 
 ## Checklist
 
-- [ ] Env en Vercel (Production + Preview)
-- [ ] `prisma db push` o migrate contra Neon
-- [ ] Seed admin + catálogo
-- [ ] Login admin y un cliente de prueba
+- [x] Env en Vercel (Production + Preview + Development)
+- [x] `prisma db push` contra Neon
+- [x] Seed admin + catálogo
+- [ ] Login admin y un cliente de prueba en producción
 - [ ] Cotización → remito → imprimir
