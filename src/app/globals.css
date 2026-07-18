@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+/* Tailwind v4 preflight leaves buttons at cursor:default; restore pointer for clickables. */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  input:where([type="button"], [type="submit"], [type="reset"]):not(:disabled),
+  ::file-selector-button {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  [role="button"][aria-disabled="true"],
+  input:where([type="button"], [type="submit"], [type="reset"]):disabled {
+    cursor: not-allowed;
+  }
+}
+
 :root {
   --background: #f6f4ef;
   --foreground: #1c1917;

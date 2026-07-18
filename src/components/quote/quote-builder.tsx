@@ -9,14 +9,10 @@ import { Label } from "@/components/ui/label";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { formatPrice } from "@/lib/utils";
 import { useQuoteDraftStore } from "@/stores/quote-draft-store";
-
-type SearchProduct = {
-  id: string;
-  code: string;
-  name: string;
-  rubro: string | null;
-  unitPrice: number;
-};
+import {
+  useProductCatalog,
+  type CatalogSearchProduct,
+} from "@/hooks/use-product-catalog";
 
 type QuoteBuilderProps = {
   /** When set (admin flow), prices and submit use this customer. */
@@ -34,9 +30,12 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
   const clear = useQuoteDraftStore((s) => s.clear);
   const draftTotal = useQuoteDraftStore((s) => s.total());
 
+  const catalog = useProductCatalog({ customerId, discountPercent });
+  const { search: searchCatalog } = catalog;
+
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchProduct[]>([]);
-  const [selected, setSelected] = useState<SearchProduct | null>(null);
+  const [results, setResults] = useState<CatalogSearchProduct[]>([]);
+  const [selected, setSelected] = useState<CatalogSearchProduct | null>(null);
   const [qty, setLocalQty] = useState("1");
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -48,17 +47,13 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
     if (q.length < 1) {
       return;
     }
-    const handle = setTimeout(async () => {
-      const params = new URLSearchParams({ q });
-      if (customerId) params.set("customerId", customerId);
-      const res = await fetch(`/api/products/search?${params}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      setResults(data.products ?? []);
+    // Local filter — short debounce only to coalesce keystrokes.
+    const handle = setTimeout(() => {
+      setResults(searchCatalog(q));
       setOpen(true);
-    }, 200);
+    }, 50);
     return () => clearTimeout(handle);
-  }, [query, customerId]);
+  }, [query, searchCatalog]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -138,11 +133,18 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
             <Label htmlFor="product-search">Producto</Label>
             <Input
               id="product-search"
-              placeholder="Buscar por nombre o código…"
+              placeholder={
+                catalog.ready
+                  ? "Buscar por nombre o código…"
+                  : catalog.loading
+                    ? "Cargando catálogo…"
+                    : "Buscar por nombre o código…"
+              }
               value={selected ? `${selected.code} — ${selected.name}` : query}
               onChange={(e) => onQueryChange(e.target.value)}
               onFocus={() => results.length > 0 && setOpen(true)}
               autoComplete="off"
+              disabled={!catalog.ready && catalog.loading}
             />
             {open && results.length > 0 ? (
               <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg">
@@ -168,6 +170,12 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
                   </li>
                 ))}
               </ul>
+            ) : null}
+            {open && query.trim().length > 0 && results.length === 0 && catalog.ready ? (
+              <p className="mt-2 text-sm text-neutral-500">Sin productos</p>
+            ) : null}
+            {catalog.error && !catalog.ready ? (
+              <p className="mt-2 text-sm text-red-600">{catalog.error}</p>
             ) : null}
           </div>
           <div>
