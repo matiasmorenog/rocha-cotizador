@@ -3,6 +3,7 @@ import { z } from "zod";
 import { Decimal } from "@prisma/client/runtime/library";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { invalidateAfterQuoteCreate } from "@/lib/cache-tags";
 import { lineTotal, priceForCustomer } from "@/lib/pricing";
 import { nextQuoteNumber } from "@/lib/quotes";
 
@@ -112,6 +113,8 @@ export async function POST(req: NextRequest) {
     },
     include: { items: true },
   });
+
+  invalidateAfterQuoteCreate();
 
   return NextResponse.json({ id: quote.id, number: quote.number });
 }

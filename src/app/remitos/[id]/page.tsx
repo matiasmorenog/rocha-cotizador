@@ -27,7 +27,16 @@ export default async function RemitoDetailPage({
   const quote = await db.quote.findUnique({
     where: { id },
     include: {
-      customer: true,
+      customer: {
+        select: {
+          code: true,
+          name: true,
+          address: true,
+          phone: true,
+          email: true,
+          deliveryHours: true,
+        },
+      },
       items: { orderBy: { productCode: "asc" } },
     },
   });

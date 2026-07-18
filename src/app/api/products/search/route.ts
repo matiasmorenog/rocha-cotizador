@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ products: [] });
   }
 
+  // Catalog from shared cache (basePrice only); discount applied below per request.
   const products = await searchActiveProductsBase(q, 30);
 
   let discountPercent = 0;

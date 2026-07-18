@@ -108,6 +108,34 @@ input[type="week"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
 
+/* Skeleton shimmer — adapted from nexus admin/storefront-skeleton */
+@keyframes rocha-skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+.rocha-skeleton {
+  background: linear-gradient(
+    90deg,
+    #ebe4dc 0%,
+    #f3e4e4 45%,
+    #ebe4dc 100%
+  );
+  background-size: 200% 100%;
+  animation: rocha-skeleton-shimmer 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rocha-skeleton {
+    animation: none;
+    background: #ebe4dc;
+  }
+}
+
 @media print {
   body {
     background: white !important;
@@ -121,5 +149,8 @@ input[type="week"]::-webkit-calendar-picker-indicator:hover {
   }
   .data-table-scroll {
     overflow: visible;
+  }
+  .rocha-skeleton {
+    animation: none !important;
   }
 }

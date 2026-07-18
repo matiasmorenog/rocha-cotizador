@@ -1,21 +1,9 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
+import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
 import { formatPrice } from "@/lib/utils";
 
 export default async function AdminDashboardPage() {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-
-  const [customers, products, quotesToday, recent] = await Promise.all([
-    db.customer.count({ where: { active: true } }),
-    db.product.count({ where: { active: true } }),
-    db.quote.count({ where: { createdAt: { gte: start } } }),
-    db.quote.findMany({
-      take: 8,
-      orderBy: { createdAt: "desc" },
-      include: { customer: { select: { code: true, name: true } } },
-    }),
-  ]);
+  const { customers, products, quotesToday, recent } = await getAdminDashboardData();
 
   return (
     <div className="space-y-6">
@@ -65,7 +53,7 @@ export default async function AdminDashboardPage() {
               <div className="text-right">
                 <p className="font-medium">{formatPrice(q.total)}</p>
                 <p className="text-xs text-neutral-500">
-                  {q.createdAt.toLocaleString("es-AR")}
+                  {new Date(q.createdAt).toLocaleString("es-AR")}
                 </p>
               </div>
             </li>

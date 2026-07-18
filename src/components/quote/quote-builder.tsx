@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { formatPrice } from "@/lib/utils";
 import { useQuoteDraftStore } from "@/stores/quote-draft-store";
@@ -41,6 +42,8 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+
+  const catalogLoading = catalog.loading && !catalog.ready;
 
   useEffect(() => {
     const q = query.trim();
@@ -131,21 +134,29 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
         <div className="grid gap-3 md:grid-cols-[1fr_120px_auto]">
           <div className="relative" ref={boxRef}>
             <Label htmlFor="product-search">Producto</Label>
-            <Input
-              id="product-search"
-              placeholder={
-                catalog.ready
-                  ? "Buscar por nombre o código…"
-                  : catalog.loading
-                    ? "Cargando catálogo…"
-                    : "Buscar por nombre o código…"
-              }
-              value={selected ? `${selected.code} — ${selected.name}` : query}
-              onChange={(e) => onQueryChange(e.target.value)}
-              onFocus={() => results.length > 0 && setOpen(true)}
-              autoComplete="off"
-              disabled={!catalog.ready && catalog.loading}
-            />
+            <div className="relative">
+              <Input
+                id="product-search"
+                placeholder={
+                  catalog.ready
+                    ? "Buscar por nombre o código…"
+                    : catalog.loading
+                      ? "Cargando catálogo…"
+                      : "Buscar por nombre o código…"
+                }
+                value={selected ? `${selected.code} — ${selected.name}` : query}
+                onChange={(e) => onQueryChange(e.target.value)}
+                onFocus={() => results.length > 0 && setOpen(true)}
+                autoComplete="off"
+                disabled={catalogLoading}
+                className={catalogLoading && !selected ? "pr-10" : undefined}
+              />
+              {catalogLoading && !selected ? (
+                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
+                  <Spinner label="Cargando catálogo" />
+                </span>
+              ) : null}
+            </div>
             {open && results.length > 0 ? (
               <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg">
                 {results.map((p) => (
@@ -268,7 +279,14 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
           Vaciar
         </Button>
         <Button type="button" onClick={submitQuote} disabled={submitting || !lines.length}>
-          {submitting ? "Enviando…" : "Confirmar cotización"}
+          {submitting ? (
+            <>
+              <Spinner className="mr-2 text-white" />
+              Enviando…
+            </>
+          ) : (
+            "Confirmar cotización"
+          )}
         </Button>
       </div>
     </div>

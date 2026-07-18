@@ -1,0 +1,25 @@
+---
+description: CI/CD backlog — lint, typecheck, branch protection
+alwaysApply: true
+---
+
+# CI / CD
+
+Estado: workflow `.github/workflows/ci.yml` — job `lint-and-typecheck` (`typecheck` + `lint` en `src/`).
+
+## Hecho
+
+- GitHub Actions en PRs/push a `development` y `main`
+- `npm run typecheck` / `npm run lint`
+- `prisma generate` con `DATABASE_URL` dummy
+- Node 24
+
+## Pendiente
+
+- Activar **Require status checks** → `lint-and-typecheck` en `development` cuando el job esté estable en verde.
+- Fase 2 opcional: `npm run build` en Actions (hoy lo hace Vercel).
+
+## Referencias
+
+- `docs/ci.md`
+- `DEPLOY.md`

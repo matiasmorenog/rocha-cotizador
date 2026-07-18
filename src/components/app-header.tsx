@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
-import { db } from "@/lib/db";
 import { PinChangeHint } from "@/components/account/pin-change-hint";
 import { AdminMenuButton } from "@/components/admin/admin-menu-button";
 
@@ -9,15 +8,8 @@ export async function AppHeader() {
   const session = await auth();
   const isCustomer = session?.user?.role === "CUSTOMER";
   const isAdmin = session?.user?.role === "ADMIN";
-
-  let mustChangePassword = false;
-  if (isCustomer && session?.user?.customerId) {
-    const customer = await db.customer.findUnique({
-      where: { id: session.user.customerId },
-      select: { mustChangePassword: true },
-    });
-    mustChangePassword = Boolean(customer?.mustChangePassword);
-  }
+  /** From JWT — updated via session.update() after password change. No Neon hit. */
+  const mustChangePassword = Boolean(session?.user?.mustChangePassword);
 
   return (
     <>

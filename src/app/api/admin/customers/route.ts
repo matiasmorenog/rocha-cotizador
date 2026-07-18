@@ -3,6 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { invalidateAfterCustomerMutation } from "@/lib/cache-tags";
 import { normalizePhone } from "@/lib/phone-contact";
 import { padCustomerCode, pinFromCustomerCode } from "@/lib/utils";
 
@@ -112,6 +113,7 @@ export async function POST(req: NextRequest) {
           : {}),
       },
     });
+    invalidateAfterCustomerMutation();
     return NextResponse.json({ customer, pin: pin ?? null });
   }
 
@@ -137,5 +139,6 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  invalidateAfterCustomerMutation();
   return NextResponse.json({ customer, pin });
 }
