@@ -3,6 +3,7 @@
 import { FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 
 type ImportSummary = {
   created: number;
@@ -107,6 +108,7 @@ export function ExcelSyncPanel({
               variant="outline"
               className="w-full shrink-0 sm:w-auto"
               onClick={() => inputRef.current?.click()}
+              disabled={loading}
             >
               Elegir archivo
             </Button>
@@ -122,7 +124,14 @@ export function ExcelSyncPanel({
               className="w-full shrink-0 sm:w-auto"
               disabled={loading || !file}
             >
-              {loading ? "Subiendo…" : "Sincronizar"}
+              {loading ? (
+                <>
+                  <Spinner className="mr-2" />
+                  Subiendo…
+                </>
+              ) : (
+                "Sincronizar"
+              )}
             </Button>
           </form>
         </div>

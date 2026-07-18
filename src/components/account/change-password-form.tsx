@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
+import { Spinner } from "@/components/ui/spinner";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
 
 export function ChangePasswordForm() {
@@ -95,7 +96,14 @@ export function ChangePasswordForm() {
         type="submit"
         disabled={loading || newPassword.length < MIN_PASSWORD_LENGTH}
       >
-        {loading ? "Guardando…" : "Cambiar contraseña"}
+        {loading ? (
+          <>
+            <Spinner className="mr-2 text-white" />
+            Guardando…
+          </>
+        ) : (
+          "Cambiar contraseña"
+        )}
       </Button>
     </form>
   );

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { invalidateAfterProductMutation } from "@/lib/cache-tags";
 
 async function requireAdmin() {
   const session = await auth();
@@ -39,6 +40,8 @@ export async function POST(req: NextRequest) {
   const product = parsed.data.id
     ? await db.product.update({ where: { id: parsed.data.id }, data })
     : await db.product.create({ data });
+
+  invalidateAfterProductMutation();
 
   return NextResponse.json({ product });
 }

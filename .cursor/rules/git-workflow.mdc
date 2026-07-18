@@ -1,0 +1,71 @@
+---
+description: Flujo Git y PRs — branches, naming, autonomía y buenas prácticas
+alwaysApply: true
+---
+
+# Git y PRs
+
+## Modelo de branches
+
+```
+feat|fix|refactor|chore|docs/*  ──PR──►  development  ──PR──►  main  ──►  producción
+```
+
+| Branch | Rol |
+|--------|-----|
+| `development` | Integración. Default del repo. Preview Vercel. |
+| `main` | Producción. Solo entra vía release PR. |
+| `feat/*`, `fix/*`, … | Una tarea = un branch. Vida corta. |
+
+## Autonomía del agente
+
+### Hacer sin preguntar
+- Comandos de rutina: `npm install`, `prisma generate`, reiniciar dev server, `tsc`, `lint`, `build`.
+- `prisma db push` **aditivo/seguro** — ver `prisma-db-push.mdc`.
+- Al terminar tarea (si el flujo lo pide): commit EN + push + `gh pr create --base development`.
+- Validar: `npx tsc --noEmit` + `npm run lint`.
+- Crear/`pop`/limpiar stashes (no acumular).
+
+### Pedir confirmación explícita
+- **Merge a `development` o `main`** — nunca mergear sin sí explícito del usuario.
+- **Release a producción**: PR/merge `development → main`.
+- `prisma db push` con **pérdida de datos** (`--accept-data-loss`).
+- `git push --force`, reescritura de historial.
+- Cambiar env/secrets de producción.
+- Acciones destructivas o irreversibles.
+
+### CI y merge
+- GitHub Actions: job **`lint-and-typecheck`** en PRs/push a `development` y `main`.
+- Build = responsabilidad de Vercel (no en Actions por ahora).
+- Merge estándar: **squash** + borrado de branch.
+
+## Naming de branches
+
+| Prefijo | Cuándo |
+|---------|--------|
+| `feat/` | Feature nueva |
+| `fix/` | Bugfix |
+| `refactor/` | Sin cambio de comportamiento |
+| `chore/` | Tooling, rules, deps, CI |
+| `docs/` | Solo documentación |
+
+Formato: `kebab-case`, corto.
+
+## Antes de codear
+
+1. `git fetch origin development`
+2. `git checkout development && git pull`
+3. Working tree limpio (o stash de otra tarea)
+4. `git checkout -b <prefijo>/<nombre-corto>`
+5. Avisar al usuario el nombre del branch
+
+## Commits y PRs
+
+- Idioma: títulos/cuerpos en **inglés**.
+- Base del PR: **siempre `development`** (salvo release a `main`).
+- Usar `.github/pull_request_template.md`.
+
+## Stashes
+
+- Al iniciar chat/tarea: `git stash list`. Limpiar obsoletos.
+- Al crear stash: mensaje `wip: <qué>`; `pop` apenas termine la operación.
