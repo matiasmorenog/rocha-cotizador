@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
+import { Spinner } from "@/components/ui/spinner";
 
 export function AdminLoginForm() {
   const router = useRouter();
@@ -56,7 +57,14 @@ export function AdminLoginForm() {
       </div>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       <Button type="submit" disabled={loading}>
-        {loading ? "Ingresando…" : "Ingresar"}
+        {loading ? (
+          <>
+            <Spinner className="mr-2 text-white" />
+            Ingresando…
+          </>
+        ) : (
+          "Ingresar"
+        )}
       </Button>
     </form>
   );

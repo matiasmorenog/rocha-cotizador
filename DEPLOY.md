@@ -1,45 +1,75 @@
 # Deploy — Rocha Cotizador
 
-## Infra recomendada
+## Infra (primera producción)
 
-| Pieza | Notas |
-|-------|--------|
-| Vercel | 1 proyecto |
-| Neon / Postgres | 1 DB |
-| Env | `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` |
+| Pieza | Nombre / URL |
+|-------|----------------|
+| GitHub | [`matiasmorenog/rocha-cotizador`](https://github.com/matiasmorenog/rocha-cotizador) (privado) |
+| Vercel | proyecto `rocha-cotizador` (team `tutemorenos-projects`) → https://rocha-cotizador.vercel.app |
+| Neon | proyecto `rocha-cotizador` (org Nexus), región AWS `us-west-2`, DB `neondb` |
+| Env | `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` |
 
 ## Variables
 
 ```bash
-DATABASE_URL=postgresql://...
-DIRECT_URL=postgresql://...   # Neon: connection string no-pooled
-AUTH_SECRET=                     # openssl rand -base64 32
-AUTH_URL=https://tu-dominio.vercel.app
-ADMIN_EMAIL=admin@tu-dominio.com
-ADMIN_PASSWORD=                  # solo para seed / bootstrap admin
+# Vercel: Neon pooled + pgbouncer=true&connection_limit=1 (Prisma + serverless = 1 conn/instance)
+DATABASE_URL=postgresql://...-pooler...?sslmode=require&pgbouncer=true&connection_limit=1
+AUTH_SECRET=                    # openssl rand -base64 32
+AUTH_URL=https://rocha-cotizador.vercel.app
 ```
 
-Build command (Vercel): `prisma generate && next build` (o el script `npm run build`).
+Setear en Vercel para **Production**, **Preview** y (opcional) **Development**. No commitear `.env`.
 
-## Seed en producción
+### Neon + Prisma (conexiones)
 
-Correr una vez con el Excel en `prisma/data/rocha_data.xlsx`:
+Una sola variable: `DATABASE_URL` (Prisma ya no usa `directUrl` / `DIRECT_URL`).
+
+| Dónde | `DATABASE_URL` recomendada |
+|-------|----------------------------|
+| **Vercel** | Host **`-pooler`** + `pgbouncer=true&connection_limit=1` |
+| **Local** (dev / `db push` / seed) | URL **directa** Neon (sin `-pooler`) o Postgres local |
+
+`prisma db push` contra pooler Neon en transaction mode puede fallar. Si local usás pooler y push falla, cambiá temporalmente:
 
 ```bash
+DATABASE_URL="postgresql://...@ep-xxx.region.aws.neon.tech/neondb?sslmode=require" npx prisma db push
+```
+
+Dashboard admin serializa queries en `$transaction` (no `Promise.all` de 4 counts) para no abrir 4 conexiones a la vez.
+
+### Cache (Next.js)
+
+| Tag | Qué cachea | Invalidar |
+|-----|------------|-----------|
+| `products` | Catálogo base activos (`basePrice`, sin `unitPrice`) | Admin producto create/update + import Excel |
+| `admin-dashboard` | Counts + últimas cotizaciones (TTL ~120s) | Quote create; también product/customer mutate |
+
+Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateAfterCustomerMutation`, `invalidateAfterQuoteCreate`).
+
+Build command (Vercel): `npm run build` → `prisma generate && next build` (`postinstall` también corre `prisma generate`).
+
+## Seed
+
+Una vez contra Neon (local con `.env` apuntando a Neon **direct**):
+
+```bash
+npx prisma db push
 npm run db:seed
 ```
 
-Guardar `prisma/data/seed-pins.csv` de forma segura (no subir a git) y entregar PINs a clientes.
+PINs de clientes: `prisma/data/seed-pins.csv` (gitignored). Entregar PINs a clientes de forma segura.
+
+Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1234` — cambiar password tras primer login. Email vive en DB, no en env.
 
 ## Branches
 
-- `development` — integración / preview
-- `main` — producción (solo vía release PR)
+- `development` — integración / preview (default del repo)
+- `main` — producción (Vercel Production branch; releases vía PR `development` → `main`)
 
 ## Checklist
 
-- [ ] Env en Vercel (Production + Preview)
-- [ ] `prisma db push` o migrate contra Neon
-- [ ] Seed admin + catálogo
-- [ ] Login admin y un cliente de prueba
+- [x] Env en Vercel (Production + Preview + Development)
+- [x] `prisma db push` contra Neon
+- [x] Seed admin + catálogo
+- [ ] Login admin y un cliente de prueba en producción
 - [ ] Cotización → remito → imprimir

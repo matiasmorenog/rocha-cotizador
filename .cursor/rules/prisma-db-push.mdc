@@ -1,0 +1,27 @@
+---
+description: Aplicar cambios de Prisma (db push) con criterio seguro y reiniciar dev server
+alwaysApply: true
+---
+
+# Prisma: db push y reinicio de consola
+
+Cuando un cambio incluya `prisma/schema.prisma` (o requiera sincronizar la DB):
+
+1. `npx prisma generate`
+2. Evaluar el tipo de cambio:
+   - **Aditivo/seguro** (nueva tabla, columna nullable o con default, índice): `npx prisma db push` **sin preguntar**.
+   - **Con posible pérdida de datos** (drop/rename, tipo incompatible, `NOT NULL` sin default sobre filas): **frenar y confirmar** antes de `db push --accept-data-loss`.
+3. **Reiniciar el dev server** si estaba corriendo.
+
+## Reinicio del dev server
+
+- Matar procesos `next dev` del proyecto antes de levantar de nuevo.
+- Usar `npm run dev`.
+
+## No delegar al usuario
+
+Para cambios seguros, ejecutar el push y confirmar éxito o el error concreto.
+
+## Migraciones vs push
+
+En este repo el flujo habitual es `db push` (no `migrate dev`), salvo que la tarea pida migraciones explícitas.

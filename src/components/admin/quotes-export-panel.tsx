@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 
 type QuotesExportPanelProps = {
   defaultFromLocal: string;
@@ -18,6 +19,7 @@ export function QuotesExportPanel({
   const router = useRouter();
   const [from, setFrom] = useState(defaultFromLocal);
   const [to, setTo] = useState(defaultToLocal);
+  const [downloading, setDownloading] = useState(false);
 
   function buildParams() {
     const params = new URLSearchParams();
@@ -34,8 +36,10 @@ export function QuotesExportPanel({
   }
 
   function onDownload() {
+    setDownloading(true);
     const params = buildParams();
     window.location.href = `/api/admin/quotes/export?${params.toString()}`;
+    window.setTimeout(() => setDownloading(false), 2500);
   }
 
   return (
@@ -81,9 +85,17 @@ export function QuotesExportPanel({
           <button
             type="button"
             onClick={onDownload}
-            className="inline-flex h-10 w-full items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:opacity-90 sm:w-auto"
+            disabled={downloading}
+            className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
           >
-            Descargar PDF
+            {downloading ? (
+              <>
+                <Spinner className="text-white" />
+                Generando…
+              </>
+            ) : (
+              "Descargar PDF"
+            )}
           </button>
         </div>
       </form>

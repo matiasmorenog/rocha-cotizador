@@ -1,0 +1,38 @@
+---
+description: Contexto del cotizador Rocha — stack, modelos y convenciones
+alwaysApply: true
+---
+
+# Rocha Cotizador — contexto
+
+Cotizador B2B mayorista (embutidos, panadería, varios). Single-tenant. Marca en UI: **Rocha Cotizador**.
+
+## Stack
+
+Next.js 16 App Router, TypeScript, Tailwind 4, Prisma 6 + PostgreSQL, NextAuth v5 (Credentials), Zustand, Zod.
+
+## Auth
+
+| Rol | Login | Rutas |
+|-----|-------|-------|
+| `CUSTOMER` | Código 3 dígitos + contraseña (PIN inicial 4 dígitos recomendado cambiar; no obligatorio) | `/cotizar`, `/remitos`, `/cuenta` |
+| `ADMIN` | Email + password | `/admin/*` |
+
+Descuento `%` por cliente: **solo admin**. APIs cliente nunca exponen `discountPercent`. Precio efectivo = `basePrice * (1 - discount/100)` en server (`src/lib/pricing.ts`).
+
+## Archivos clave
+
+| Área | Ruta |
+|------|------|
+| Schema / seed | `prisma/schema.prisma`, `prisma/seed.ts`, `prisma/data/rocha_data.xlsx` |
+| Auth | `src/lib/auth.ts`, `src/lib/session.ts` |
+| Pricing | `src/lib/pricing.ts` |
+| Cotizar UI | `src/components/quote/quote-builder.tsx` |
+| Remito | `src/app/remitos/[id]/page.tsx` |
+| Admin | `src/app/admin/(protected)/` |
+
+## Convenciones
+
+- Git: una tarea = branch nuevo desde `development` — ver `git-workflow.mdc`.
+- Cambios mínimos; no refactorizar fuera del pedido.
+- Seed PINs: `prisma/data/seed-pins.csv` (gitignored).

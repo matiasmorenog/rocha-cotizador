@@ -34,9 +34,14 @@ function joinParts(parts: Array<string | null | undefined>, sep = " / "): string
   return cleaned.length > 0 ? cleaned.join(sep) : null;
 }
 
+/** Bootstrap admin — email lives in DB only; change password after first login. */
+const DEFAULT_ADMIN_EMAIL = "admin@rocha.com";
+const DEFAULT_ADMIN_PASSWORD = "admin1234";
+
 async function seedAdmin() {
-  const email = (process.env.ADMIN_EMAIL ?? "admin@rocha.local").trim().toLowerCase();
-  const password = process.env.ADMIN_PASSWORD ?? "admin1234";
+  const email = DEFAULT_ADMIN_EMAIL;
+  // Optional local override for seed only; never used at runtime.
+  const password = process.env.ADMIN_PASSWORD ?? DEFAULT_ADMIN_PASSWORD;
   const passwordHash = await bcrypt.hash(password, 10);
 
   await db.user.upsert({

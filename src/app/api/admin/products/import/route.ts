@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { invalidateAfterProductMutation } from "@/lib/cache-tags";
 import {
   cellNumber,
   cellText,
@@ -122,6 +123,10 @@ export async function POST(req: NextRequest) {
       const message = e instanceof Error ? e.message : "Error al guardar";
       summary.errors.push({ row: r, message });
     }
+  }
+
+  if (summary.created > 0 || summary.updated > 0) {
+    invalidateAfterProductMutation();
   }
 
   return NextResponse.json(summary);

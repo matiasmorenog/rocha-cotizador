@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { invalidateAfterCustomerMutation } from "@/lib/cache-tags";
 import { normalizePhone } from "@/lib/phone-contact";
 import { padCustomerCode, pinFromCustomerCode } from "@/lib/utils";
 import {
@@ -186,6 +187,10 @@ export async function POST(req: NextRequest) {
       const message = e instanceof Error ? e.message : "Error al guardar";
       summary.errors.push({ row: r, message });
     }
+  }
+
+  if (summary.created > 0 || summary.updated > 0) {
+    invalidateAfterCustomerMutation();
   }
 
   return NextResponse.json(summary);

@@ -12,7 +12,7 @@ Cotizador B2B mayorista: clientes con código + contraseña arman cotizaciones; 
 
 ```bash
 cp .env.example .env
-# Ajustá DATABASE_URL / AUTH_SECRET / ADMIN_*
+# Ajustá DATABASE_URL / AUTH_SECRET / AUTH_URL
 
 createdb rocha_cotizador   # si aún no existe
 npm install
@@ -27,7 +27,7 @@ Abrí [http://localhost:3000](http://localhost:3000).
 
 | Quién | Cómo |
 |-------|------|
-| Admin | `ADMIN_EMAIL` / `ADMIN_PASSWORD` del `.env` (default seed: `admin@rocha.local` / `admin1234`) |
+| Admin | Seed: `admin@rocha.com` / `admin1234` (cambiar password tras primer login; email solo en DB) |
 | Cliente | Código 3 dígitos + PIN inicial en `prisma/data/seed-pins.csv` (luego cambiar a contraseña ≥8 en Configuración) |
 
 ## Scripts
