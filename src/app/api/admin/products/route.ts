@@ -1,0 +1,44 @@
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+
+async function requireAdmin() {
+  const session = await auth();
+  if (!session?.user || session.user.role !== "ADMIN") return null;
+  return session;
+}
+
+const schema = z.object({
+  id: z.string().optional(),
+  code: z.string().min(1),
+  name: z.string().min(1),
+  rubro: z.string().optional().nullable(),
+  basePrice: z.number().nonnegative(),
+  active: z.boolean().optional(),
+});
+
+export async function POST(req: NextRequest) {
+  if (!(await requireAdmin())) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  const parsed = schema.safeParse(await req.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+
+  const data = {
+    code: parsed.data.code.trim(),
+    name: parsed.data.name.trim(),
+    rubro: parsed.data.rubro ?? null,
+    basePrice: parsed.data.basePrice,
+    active: parsed.data.active ?? true,
+  };
+
+  const product = parsed.data.id
+    ? await db.product.update({ where: { id: parsed.data.id }, data })
+    : await db.product.create({ data });
+
+  return NextResponse.json({ product });
+}
