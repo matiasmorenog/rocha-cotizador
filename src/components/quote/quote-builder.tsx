@@ -130,6 +130,12 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
     const data = await res.json();
     clear();
     setNotes("");
+    // Prefer remito + ?whatsapp=1 so a blocked popup still leaves a clear CTA.
+    if (typeof data.whatsappUrl === "string" && data.whatsappUrl) {
+      window.open(data.whatsappUrl, "_blank", "noopener,noreferrer");
+      router.push(`/remitos/${data.id}?whatsapp=1`);
+      return;
+    }
     router.push(`/remitos/${data.id}`);
   }
 

@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Decimal } from "@prisma/client/runtime/library";
 import { auth } from "@/lib/auth";
+import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
 import { invalidateAfterQuoteCreate } from "@/lib/cache-tags";
 import { lineTotal, priceForCustomer } from "@/lib/pricing";
 import { nextQuoteNumber } from "@/lib/quotes";
+import { formatPrice } from "@/lib/utils";
+import { buildQuoteWhatsAppMessage, whatsappUrl } from "@/lib/whatsapp";
 
 const bodySchema = z.object({
   notes: z.string().optional(),
@@ -116,5 +119,25 @@ export async function POST(req: NextRequest) {
 
   invalidateAfterQuoteCreate();
 
-  return NextResponse.json({ id: quote.id, number: quote.number });
+  const origin =
+    req.nextUrl.origin ||
+    process.env.AUTH_URL?.replace(/\/$/, "") ||
+    "";
+  const remitoUrl = `${origin}/remitos/${quote.id}`;
+  const notifyDigits = await getWhatsAppNotifyDigits();
+  const message = buildQuoteWhatsAppMessage({
+    quoteNumber: quote.number,
+    customerCode: customer.code,
+    customerName: customer.name,
+    totalLabel: formatPrice(quote.total),
+    notes: quote.notes,
+    remitoUrl,
+  });
+  const notifyWhatsappUrl = whatsappUrl(notifyDigits, message);
+
+  return NextResponse.json({
+    id: quote.id,
+    number: quote.number,
+    whatsappUrl: notifyWhatsappUrl,
+  });
 }
