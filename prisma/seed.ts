@@ -204,6 +204,18 @@ async function seedFromExcel(xlsxPath: string) {
   }
 }
 
+async function seedBusinessSettings() {
+  await db.businessSettings.upsert({
+    where: { id: 1 },
+    create: {
+      id: 1,
+      whatsappNotifyPhone: "5491166904442",
+    },
+    update: {},
+  });
+  console.log("Business settings ready (WhatsApp notify default)");
+}
+
 async function main() {
   await db.quoteSequence.upsert({
     where: { id: 1 },
@@ -211,6 +223,7 @@ async function main() {
     update: {},
   });
 
+  await seedBusinessSettings();
   await seedAdmin();
 
   const xlsxPath = path.join(process.cwd(), "prisma", "data", "rocha_data.xlsx");

@@ -1,26 +1,36 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
-import { requireCustomerSession, requireAdminSession } from "@/lib/session";
 import { formatPrice, formatQty } from "@/lib/utils";
+import {
+  buildQuoteWhatsAppMessage,
+  whatsappUrl,
+} from "@/lib/whatsapp";
 import { PrintButton } from "@/components/quote/print-button";
+import { WhatsAppNotifyButton } from "@/components/quote/whatsapp-notify-button";
 import { DataTableScroll } from "@/components/ui/data-table";
 
 export default async function RemitoDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ whatsapp?: string }>;
 }) {
   const { id } = await params;
+  const { whatsapp } = await searchParams;
   const session = await auth();
-  if (!session?.user) notFound();
 
-  if (session.user.role === "CUSTOMER") {
-    await requireCustomerSession();
-  } else if (session.user.role === "ADMIN") {
-    await requireAdminSession();
-  } else {
+  // WhatsApp / shared links: never 404 when logged out — choose cliente/admin.
+  if (!session?.user) {
+    const next = encodeURIComponent(`/remitos/${id}`);
+    redirect(`/entrar?callbackUrl=${next}`);
+  }
+
+  if (session.user.role !== "CUSTOMER" && session.user.role !== "ADMIN") {
     notFound();
   }
 
@@ -49,6 +59,28 @@ export default async function RemitoDetailPage({
     notFound();
   }
 
+  const hdrs = await headers();
+  const host = hdrs.get("x-forwarded-host") ?? hdrs.get("host");
+  const proto = hdrs.get("x-forwarded-proto") ?? "https";
+  const origin =
+    (host ? `${proto}://${host}` : null) ??
+    process.env.AUTH_URL?.replace(/\/$/, "") ??
+    "";
+  const remitoUrl = `${origin}/remitos/${quote.id}`;
+  const notifyDigits = await getWhatsAppNotifyDigits();
+  const notifyWhatsappUrl = whatsappUrl(
+    notifyDigits,
+    buildQuoteWhatsAppMessage({
+      quoteNumber: quote.number,
+      customerCode: quote.customer.code,
+      customerName: quote.customer.name,
+      totalLabel: formatPrice(quote.total),
+      notes: quote.notes,
+      remitoUrl,
+    }),
+  );
+  const showWhatsappCta = whatsapp === "1" && Boolean(notifyWhatsappUrl);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 print:hidden">
@@ -68,6 +100,10 @@ export default async function RemitoDetailPage({
           <PrintButton />
         </div>
       </div>
+
+      {showWhatsappCta && notifyWhatsappUrl ? (
+        <WhatsAppNotifyButton whatsappUrl={notifyWhatsappUrl} autoOpen />
+      ) : null}
 
       <article className="print-remito rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
         <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-4">

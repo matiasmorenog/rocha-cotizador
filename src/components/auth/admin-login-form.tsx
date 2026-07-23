@@ -2,15 +2,17 @@
 
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
+import { safeCallbackUrl } from "@/lib/callback-url";
 
 export function AdminLoginForm() {
-  const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = safeCallbackUrl(searchParams.get("callbackUrl"), "/admin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,13 +27,13 @@ export function AdminLoginForm() {
       password,
       redirect: false,
     });
-    setLoading(false);
     if (result?.error) {
       setError("Email o contraseña incorrectos");
+      setLoading(false);
       return;
     }
-    router.push("/admin");
-    router.refresh();
+    // Keep "Ingresando…" and hard-nav so callback (e.g. remito) loads with session.
+    window.location.assign(callbackUrl);
   }
 
   return (
