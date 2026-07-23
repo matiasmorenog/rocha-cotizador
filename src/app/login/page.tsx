@@ -1,11 +1,21 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { auth } from "@/lib/auth";
 import { CustomerLoginForm } from "@/components/auth/customer-login-form";
+import { safeCallbackUrl } from "@/lib/callback-url";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
+  const { callbackUrl: rawCallback } = await searchParams;
+  const callbackUrl = safeCallbackUrl(rawCallback, "/cotizar");
   const session = await auth();
-  if (session?.user?.role === "CUSTOMER") redirect("/cotizar");
-  if (session?.user?.role === "ADMIN") redirect("/admin");
+  if (session?.user?.role === "CUSTOMER") redirect(callbackUrl);
+  if (session?.user?.role === "ADMIN") {
+    redirect(safeCallbackUrl(rawCallback, "/admin"));
+  }
 
   return (
     <div className="mx-auto max-w-md space-y-6 rounded-xl border border-neutral-200 bg-white/90 p-6 shadow-sm">
@@ -15,7 +25,9 @@ export default async function LoginPage() {
           Código de cliente y contraseña (PIN inicial la primera vez)
         </p>
       </div>
-      <CustomerLoginForm />
+      <Suspense fallback={<p className="text-center text-sm text-neutral-500">Cargando…</p>}>
+        <CustomerLoginForm />
+      </Suspense>
     </div>
   );
 }

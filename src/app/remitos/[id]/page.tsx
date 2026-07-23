@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
-import { requireCustomerSession, requireAdminSession } from "@/lib/session";
 import { formatPrice, formatQty } from "@/lib/utils";
 import {
   buildQuoteWhatsAppMessage,
@@ -24,13 +23,15 @@ export default async function RemitoDetailPage({
   const { id } = await params;
   const { whatsapp } = await searchParams;
   const session = await auth();
-  if (!session?.user) notFound();
 
-  if (session.user.role === "CUSTOMER") {
-    await requireCustomerSession();
-  } else if (session.user.role === "ADMIN") {
-    await requireAdminSession();
-  } else {
+  // WhatsApp / shared links: never 404 when logged out — send to admin login
+  // (office reads the remito). Same URL works for admin after sign-in.
+  if (!session?.user) {
+    const next = encodeURIComponent(`/remitos/${id}`);
+    redirect(`/admin/login?callbackUrl=${next}`);
+  }
+
+  if (session.user.role !== "CUSTOMER" && session.user.role !== "ADMIN") {
     notFound();
   }
 
