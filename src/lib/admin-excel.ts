@@ -10,7 +10,9 @@
  *     unless resetearPin is set.
  *
  * Products (`productos.xlsx`):
- *   código | nombre | rubro | precioBase | activo
+ *   código | nombre | rubro | precioBase | <nombre de cada PriceList>… | activo
+ *   - `precioBase` = Mayorista.
+ *   - Extra columns match PriceList.name (case-insensitive). Empty cell clears that list price.
  *
  * Quotes range export is PDF (`/api/admin/quotes/export`) — see `quotes-export-pdf.ts`.
  */
@@ -31,13 +33,17 @@ export const CUSTOMER_COLUMNS = [
   "resetearPin",
 ] as const;
 
-export const PRODUCT_COLUMNS = [
+/** Fixed product columns; price-list names are appended dynamically on export. */
+export const PRODUCT_BASE_COLUMNS = [
   "código",
   "nombre",
   "rubro",
   "precioBase",
   "activo",
 ] as const;
+
+/** @deprecated Prefer PRODUCT_BASE_COLUMNS + dynamic list names. */
+export const PRODUCT_COLUMNS = PRODUCT_BASE_COLUMNS;
 
 export type ImportSummary = {
   created: number;

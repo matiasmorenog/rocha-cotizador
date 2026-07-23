@@ -71,6 +71,25 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const priceLists = await db.priceList.findMany({
+    select: { id: true, name: true },
+  });
+  const listByHeader = new Map(
+    priceLists.map((l) => [l.name.trim().toLowerCase(), l.id]),
+  );
+
+  /** Columns that are price lists (not base product fields). */
+  const listColumns: Array<{ header: string; priceListId: string }> = [];
+  for (const [header] of headers) {
+    if (
+      ["código", "nombre", "rubro", "preciobase", "activo"].includes(header)
+    ) {
+      continue;
+    }
+    const id = listByHeader.get(header);
+    if (id) listColumns.push({ header, priceListId: id });
+  }
+
   for (let r = 2; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r);
     const codeRaw = cellText(getCellByHeader(row, headers, "código"));
@@ -112,12 +131,47 @@ export async function POST(req: NextRequest) {
         active,
       };
 
-      if (existing) {
-        await db.product.update({ where: { code }, data });
-        summary.updated += 1;
-      } else {
-        await db.product.create({ data });
-        summary.created += 1;
+      const product = existing
+        ? await db.product.update({ where: { code }, data })
+        : await db.product.create({ data });
+
+      if (existing) summary.updated += 1;
+      else summary.created += 1;
+
+      for (const col of listColumns) {
+        const raw = getCellByHeader(row, headers, col.header);
+        const text = cellText(raw).trim();
+        if (!text) {
+          await db.priceListItem.deleteMany({
+            where: {
+              priceListId: col.priceListId,
+              productId: product.id,
+            },
+          });
+          continue;
+        }
+        const unitPrice = cellNumber(raw);
+        if (unitPrice === null || unitPrice < 0) {
+          summary.errors.push({
+            row: r,
+            message: `Precio inválido en columna ${col.header}`,
+          });
+          continue;
+        }
+        await db.priceListItem.upsert({
+          where: {
+            priceListId_productId: {
+              priceListId: col.priceListId,
+              productId: product.id,
+            },
+          },
+          create: {
+            priceListId: col.priceListId,
+            productId: product.id,
+            unitPrice,
+          },
+          update: { unitPrice },
+        });
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : "Error al guardar";
