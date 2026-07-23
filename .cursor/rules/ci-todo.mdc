@@ -14,9 +14,12 @@ Estado: workflow `.github/workflows/ci.yml` — job `lint-and-typecheck` (`typec
 - `prisma generate` con `DATABASE_URL` dummy
 - Node 24
 
-## Pendiente
+## Pendiente / bloqueos
 
-- Activar **Require status checks** → `lint-and-typecheck` en `development` cuando el job esté estable en verde.
+- **Branch protection** en `development`/`main` → requiere **GitHub Pro** (repo privado Free = 403). Alternativa: repo público o upgrade.
+- **Vercel Deployment Checks** (prod): dashboard →
+  [Deployment Checks](https://vercel.com/tutemorenos-projects/rocha-cotizador/settings/deployment-checks)
+  → Add Checks → GitHub → `lint-and-typecheck` (hay que confirmar en UI; no hay API simple).
 - Fase 2 opcional: `npm run build` en Actions (hoy lo hace Vercel).
 
 ## Referencias

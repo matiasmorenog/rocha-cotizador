@@ -2,16 +2,25 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
 
-export function ChangePasswordForm() {
+type Props = {
+  apiPath?: string;
+  /** Customer PIN hint under current password. */
+  showPinHint?: boolean;
+  onSuccess?: () => void | Promise<void>;
+};
+
+export function ChangePasswordForm({
+  apiPath = "/api/account/password",
+  showPinHint = true,
+  onSuccess,
+}: Props) {
   const router = useRouter();
-  const { update } = useSession();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -28,7 +37,7 @@ export function ChangePasswordForm() {
       return;
     }
     setLoading(true);
-    const res = await fetch("/api/account/password", {
+    const res = await fetch(apiPath, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ currentPassword, newPassword }),
@@ -43,12 +52,9 @@ export function ChangePasswordForm() {
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
-    try {
-      sessionStorage.removeItem("rocha-pin-hint-dismissed");
-    } catch {
-      /* ignore */
+    if (onSuccess) {
+      await onSuccess();
     }
-    await update();
     router.refresh();
   }
 
@@ -63,9 +69,11 @@ export function ChangePasswordForm() {
           onChange={(e) => setCurrentPassword(e.target.value)}
           required
         />
-        <p className="text-xs text-neutral-500">
-          Si todavía no la cambiaste, usá el PIN de 4 dígitos.
-        </p>
+        {showPinHint ? (
+          <p className="text-xs text-neutral-500">
+            Si todavía no la cambiaste, usá el PIN de 4 dígitos.
+          </p>
+        ) : null}
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="new">Contraseña nueva</Label>
