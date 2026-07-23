@@ -21,7 +21,7 @@ Solo **dos** branches Neon. Preview **no** crea branch Neon por deploy.
 
 **No** habilitar Neon↔Vercel “create branch per preview/deploy”. Si aparece esa integración, desactivarla: Preview debe apuntar siempre a Neon `development`.
 
-**Vercel Development** (`vercel env pull` / local sync) **debe** usar el mismo host Neon `development` que Preview — **nunca** el de Production.
+**Vercel Preview ≡ Development:** mismas variables (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, …) y mismo Neon `development`. **Production** aislado (Neon `main` + secrets propios). No copiar Production → Preview/Development.
 
 Hosts (password en dashboard / `vercel env`; no commitear):
 
@@ -40,7 +40,7 @@ AUTH_SECRET=                    # openssl rand -base64 32
 AUTH_URL=https://rocha-cotizador.vercel.app
 ```
 
-En Vercel: **Production** → Neon `main` (pooled). **Preview** y **Development** → Neon `development` (pooled, misma URL). No commitear `.env`.
+En Vercel: **Production** → Neon `main` (pooled) + secrets prod. **Preview ≡ Development** → Neon `development` (pooled) + mismos `AUTH_*`. Local `.env` (gitignored): Neon `development` **direct** + `AUTH_URL=http://localhost:3000` + `SEED_TARGET=development`.
 
 ### Neon + Prisma (conexiones)
 
@@ -114,7 +114,7 @@ Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1
 
 ### Neon / env
 
-- [x] Env Vercel: Production → Neon `main`; Preview + Development → Neon `development` (misma URL pooled)
+- [x] Env Vercel: Production → Neon `main`; Preview ≡ Development (todas las vars → Neon `development`)
 - [x] Branch Neon `development` (copia de `main`; permanente; no TTL)
 - [x] `prisma db push` contra Neon (según target)
 - [x] Seed admin + catálogo (en Neon `main` al go-live; re-seed `development` si hace falta)
