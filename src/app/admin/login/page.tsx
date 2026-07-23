@@ -17,8 +17,8 @@ export default async function AdminLoginPage({
 
   const customerLoginHref =
     callbackUrl !== "/admin"
-      ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`
-      : "/login";
+      ? `/entrar?callbackUrl=${encodeURIComponent(callbackUrl)}`
+      : "/entrar";
 
   return (
     <div className="mx-auto max-w-md space-y-6 rounded-xl border border-neutral-200 bg-white/90 p-6 shadow-sm">
@@ -36,7 +36,7 @@ export default async function AdminLoginPage({
       </Suspense>
       <p className="text-center text-xs text-neutral-500">
         <Link href={customerLoginHref} className="underline">
-          Volver a login cliente
+          Elegir otro tipo de acceso
         </Link>
       </p>
     </div>

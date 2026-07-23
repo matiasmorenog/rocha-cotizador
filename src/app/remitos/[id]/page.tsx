@@ -24,11 +24,10 @@ export default async function RemitoDetailPage({
   const { whatsapp } = await searchParams;
   const session = await auth();
 
-  // WhatsApp / shared links: never 404 when logged out — send to admin login
-  // (office reads the remito). Same URL works for admin after sign-in.
+  // WhatsApp / shared links: never 404 when logged out — choose cliente/admin.
   if (!session?.user) {
     const next = encodeURIComponent(`/remitos/${id}`);
-    redirect(`/admin/login?callbackUrl=${next}`);
+    redirect(`/entrar?callbackUrl=${next}`);
   }
 
   if (session.user.role !== "CUSTOMER" && session.user.role !== "ADMIN") {
