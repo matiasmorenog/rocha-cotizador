@@ -5,21 +5,24 @@ alwaysApply: true
 
 # CI / CD
 
-Estado: workflow `.github/workflows/ci.yml` — job `lint-and-typecheck` (`typecheck` + `lint` en `src/`).
+Estado: workflow `.github/workflows/ci.yml`.
 
 ## Hecho
 
-- GitHub Actions en PRs/push a `development` y `main`
-- `npm run typecheck` / `npm run lint`
-- `prisma generate` con `DATABASE_URL` dummy
+- GitHub Actions en PRs/push a `development` y `main` — job `lint-and-typecheck`
+- Job `deploy-production` en push a `main` **después** de lint/typecheck
+- `vercel.json`: auto-deploy OFF en `main` (prod solo vía Actions)
+- `prisma generate` con `DATABASE_URL` dummy en CI
 - Node 24
+- Docs: `docs/ci.md`, checklist go-live en `DEPLOY.md`
 
 ## Pendiente / bloqueos
 
-- **Branch protection** en `development`/`main` → requiere **GitHub Pro** (repo privado Free = 403). Alternativa: repo público o upgrade.
-- **Vercel Deployment Checks** (prod): dashboard →
+- **Branch protection** GitHub: requiere **Pro** en repo privado Free (403). Alternativa: repo público o upgrade. Hasta entonces: no mergear CI rojo.
+- Secrets GitHub para deploy prod: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (cargar antes del primer release con el gate).
+- Deployment Checks en Vercel dashboard = opcional (el gate de Actions ya cubre prod). UI:
   [Deployment Checks](https://vercel.com/tutemorenos-projects/rocha-cotizador/settings/deployment-checks)
-  → Add Checks → GitHub → `lint-and-typecheck` (hay que confirmar en UI; no hay API simple).
+  → Add Checks → GitHub → `lint-and-typecheck`.
 - Fase 2 opcional: `npm run build` en Actions (hoy lo hace Vercel).
 
 ## Referencias

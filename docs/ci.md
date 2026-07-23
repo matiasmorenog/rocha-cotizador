@@ -13,30 +13,47 @@ Corre en PR/push a `development` y `main`:
 
 Node 24.
 
-## Build
+## Job `deploy-production` (gate real a prod)
 
-`next build` lo hace **Vercel** en preview/producción. No está en Actions (Fase 2 opcional).
+Solo en **push a `main`**, y **solo si** `lint-and-typecheck` pasó:
 
-## Branch protection / merge gate
+1. `vercel pull` (env production)
+2. `vercel build --prod`
+3. `vercel deploy --prebuilt --prod`
 
-Repo **privado** en plan Free: GitHub **no permite** branch protection ni rulesets
-(`403 Upgrade to GitHub Pro or make this repository public`).
+`vercel.json` desactiva auto-deploy de Vercel en `main` → no hay carrera paralela.
+Previews (`development` / feature branches) siguen con el Git integration de Vercel.
+
+### Secrets GitHub (obligatorios para prod)
+
+Repo → Settings → Secrets and variables → Actions:
+
+| Secret | Valor |
+|--------|--------|
+| `VERCEL_TOKEN` | [Vercel → Account → Tokens](https://vercel.com/account/tokens) |
+| `VERCEL_ORG_ID` | `team_QxlnpSeR7a1AsZiXtKSsqWFJ` (team tutemorenos-projects) |
+| `VERCEL_PROJECT_ID` | `prj_q87cwzCd7xVN7eDPzm81fDmjLKNz` |
+
+Sin estos secrets, el push a `main` falla en el job de deploy (lint igual corre).
+
+## Branch protection
+
+Repo **privado Free**: GitHub **no** permite rulesets / branch protection (`403` Pro).
 
 Opciones:
 
 1. **GitHub Pro** (o repo público) → Settings → Branches / Rulesets → require
    `lint-and-typecheck` en `development` y `main`.
-2. Hasta entonces: **no mergear** PRs con CI rojo (regla de equipo + agente).
+2. Hasta entonces: **no mergear** PRs con `lint-and-typecheck` rojo (regla de equipo + agente).
 
-## Vercel espera lint/typecheck (prod)
+Prod igual queda protegida: sin CI verde **no hay** deploy a `main` vía Actions.
 
-Deployment Checks (solo **promote a producción**, no frena el build preview):
+## Vercel Deployment Checks (opcional extra)
 
-1. Abrí
-   [Deployment Checks](https://vercel.com/tutemorenos-projects/rocha-cotizador/settings/deployment-checks)
-2. **Add Checks** → GitHub → elegí `lint-and-typecheck`
-3. Guardá
+Si querés freno también en el dashboard:
+[Deployment Checks](https://vercel.com/tutemorenos-projects/rocha-cotizador/settings/deployment-checks)
+→ Add Checks → GitHub → `lint-and-typecheck`.
 
-Así el deploy a `main` se construye, pero **no se asigna al dominio** hasta que Actions esté verde.
+Con el gate de Actions + `main: false`, esto es backup, no obligatorio.
 
 Nota: preview sigue buildeando en paralelo al CI (comportamiento normal de Vercel).
