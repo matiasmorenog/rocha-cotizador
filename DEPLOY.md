@@ -48,6 +48,14 @@ Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateA
 
 Build command (Vercel): `npm run build` → `prisma generate && next build` (`postinstall` también corre `prisma generate`).
 
+### CI → producción (gate)
+
+- Auto-deploy Vercel en **`main` está OFF** (`vercel.json`).
+- Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production**.
+- Secrets en GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (ver [`docs/ci.md`](docs/ci.md)).
+
+Previews de `development` / PRs siguen con el deploy automático de Vercel.
+
 ## Seed
 
 Una vez contra Neon (local con `.env` apuntando a Neon **direct**):
@@ -59,17 +67,40 @@ npm run db:seed
 
 PINs de clientes: `prisma/data/seed-pins.csv` (gitignored). Entregar PINs a clientes de forma segura.
 
-Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1234` — cambiar password tras primer login. Email vive en DB, no en env.
+Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1234` — **cambiar password** en `/admin/cuenta` antes de go-live.
 
 ## Branches
 
 - `development` — integración / preview (default del repo)
-- `main` — producción (Vercel Production branch; releases vía PR `development` → `main`)
+- `main` — producción (release PR `development` → `main`; deploy solo vía Actions)
 
-## Checklist
+## Checklist go-live (semana de uso real)
 
-- [x] Env en Vercel (Production + Preview + Development)
-- [x] `prisma db push` contra Neon
-- [x] Seed admin + catálogo
-- [ ] Login admin y un cliente de prueba en producción
-- [ ] Cotización → remito → imprimir
+### Seguridad / acceso
+
+- [ ] Cambiar password admin (no dejar `admin1234`)
+- [ ] Confirmar `AUTH_SECRET` fuerte y distinto en Production
+- [ ] Confirmar `AUTH_URL=https://rocha-cotizador.vercel.app` en Production
+- [ ] WhatsApp avisos: número correcto en `/admin/configuracion`
+- [ ] Entregar PINs/credenciales a clientes por canal seguro (no commit)
+
+### CI / deploy
+
+- [ ] Secrets GitHub `VERCEL_*` cargados
+- [ ] Merge a `development` solo con `lint-and-typecheck` verde
+- [ ] Release: PR `development` → `main`; esperar job `deploy-production` verde
+- [ ] Smoke en https://rocha-cotizador.vercel.app tras el release
+
+### Smoke test producción
+
+- [ ] Login admin + cliente
+- [ ] Cotizar → observaciones → confirmar → remito
+- [ ] Link remito sin sesión → `/entrar` → admin ve remito
+- [ ] WhatsApp `wa.me` abre con datos del pedido
+- [ ] Imprimir remito
+- [ ] Buscador productos (catálogo) lista resultados
+
+### Ops
+
+- [ ] Neon: saber cómo restaurar / contactar backup del plan
+- [ ] Quién mergea a `main` la semana de go-live (una persona)
