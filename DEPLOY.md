@@ -98,7 +98,9 @@ Seed hace **upsert** de productos/clientes (no `deleteMany`). Con `RESET_PINS=1`
 
 PINs de clientes: `prisma/data/seed-pins.csv` (gitignored). Entregar PINs a clientes de forma segura.
 
-Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1234` — **cambiar password** en `/admin/cuenta` antes de go-live.
+Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1234`. Email vive en DB, no en env. Password se cambia en `/admin/cuenta`.
+
+**Importante:** passwords seed (admin + PINs clientes) se dejan **tal cual** hasta que el admin real confirme que go-live está listo. Rotar admin password y PINs **recién al último momento** antes del uso real en producción — no cambiar seed data ni rotar credenciales ahora.
 
 ## Branches (Git)
 
@@ -111,16 +113,20 @@ Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1
 
 - [x] Env Vercel: Production → Neon `main`; Preview → Neon `development`
 - [x] Branch Neon `development` (copia de `main`; permanente; no TTL)
+- [x] `prisma db push` contra Neon (según target)
 - [x] Seed admin + catálogo (en Neon `main` al go-live; re-seed `development` si hace falta)
 - [ ] Local `.env` apunta a Neon `development` (direct)
 
+### Go-live (uso real) — último momento
+
+- [ ] Cambiar password admin (no dejar `admin1234`) en `/admin/cuenta` — solo cuando el admin real diga que go-live está listo
+- [ ] Rotar / entregar PINs de clientes por canal seguro — mismo momento; hasta entonces las credenciales seed se quedan como están
+
 ### Seguridad / acceso
 
-- [ ] Cambiar password admin (no dejar `admin1234`)
 - [ ] Confirmar `AUTH_SECRET` fuerte y distinto en Production
 - [ ] Confirmar `AUTH_URL=https://rocha-cotizador.vercel.app` en Production
 - [ ] WhatsApp avisos: número correcto en `/admin/configuracion`
-- [ ] Entregar PINs/credenciales a clientes por canal seguro (no commit)
 
 ### CI / deploy
 
