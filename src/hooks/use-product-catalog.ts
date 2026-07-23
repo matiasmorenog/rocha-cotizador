@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ProductBase } from "@/lib/product-base";
 import {
+  clearCachedCatalog,
   filterCatalog,
   priceFactorFromDiscount,
   readCachedCatalog,
@@ -60,10 +61,23 @@ function initialState(opts: UseProductCatalogOptions): CatalogState {
   };
 }
 
+async function fetchCatalogJson(params: URLSearchParams) {
+  const res = await fetch(`/api/products/catalog?${params}`);
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    unchanged?: boolean;
+    version?: string;
+    priceFactor?: number;
+    products?: ProductBase[];
+  };
+  return { res, data };
+}
+
 export function useProductCatalog(
   opts: UseProductCatalogOptions = {},
 ): CatalogState & {
   search: (q: string, take?: number) => CatalogSearchProduct[];
+  searchAsync: (q: string, take?: number) => Promise<CatalogSearchProduct[]>;
 } {
   const [state, setState] = useState<CatalogState>(() => initialState(opts));
 
@@ -76,15 +90,17 @@ export function useProductCatalog(
 
       const cached = readCachedCatalog();
       const params = new URLSearchParams();
-      if (cached?.version) params.set("v", cached.version);
+      // Only send version when we actually have products locally.
+      if (cached?.version && cached.products.length > 0) {
+        params.set("v", cached.version);
+      }
       if (opts.customerId) params.set("customerId", opts.customerId);
 
       try {
-        const res = await fetch(`/api/products/catalog?${params}`);
+        let { res, data } = await fetchCatalogJson(params);
         if (cancelled) return;
 
         if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
           setState((s) => ({
             ...s,
             loading: false,
@@ -94,24 +110,20 @@ export function useProductCatalog(
           return;
         }
 
-        const data = (await res.json()) as {
-          unchanged: boolean;
-          version: string;
-          priceFactor: number;
-          products: ProductBase[];
-        };
-
         const priceFactor =
           opts.discountPercent != null
             ? priceFactorFromDiscount(Number(opts.discountPercent))
-            : data.priceFactor;
+            : typeof data.priceFactor === "number"
+              ? data.priceFactor
+              : 1;
 
         writeCachedPriceFactor(key, priceFactor);
 
-        if (data.unchanged && cached) {
+        // Unchanged with empty local cache is invalid — force full body.
+        if (data.unchanged && cached && cached.products.length > 0) {
           setState({
             products: cached.products,
-            version: data.version,
+            version: data.version ?? cached.version,
             priceFactor,
             ready: true,
             loading: false,
@@ -120,16 +132,50 @@ export function useProductCatalog(
           return;
         }
 
-        const products = data.products ?? [];
+        let products = data.products ?? [];
+
+        // Empty body after a version hint: drop cache and refetch without v.
+        if (products.length === 0 && params.has("v")) {
+          clearCachedCatalog();
+          const full = new URLSearchParams();
+          if (opts.customerId) full.set("customerId", opts.customerId);
+          ({ res, data } = await fetchCatalogJson(full));
+          if (cancelled) return;
+          if (!res.ok) {
+            setState((s) => ({
+              ...s,
+              loading: false,
+              error: data.error ?? "No se pudo cargar el catálogo",
+              ready: s.products.length > 0,
+            }));
+            return;
+          }
+          products = data.products ?? [];
+        }
+
+        if (products.length === 0) {
+          clearCachedCatalog();
+          setState({
+            products: [],
+            version: data.version ?? null,
+            priceFactor,
+            ready: false,
+            loading: false,
+            error: null,
+          });
+          return;
+        }
+
+        const version = data.version ?? cached?.version ?? "0";
         writeCachedCatalog({
-          version: data.version,
+          version,
           products,
           fetchedAt: Date.now(),
         });
 
         setState({
           products,
-          version: data.version,
+          version,
           priceFactor,
           ready: true,
           loading: false,
@@ -165,5 +211,25 @@ export function useProductCatalog(
     [state.products, state.priceFactor],
   );
 
-  return { ...state, search };
+  /** Prefer local catalog; if empty, hit search API so UX never stuck blank. */
+  const searchAsync = useCallback(
+    async (q: string, take = 30): Promise<CatalogSearchProduct[]> => {
+      const local = search(q, take);
+      if (local.length > 0 || state.products.length > 0) return local;
+
+      const params = new URLSearchParams({ q });
+      if (opts.customerId) params.set("customerId", opts.customerId);
+      try {
+        const res = await fetch(`/api/products/search?${params}`);
+        if (!res.ok) return [];
+        const data = (await res.json()) as { products?: CatalogSearchProduct[] };
+        return (data.products ?? []).slice(0, take);
+      } catch {
+        return [];
+      }
+    },
+    [search, state.products.length, opts.customerId],
+  );
+
+  return { ...state, search, searchAsync };
 }

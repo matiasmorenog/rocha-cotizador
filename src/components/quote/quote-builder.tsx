@@ -32,12 +32,13 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
   const draftTotal = useQuoteDraftStore((s) => s.total());
 
   const catalog = useProductCatalog({ customerId, discountPercent });
-  const { search: searchCatalog } = catalog;
+  const { searchAsync } = catalog;
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CatalogSearchProduct[]>([]);
   const [selected, setSelected] = useState<CatalogSearchProduct | null>(null);
   const [qty, setLocalQty] = useState("1");
+  const [notes, setNotes] = useState("");
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,13 +51,20 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
     if (q.length < 1) {
       return;
     }
-    // Local filter — short debounce only to coalesce keystrokes.
+    let cancelled = false;
+    // Local filter first; searchAsync falls back to API if catalog empty.
     const handle = setTimeout(() => {
-      setResults(searchCatalog(q));
-      setOpen(true);
+      void searchAsync(q).then((rows) => {
+        if (cancelled) return;
+        setResults(rows);
+        setOpen(true);
+      });
     }, 50);
-    return () => clearTimeout(handle);
-  }, [query, searchCatalog]);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [query, searchAsync]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -103,11 +111,13 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
     }
     setSubmitting(true);
     setError(null);
+    const trimmedNotes = notes.trim();
     const res = await fetch("/api/quotes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         items: lines.map((l) => ({ productId: l.productId, qty: l.qty })),
+        ...(trimmedNotes ? { notes: trimmedNotes } : {}),
         ...(customerId ? { customerId } : {}),
       }),
     });
@@ -119,6 +129,7 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
     }
     const data = await res.json();
     clear();
+    setNotes("");
     router.push(`/remitos/${data.id}`);
   }
 
@@ -182,7 +193,7 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
                 ))}
               </ul>
             ) : null}
-            {open && query.trim().length > 0 && results.length === 0 && catalog.ready ? (
+            {open && query.trim().length > 0 && results.length === 0 && !catalogLoading ? (
               <p className="mt-2 text-sm text-neutral-500">Sin productos</p>
             ) : null}
             {catalog.error && !catalog.ready ? (
@@ -272,10 +283,30 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
         </div>
       </div>
 
+      <div className="space-y-1">
+        <Label htmlFor="quote-notes">Observaciones</Label>
+        <textarea
+          id="quote-notes"
+          rows={3}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Opcional — aclaraciones del pedido (horario, detalle, etc.)"
+          className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+        />
+      </div>
+
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => clear()} disabled={!lines.length}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            clear();
+            setNotes("");
+          }}
+          disabled={!lines.length && !notes.trim()}
+        >
           Vaciar
         </Button>
         <Button type="button" onClick={submitQuote} disabled={submitting || !lines.length}>

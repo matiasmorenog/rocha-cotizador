@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { CACHE_TAGS, invalidateProductsCache } from "@/lib/cache-tags";
 import type { ProductBase } from "@/lib/product-base";
 
 export type { ProductBase } from "@/lib/product-base";
@@ -16,34 +16,50 @@ export async function getProductsCatalogVersion(): Promise<string> {
   return result._max.updatedAt?.toISOString() ?? "0";
 }
 
+async function fetchActiveProductsBaseUncached(): Promise<ProductBase[]> {
+  const rows = await db.product.findMany({
+    where: { active: true },
+    orderBy: [{ code: "asc" }],
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      rubro: true,
+      basePrice: true,
+    },
+  });
+  return rows.map((p) => ({
+    id: p.id,
+    code: p.code,
+    name: p.name,
+    rubro: p.rubro,
+    basePrice: Number(p.basePrice),
+  }));
+}
+
 /**
  * Active products (basePrice only). Shared across customers.
  * Invalidate via tag `products` after admin product mutate / import.
+ *
+ * Empty Data Cache entries are treated as poison: bypass + expire tag so a
+ * brief empty window (pre-seed / blip) cannot stick for the full TTL.
  */
-export const getActiveProductsBase = unstable_cache(
-  async (): Promise<ProductBase[]> => {
-    const rows = await db.product.findMany({
-      where: { active: true },
-      orderBy: [{ code: "asc" }],
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        rubro: true,
-        basePrice: true,
-      },
-    });
-    return rows.map((p) => ({
-      id: p.id,
-      code: p.code,
-      name: p.name,
-      rubro: p.rubro,
-      basePrice: Number(p.basePrice),
-    }));
-  },
+const getActiveProductsBaseCached = unstable_cache(
+  async (): Promise<ProductBase[]> => fetchActiveProductsBaseUncached(),
   ["active-products-base"],
   { tags: [CACHE_TAGS.products], revalidate: 3600 },
 );
+
+export async function getActiveProductsBase(): Promise<ProductBase[]> {
+  const cached = await getActiveProductsBaseCached();
+  if (cached.length > 0) return cached;
+
+  const fresh = await fetchActiveProductsBaseUncached();
+  if (fresh.length > 0) {
+    invalidateProductsCache();
+  }
+  return fresh;
+}
 
 /** In-memory filter over cached catalog (no per-query DB hit). */
 export async function searchActiveProductsBase(

@@ -118,6 +118,17 @@ export default async function RemitoDetailPage({
           </table>
         </DataTableScroll>
 
+        {quote.notes ? (
+          <div className="mt-6 border-t border-neutral-200 pt-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+              Observaciones
+            </p>
+            <p className="mt-1 whitespace-pre-wrap text-sm text-neutral-800">
+              {quote.notes}
+            </p>
+          </div>
+        ) : null}
+
         <div className="mt-6 flex justify-end">
           <p className="text-lg font-semibold">
             Total: {formatPrice(quote.total)}

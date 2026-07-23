@@ -1,7 +1,9 @@
 import type { ProductBase } from "@/lib/product-base";
 
-const CATALOG_KEY = "rocha:product-catalog:v1";
-const FACTOR_KEY = "rocha:price-factor:v1";
+/** Bump key when cache shape/semantics change — clears poisoned empty catalogs. */
+const CATALOG_KEY = "rocha:product-catalog:v2";
+const FACTOR_KEY = "rocha:price-factor:v2";
+const MAX_AGE_MS = 1000 * 60 * 60; // 1h — force full refetch even if version matches
 
 export type { ProductBase };
 export type CachedCatalog = {
@@ -20,30 +22,66 @@ function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof sessionStorage !== "undefined";
 }
 
+/** One-shot drop of legacy empty-poison keys. */
+function purgeLegacyCatalogKeys(): void {
+  if (!canUseStorage()) return;
+  try {
+    sessionStorage.removeItem("rocha:product-catalog:v1");
+    sessionStorage.removeItem("rocha:price-factor:v1");
+  } catch {
+    // ignore
+  }
+}
+
 export function readCachedCatalog(): CachedCatalog | null {
   if (!canUseStorage()) return null;
+  purgeLegacyCatalogKeys();
   try {
     const raw = sessionStorage.getItem(CATALOG_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CachedCatalog;
     if (
       typeof parsed?.version !== "string" ||
-      !Array.isArray(parsed.products)
+      !Array.isArray(parsed.products) ||
+      parsed.products.length === 0 ||
+      typeof parsed.fetchedAt !== "number"
     ) {
+      sessionStorage.removeItem(CATALOG_KEY);
+      return null;
+    }
+    if (Date.now() - parsed.fetchedAt > MAX_AGE_MS) {
       return null;
     }
     return parsed;
   } catch {
+    sessionStorage.removeItem(CATALOG_KEY);
     return null;
   }
 }
 
 export function writeCachedCatalog(catalog: CachedCatalog): void {
   if (!canUseStorage()) return;
+  // Never persist an empty catalog — it poisons version checks (`unchanged`).
+  if (!catalog.products.length) {
+    clearCachedCatalog();
+    return;
+  }
   try {
     sessionStorage.setItem(CATALOG_KEY, JSON.stringify(catalog));
   } catch {
     // Quota / private mode — memory-only still works via React state.
+  }
+}
+
+export function clearCachedCatalog(): void {
+  if (!canUseStorage()) return;
+  try {
+    sessionStorage.removeItem(CATALOG_KEY);
+    // Drop legacy keys from earlier cache versions (may hold empty poison).
+    sessionStorage.removeItem("rocha:product-catalog:v1");
+    sessionStorage.removeItem("rocha:price-factor:v1");
+  } catch {
+    // ignore
   }
 }
 
