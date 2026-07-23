@@ -7,7 +7,7 @@
 | GitHub | [`matiasmorenog/rocha-cotizador`](https://github.com/matiasmorenog/rocha-cotizador) (privado) |
 | Vercel | proyecto `rocha-cotizador` (team `tutemorenos-projects`) → https://rocha-cotizador.vercel.app |
 | Neon | proyecto `rocha-cotizador` (org Nexus), región AWS `us-west-2`, DB `neondb` |
-| Neon branches | **`main`** = Production · **`development`** = Preview + local |
+| Neon branches | **`main`** = Production · **`development`** = Preview + Development + local |
 | Env | `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` |
 
 ## Modelo de bases (2 DBs)
@@ -17,15 +17,17 @@ Solo **dos** branches Neon. Preview **no** crea branch Neon por deploy.
 | Neon branch | Quién la usa | Vercel target |
 |-------------|--------------|---------------|
 | `main` (`br-late-truth-a6i3aziz`) | Producción | **Production** `DATABASE_URL` (pooled) |
-| `development` (`br-curly-truth-a6lzrk5r`) | Preview + local | **Preview** `DATABASE_URL` (pooled); local `.env` = **direct** |
+| `development` (`br-curly-truth-a6lzrk5r`) | Preview + Vercel Development + local | **Preview** y **Development** = misma `DATABASE_URL` (pooled); local `.env` = **direct** |
 
 **No** habilitar Neon↔Vercel “create branch per preview/deploy”. Si aparece esa integración, desactivarla: Preview debe apuntar siempre a Neon `development`.
+
+**Vercel Development** (`vercel env pull` / local sync) **debe** usar el mismo host Neon `development` que Preview — **nunca** el de Production.
 
 Hosts (password en dashboard / `vercel env`; no commitear):
 
 | Uso | Host |
 |-----|------|
-| Preview (pooled) | `ep-noisy-darkness-a6ms81wq-pooler.us-west-2.aws.neon.tech` |
+| Preview + Vercel Development (pooled) | `ep-noisy-darkness-a6ms81wq-pooler.us-west-2.aws.neon.tech` |
 | Local / `db push` (direct) | `ep-noisy-darkness-a6ms81wq.us-west-2.aws.neon.tech` |
 | Production (pooled) | `ep-cool-mud-a6k5vosf-pooler.us-west-2.aws.neon.tech` |
 
@@ -38,7 +40,7 @@ AUTH_SECRET=                    # openssl rand -base64 32
 AUTH_URL=https://rocha-cotizador.vercel.app
 ```
 
-En Vercel: **Production** → Neon `main` (pooled). **Preview** → Neon `development` (pooled). No commitear `.env`.
+En Vercel: **Production** → Neon `main` (pooled). **Preview** y **Development** → Neon `development` (pooled, misma URL). No commitear `.env`.
 
 ### Neon + Prisma (conexiones)
 
@@ -48,6 +50,7 @@ Una sola variable: `DATABASE_URL` (Prisma ya no usa `directUrl` / `DIRECT_URL`).
 |-------|----------------------------|
 | **Vercel Production** | Neon `main` host **`-pooler`** + `pgbouncer=true&connection_limit=1` |
 | **Vercel Preview** | Neon `development` host **`-pooler`** + mismos query params |
+| **Vercel Development** | Misma URL pooled que Preview (Neon `development`) |
 | **Local** (dev / `db push` / seed) | Neon `development` URL **directa** (sin `-pooler`) o Postgres local |
 
 `prisma db push` contra pooler Neon en transaction mode puede fallar. Si local usás pooler y push falla, cambiá temporalmente:
@@ -111,11 +114,11 @@ Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1
 
 ### Neon / env
 
-- [x] Env Vercel: Production → Neon `main`; Preview → Neon `development`
+- [x] Env Vercel: Production → Neon `main`; Preview + Development → Neon `development` (misma URL pooled)
 - [x] Branch Neon `development` (copia de `main`; permanente; no TTL)
 - [x] `prisma db push` contra Neon (según target)
 - [x] Seed admin + catálogo (en Neon `main` al go-live; re-seed `development` si hace falta)
-- [ ] Local `.env` apunta a Neon `development` (direct)
+- [x] Local `.env` apunta a Neon `development` (direct) + `SEED_TARGET=development`
 
 ### Go-live (uso real) — último momento
 
