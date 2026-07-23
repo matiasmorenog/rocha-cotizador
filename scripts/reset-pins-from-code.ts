@@ -1,18 +1,21 @@
 /**
  * Set every Customer PIN to code.padStart(4, "0") (001 → 0001).
  * Also regenerates prisma/data/seed-pins.csv.
- * Usage: npx tsx scripts/reset-pins-from-code.ts
+ * Usage: SEED_TARGET=development npx tsx scripts/reset-pins-from-code.ts
  */
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import fs from "node:fs";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
+import { assertSafeDestructiveDb } from "../prisma/assert-safe-db";
 import { pinFromCustomerCode } from "../src/lib/utils";
 
 const db = new PrismaClient();
 
 async function main() {
+  assertSafeDestructiveDb();
+
   const customers = await db.customer.findMany({
     select: {
       id: true,

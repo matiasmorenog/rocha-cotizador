@@ -1,9 +1,10 @@
 /**
  * One-off: split Customer.phone "Telefono/Contacto" into phone-only + name (Contact).
- * Usage: npx tsx scripts/clean-customer-phones.ts
+ * Usage: SEED_TARGET=development npx tsx scripts/clean-customer-phones.ts
  */
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import { assertSafeDestructiveDb } from "../prisma/assert-safe-db";
 import {
   appendContactToName,
   parsePhoneContact,
@@ -12,6 +13,8 @@ import {
 const db = new PrismaClient();
 
 async function main() {
+  assertSafeDestructiveDb();
+
   const customers = await db.customer.findMany({
     where: { phone: { not: null } },
     select: { id: true, code: true, name: true, phone: true, email: true },

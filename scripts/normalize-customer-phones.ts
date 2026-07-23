@@ -1,14 +1,17 @@
 /**
  * One-off: normalize all Customer.phone to XX-XXXX-XXXX / +54 … format.
- * Usage: npx tsx scripts/normalize-customer-phones.ts
+ * Usage: SEED_TARGET=development npx tsx scripts/normalize-customer-phones.ts
  */
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import { assertSafeDestructiveDb } from "../prisma/assert-safe-db";
 import { normalizePhone } from "../src/lib/phone-contact";
 
 const db = new PrismaClient();
 
 async function main() {
+  assertSafeDestructiveDb();
+
   const customers = await db.customer.findMany({
     where: { phone: { not: null } },
     select: { id: true, code: true, phone: true },

@@ -1,8 +1,10 @@
 import "dotenv/config";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
+import { assertSafeDestructiveDb } from "../prisma/assert-safe-db";
 
 const db = new PrismaClient();
+assertSafeDestructiveDb();
 
 function priceForCustomer(
   basePrice: Decimal | number | string,
