@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       customerId: customer.id,
       subtotal: total,
       total,
-      notes: parsed.data.notes || null,
+      notes: parsed.data.notes?.trim() || null,
       items: {
         create: lines.map((l) => ({
           productId: l.productId,
