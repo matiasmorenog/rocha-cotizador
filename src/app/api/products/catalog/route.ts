@@ -5,11 +5,11 @@ import {
   getActiveProductsBase,
   getProductsCatalogVersion,
 } from "@/lib/products-cache";
+import { resolveUnitPricesForList } from "@/lib/price-list-resolve";
 
 /**
- * Shared base catalog + version for browser cache.
- * `priceFactor` = 1 - discount/100 (never exposes discountPercent key).
- * Conditional: `?v=` matching current version → products omitted.
+ * Shared base catalog + per-customer unitPrices map.
+ * Conditional: `?v=` matching current version → products omitted (unitPrices always sent).
  */
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -17,14 +17,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  let discountPercent = 0;
+  let priceListId: string | null = null;
 
   if (session.user.role === "CUSTOMER" && session.user.customerId) {
     const customer = await db.customer.findUnique({
       where: { id: session.user.customerId },
-      select: { discountPercent: true },
+      select: { priceListId: true },
     });
-    discountPercent = Number(customer?.discountPercent ?? 0);
+    priceListId = customer?.priceListId ?? null;
   } else if (session.user.role === "ADMIN") {
     const customerId = (req.nextUrl.searchParams.get("customerId") ?? "").trim();
     if (!customerId) {
@@ -35,42 +35,64 @@ export async function GET(req: NextRequest) {
     }
     const customer = await db.customer.findUnique({
       where: { id: customerId },
-      select: { discountPercent: true, active: true },
+      select: { priceListId: true, active: true },
     });
     if (!customer) {
       return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
     }
-    discountPercent = Number(customer.discountPercent ?? 0);
+    priceListId = customer.priceListId;
   } else {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
   const version = await getProductsCatalogVersion();
-  const priceFactor = 1 - discountPercent / 100;
+  const listKey = priceListId ?? "base";
+  const catalogKey = `${version}:${listKey}`;
+
   const clientVersion =
     req.nextUrl.searchParams.get("v")?.trim() ||
     req.headers.get("If-None-Match")?.replaceAll('"', "").trim() ||
     "";
 
-  if (clientVersion && clientVersion === version) {
+  const products = await getActiveProductsBase();
+  const unitPrices = await resolveUnitPricesForList(
+    products.map((p) => ({
+      id: p.id,
+      code: p.code,
+      basePrice: p.basePrice,
+    })),
+    priceListId,
+  );
+
+  if (clientVersion && clientVersion === catalogKey) {
     return NextResponse.json(
-      { unchanged: true, version, priceFactor, products: [] as const },
+      {
+        unchanged: true,
+        version: catalogKey,
+        priceListId,
+        unitPrices,
+        products: [] as const,
+      },
       {
         headers: {
-          ETag: `"${version}"`,
+          ETag: `"${catalogKey}"`,
           "Cache-Control": "private, no-cache",
         },
       },
     );
   }
 
-  const products = await getActiveProductsBase();
-
   return NextResponse.json(
-    { unchanged: false, version, priceFactor, products },
+    {
+      unchanged: false,
+      version: catalogKey,
+      priceListId,
+      unitPrices,
+      products,
+    },
     {
       headers: {
-        ETag: `"${version}"`,
+        ETag: `"${catalogKey}"`,
         "Cache-Control": "private, no-cache",
       },
     },

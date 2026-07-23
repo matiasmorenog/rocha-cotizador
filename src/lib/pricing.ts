@@ -1,29 +1,40 @@
 import { Decimal } from "@prisma/client/runtime/library";
 
-/** Effective unit price for a customer. Never expose discountPercent to clients. */
-export function priceForCustomer(
+/**
+ * Effective unit price for a customer.
+ * `priceListId` null → Mayorista base (`basePrice`).
+ * Missing list item → fallback to `basePrice`.
+ */
+export function unitPriceForProduct(
   basePrice: Decimal | number | string,
-  discountPercent: Decimal | number | string,
+  listUnitPrice: Decimal | number | string | null | undefined,
 ): Decimal {
-  const base = new Decimal(basePrice);
-  const discount = new Decimal(discountPercent);
-  const factor = new Decimal(1).minus(discount.div(100));
-  return base.mul(factor).toDecimalPlaces(2);
+  if (listUnitPrice !== null && listUnitPrice !== undefined) {
+    return new Decimal(listUnitPrice).toDecimalPlaces(2);
+  }
+  return new Decimal(basePrice).toDecimalPlaces(2);
 }
 
 export function lineTotal(unitPrice: Decimal, qty: Decimal | number | string): Decimal {
   return unitPrice.mul(new Decimal(qty)).toDecimalPlaces(2);
 }
 
-/** Map Excel price list number → initial discount %. Lista 5 / empty = 0. */
-export function discountFromExcelLista(lista: string | number | null | undefined): number {
-  if (lista === null || lista === undefined) return 0;
+/** Default PriceList names keyed by Excel lista number (cols 4, 6–9). */
+export const EXCEL_PRICE_LIST_DEFAULTS: Record<string, { name: string; column: number }> = {
+  "4": { name: "Minorista", column: 4 },
+  "6": { name: "Lista 20% dto", column: 6 },
+  "7": { name: "Lista 15% dto", column: 7 },
+  "8": { name: "Lista 10% dto", column: 8 },
+  "9": { name: "Lista 5% dto", column: 9 },
+};
+
+/** Excel lista → price list excelKey. "5" / empty / unknown → null (base Mayorista). */
+export function excelListaToPriceListKey(
+  lista: string | number | null | undefined,
+): string | null {
+  if (lista === null || lista === undefined) return null;
   const key = String(lista).trim();
-  const map: Record<string, number> = {
-    "6": 20,
-    "7": 15,
-    "8": 10,
-    "9": 5,
-  };
-  return map[key] ?? 0;
+  if (!key || key === "5") return null;
+  if (key in EXCEL_PRICE_LIST_DEFAULTS) return key;
+  return null;
 }

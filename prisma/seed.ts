@@ -8,7 +8,10 @@ import {
   appendContactToName,
   parsePhoneContact,
 } from "../src/lib/phone-contact";
-import { discountFromExcelLista } from "../src/lib/pricing";
+import {
+  EXCEL_PRICE_LIST_DEFAULTS,
+  excelListaToPriceListKey,
+} from "../src/lib/pricing";
 import { padCustomerCode, pinFromCustomerCode } from "../src/lib/utils";
 import { assertSafeDestructiveDb } from "./assert-safe-db";
 
@@ -24,6 +27,11 @@ function cellText(value: ExcelJS.CellValue): string {
 }
 
 function cellNumber(value: ExcelJS.CellValue): number {
+  if (value !== null && typeof value === "object" && "result" in value) {
+    const r = (value as { result?: unknown }).result;
+    if (typeof r === "number" && Number.isFinite(r)) return r;
+    return cellNumber(r as ExcelJS.CellValue);
+  }
   const raw = cellText(value).replace(",", ".");
   const n = Number(raw);
   return Number.isFinite(n) ? n : 0;
@@ -41,7 +49,6 @@ const DEFAULT_ADMIN_PASSWORD = "admin1234";
 
 async function seedAdmin() {
   const email = DEFAULT_ADMIN_EMAIL;
-  // Optional local override for seed only; never used at runtime.
   const password = process.env.ADMIN_PASSWORD ?? DEFAULT_ADMIN_PASSWORD;
   const passwordHash = await bcrypt.hash(password, 10);
 
@@ -62,6 +69,20 @@ async function seedAdmin() {
   console.log(`Admin ready: ${email}`);
 }
 
+/** Ensure Excel-backed price lists exist; return excelKey → id. */
+async function ensureExcelPriceLists(): Promise<Map<string, string>> {
+  const map = new Map<string, string>();
+  for (const [excelKey, meta] of Object.entries(EXCEL_PRICE_LIST_DEFAULTS)) {
+    const list = await db.priceList.upsert({
+      where: { excelKey },
+      create: { name: meta.name, excelKey, active: true },
+      update: {},
+    });
+    map.set(excelKey, list.id);
+  }
+  return map;
+}
+
 async function seedFromExcel(xlsxPath: string) {
   const resetPins = process.env.RESET_PINS === "1";
   const workbook = new ExcelJS.Workbook();
@@ -70,7 +91,19 @@ async function seedFromExcel(xlsxPath: string) {
   const pricesSheet = workbook.getWorksheet("Lista de Precios");
   if (!pricesSheet) throw new Error('Missing sheet "Lista de Precios"');
 
+  const listByKey = await ensureExcelPriceLists();
+  console.log(`Price lists ready: ${[...listByKey.keys()].join(", ")}`);
+
   let products = 0;
+  let listItems = 0;
+  const productRows: Array<{
+    code: string;
+    name: string;
+    rubro: string | null;
+    basePrice: number;
+    listPrices: Record<string, number>;
+  }> = [];
+
   for (let r = 5; r <= pricesSheet.rowCount; r++) {
     const row = pricesSheet.getRow(r);
     const codeRaw = cellText(row.getCell(1).value);
@@ -79,23 +112,68 @@ async function seedFromExcel(xlsxPath: string) {
     const code = codeRaw.padStart(4, "0");
     const rubro = cellText(row.getCell(2).value) || null;
     const name = cellText(row.getCell(3).value);
-    const basePrice = cellNumber(row.getCell(5).value); // Mayorista (lista 5)
+    const basePrice = cellNumber(row.getCell(5).value);
 
     if (!name || basePrice <= 0) continue;
 
-    await db.product.upsert({
-      where: { code },
-      create: { code, name, rubro, basePrice, active: true },
-      update: { name, rubro, basePrice, active: true },
-    });
-    products += 1;
+    const listPrices: Record<string, number> = {};
+    for (const [excelKey, meta] of Object.entries(EXCEL_PRICE_LIST_DEFAULTS)) {
+      const unitPrice = cellNumber(row.getCell(meta.column).value);
+      if (unitPrice > 0) listPrices[excelKey] = unitPrice;
+    }
+    productRows.push({ code, name, rubro, basePrice, listPrices });
   }
-  console.log(`Products upserted: ${products}`);
+
+  const CHUNK = 25;
+  for (let i = 0; i < productRows.length; i += CHUNK) {
+    const chunk = productRows.slice(i, i + CHUNK);
+    const results = await Promise.all(
+      chunk.map(async (row) => {
+        const product = await db.product.upsert({
+          where: { code: row.code },
+          create: {
+            code: row.code,
+            name: row.name,
+            rubro: row.rubro,
+            basePrice: row.basePrice,
+            active: true,
+          },
+          update: {
+            name: row.name,
+            rubro: row.rubro,
+            basePrice: row.basePrice,
+            active: true,
+          },
+        });
+
+        const itemKeys = Object.entries(row.listPrices);
+        await Promise.all(
+          itemKeys.map(async ([excelKey, unitPrice]) => {
+            const priceListId = listByKey.get(excelKey);
+            if (!priceListId) return;
+            await db.priceListItem.upsert({
+              where: {
+                priceListId_productId: { priceListId, productId: product.id },
+              },
+              create: { priceListId, productId: product.id, unitPrice },
+              update: { unitPrice },
+            });
+          }),
+        );
+        return { products: 1, items: itemKeys.length };
+      }),
+    );
+    for (const r of results) {
+      products += r.products;
+      listItems += r.items;
+    }
+  }
+  console.log(`Products upserted: ${products}; price list items: ${listItems}`);
 
   const clientsSheet = workbook.getWorksheet("Lista Clientes");
   if (!clientsSheet) throw new Error('Missing sheet "Lista Clientes"');
 
-  const pins: Array<{ code: string; name: string; pin: string; discountPercent: number }> = [];
+  const pins: Array<{ code: string; name: string; pin: string; priceList: string }> = [];
   let customers = 0;
 
   for (let r = 3; r <= clientsSheet.rowCount; r++) {
@@ -108,9 +186,13 @@ async function seedFromExcel(xlsxPath: string) {
     if (!name) continue;
 
     const lista = cellText(row.getCell(3).value);
-    const discountPercent = discountFromExcelLista(lista);
+    const excelKey = excelListaToPriceListKey(lista);
+    const priceListId = excelKey ? (listByKey.get(excelKey) ?? null) : null;
+    const priceListLabel = excelKey
+      ? (EXCEL_PRICE_LIST_DEFAULTS[excelKey]?.name ?? excelKey)
+      : "Mayorista (base)";
+
     const address = cellText(row.getCell(4).value) || null;
-    // F Comentarios + N Reparto (reuse notes; no schema field)
     const comments = cellText(row.getCell(6).value);
     const reparto = cellText(row.getCell(14).value);
     const notes = joinParts(
@@ -121,7 +203,6 @@ async function seedFromExcel(xlsxPath: string) {
       cellText(row.getCell(7).value),
     );
     const customerName = contact ? appendContactToName(name, contact) : name;
-    // H CC/Contado, I Forma de Pago, J Forma (Efectivo); K Factura / L Tipo when set
     const factura = cellText(row.getCell(11).value);
     const tipo = cellText(row.getCell(12).value);
     const paymentTerms = joinParts([
@@ -151,7 +232,7 @@ async function seedFromExcel(xlsxPath: string) {
         name: customerName,
         passwordHash,
         mustChangePassword: true,
-        discountPercent,
+        priceListId,
         address,
         phone,
         email,
@@ -162,7 +243,7 @@ async function seedFromExcel(xlsxPath: string) {
       },
       update: {
         name: customerName,
-        discountPercent,
+        priceListId,
         address,
         phone,
         email,
@@ -177,7 +258,7 @@ async function seedFromExcel(xlsxPath: string) {
     });
 
     if (pin) {
-      pins.push({ code, name: customerName, pin, discountPercent });
+      pins.push({ code, name: customerName, pin, priceList: priceListLabel });
     }
     customers += 1;
   }
@@ -190,10 +271,10 @@ async function seedFromExcel(xlsxPath: string) {
 
   if (pins.length > 0) {
     const csv = [
-      "code,name,pin,discountPercent",
+      "code,name,pin,priceList",
       ...pins.map(
         (p) =>
-          `${p.code},"${p.name.replace(/"/g, '""')}",${p.pin},${p.discountPercent}`,
+          `${p.code},"${p.name.replace(/"/g, '""')}",${p.pin},"${p.priceList.replace(/"/g, '""')}"`,
       ),
     ].join("\n");
     fs.writeFileSync(csvPath, csv, "utf8");
@@ -218,8 +299,6 @@ async function seedBusinessSettings() {
 }
 
 async function main() {
-  // Upserts catalog/customers; with RESET_PINS=1 also overwrites customer passwords.
-  // Never run against Neon main/production.
   assertSafeDestructiveDb();
 
   await db.quoteSequence.upsert({

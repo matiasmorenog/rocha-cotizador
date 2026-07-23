@@ -1,9 +1,9 @@
 import type { ProductBase } from "@/lib/product-base";
 
 /** Bump key when cache shape/semantics change — clears poisoned empty catalogs. */
-const CATALOG_KEY = "rocha:product-catalog:v2";
-const FACTOR_KEY = "rocha:price-factor:v2";
-const MAX_AGE_MS = 1000 * 60 * 60; // 1h — force full refetch even if version matches
+const CATALOG_KEY = "rocha:product-catalog:v3";
+const UNIT_PRICES_KEY = "rocha:unit-prices:v3";
+const MAX_AGE_MS = 1000 * 60 * 60; // 1h
 
 export type { ProductBase };
 export type CachedCatalog = {
@@ -12,9 +12,10 @@ export type CachedCatalog = {
   fetchedAt: number;
 };
 
-type CachedPriceFactor = {
+type CachedUnitPrices = {
   customerKey: string;
-  priceFactor: number;
+  version: string;
+  unitPrices: Record<string, number>;
   fetchedAt: number;
 };
 
@@ -22,12 +23,13 @@ function canUseStorage(): boolean {
   return typeof window !== "undefined" && typeof sessionStorage !== "undefined";
 }
 
-/** One-shot drop of legacy empty-poison keys. */
 function purgeLegacyCatalogKeys(): void {
   if (!canUseStorage()) return;
   try {
     sessionStorage.removeItem("rocha:product-catalog:v1");
+    sessionStorage.removeItem("rocha:product-catalog:v2");
     sessionStorage.removeItem("rocha:price-factor:v1");
+    sessionStorage.removeItem("rocha:price-factor:v2");
   } catch {
     // ignore
   }
@@ -61,7 +63,6 @@ export function readCachedCatalog(): CachedCatalog | null {
 
 export function writeCachedCatalog(catalog: CachedCatalog): void {
   if (!canUseStorage()) return;
-  // Never persist an empty catalog — it poisons version checks (`unchanged`).
   if (!catalog.products.length) {
     clearCachedCatalog();
     return;
@@ -69,7 +70,7 @@ export function writeCachedCatalog(catalog: CachedCatalog): void {
   try {
     sessionStorage.setItem(CATALOG_KEY, JSON.stringify(catalog));
   } catch {
-    // Quota / private mode — memory-only still works via React state.
+    // Quota / private mode
   }
 }
 
@@ -77,46 +78,48 @@ export function clearCachedCatalog(): void {
   if (!canUseStorage()) return;
   try {
     sessionStorage.removeItem(CATALOG_KEY);
-    // Drop legacy keys from earlier cache versions (may hold empty poison).
-    sessionStorage.removeItem("rocha:product-catalog:v1");
-    sessionStorage.removeItem("rocha:price-factor:v1");
+    sessionStorage.removeItem(UNIT_PRICES_KEY);
+    purgeLegacyCatalogKeys();
   } catch {
     // ignore
   }
 }
 
-export function readCachedPriceFactor(customerKey: string): number | null {
+export function readCachedUnitPrices(
+  customerKey: string,
+): CachedUnitPrices | null {
   if (!canUseStorage()) return null;
   try {
-    const raw = sessionStorage.getItem(FACTOR_KEY);
+    const raw = sessionStorage.getItem(UNIT_PRICES_KEY);
     if (!raw) return null;
-    const parsed = JSON.parse(raw) as CachedPriceFactor;
+    const parsed = JSON.parse(raw) as CachedUnitPrices;
     if (parsed.customerKey !== customerKey) return null;
-    if (typeof parsed.priceFactor !== "number") return null;
-    return parsed.priceFactor;
+    if (!parsed.unitPrices || typeof parsed.unitPrices !== "object") return null;
+    return parsed;
   } catch {
     return null;
   }
 }
 
-export function writeCachedPriceFactor(
+export function writeCachedUnitPrices(
   customerKey: string,
-  priceFactor: number,
+  version: string,
+  unitPrices: Record<string, number>,
 ): void {
   if (!canUseStorage()) return;
   try {
-    const payload: CachedPriceFactor = {
+    const payload: CachedUnitPrices = {
       customerKey,
-      priceFactor,
+      version,
+      unitPrices,
       fetchedAt: Date.now(),
     };
-    sessionStorage.setItem(FACTOR_KEY, JSON.stringify(payload));
+    sessionStorage.setItem(UNIT_PRICES_KEY, JSON.stringify(payload));
   } catch {
     // ignore
   }
 }
 
-/** Local catalog search (same rules as server searchActiveProductsBase). */
 export function filterCatalog(
   products: ProductBase[],
   q: string,
@@ -138,14 +141,12 @@ export function filterCatalog(
   return matched;
 }
 
-/** Display unit price from base + factor (1 - discount/100). */
-export function unitPriceFromFactor(
+export function unitPriceFromMap(
+  code: string,
   basePrice: number,
-  priceFactor: number,
+  unitPrices: Record<string, number>,
 ): number {
-  return Math.round(basePrice * priceFactor * 100) / 100;
-}
-
-export function priceFactorFromDiscount(discountPercent: number): number {
-  return 1 - discountPercent / 100;
+  const fromList = unitPrices[code];
+  if (typeof fromList === "number" && Number.isFinite(fromList)) return fromList;
+  return basePrice;
 }

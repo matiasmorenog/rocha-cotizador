@@ -29,36 +29,68 @@ model User {
 }
 
 model Customer {
-  id                 String   @id @default(cuid())
-  code               String   @unique
+  id                 String     @id @default(cuid())
+  code               String     @unique
   name               String
   /// bcrypt hash — initial seed is a 4-digit PIN; clients must set a real password.
-  passwordHash       String   @map("pinHash")
-  mustChangePassword Boolean  @default(true)
-  discountPercent    Decimal  @default(0) @db.Decimal(5, 2)
+  passwordHash       String     @map("pinHash")
+  mustChangePassword Boolean    @default(true)
+  /// null = Mayorista base (`Product.basePrice`).
+  priceListId        String?
+  priceList          PriceList? @relation(fields: [priceListId], references: [id], onDelete: SetNull)
   address            String?
   phone              String?
   email              String?
   notes              String?
   paymentTerms       String?
   deliveryHours      String?
-  active             Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  active             Boolean    @default(true)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
   quotes             Quote[]
+
+  @@index([priceListId])
 }
 
 model Product {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  name      String
-  rubro     String?
-  basePrice Decimal  @db.Decimal(12, 2)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String          @id @default(cuid())
+  code           String          @unique
+  name           String
+  rubro          String?
+  basePrice      Decimal         @db.Decimal(12, 2)
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  priceListItems PriceListItem[]
 
   @@index([active, code])
+}
+
+/// Named price list with fixed unit prices (Excel ROUND). Not the Mayorista base.
+model PriceList {
+  id        String          @id @default(cuid())
+  name      String
+  /// Excel "Lista de Precio" key (e.g. "4", "6") for re-import; optional for manual lists.
+  excelKey  String?         @unique
+  active    Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  items     PriceListItem[]
+  customers Customer[]
+}
+
+model PriceListItem {
+  id          String    @id @default(cuid())
+  priceListId String
+  priceList   PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  unitPrice   Decimal   @db.Decimal(12, 2)
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([priceListId, productId])
+  @@index([priceListId])
+  @@index([productId])
 }
 
 model Quote {

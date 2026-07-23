@@ -34,7 +34,8 @@ export async function GET(req: NextRequest) {
       id: true,
       code: true,
       name: true,
-      discountPercent: true,
+      priceListId: true,
+      priceList: { select: { id: true, name: true } },
       active: true,
       address: true,
       phone: true,
@@ -51,7 +52,7 @@ const upsertSchema = z.object({
   id: z.string().optional(),
   code: z.string().min(1),
   name: z.string().min(1),
-  discountPercent: z.number().min(0).max(100),
+  priceListId: z.string().nullable().optional(),
   address: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
   email: z.string().optional().nullable(),
@@ -93,6 +94,20 @@ export async function POST(req: NextRequest) {
   const notes = emptyToNull(parsed.data.notes);
   const paymentTerms = emptyToNull(parsed.data.paymentTerms);
   const deliveryHours = emptyToNull(parsed.data.deliveryHours);
+  const priceListId =
+    parsed.data.priceListId === undefined
+      ? undefined
+      : emptyToNull(parsed.data.priceListId);
+
+  if (priceListId) {
+    const list = await db.priceList.findUnique({ where: { id: priceListId } });
+    if (!list) {
+      return NextResponse.json(
+        { error: "Lista de precios no encontrada" },
+        { status: 400 },
+      );
+    }
+  }
 
   if (parsed.data.id) {
     const customer = await db.customer.update({
@@ -100,7 +115,7 @@ export async function POST(req: NextRequest) {
       data: {
         code,
         name: parsed.data.name,
-        discountPercent: parsed.data.discountPercent,
+        ...(priceListId !== undefined ? { priceListId } : {}),
         address,
         phone,
         email,
@@ -128,7 +143,7 @@ export async function POST(req: NextRequest) {
       name: parsed.data.name,
       passwordHash,
       mustChangePassword: true,
-      discountPercent: parsed.data.discountPercent,
+      priceListId: priceListId ?? null,
       address,
       phone,
       email,

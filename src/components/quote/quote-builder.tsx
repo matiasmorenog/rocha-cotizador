@@ -18,11 +18,11 @@ import {
 type QuoteBuilderProps = {
   /** When set (admin flow), prices and submit use this customer. */
   customerId?: string;
-  /** Optional discount label for admin UI only. */
-  discountPercent?: number | null;
+  /** Admin label for assigned price list. */
+  priceListName?: string | null;
 };
 
-export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps = {}) {
+export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = {}) {
   const router = useRouter();
   const lines = useQuoteDraftStore((s) => s.lines);
   const addOrUpdate = useQuoteDraftStore((s) => s.addOrUpdate);
@@ -31,7 +31,7 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
   const clear = useQuoteDraftStore((s) => s.clear);
   const draftTotal = useQuoteDraftStore((s) => s.total());
 
-  const catalog = useProductCatalog({ customerId, discountPercent });
+  const catalog = useProductCatalog({ customerId });
   const { searchAsync } = catalog;
 
   const [query, setQuery] = useState("");
@@ -141,10 +141,12 @@ export function QuoteBuilder({ customerId, discountPercent }: QuoteBuilderProps 
 
   return (
     <div className="space-y-6">
-      {discountPercent != null && discountPercent > 0 ? (
+      {priceListName ? (
         <p className="text-sm text-neutral-600">
-          Precios con descuento del cliente: {discountPercent}%
+          Lista de precios: {priceListName}
         </p>
+      ) : customerId ? (
+        <p className="text-sm text-neutral-600">Lista de precios: Mayorista (base)</p>
       ) : null}
 
       <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">

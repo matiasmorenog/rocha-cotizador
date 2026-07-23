@@ -2,23 +2,11 @@ import "dotenv/config";
 import { PrismaClient, Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { assertSafeDestructiveDb } from "../prisma/assert-safe-db";
+import { unitPriceForProduct, lineTotal } from "../src/lib/pricing";
+import { getPriceListUnitPricesByProductId } from "../src/lib/price-list-resolve";
 
 const db = new PrismaClient();
 assertSafeDestructiveDb();
-
-function priceForCustomer(
-  basePrice: Decimal | number | string,
-  discountPercent: Decimal | number | string,
-): Decimal {
-  const base = new Decimal(basePrice);
-  const discount = new Decimal(discountPercent);
-  const factor = new Decimal(1).minus(discount.div(100));
-  return base.mul(factor).toDecimalPlaces(2);
-}
-
-function lineTotal(unitPrice: Decimal, qty: Decimal | number | string): Decimal {
-  return unitPrice.mul(new Decimal(qty)).toDecimalPlaces(2);
-}
 
 async function nextQuoteNumber(tx: Prisma.TransactionClient): Promise<string> {
   const existing = await tx.quoteSequence.findUnique({ where: { id: 1 } });
@@ -52,13 +40,20 @@ async function createQuoteForCustomer(code: string, productOffset: number) {
     picked.push(...products.slice(0, 3 - picked.length));
   }
 
+  const listPrices = customer.priceListId
+    ? await getPriceListUnitPricesByProductId(customer.priceListId)
+    : null;
+
   const qtys = [2, 1.5, 3];
 
   const quote = await db.$transaction(async (tx) => {
     const number = await nextQuoteNumber(tx);
 
     const items = picked.map((p, i) => {
-      const unitPrice = priceForCustomer(p.basePrice, customer.discountPercent);
+      const unitPrice = unitPriceForProduct(
+        p.basePrice,
+        listPrices?.get(p.id) ?? null,
+      );
       const qty = new Decimal(qtys[i] ?? 1);
       return {
         productId: p.id,
@@ -81,21 +76,19 @@ async function createQuoteForCustomer(code: string, productOffset: number) {
         customerId: customer.id,
         subtotal: total,
         total,
-        notes: `Seed quote for customer ${code}`,
         items: { create: items },
       },
-      select: { number: true, total: true },
+      include: { items: true },
     });
   });
 
-  return { code, number: quote.number, total: quote.total.toString() };
+  console.log(`Quote ${quote.number} for ${code}: ${quote.items.length} lines, total ${quote.total}`);
+  return quote;
 }
 
 async function main() {
-  const r002 = await createQuoteForCustomer("002", 0);
-  const r003 = await createQuoteForCustomer("003", 3);
-  console.log(`${r002.code} ${r002.number} ${r002.total}`);
-  console.log(`${r003.code} ${r003.number} ${r003.total}`);
+  await createQuoteForCustomer("002", 0);
+  await createQuoteForCustomer("003", 3);
 }
 
 main()

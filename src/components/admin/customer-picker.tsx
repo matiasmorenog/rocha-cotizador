@@ -10,7 +10,7 @@ export type PickedCustomer = {
   id: string;
   code: string;
   name: string;
-  discountPercent: number;
+  priceListName: string | null;
   active: boolean;
 };
 
@@ -23,7 +23,7 @@ type SearchHit = {
   id: string;
   code: string;
   name: string;
-  discountPercent: number | string;
+  priceList?: { id: string; name: string } | null;
   active: boolean;
 };
 
@@ -50,7 +50,8 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
       if (!res.ok) return;
       const data = await res.json();
       setResults(
-        (data.customers as SearchHit[] | undefined)?.filter((c) => c.active) ?? [],
+        (data.customers as SearchHit[] | undefined)?.filter((c) => c.active) ??
+          [],
       );
       setOpen(true);
     }, 200);
@@ -76,7 +77,7 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
             {value.code} — {value.name}
           </p>
           <p className="text-xs text-neutral-500">
-            Descuento {value.discountPercent}%
+            Lista: {value.priceListName ?? "Mayorista (base)"}
           </p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={() => onChange(null)}>
@@ -125,7 +126,7 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
                     id: c.id,
                     code: c.code,
                     name: c.name,
-                    discountPercent: Number(c.discountPercent),
+                    priceListName: c.priceList?.name ?? null,
                     active: c.active,
                   });
                   setQuery("");
@@ -137,7 +138,7 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
                   {c.code} — {c.name}
                 </span>
                 <span className="text-xs text-neutral-500">
-                  Desc. {Number(c.discountPercent)}%
+                  Lista: {c.priceList?.name ?? "Mayorista (base)"}
                 </span>
               </button>
             </li>

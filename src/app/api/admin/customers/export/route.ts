@@ -33,8 +33,8 @@ export async function GET() {
       paymentTerms: true,
       deliveryHours: true,
       notes: true,
-      discountPercent: true,
       active: true,
+      priceList: { select: { name: true } },
     },
   });
 
@@ -53,9 +53,9 @@ export async function GET() {
       c.paymentTerms ?? "",
       c.deliveryHours ?? "",
       c.notes ?? "",
-      Number(c.discountPercent),
+      c.priceList?.name ?? "Mayorista (base)",
       formatBool(c.active),
-      "", // resetearPin — leave blank on export (round-trip safe)
+      "",
     ]);
   }
 

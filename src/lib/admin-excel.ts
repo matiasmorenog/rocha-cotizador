@@ -3,7 +3,8 @@
  *
  * Customers (`clientes.xlsx`):
  *   código | nombre | email | teléfono | dirección | condicionesPago |
- *   horarioEntrega | notas | descuentoPercent | activo | resetearPin
+ *   horarioEntrega | notas | listaPrecios | activo | resetearPin
+ *   - `listaPrecios`: name of PriceList or "Mayorista (base)" / empty for base.
  *   - `resetearPin` exported empty; on import, truthy values reset PIN via pinFromCustomerCode.
  *   - Password never exported. New customers always get PIN from code; existing keep passwordHash
  *     unless resetearPin is set.
@@ -25,7 +26,7 @@ export const CUSTOMER_COLUMNS = [
   "condicionesPago",
   "horarioEntrega",
   "notas",
-  "descuentoPercent",
+  "listaPrecios",
   "activo",
   "resetearPin",
 ] as const;

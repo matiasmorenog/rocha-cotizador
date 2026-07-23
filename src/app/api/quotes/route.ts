@@ -5,7 +5,8 @@ import { auth } from "@/lib/auth";
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
 import { invalidateAfterQuoteCreate } from "@/lib/cache-tags";
-import { lineTotal, priceForCustomer } from "@/lib/pricing";
+import { lineTotal, unitPriceForProduct } from "@/lib/pricing";
+import { getPriceListUnitPricesByProductId } from "@/lib/price-list-resolve";
 import { nextQuoteNumber } from "@/lib/quotes";
 import { formatPrice } from "@/lib/utils";
 import { buildQuoteWhatsAppMessage, whatsappUrl } from "@/lib/whatsapp";
@@ -62,6 +63,9 @@ export async function POST(req: NextRequest) {
     where: { id: { in: productIds }, active: true },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
+  const listPrices = customer.priceListId
+    ? await getPriceListUnitPricesByProductId(customer.priceListId)
+    : null;
 
   const lines: Array<{
     productId: string;
@@ -80,7 +84,10 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-    const unitPrice = priceForCustomer(product.basePrice, customer.discountPercent);
+    const unitPrice = unitPriceForProduct(
+      product.basePrice,
+      listPrices?.get(product.id) ?? null,
+    );
     const qty = new Decimal(item.qty);
     lines.push({
       productId: product.id,
