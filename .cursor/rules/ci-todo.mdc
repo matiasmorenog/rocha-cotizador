@@ -18,9 +18,12 @@ Estado: workflow `.github/workflows/ci.yml`.
 
 ## Pendiente / bloqueos
 
-- **Branch protection** GitHub: requiere **Pro** en repo privado Free (403). Hasta entonces: no mergear CI rojo.
+- **Branch protection** GitHub: requiere **Pro** en repo privado Free (403). Alternativa: repo público o upgrade. Hasta entonces: no mergear CI rojo.
 - Secrets GitHub para deploy prod: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (cargar antes del primer release con el gate).
-- Deployment Checks en Vercel dashboard = opcional (el gate de Actions ya cubre prod).
+- Deployment Checks en Vercel dashboard = opcional (el gate de Actions ya cubre prod). UI:
+  [Deployment Checks](https://vercel.com/tutemorenos-projects/rocha-cotizador/settings/deployment-checks)
+  → Add Checks → GitHub → `lint-and-typecheck`.
+- Fase 2 opcional: `npm run build` en Actions (hoy lo hace Vercel).
 
 ## Referencias
 

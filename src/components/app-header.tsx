@@ -56,21 +56,29 @@ export async function AppHeader() {
                 </form>
               </>
             ) : isAdmin ? (
-              <form
-                action={async () => {
-                  "use server";
-                  await signOut({ redirectTo: "/admin/login" });
-                }}
-              >
-                <button
-                  type="submit"
-                  aria-label="Salir"
-                  title="Salir"
-                  className="cursor-pointer rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
+              <>
+                <Link
+                  href="/admin/cuenta"
+                  className="text-neutral-700 hover:text-neutral-900"
                 >
-                  <LogOut className="h-4 w-4" aria-hidden />
-                </button>
-              </form>
+                  Mi cuenta
+                </Link>
+                <form
+                  action={async () => {
+                    "use server";
+                    await signOut({ redirectTo: "/admin/login" });
+                  }}
+                >
+                  <button
+                    type="submit"
+                    aria-label="Salir"
+                    title="Salir"
+                    className="cursor-pointer rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
+                  >
+                    <LogOut className="h-4 w-4" aria-hidden />
+                  </button>
+                </form>
+              </>
             ) : (
               <>
                 <Link href="/login" className="text-neutral-700 hover:text-neutral-900">

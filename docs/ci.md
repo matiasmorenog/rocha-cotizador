@@ -40,10 +40,13 @@ Sin estos secrets, el push a `main` falla en el job de deploy (lint igual corre)
 
 Repo **privado Free**: GitHub **no** permite rulesets / branch protection (`403` Pro).
 
-Hasta upgrade o repo público:
+Opciones:
 
-- **No mergear** PRs con `lint-and-typecheck` rojo (regla de equipo + agente).
-- Prod igual queda protegida: sin CI verde **no hay** deploy a `main` vía Actions.
+1. **GitHub Pro** (o repo público) → Settings → Branches / Rulesets → require
+   `lint-and-typecheck` en `development` y `main`.
+2. Hasta entonces: **no mergear** PRs con `lint-and-typecheck` rojo (regla de equipo + agente).
+
+Prod igual queda protegida: sin CI verde **no hay** deploy a `main` vía Actions.
 
 ## Vercel Deployment Checks (opcional extra)
 
@@ -52,3 +55,5 @@ Si querés freno también en el dashboard:
 → Add Checks → GitHub → `lint-and-typecheck`.
 
 Con el gate de Actions + `main: false`, esto es backup, no obligatorio.
+
+Nota: preview sigue buildeando en paralelo al CI (comportamiento normal de Vercel).
