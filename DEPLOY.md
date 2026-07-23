@@ -7,6 +7,7 @@
 | GitHub | [`matiasmorenog/rocha-cotizador`](https://github.com/matiasmorenog/rocha-cotizador) (privado) |
 | Vercel | proyecto `rocha-cotizador` (team `tutemorenos-projects`) → https://rocha-cotizador.vercel.app |
 | Neon | proyecto `rocha-cotizador` (org Nexus), región AWS `us-west-2`, DB `neondb` |
+| Neon branches | **`main`** = Production · **`development`** = Preview + local |
 | Env | `DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL` |
 
 ## Modelo de bases (2 DBs)
@@ -70,12 +71,22 @@ Build command (Vercel): `npm run build` → `prisma generate && next build` (`po
 
 ## Seed
 
-Una vez contra Neon **`development`** (local `.env` = URL **direct** de ese branch). Nunca `db push` / seed contra Neon `main` desde local salvo release consciente:
+**Nunca** seed / reset PINs / scripts de mutación masiva contra Neon `main`.
+
+Guard: `prisma/assert-safe-db.ts` (llamado por `prisma/seed.ts` y `scripts/*`):
+
+1. Rechaza host de producción (`ep-cool-mud-a6k5vosf`) siempre.
+2. Exige `SEED_TARGET=development` **o** `ALLOW_DESTRUCTIVE_DB=1` (solo non-prod, p.ej. Postgres local).
+3. Con `SEED_TARGET=development`, la URL debe ser el endpoint de Neon `development`.
+
+Local (`.env` = URL **direct** de branch `development` + `SEED_TARGET=development`):
 
 ```bash
 npx prisma db push
-npm run db:seed
+SEED_TARGET=development npm run db:seed
 ```
+
+Seed hace **upsert** de productos/clientes (no `deleteMany`). Con `RESET_PINS=1` regenera PINs de clientes existentes.
 
 PINs de clientes: `prisma/data/seed-pins.csv` (gitignored). Entregar PINs a clientes de forma segura.
 

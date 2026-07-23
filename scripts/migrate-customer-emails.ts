@@ -1,9 +1,10 @@
 /**
  * One-off: move email-looking Customer.phone values into Customer.email.
- * Usage: npx tsx scripts/migrate-customer-emails.ts
+ * Usage: SEED_TARGET=development npx tsx scripts/migrate-customer-emails.ts
  */
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import { assertSafeDestructiveDb } from "../prisma/assert-safe-db";
 import {
   appendContactToName,
   parsePhoneContact,
@@ -12,6 +13,8 @@ import {
 const db = new PrismaClient();
 
 async function main() {
+  assertSafeDestructiveDb();
+
   const customers = await db.customer.findMany({
     where: { phone: { contains: "@" } },
     select: { id: true, code: true, name: true, phone: true, email: true },

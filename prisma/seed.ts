@@ -10,6 +10,7 @@ import {
 } from "../src/lib/phone-contact";
 import { discountFromExcelLista } from "../src/lib/pricing";
 import { padCustomerCode, pinFromCustomerCode } from "../src/lib/utils";
+import { assertSafeDestructiveDb } from "./assert-safe-db";
 
 const db = new PrismaClient();
 
@@ -217,6 +218,10 @@ async function seedBusinessSettings() {
 }
 
 async function main() {
+  // Upserts catalog/customers; with RESET_PINS=1 also overwrites customer passwords.
+  // Never run against Neon main/production.
+  assertSafeDestructiveDb();
+
   await db.quoteSequence.upsert({
     where: { id: 1 },
     create: { id: 1, value: 0 },
