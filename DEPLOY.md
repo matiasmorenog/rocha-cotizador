@@ -59,7 +59,9 @@ npm run db:seed
 
 PINs de clientes: `prisma/data/seed-pins.csv` (gitignored). Entregar PINs a clientes de forma segura.
 
-Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1234` — cambiar password tras primer login. Email vive en DB, no en env.
+Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1234`. Email vive en DB, no en env.
+
+**Importante:** passwords seed (admin + PINs clientes) se dejan **tal cual** hasta que el admin real confirme que go-live está listo. Rotar admin password y PINs **recién al último momento** antes del uso real en producción — no cambiar seed data ni rotar credenciales ahora.
 
 ## Branches
 
@@ -73,3 +75,8 @@ Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1
 - [x] Seed admin + catálogo
 - [ ] Login admin y un cliente de prueba en producción
 - [ ] Cotización → remito → imprimir
+
+### Go-live (uso real) — último momento
+
+- [ ] Cambiar password admin (no dejar `admin1234`) — solo cuando el admin real diga que go-live está listo
+- [ ] Rotar / entregar PINs de clientes por canal seguro — mismo momento; hasta entonces las credenciales seed se quedan como están
