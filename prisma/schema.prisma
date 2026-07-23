@@ -96,3 +96,11 @@ model QuoteSequence {
   id    Int @id @default(1)
   value Int @default(0)
 }
+
+/// Singleton app settings (id = 1). WhatsApp notify uses wa.me (no Business API).
+model BusinessSettings {
+  id                   Int    @id @default(1)
+  /// Digits for wa.me (e.g. 5491166904442). Display forms are normalized on save.
+  whatsappNotifyPhone  String @default("5491166904442")
+  updatedAt            DateTime @updatedAt
+}
