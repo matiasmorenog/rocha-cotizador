@@ -8,6 +8,7 @@ import {
   ARGENTINA_TZ,
   resolveQuotesExportRange,
 } from "@/lib/argentina-time";
+import { quoteStatusLabel } from "@/lib/quote-status";
 
 export default async function AdminCotizacionesPage({
   searchParams,
@@ -114,7 +115,7 @@ export default async function AdminCotizacionesPage({
                   })}
                 </td>
                 <td className="px-3 py-2">
-                  <Badge variant="success">{qrow.status}</Badge>
+                  <Badge variant="success">{quoteStatusLabel(qrow.status)}</Badge>
                 </td>
                 <td className="px-3 py-2 font-medium">{formatPrice(qrow.total)}</td>
               </tr>
