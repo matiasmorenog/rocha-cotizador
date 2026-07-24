@@ -237,11 +237,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
           </div>
           <div className="flex flex-wrap items-end gap-2">
             <div className="w-[120px] min-w-[6rem] flex-1 sm:flex-none">
-              <Label htmlFor="qty">
-                {selectedAllowsUnit && orderByUnit
-                  ? "Cantidad (unid.)"
-                  : "Cantidad (kg)"}
-              </Label>
+              <Label htmlFor="qty">Cantidad</Label>
               <Input
                 id="qty"
                 inputMode="decimal"
@@ -371,9 +367,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                         step="any"
                         value={l.qty}
                         onChange={(e) => setQty(l.productId, Number(e.target.value))}
-                        aria-label={
-                          l.orderByUnit ? "Cantidad en unidades" : "Cantidad en kg"
-                        }
+                        aria-label="Cantidad"
                       />
                       <span className="mt-0.5 block text-[10px] text-neutral-500">
                         {l.orderByUnit ? "unidades" : "kg"}
