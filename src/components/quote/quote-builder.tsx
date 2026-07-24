@@ -326,8 +326,8 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
               <tr>
                 <th className="px-3 py-2 font-medium">Código</th>
                 <th className="px-3 py-2 font-medium">Producto</th>
-                <th className="px-3 py-2 font-medium">Modo</th>
                 <th className="px-3 py-2 font-medium">Cant.</th>
+                <th className="px-3 py-2 font-medium">Modo</th>
                 <th className="px-3 py-2 font-medium">Precio</th>
                 <th className="px-3 py-2 font-medium">Importe</th>
                 <th className="px-3 py-2" />
@@ -358,6 +358,19 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                       ) : null}
                     </td>
                     <td className="px-3 py-2">
+                      <Input
+                        className="h-8 w-24"
+                        type="number"
+                        min={0.001}
+                        step="any"
+                        value={l.qty}
+                        onChange={(e) => setQty(l.productId, Number(e.target.value))}
+                        aria-label={
+                          l.orderByUnit ? "Cantidad en unidades" : "Cantidad en kg"
+                        }
+                      />
+                    </td>
+                    <td className="px-3 py-2">
                       {l.allowsUnitOrder ? (
                         <div className="flex flex-col gap-1">
                           <button
@@ -386,19 +399,6 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                       ) : (
                         <span className="text-neutral-500">kg</span>
                       )}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Input
-                        className="h-8 w-24"
-                        type="number"
-                        min={0.001}
-                        step="any"
-                        value={l.qty}
-                        onChange={(e) => setQty(l.productId, Number(e.target.value))}
-                        aria-label={
-                          l.orderByUnit ? "Cantidad en unidades" : "Cantidad en kg"
-                        }
-                      />
                     </td>
                     <td className="px-3 py-2">
                       {formatPrice(effectiveUnitPrice(l))}
