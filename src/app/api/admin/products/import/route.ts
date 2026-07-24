@@ -86,7 +86,14 @@ export async function POST(req: NextRequest) {
   const listColumns: Array<{ header: string; priceListId: string }> = [];
   for (const [header] of headers) {
     if (
-      ["código", "nombre", "rubro", "preciobase", "activo"].includes(header)
+      [
+        "código",
+        "nombre",
+        "rubro",
+        "preciobase",
+        "permitipedidounidad",
+        "activo",
+      ].includes(header)
     ) {
       continue;
     }
@@ -126,6 +133,10 @@ export async function POST(req: NextRequest) {
       continue;
     }
     const active = parseBool(getCellByHeader(row, headers, "activo"), true);
+    const allowsUnitOrder = parseBool(
+      getCellByHeader(row, headers, "permitePedidoUnidad"),
+      false,
+    );
 
     try {
       const existing = await db.product.findUnique({ where: { code } });
@@ -134,6 +145,7 @@ export async function POST(req: NextRequest) {
         name,
         rubro,
         basePrice: priceRaw,
+        allowsUnitOrder,
         active,
       };
 

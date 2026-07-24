@@ -47,6 +47,7 @@ export default async function AdminProductosPage({
     rubro: p.rubro,
     basePrice: Number(p.basePrice),
     active: p.active,
+    allowsUnitOrder: p.allowsUnitOrder,
     listPrices: Object.fromEntries(
       p.priceListItems.map((i) => [i.priceListId, Number(i.unitPrice)]),
     ),

@@ -22,6 +22,7 @@ export function ProductAdminForm() {
   const [rubro, setRubro] = useState("");
   const [basePrice, setBasePrice] = useState("");
   const [active, setActive] = useState(true);
+  const [allowsUnitOrder, setAllowsUnitOrder] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -51,6 +52,7 @@ export function ProductAdminForm() {
         rubro,
         basePrice: Number(basePrice),
         active,
+        allowsUnitOrder,
       }),
     });
     setLoading(false);
@@ -65,6 +67,7 @@ export function ProductAdminForm() {
     setRubro("");
     setBasePrice("");
     setActive(true);
+    setAllowsUnitOrder(false);
     router.refresh();
   }
 
@@ -129,6 +132,17 @@ export function ProductAdminForm() {
           onChange={(e) => setActive(e.target.checked)}
         />
         Activo
+      </label>
+      <label
+        htmlFor="product-unit-order-create"
+        className="flex cursor-pointer items-center gap-2.5 text-sm"
+      >
+        <Switch
+          id="product-unit-order-create"
+          checked={allowsUnitOrder}
+          onChange={(e) => setAllowsUnitOrder(e.target.checked)}
+        />
+        Permite pedido por unidades (precio al pesar)
       </label>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}

@@ -18,6 +18,7 @@ export type CatalogSearchProduct = {
   name: string;
   rubro: string | null;
   unitPrice: number;
+  allowsUnitOrder: boolean;
 };
 
 type UseProductCatalogOptions = {
@@ -200,6 +201,7 @@ export function useProductCatalog(
         name: p.name,
         rubro: p.rubro,
         unitPrice: unitPriceFromMap(p.code, p.basePrice, state.unitPrices),
+        allowsUnitOrder: p.allowsUnitOrder,
       }));
     },
     [state.products, state.unitPrices],

@@ -17,6 +17,7 @@ const schema = z.object({
   name: z.string().min(1),
   rubro: z.string().optional().nullable(),
   basePrice: z.number().nonnegative(),
+  allowsUnitOrder: z.boolean().optional(),
   active: z.boolean().optional(),
   listPrices: z
     .array(
@@ -44,6 +45,11 @@ export async function POST(req: NextRequest) {
     rubro: parsed.data.rubro ?? null,
     basePrice: parsed.data.basePrice,
     active: parsed.data.active ?? true,
+    ...(parsed.data.allowsUnitOrder !== undefined
+      ? { allowsUnitOrder: parsed.data.allowsUnitOrder }
+      : parsed.data.id
+        ? {}
+        : { allowsUnitOrder: false }),
   };
 
   const product = parsed.data.id

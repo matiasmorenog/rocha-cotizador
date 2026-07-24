@@ -60,6 +60,7 @@ export async function GET(req: NextRequest) {
       name: p.name,
       rubro: p.rubro,
       unitPrice: unitPrices[p.code] ?? p.basePrice,
+      allowsUnitOrder: p.allowsUnitOrder,
     })),
   });
 }

@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
+import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import { formatPrice, formatQty } from "@/lib/utils";
 import {
   buildQuoteWhatsAppMessage,
@@ -144,10 +145,26 @@ export default async function RemitoDetailPage({
               {quote.items.map((item) => (
                 <tr key={item.id} className="border-b border-neutral-100">
                   <td className="py-2 pr-2 font-mono text-xs">{item.productCode}</td>
-                  <td className="py-2 pr-2">{formatQty(item.qty)}</td>
-                  <td className="py-2 pr-2">{item.productName}</td>
-                  <td className="py-2 pr-2 text-right">{formatPrice(item.unitPrice)}</td>
-                  <td className="py-2 text-right font-medium">{formatPrice(item.lineTotal)}</td>
+                  <td className="py-2 pr-2">
+                    {formatQty(item.qty)}{" "}
+                    <span className="text-neutral-500">
+                      {item.orderByUnit ? "unid." : "kg"}
+                    </span>
+                  </td>
+                  <td className="py-2 pr-2">
+                    <div>{item.productName}</div>
+                    {item.orderByUnit ? (
+                      <p className="mt-0.5 text-xs text-amber-800">
+                        {UNIT_ORDER_PRICE_WARNING}
+                      </p>
+                    ) : null}
+                  </td>
+                  <td className="py-2 pr-2 text-right">
+                    {formatPrice(item.unitPrice)}
+                  </td>
+                  <td className="py-2 text-right font-medium">
+                    {formatPrice(item.lineTotal)}
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -21,6 +21,7 @@ export type ProductTableRow = {
   rubro: string | null;
   basePrice: number;
   active: boolean;
+  allowsUnitOrder: boolean;
   /** priceListId → unitPrice */
   listPrices: Record<string, number>;
 };
@@ -66,6 +67,7 @@ function ProductEditRow({
     return init;
   });
   const [active, setActive] = useState(product.active);
+  const [allowsUnitOrder, setAllowsUnitOrder] = useState(product.allowsUnitOrder);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,6 +112,7 @@ function ProductEditRow({
         rubro,
         basePrice: base,
         active,
+        allowsUnitOrder,
         listPrices: listPricePayload,
       }),
     });
@@ -197,6 +200,24 @@ function ProductEditRow({
         </label>
         {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
       </td>
+      <td className="px-3 py-2">
+        <label
+          className="inline-flex cursor-pointer items-center gap-2"
+          title={
+            allowsUnitOrder
+              ? "Pedido por unidades o kg"
+              : "Solo por kg"
+          }
+        >
+          <Switch
+            form={formId}
+            checked={allowsUnitOrder}
+            onChange={(e) => setAllowsUnitOrder(e.target.checked)}
+            disabled={loading}
+            aria-label="Permite pedido por unidades"
+          />
+        </label>
+      </td>
       <td className="px-3 py-2 text-right">
         <AdminTableActions className="justify-end">
           <AdminTableIconAction
@@ -250,6 +271,11 @@ function ProductViewRow({
           {product.active ? "Activo" : "Inactivo"}
         </Badge>
       </td>
+      <td className="px-3 py-2">
+        <Badge variant={product.allowsUnitOrder ? "success" : "default"}>
+          {product.allowsUnitOrder ? "Unid. o kg" : "Solo kg"}
+        </Badge>
+      </td>
       <td className="px-3 py-2 text-right">
         <AdminTableActions className="justify-end">
           <AdminTableIconAction
@@ -293,6 +319,7 @@ export function ProductAdminTable({
               </th>
             ))}
             <th className="px-3 py-2">Estado</th>
+            <th className="px-3 py-2">Pedido unid.</th>
             <th className="px-3 py-2" />
           </tr>
         </thead>
@@ -318,7 +345,7 @@ export function ProductAdminTable({
           {products.length === 0 ? (
             <tr>
               <td
-                colSpan={5 + activeLists.length}
+                colSpan={6 + activeLists.length}
                 className="px-3 py-8 text-center text-neutral-500"
               >
                 No hay productos

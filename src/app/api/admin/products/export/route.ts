@@ -31,6 +31,7 @@ export async function GET() {
         name: true,
         rubro: true,
         basePrice: true,
+        allowsUnitOrder: true,
         active: true,
         priceListItems: {
           select: { priceListId: true, unitPrice: true },
@@ -46,10 +47,12 @@ export async function GET() {
     (l) => !l.isBase,
   );
 
+  // código | nombre | rubro | precioBase | <lists…> | permitePedidoUnidad | activo
   const headers = [
     ...PRODUCT_BASE_COLUMNS.slice(0, 4),
     ...orderedLists.map((l) => l.name),
     PRODUCT_BASE_COLUMNS[4],
+    PRODUCT_BASE_COLUMNS[5],
   ];
 
   const workbook = new ExcelJS.Workbook();
@@ -70,6 +73,7 @@ export async function GET() {
         const v = byList.get(l.id);
         return v != null ? v : "";
       }),
+      formatBool(p.allowsUnitOrder),
       formatBool(p.active),
     ]);
   }

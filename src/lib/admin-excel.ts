@@ -11,8 +11,10 @@
  *     unless resetearPin is set.
  *
  * Products (`productos.xlsx`):
- *   código | nombre | rubro | precioBase | <nombre de cada PriceList>… | activo
+ *   código | nombre | rubro | precioBase | <nombre de cada PriceList>… |
+ *   permitePedidoUnidad | activo
  *   - `precioBase` = Product.basePrice (precio base del producto).
+ *   - `permitePedidoUnidad`: sí/no — order by unit count (price TBD after weigh) or kg.
  *   - Extra columns match PriceList.name (case-insensitive). Empty cell clears that list price.
  *
  * Quotes range export is PDF (`/api/admin/quotes/export`) — see `quotes-export-pdf.ts`.
@@ -40,6 +42,7 @@ export const PRODUCT_BASE_COLUMNS = [
   "nombre",
   "rubro",
   "precioBase",
+  "permitePedidoUnidad",
   "activo",
 ] as const;
 

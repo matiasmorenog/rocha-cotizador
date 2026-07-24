@@ -35,6 +35,7 @@ async function fetchActiveProductsBaseUncached(): Promise<ProductBase[]> {
       name: true,
       rubro: true,
       basePrice: true,
+      allowsUnitOrder: true,
     },
   });
   return rows.map((p) => ({
@@ -43,6 +44,7 @@ async function fetchActiveProductsBaseUncached(): Promise<ProductBase[]> {
     name: p.name,
     rubro: p.rubro,
     basePrice: Number(p.basePrice),
+    allowsUnitOrder: p.allowsUnitOrder,
   }));
 }
 

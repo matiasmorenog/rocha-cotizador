@@ -1,5 +1,6 @@
 import PDFDocument from "pdfkit";
 import { formatArgentinaDateTime } from "@/lib/argentina-time";
+import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import { formatPrice, formatQty } from "@/lib/utils";
 
 export type QuoteForPdf = {
@@ -11,6 +12,7 @@ export type QuoteForPdf = {
     productCode: string;
     productName: string;
     qty: number | string | { toNumber?: () => number; toString: () => string };
+    orderByUnit?: boolean;
     unitPrice: number | string | { toNumber?: () => number; toString: () => string };
     lineTotal: number | string | { toNumber?: () => number; toString: () => string };
   }>;
@@ -106,9 +108,13 @@ function drawQuoteBlock(doc: PDFKit.PDFDocument, quote: QuoteForPdf) {
     doc.moveDown(0.5);
   } else {
     for (const item of quote.items) {
-      ensureSpace(doc, 28);
+      ensureSpace(doc, 36);
       const y = doc.y;
-      const nameHeight = doc.heightOfString(item.productName, {
+      const unitLabel = item.orderByUnit ? "unid." : "kg";
+      const nameText = item.orderByUnit
+        ? `${item.productName}\n(${UNIT_ORDER_PRICE_WARNING})`
+        : item.productName;
+      const nameHeight = doc.heightOfString(nameText, {
         width: COL.name,
       });
       const rowHeight = Math.max(12, nameHeight);
@@ -118,8 +124,10 @@ function drawQuoteBlock(doc: PDFKit.PDFDocument, quote: QuoteForPdf) {
         .fontSize(8)
         .fillColor("#171717")
         .text(item.productCode, MARGIN, y, { width: COL.code })
-        .text(formatQty(item.qty), MARGIN + COL.code, y, { width: COL.qty })
-        .text(item.productName, MARGIN + COL.code + COL.qty, y, {
+        .text(`${formatQty(item.qty)} ${unitLabel}`, MARGIN + COL.code, y, {
+          width: COL.qty,
+        })
+        .text(nameText, MARGIN + COL.code + COL.qty, y, {
           width: COL.name,
         })
         .text(

@@ -8,8 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import { formatPrice } from "@/lib/utils";
-import { useQuoteDraftStore } from "@/stores/quote-draft-store";
+import {
+  effectiveLineTotal,
+  effectiveUnitPrice,
+  useQuoteDraftStore,
+} from "@/stores/quote-draft-store";
 import {
   useProductCatalog,
   type CatalogSearchProduct,
@@ -27,6 +32,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
   const lines = useQuoteDraftStore((s) => s.lines);
   const addOrUpdate = useQuoteDraftStore((s) => s.addOrUpdate);
   const setQty = useQuoteDraftStore((s) => s.setQty);
+  const setOrderByUnit = useQuoteDraftStore((s) => s.setOrderByUnit);
   const remove = useQuoteDraftStore((s) => s.remove);
   const clear = useQuoteDraftStore((s) => s.clear);
   const draftTotal = useQuoteDraftStore((s) => s.total());
@@ -38,6 +44,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
   const [results, setResults] = useState<CatalogSearchProduct[]>([]);
   const [selected, setSelected] = useState<CatalogSearchProduct | null>(null);
   const [qty, setLocalQty] = useState("1");
+  const [orderByUnit, setLocalOrderByUnit] = useState(false);
   const [notes, setNotes] = useState("");
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -45,6 +52,8 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
   const boxRef = useRef<HTMLDivElement>(null);
 
   const catalogLoading = catalog.loading && !catalog.ready;
+  const selectedAllowsUnit = selected?.allowsUnitOrder === true;
+  const hasUnitOrderLines = lines.some((l) => l.orderByUnit);
 
   useEffect(() => {
     const q = query.trim();
@@ -76,6 +85,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
 
   function onQueryChange(value: string) {
     setSelected(null);
+    setLocalOrderByUnit(false);
     setQuery(value);
     if (value.trim().length < 1) {
       setResults([]);
@@ -90,16 +100,20 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
       setError("Cantidad inválida");
       return;
     }
+    const byUnit = selectedAllowsUnit && orderByUnit;
     addOrUpdate({
       productId: selected.id,
       code: selected.code,
       name: selected.name,
       unitPrice: selected.unitPrice,
       qty: n,
+      orderByUnit: byUnit,
+      allowsUnitOrder: selected.allowsUnitOrder,
     });
     setSelected(null);
     setQuery("");
     setLocalQty("1");
+    setLocalOrderByUnit(false);
     setResults([]);
     setError(null);
   }
@@ -116,7 +130,11 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        items: lines.map((l) => ({ productId: l.productId, qty: l.qty })),
+        items: lines.map((l) => ({
+          productId: l.productId,
+          qty: l.qty,
+          orderByUnit: l.orderByUnit,
+        })),
         ...(trimmedNotes ? { notes: trimmedNotes } : {}),
         ...(customerId ? { customerId } : {}),
       }),
@@ -185,6 +203,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                       className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-neutral-50"
                       onClick={() => {
                         setSelected(p);
+                        setLocalOrderByUnit(false);
                         setQuery("");
                         setOpen(false);
                       }}
@@ -195,6 +214,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                       <span className="text-xs text-neutral-500">
                         {p.rubro ? `${p.rubro} · ` : ""}
                         {formatPrice(p.unitPrice)}
+                        {p.allowsUnitOrder ? " · kg o unidades" : ""}
                       </span>
                     </button>
                   </li>
@@ -209,7 +229,9 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
             ) : null}
           </div>
           <div>
-            <Label htmlFor="qty">Cantidad</Label>
+            <Label htmlFor="qty">
+              {selectedAllowsUnit && orderByUnit ? "Cantidad (unid.)" : "Cantidad (kg)"}
+            </Label>
             <Input
               id="qty"
               inputMode="decimal"
@@ -223,15 +245,59 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
             </Button>
           </div>
         </div>
+
+        {selectedAllowsUnit ? (
+          <div className="mt-3 space-y-2">
+            <p className="text-xs font-medium text-neutral-600">Modo de pedido</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                className={`rounded-md border px-3 py-1.5 text-sm ${
+                  !orderByUnit
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10 font-medium text-neutral-900"
+                    : "border-neutral-300 bg-white text-neutral-700"
+                }`}
+                onClick={() => setLocalOrderByUnit(false)}
+              >
+                Por kg
+              </button>
+              <button
+                type="button"
+                className={`rounded-md border px-3 py-1.5 text-sm ${
+                  orderByUnit
+                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10 font-medium text-neutral-900"
+                    : "border-neutral-300 bg-white text-neutral-700"
+                }`}
+                onClick={() => setLocalOrderByUnit(true)}
+              >
+                Por unidades
+              </button>
+            </div>
+            {orderByUnit ? (
+              <p className="text-sm text-amber-800">{UNIT_ORDER_PRICE_WARNING}</p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
+
+      {hasUnitOrderLines ? (
+        <div
+          className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          role="status"
+        >
+          {UNIT_ORDER_PRICE_WARNING}. Las líneas por unidades figuran con precio $0
+          hasta el pesaje.
+        </div>
+      ) : null}
 
       <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
         <DataTableScroll className="rounded-none border-0">
-          <table className="w-full min-w-[36rem] text-sm">
+          <table className="w-full min-w-[40rem] text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
                 <th className="px-3 py-2 font-medium">Código</th>
                 <th className="px-3 py-2 font-medium">Producto</th>
+                <th className="px-3 py-2 font-medium">Modo</th>
                 <th className="px-3 py-2 font-medium">Cant.</th>
                 <th className="px-3 py-2 font-medium">Precio</th>
                 <th className="px-3 py-2 font-medium">Importe</th>
@@ -241,15 +307,57 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
             <tbody>
               {lines.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-neutral-500">
+                  <td colSpan={7} className="px-3 py-8 text-center text-neutral-500">
                     Sin productos. Buscá y agregá líneas.
                   </td>
                 </tr>
               ) : (
                 lines.map((l) => (
-                  <tr key={l.productId} className="border-t border-neutral-100">
+                  <tr
+                    key={l.productId}
+                    className={`border-t border-neutral-100 ${
+                      l.orderByUnit ? "bg-amber-50/40" : ""
+                    }`}
+                  >
                     <td className="px-3 py-2 font-mono text-xs">{l.code}</td>
-                    <td className="px-3 py-2">{l.name}</td>
+                    <td className="px-3 py-2">
+                      <div>{l.name}</div>
+                      {l.orderByUnit ? (
+                        <p className="mt-0.5 text-xs text-amber-800">
+                          {UNIT_ORDER_PRICE_WARNING}
+                        </p>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2">
+                      {l.allowsUnitOrder ? (
+                        <div className="flex flex-col gap-1">
+                          <button
+                            type="button"
+                            className={`rounded border px-2 py-0.5 text-xs ${
+                              !l.orderByUnit
+                                ? "border-[var(--brand-primary)] font-medium"
+                                : "border-neutral-300 text-neutral-600"
+                            }`}
+                            onClick={() => setOrderByUnit(l.productId, false)}
+                          >
+                            kg
+                          </button>
+                          <button
+                            type="button"
+                            className={`rounded border px-2 py-0.5 text-xs ${
+                              l.orderByUnit
+                                ? "border-[var(--brand-primary)] font-medium"
+                                : "border-neutral-300 text-neutral-600"
+                            }`}
+                            onClick={() => setOrderByUnit(l.productId, true)}
+                          >
+                            unid.
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-neutral-500">kg</span>
+                      )}
+                    </td>
                     <td className="px-3 py-2">
                       <Input
                         className="h-8 w-24"
@@ -258,11 +366,19 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                         step="any"
                         value={l.qty}
                         onChange={(e) => setQty(l.productId, Number(e.target.value))}
+                        aria-label={
+                          l.orderByUnit ? "Cantidad en unidades" : "Cantidad en kg"
+                        }
                       />
+                      <span className="mt-0.5 block text-[10px] text-neutral-500">
+                        {l.orderByUnit ? "unidades" : "kg"}
+                      </span>
                     </td>
-                    <td className="px-3 py-2">{formatPrice(l.unitPrice)}</td>
+                    <td className="px-3 py-2">
+                      {formatPrice(effectiveUnitPrice(l))}
+                    </td>
                     <td className="px-3 py-2 font-medium">
-                      {formatPrice(l.unitPrice * l.qty)}
+                      {formatPrice(effectiveLineTotal(l))}
                     </td>
                     <td className="px-3 py-2">
                       <Button
