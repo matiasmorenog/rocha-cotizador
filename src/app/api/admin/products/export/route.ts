@@ -8,6 +8,7 @@ import {
   styleHeaderRow,
   xlsxResponse,
 } from "@/lib/admin-excel";
+import { sortPriceListsForDisplay } from "@/lib/pricing";
 
 export const runtime = "nodejs";
 
@@ -37,14 +38,15 @@ export async function GET() {
       },
     }),
     db.priceList.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, excelKey: true },
     }),
   ]);
 
+  const orderedLists = sortPriceListsForDisplay(priceLists);
+
   const headers = [
     ...PRODUCT_BASE_COLUMNS.slice(0, 4),
-    ...priceLists.map((l) => l.name),
+    ...orderedLists.map((l) => l.name),
     PRODUCT_BASE_COLUMNS[4],
   ];
 
@@ -62,7 +64,7 @@ export async function GET() {
       p.name,
       p.rubro ?? "",
       Number(p.basePrice),
-      ...priceLists.map((l) => {
+      ...orderedLists.map((l) => {
         const v = byList.get(l.id);
         return v != null ? v : "";
       }),

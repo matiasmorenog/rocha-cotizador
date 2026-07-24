@@ -3,14 +3,16 @@ import { Badge } from "@/components/ui/badge";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { PriceListCreateForm } from "@/components/admin/price-list-create-form";
 import { PriceListRowActions } from "@/components/admin/price-list-row-actions";
+import { sortPriceListsForDisplay } from "@/lib/pricing";
 
 export default async function AdminListasPreciosPage() {
-  const lists = await db.priceList.findMany({
-    orderBy: { name: "asc" },
-    include: {
-      _count: { select: { items: true, customers: true } },
-    },
-  });
+  const lists = sortPriceListsForDisplay(
+    await db.priceList.findMany({
+      include: {
+        _count: { select: { items: true, customers: true } },
+      },
+    }),
+  );
 
   return (
     <div className="space-y-6">

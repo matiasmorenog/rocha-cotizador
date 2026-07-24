@@ -29,6 +29,60 @@ export const EXCEL_PRICE_LIST_DEFAULTS: Record<string, { name: string; column: n
 };
 
 /**
+ * Display order for known Excel keys: highest discount first, then Minorista list.
+ * excelKey 6→20%, 7→15%, 8→10%, 9→5%, 4→Minorista.
+ */
+const EXCEL_KEY_DISPLAY_ORDER: Record<string, number> = {
+  "6": 0,
+  "7": 1,
+  "8": 2,
+  "9": 3,
+  "4": 4,
+};
+
+export type PriceListSortable = {
+  name: string;
+  excelKey?: string | null;
+};
+
+function discountPercentFromName(name: string): number | null {
+  const m = name.match(/(\d+)\s*%/);
+  if (!m) return null;
+  const n = Number(m[1]);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Compare for product-table / export / admin list column order. */
+export function comparePriceListsForDisplay(
+  a: PriceListSortable,
+  b: PriceListSortable,
+): number {
+  const aOrder =
+    a.excelKey != null ? EXCEL_KEY_DISPLAY_ORDER[a.excelKey] : undefined;
+  const bOrder =
+    b.excelKey != null ? EXCEL_KEY_DISPLAY_ORDER[b.excelKey] : undefined;
+
+  if (aOrder !== undefined && bOrder !== undefined) return aOrder - bOrder;
+  if (aOrder !== undefined) return -1;
+  if (bOrder !== undefined) return 1;
+
+  const aPct = discountPercentFromName(a.name);
+  const bPct = discountPercentFromName(b.name);
+  if (aPct != null && bPct != null && aPct !== bPct) return bPct - aPct;
+  if (aPct != null && bPct == null) return -1;
+  if (aPct == null && bPct != null) return 1;
+
+  return a.name.localeCompare(b.name, "es");
+}
+
+/** Stable copy sorted for UI / Excel column order. */
+export function sortPriceListsForDisplay<T extends PriceListSortable>(
+  lists: T[],
+): T[] {
+  return [...lists].sort(comparePriceListsForDisplay);
+}
+
+/**
  * Excel lista → price list excelKey.
  * "5" / empty / unknown → null (Product.basePrice = Minorista sin descuento in UI).
  * Excel sheet header for col 5 may still say "Mayorista"; product owner names that base Minorista.

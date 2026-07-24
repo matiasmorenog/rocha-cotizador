@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { invalidateAfterPriceListMutation } from "@/lib/cache-tags";
+import { sortPriceListsForDisplay } from "@/lib/pricing";
 
 async function requireAdmin() {
   const session = await auth();
@@ -15,12 +16,13 @@ export async function GET() {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const priceLists = await db.priceList.findMany({
-    orderBy: [{ name: "asc" }],
-    include: {
-      _count: { select: { items: true, customers: true } },
-    },
-  });
+  const priceLists = sortPriceListsForDisplay(
+    await db.priceList.findMany({
+      include: {
+        _count: { select: { items: true, customers: true } },
+      },
+    }),
+  );
 
   return NextResponse.json({
     priceLists: priceLists.map((l) => ({

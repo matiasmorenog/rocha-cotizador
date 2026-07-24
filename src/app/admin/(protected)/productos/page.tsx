@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { ProductAdminForm } from "@/components/admin/product-admin-form";
 import { ProductAdminTable } from "@/components/admin/product-admin-table";
 import { ExcelSyncPanel } from "@/components/admin/excel-sync-panel";
+import { sortPriceListsForDisplay } from "@/lib/pricing";
 
 export default async function AdminProductosPage({
   searchParams,
@@ -31,10 +32,13 @@ export default async function AdminProductosPage({
       take: 100,
     }),
     db.priceList.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, active: true },
+      select: { id: true, name: true, active: true, excelKey: true },
     }),
   ]);
+
+  const orderedLists = sortPriceListsForDisplay(priceLists).map(
+    ({ id, name, active }) => ({ id, name, active }),
+  );
 
   const tableRows = products.map((p) => ({
     id: p.id,
@@ -81,7 +85,7 @@ export default async function AdminProductosPage({
 
       <ProductAdminForm />
 
-      <ProductAdminTable products={tableRows} priceLists={priceLists} />
+      <ProductAdminTable products={tableRows} priceLists={orderedLists} />
     </div>
   );
 }

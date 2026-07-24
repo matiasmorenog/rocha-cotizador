@@ -6,6 +6,7 @@ import { CustomerAdminForm } from "@/components/admin/customer-admin-form";
 import { ExcelSyncPanel } from "@/components/admin/excel-sync-panel";
 import { Badge } from "@/components/ui/badge";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { sortPriceListsForDisplay } from "@/lib/pricing";
 
 export default async function AdminClientesPage({
   searchParams,
@@ -15,7 +16,7 @@ export default async function AdminClientesPage({
   const { q, edit } = await searchParams;
   const query = (q ?? "").trim();
 
-  const [customers, priceLists] = await Promise.all([
+  const [customers, priceListsRaw] = await Promise.all([
     db.customer.findMany({
       where: query
         ? {
@@ -30,10 +31,13 @@ export default async function AdminClientesPage({
       take: 100,
     }),
     db.priceList.findMany({
-      orderBy: { name: "asc" },
-      select: { id: true, name: true, active: true },
+      select: { id: true, name: true, active: true, excelKey: true },
     }),
   ]);
+
+  const priceLists = sortPriceListsForDisplay(priceListsRaw).map(
+    ({ id, name, active }) => ({ id, name, active }),
+  );
 
   const editing = edit ? customers.find((c) => c.id === edit) : undefined;
 
