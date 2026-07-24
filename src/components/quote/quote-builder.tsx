@@ -1,15 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { DataTableScroll } from "@/components/ui/data-table";
-import { formatPrice } from "@/lib/utils";
-import { useQuoteDraftStore } from "@/stores/quote-draft-store";
+import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
+import { cn, formatPrice } from "@/lib/utils";
+import {
+  effectiveLineTotal,
+  effectiveUnitPrice,
+  useQuoteDraftStore,
+} from "@/stores/quote-draft-store";
 import {
   useProductCatalog,
   type CatalogSearchProduct,
@@ -27,24 +32,39 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
   const lines = useQuoteDraftStore((s) => s.lines);
   const addOrUpdate = useQuoteDraftStore((s) => s.addOrUpdate);
   const setQty = useQuoteDraftStore((s) => s.setQty);
+  const setOrderByUnit = useQuoteDraftStore((s) => s.setOrderByUnit);
   const remove = useQuoteDraftStore((s) => s.remove);
   const clear = useQuoteDraftStore((s) => s.clear);
   const draftTotal = useQuoteDraftStore((s) => s.total());
 
   const catalog = useProductCatalog({ customerId });
   const { searchAsync } = catalog;
+  // Keep latest searchAsync in a ref so catalog load (new callback identity)
+  // does not cancel an in-flight search — that left the 2nd product lookup empty.
+  const searchAsyncRef = useRef(searchAsync);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CatalogSearchProduct[]>([]);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
   const [selected, setSelected] = useState<CatalogSearchProduct | null>(null);
   const [qty, setLocalQty] = useState("1");
+  const [orderByUnit, setLocalOrderByUnit] = useState(false);
   const [notes, setNotes] = useState("");
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  const searchRequestId = useRef(0);
 
   const catalogLoading = catalog.loading && !catalog.ready;
+  const selectedAllowsUnit = selected?.allowsUnitOrder === true;
+  const hasUnitOrderLines = lines.some((l) => l.orderByUnit);
+
+  useEffect(() => {
+    searchAsyncRef.current = searchAsync;
+  }, [searchAsync]);
 
   useEffect(() => {
     const q = query.trim();
@@ -52,19 +72,29 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
       return;
     }
     let cancelled = false;
-    // Local filter first; searchAsync falls back to API if catalog empty.
+    const requestId = ++searchRequestId.current;
+    // Prefer local catalog (after load). Debounce avoids spam while typing.
     const handle = setTimeout(() => {
-      void searchAsync(q).then((rows) => {
-        if (cancelled) return;
+      void searchAsyncRef.current(q).then((rows) => {
+        if (cancelled || requestId !== searchRequestId.current) return;
         setResults(rows);
+        setHighlightIndex(rows.length > 0 ? 0 : -1);
         setOpen(true);
       });
-    }, 50);
+    }, 200);
     return () => {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [query, searchAsync]);
+  }, [query, catalog.ready]);
+
+  useEffect(() => {
+    if (!open || highlightIndex < 0) return;
+    const el = listRef.current?.querySelector<HTMLElement>(
+      `[data-product-option="${highlightIndex}"]`,
+    );
+    el?.scrollIntoView({ block: "nearest" });
+  }, [highlightIndex, open, results]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -74,12 +104,64 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
+  function pickProduct(p: CatalogSearchProduct) {
+    setSelected(p);
+    setLocalOrderByUnit(false);
+    setQuery("");
+    setResults([]);
+    setHighlightIndex(-1);
+    setOpen(false);
+    queueMicrotask(() => {
+      document.getElementById("qty")?.focus();
+    });
+  }
+
   function onQueryChange(value: string) {
     setSelected(null);
+    setLocalOrderByUnit(false);
     setQuery(value);
+    setHighlightIndex(-1);
     if (value.trim().length < 1) {
       setResults([]);
       setOpen(false);
+    }
+  }
+
+  function onSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (selected) return;
+
+    if (e.key === "Escape") {
+      if (open) {
+        e.preventDefault();
+        setOpen(false);
+        setHighlightIndex(-1);
+      }
+      return;
+    }
+
+    if (!open || results.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIndex((i) => (i < 0 ? 0 : (i + 1) % results.length));
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIndex((i) =>
+        i < 0 ? results.length - 1 : (i - 1 + results.length) % results.length,
+      );
+      return;
+    }
+    if (e.key === "Enter") {
+      const pick =
+        highlightIndex >= 0 && highlightIndex < results.length
+          ? results[highlightIndex]
+          : results[0];
+      if (pick) {
+        e.preventDefault();
+        pickProduct(pick);
+      }
     }
   }
 
@@ -90,18 +172,25 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
       setError("Cantidad inválida");
       return;
     }
+    const byUnit = selectedAllowsUnit && orderByUnit;
     addOrUpdate({
       productId: selected.id,
       code: selected.code,
       name: selected.name,
       unitPrice: selected.unitPrice,
       qty: n,
+      orderByUnit: byUnit,
+      allowsUnitOrder: selected.allowsUnitOrder,
     });
     setSelected(null);
     setQuery("");
     setLocalQty("1");
+    setLocalOrderByUnit(false);
     setResults([]);
+    setHighlightIndex(-1);
+    setOpen(false);
     setError(null);
+    queueMicrotask(() => searchInputRef.current?.focus());
   }
 
   async function submitQuote() {
@@ -116,7 +205,11 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        items: lines.map((l) => ({ productId: l.productId, qty: l.qty })),
+        items: lines.map((l) => ({
+          productId: l.productId,
+          qty: l.qty,
+          orderByUnit: l.orderByUnit,
+        })),
         ...(trimmedNotes ? { notes: trimmedNotes } : {}),
         ...(customerId ? { customerId } : {}),
       }),
@@ -150,12 +243,29 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
       ) : null}
 
       <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-[1fr_120px_auto]">
+        <div
+          className={cn(
+            "grid gap-3",
+            selectedAllowsUnit
+              ? "md:grid-cols-[1fr_minmax(0,auto)_auto]"
+              : "md:grid-cols-[1fr_120px_auto]",
+          )}
+        >
           <div className="relative" ref={boxRef}>
             <Label htmlFor="product-search">Producto</Label>
             <div className="relative">
               <Input
+                ref={searchInputRef}
                 id="product-search"
+                role="combobox"
+                aria-expanded={open && results.length > 0}
+                aria-controls="product-search-listbox"
+                aria-autocomplete="list"
+                aria-activedescendant={
+                  open && highlightIndex >= 0
+                    ? `product-option-${highlightIndex}`
+                    : undefined
+                }
                 placeholder={
                   catalog.ready
                     ? "Buscar por nombre o código…"
@@ -165,6 +275,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                 }
                 value={selected ? `${selected.code} — ${selected.name}` : query}
                 onChange={(e) => onQueryChange(e.target.value)}
+                onKeyDown={onSearchKeyDown}
                 onFocus={() => results.length > 0 && setOpen(true)}
                 autoComplete="off"
                 disabled={catalogLoading}
@@ -177,17 +288,28 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
               ) : null}
             </div>
             {open && results.length > 0 ? (
-              <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg">
-                {results.map((p) => (
-                  <li key={p.id}>
+              <ul
+                ref={listRef}
+                id="product-search-listbox"
+                role="listbox"
+                className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
+              >
+                {results.map((p, index) => (
+                  <li key={p.id} role="presentation">
                     <button
                       type="button"
-                      className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-neutral-50"
-                      onClick={() => {
-                        setSelected(p);
-                        setQuery("");
-                        setOpen(false);
-                      }}
+                      id={`product-option-${index}`}
+                      role="option"
+                      aria-selected={index === highlightIndex}
+                      data-product-option={index}
+                      className={cn(
+                        "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm",
+                        index === highlightIndex
+                          ? "bg-[var(--brand-primary-soft)]"
+                          : "hover:bg-neutral-50",
+                      )}
+                      onMouseEnter={() => setHighlightIndex(index)}
+                      onClick={() => pickProduct(p)}
                     >
                       <span className="font-medium text-neutral-900">
                         {p.code} — {p.name}
@@ -195,6 +317,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                       <span className="text-xs text-neutral-500">
                         {p.rubro ? `${p.rubro} · ` : ""}
                         {formatPrice(p.unitPrice)}
+                        {p.allowsUnitOrder ? " · kg o unidades" : ""}
                       </span>
                     </button>
                   </li>
@@ -202,20 +325,63 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
               </ul>
             ) : null}
             {open && query.trim().length > 0 && results.length === 0 && !catalogLoading ? (
-              <p className="mt-2 text-sm text-neutral-500">Sin productos</p>
+              <p className="absolute z-50 mt-1 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-500 shadow-lg">
+                Sin productos
+              </p>
             ) : null}
             {catalog.error && !catalog.ready ? (
-              <p className="mt-2 text-sm text-red-600">{catalog.error}</p>
+              <p className="absolute z-50 mt-1 w-full rounded-md border border-red-200 bg-white px-3 py-2 text-sm text-red-600 shadow-lg">
+                {catalog.error}
+              </p>
             ) : null}
           </div>
-          <div>
-            <Label htmlFor="qty">Cantidad</Label>
-            <Input
-              id="qty"
-              inputMode="decimal"
-              value={qty}
-              onChange={(e) => setLocalQty(e.target.value)}
-            />
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="w-[120px] min-w-[6rem] flex-1 sm:flex-none">
+              <Label htmlFor="qty">Cantidad</Label>
+              <Input
+                id="qty"
+                inputMode="decimal"
+                value={qty}
+                onChange={(e) => setLocalQty(e.target.value)}
+              />
+            </div>
+            {selectedAllowsUnit ? (
+              <div className="flex min-w-[9rem] flex-1 items-end gap-3 sm:flex-none">
+                <div className="min-w-0 flex-1">
+                  <Label htmlFor="order-mode">Medida</Label>
+                  <select
+                    id="order-mode"
+                    value={orderByUnit ? "unit" : "kg"}
+                    onChange={(e) =>
+                      setLocalOrderByUnit(e.target.value === "unit")
+                    }
+                    className="flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-9 text-sm focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
+                  >
+                    <option value="kg">Kg</option>
+                    <option value="unit">Unidades</option>
+                  </select>
+                </div>
+                {orderByUnit ? (
+                  <span className="group relative mb-2 ml-0.5 inline-flex shrink-0">
+                    <button
+                      type="button"
+                      className="inline-flex rounded text-amber-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-1"
+                      aria-describedby="unit-order-warning-tip"
+                      aria-label={UNIT_ORDER_PRICE_WARNING}
+                    >
+                      <AlertTriangle className="h-5 w-5" aria-hidden />
+                    </button>
+                    <span
+                      id="unit-order-warning-tip"
+                      role="tooltip"
+                      className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-md bg-neutral-900 px-2.5 py-1.5 text-center text-xs leading-snug text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                    >
+                      {UNIT_ORDER_PRICE_WARNING}
+                    </span>
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           <div className="flex items-end">
             <Button type="button" onClick={addLine} disabled={!selected}>
@@ -225,14 +391,25 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
         </div>
       </div>
 
+      {hasUnitOrderLines ? (
+        <div
+          className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+          role="status"
+        >
+          {UNIT_ORDER_PRICE_WARNING}. Las líneas por unidades figuran con precio $0
+          hasta el pesaje.
+        </div>
+      ) : null}
+
       <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
         <DataTableScroll className="rounded-none border-0">
-          <table className="w-full min-w-[36rem] text-sm">
+          <table className="w-full min-w-[40rem] text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
                 <th className="px-3 py-2 font-medium">Código</th>
                 <th className="px-3 py-2 font-medium">Producto</th>
                 <th className="px-3 py-2 font-medium">Cant.</th>
+                <th className="px-3 py-2 font-medium">Medida</th>
                 <th className="px-3 py-2 font-medium">Precio</th>
                 <th className="px-3 py-2 font-medium">Importe</th>
                 <th className="px-3 py-2" />
@@ -241,15 +418,27 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
             <tbody>
               {lines.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-3 py-8 text-center text-neutral-500">
+                  <td colSpan={7} className="px-3 py-8 text-center text-neutral-500">
                     Sin productos. Buscá y agregá líneas.
                   </td>
                 </tr>
               ) : (
                 lines.map((l) => (
-                  <tr key={l.productId} className="border-t border-neutral-100">
+                  <tr
+                    key={l.productId}
+                    className={`border-t border-neutral-100 ${
+                      l.orderByUnit ? "bg-amber-50/40" : ""
+                    }`}
+                  >
                     <td className="px-3 py-2 font-mono text-xs">{l.code}</td>
-                    <td className="px-3 py-2">{l.name}</td>
+                    <td className="px-3 py-2">
+                      <div>{l.name}</div>
+                      {l.orderByUnit ? (
+                        <p className="mt-0.5 text-xs text-amber-800">
+                          {UNIT_ORDER_PRICE_WARNING}
+                        </p>
+                      ) : null}
+                    </td>
                     <td className="px-3 py-2">
                       <Input
                         className="h-8 w-24"
@@ -258,11 +447,33 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                         step="any"
                         value={l.qty}
                         onChange={(e) => setQty(l.productId, Number(e.target.value))}
+                        aria-label={
+                          l.orderByUnit ? "Cantidad en unidades" : "Cantidad en kg"
+                        }
                       />
                     </td>
-                    <td className="px-3 py-2">{formatPrice(l.unitPrice)}</td>
+                    <td className="px-3 py-2">
+                      {l.allowsUnitOrder ? (
+                        <select
+                          value={l.orderByUnit ? "unit" : "kg"}
+                          onChange={(e) =>
+                            setOrderByUnit(l.productId, e.target.value === "unit")
+                          }
+                          aria-label="Medida"
+                          className="flex h-8 w-[7.5rem] rounded-md border border-neutral-300 bg-white pl-2 pr-8 text-xs focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
+                        >
+                          <option value="kg">Kg</option>
+                          <option value="unit">Unidades</option>
+                        </select>
+                      ) : (
+                        <span className="text-neutral-500">kg</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {formatPrice(effectiveUnitPrice(l))}
+                    </td>
                     <td className="px-3 py-2 font-medium">
-                      {formatPrice(l.unitPrice * l.qty)}
+                      {formatPrice(effectiveLineTotal(l))}
                     </td>
                     <td className="px-3 py-2">
                       <Button
@@ -299,7 +510,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Opcional — aclaraciones del pedido (horario, detalle, etc.)"
-          className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
 

@@ -3,6 +3,7 @@ import { requireCustomerSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { quoteStatusLabel } from "@/lib/quote-status";
 import { DataTableScroll } from "@/components/ui/data-table";
 
 export default async function RemitosPage() {
@@ -45,7 +46,7 @@ export default async function RemitosPage() {
                     {q.createdAt.toLocaleString("es-AR")}
                   </td>
                   <td className="px-3 py-2">
-                    <Badge variant="success">{q.status}</Badge>
+                    <Badge variant="success">{quoteStatusLabel(q.status)}</Badge>
                   </td>
                   <td className="px-3 py-2 font-medium">{formatPrice(q.total)}</td>
                 </tr>

@@ -72,7 +72,9 @@ export function PriceListRowActions({
           >
             <Trash2 className="h-4 w-4" aria-hidden />
           </Button>
-        ) : null}
+        ) : (
+          <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
+        )}
       </div>
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
     </div>

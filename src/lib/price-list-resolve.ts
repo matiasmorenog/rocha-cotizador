@@ -1,6 +1,9 @@
 import { Decimal } from "@prisma/client/runtime/library";
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { unitPriceForProduct } from "@/lib/pricing";
+import { getActiveProductsBase } from "@/lib/products-cache";
 
 /** Load unit prices for a price list keyed by product id. */
 export async function getPriceListUnitPricesByProductId(
@@ -40,14 +43,37 @@ export async function effectiveDiscountPriceListId(
   return priceListId;
 }
 
+export type CustomerPricingContext = {
+  priceListId: string | null;
+  active: boolean;
+};
+
+/**
+ * Cached customerId → priceListId (+ active). Invalidate via `customers` tag
+ * on customer mutate and price-list delete (reassigns customers).
+ */
+export async function getCachedCustomerPricingContext(
+  customerId: string,
+): Promise<CustomerPricingContext | null> {
+  const cached = unstable_cache(
+    async (): Promise<CustomerPricingContext | null> => {
+      const customer = await db.customer.findUnique({
+        where: { id: customerId },
+        select: { priceListId: true, active: true },
+      });
+      return customer;
+    },
+    ["customer-pricing-context", customerId],
+    { tags: [CACHE_TAGS.customers], revalidate: 3600 },
+  );
+  return cached();
+}
+
 /** Resolve customer priceListId (null / isBase → treat as Precio base). */
 export async function getCustomerPriceListId(
   customerId: string,
 ): Promise<string | null> {
-  const customer = await db.customer.findUnique({
-    where: { id: customerId },
-    select: { priceListId: true },
-  });
+  const customer = await getCachedCustomerPricingContext(customerId);
   return customer?.priceListId ?? null;
 }
 
@@ -73,6 +99,36 @@ export async function resolveUnitPricesForList(
     );
   }
   return out;
+}
+
+/**
+ * Catalog unitPrices map cached by version + list.
+ * Invalidated with products / price-lists tags after admin mutations.
+ */
+export async function getCachedUnitPricesForCatalog(
+  priceListId: string | null,
+  catalogVersion: string,
+): Promise<Record<string, number>> {
+  const listKey = priceListId ?? "base";
+  const cached = unstable_cache(
+    async () => {
+      const products = await getActiveProductsBase();
+      return resolveUnitPricesForList(
+        products.map((p) => ({
+          id: p.id,
+          code: p.code,
+          basePrice: p.basePrice,
+        })),
+        priceListId,
+      );
+    },
+    ["catalog-unit-prices", listKey, catalogVersion],
+    {
+      tags: [CACHE_TAGS.products, CACHE_TAGS.priceLists],
+      revalidate: 3600,
+    },
+  );
+  return cached();
 }
 
 /** Keep base PriceListItem in sync when Product.basePrice changes. */

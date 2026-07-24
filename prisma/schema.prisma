@@ -53,15 +53,17 @@ model Customer {
 }
 
 model Product {
-  id             String          @id @default(cuid())
-  code           String          @unique
-  name           String
-  rubro          String?
-  basePrice      Decimal         @db.Decimal(12, 2)
-  active         Boolean         @default(true)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  priceListItems PriceListItem[]
+  id              String          @id @default(cuid())
+  code            String          @unique
+  name            String
+  rubro           String?
+  basePrice       Decimal         @db.Decimal(12, 2)
+  /// When true, customer may order by unit count (price TBD after weigh) or by kg.
+  allowsUnitOrder Boolean         @default(false)
+  active          Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  priceListItems  PriceListItem[]
 
   @@index([active, code])
 }
@@ -123,6 +125,8 @@ model QuoteItem {
   productCode String
   productName String
   qty         Decimal @db.Decimal(12, 3)
+  /// True when qty is unit count (not kg); unitPrice/lineTotal must be 0.
+  orderByUnit Boolean @default(false)
   unitPrice   Decimal @db.Decimal(12, 2)
   lineTotal   Decimal @db.Decimal(14, 2)
 

@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
 import {
   getActiveProductsBase,
   getProductsCatalogVersion,
 } from "@/lib/products-cache";
-import { resolveUnitPricesForList } from "@/lib/price-list-resolve";
+import {
+  getCachedCustomerPricingContext,
+  getCachedUnitPricesForCatalog,
+} from "@/lib/price-list-resolve";
 
 /**
  * Shared base catalog + per-customer unitPrices map.
@@ -20,10 +22,9 @@ export async function GET(req: NextRequest) {
   let priceListId: string | null = null;
 
   if (session.user.role === "CUSTOMER" && session.user.customerId) {
-    const customer = await db.customer.findUnique({
-      where: { id: session.user.customerId },
-      select: { priceListId: true },
-    });
+    const customer = await getCachedCustomerPricingContext(
+      session.user.customerId,
+    );
     priceListId = customer?.priceListId ?? null;
   } else if (session.user.role === "ADMIN") {
     const customerId = (req.nextUrl.searchParams.get("customerId") ?? "").trim();
@@ -33,10 +34,7 @@ export async function GET(req: NextRequest) {
         { status: 400 },
       );
     }
-    const customer = await db.customer.findUnique({
-      where: { id: customerId },
-      select: { priceListId: true, active: true },
-    });
+    const customer = await getCachedCustomerPricingContext(customerId);
     if (!customer) {
       return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
     }
@@ -54,15 +52,7 @@ export async function GET(req: NextRequest) {
     req.headers.get("If-None-Match")?.replaceAll('"', "").trim() ||
     "";
 
-  const products = await getActiveProductsBase();
-  const unitPrices = await resolveUnitPricesForList(
-    products.map((p) => ({
-      id: p.id,
-      code: p.code,
-      basePrice: p.basePrice,
-    })),
-    priceListId,
-  );
+  const unitPrices = await getCachedUnitPricesForCatalog(priceListId, version);
 
   if (clientVersion && clientVersion === catalogKey) {
     return NextResponse.json(
@@ -81,6 +71,8 @@ export async function GET(req: NextRequest) {
       },
     );
   }
+
+  const products = await getActiveProductsBase();
 
   return NextResponse.json(
     {

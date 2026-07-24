@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,9 +31,12 @@ type CustomerRow = {
 export function CustomerAdminForm({
   customer,
   priceLists,
+  onCancel,
 }: {
   customer?: CustomerRow;
   priceLists: PriceListOption[];
+  /** Create mode: dismiss form without saving. */
+  onCancel?: () => void;
 }) {
   const router = useRouter();
   const baseListId =
@@ -55,17 +57,7 @@ export function CustomerAdminForm({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
   const isEdit = Boolean(customer);
-
-  if (!isEdit && !showCreate) {
-    return (
-      <Button type="button" onClick={() => setShowCreate(true)}>
-        <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-        Nuevo cliente
-      </Button>
-    );
-  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -117,22 +109,9 @@ export function CustomerAdminForm({
       onSubmit={onSubmit}
       className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
     >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-neutral-800">
-          {isEdit ? "Editar cliente" : "Nuevo cliente"}
-        </p>
-        {!isEdit ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setShowCreate(false)}
-            aria-label="Cerrar formulario"
-          >
-            <X className="h-4 w-4" aria-hidden />
-          </Button>
-        ) : null}
-      </div>
+      <p className="text-sm font-medium text-neutral-800">
+        {isEdit ? "Editar cliente" : "Nuevo cliente"}
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label>Código</Label>
@@ -196,7 +175,7 @@ export function CustomerAdminForm({
             <select
               value={priceListId}
               onChange={(e) => setPriceListId(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
+              className="flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-10 text-sm focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
               required
             >
               {inactiveSelected ? (
@@ -218,12 +197,12 @@ export function CustomerAdminForm({
       </div>
 
       <div className="space-y-1">
-        <Label>Notas</Label>
+        <Label>Observaciones</Label>
         <textarea
           rows={4}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
 
@@ -255,9 +234,21 @@ export function CustomerAdminForm({
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
 
-      <Button type="submit" disabled={loading}>
-        {loading ? "Guardando…" : customer ? "Actualizar cliente" : "Crear cliente"}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" disabled={loading}>
+          {loading ? "Guardando…" : customer ? "Actualizar cliente" : "Crear cliente"}
+        </Button>
+        {!isEdit && onCancel ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading}
+            onClick={onCancel}
+          >
+            Cancelar
+          </Button>
+        ) : null}
+      </div>
     </form>
   );
 }

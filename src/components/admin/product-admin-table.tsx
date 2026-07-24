@@ -1,14 +1,18 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Pencil, X } from "lucide-react";
+import { Check, Pencil, Plus, X } from "lucide-react";
 import {
   AdminTableActions,
   AdminTableIconAction,
 } from "@/components/admin/admin-table";
-import type { PriceListOption } from "@/components/admin/product-admin-form";
+import {
+  ProductAdminForm,
+  type PriceListOption,
+} from "@/components/admin/product-admin-form";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
@@ -21,6 +25,7 @@ export type ProductTableRow = {
   rubro: string | null;
   basePrice: number;
   active: boolean;
+  allowsUnitOrder: boolean;
   /** priceListId → unitPrice */
   listPrices: Record<string, number>;
 };
@@ -66,6 +71,7 @@ function ProductEditRow({
     return init;
   });
   const [active, setActive] = useState(product.active);
+  const [allowsUnitOrder, setAllowsUnitOrder] = useState(product.allowsUnitOrder);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -110,6 +116,7 @@ function ProductEditRow({
         rubro,
         basePrice: base,
         active,
+        allowsUnitOrder,
         listPrices: listPricePayload,
       }),
     });
@@ -197,6 +204,24 @@ function ProductEditRow({
         </label>
         {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
       </td>
+      <td className="px-3 py-2">
+        <label
+          className="inline-flex cursor-pointer items-center gap-2"
+          title={
+            allowsUnitOrder
+              ? "Pedido por unidades o kg"
+              : "Solo por kg"
+          }
+        >
+          <Switch
+            form={formId}
+            checked={allowsUnitOrder}
+            onChange={(e) => setAllowsUnitOrder(e.target.checked)}
+            disabled={loading}
+            aria-label="Permite pedido por unidades"
+          />
+        </label>
+      </td>
       <td className="px-3 py-2 text-right">
         <AdminTableActions className="justify-end">
           <AdminTableIconAction
@@ -250,6 +275,11 @@ function ProductViewRow({
           {product.active ? "Activo" : "Inactivo"}
         </Badge>
       </td>
+      <td className="px-3 py-2">
+        <Badge variant={product.allowsUnitOrder ? "success" : "default"}>
+          {product.allowsUnitOrder ? "Unidad/Kg" : "Solo kg"}
+        </Badge>
+      </td>
       <td className="px-3 py-2 text-right">
         <AdminTableActions className="justify-end">
           <AdminTableIconAction
@@ -274,59 +304,99 @@ export function ProductAdminTable({
   products: ProductTableRow[];
   priceLists: PriceListOption[];
 }) {
+  const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const activeLists = priceLists.filter((l) => l.active);
   const isBusy = editingId !== null;
 
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return products;
+    return products.filter(
+      (p) =>
+        p.code.toLowerCase().includes(needle) ||
+        p.name.toLowerCase().includes(needle) ||
+        (p.rubro ?? "").toLowerCase().includes(needle),
+    );
+  }, [products, query]);
+
   return (
-    <DataTableScroll>
-      <table className="w-full min-w-[36rem] text-sm">
-        <thead className="bg-neutral-50 text-left text-neutral-600">
-          <tr>
-            <th className="px-3 py-2">Código</th>
-            <th className="px-3 py-2">Nombre</th>
-            <th className="px-3 py-2">Rubro</th>
-            <th className="px-3 py-2">Precio base</th>
-            {activeLists.map((l) => (
-              <th key={l.id} className="whitespace-nowrap px-3 py-2">
-                {l.name}
-              </th>
-            ))}
-            <th className="px-3 py-2">Estado</th>
-            <th className="px-3 py-2" />
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((p) =>
-            editingId === p.id ? (
-              <ProductEditRow
-                key={p.id}
-                product={p}
-                activeLists={activeLists}
-                onCancel={() => setEditingId(null)}
-              />
-            ) : (
-              <ProductViewRow
-                key={p.id}
-                product={p}
-                activeLists={activeLists}
-                editDisabled={isBusy}
-                onStartEdit={() => setEditingId(p.id)}
-              />
-            ),
-          )}
-          {products.length === 0 ? (
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar código, nombre o rubro…"
+          aria-label="Buscar productos"
+          className="min-w-0 flex-1"
+        />
+        {!creating ? (
+          <Button
+            type="button"
+            className="w-full shrink-0 sm:w-auto"
+            onClick={() => setCreating(true)}
+          >
+            <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+            Nuevo producto
+          </Button>
+        ) : null}
+      </div>
+      {creating ? (
+        <ProductAdminForm onCancel={() => setCreating(false)} />
+      ) : null}
+      <DataTableScroll>
+        <table className="w-full min-w-[36rem] text-sm">
+          <thead className="bg-neutral-50 text-left text-neutral-600">
             <tr>
-              <td
-                colSpan={5 + activeLists.length}
-                className="px-3 py-8 text-center text-neutral-500"
-              >
-                No hay productos
-              </td>
+              <th className="px-3 py-2">Código</th>
+              <th className="px-3 py-2">Nombre</th>
+              <th className="px-3 py-2">Rubro</th>
+              <th className="px-3 py-2">Base</th>
+              {activeLists.map((l) => (
+                <th key={l.id} className="whitespace-nowrap px-3 py-2">
+                  {l.name}
+                </th>
+              ))}
+              <th className="px-3 py-2">Estado</th>
+              <th className="px-3 py-2">Medida</th>
+              <th className="px-3 py-2" />
             </tr>
-          ) : null}
-        </tbody>
-      </table>
-    </DataTableScroll>
+          </thead>
+          <tbody>
+            {filtered.map((p) =>
+              editingId === p.id ? (
+                <ProductEditRow
+                  key={p.id}
+                  product={p}
+                  activeLists={activeLists}
+                  onCancel={() => setEditingId(null)}
+                />
+              ) : (
+                <ProductViewRow
+                  key={p.id}
+                  product={p}
+                  activeLists={activeLists}
+                  editDisabled={isBusy}
+                  onStartEdit={() => setEditingId(p.id)}
+                />
+              ),
+            )}
+            {filtered.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6 + activeLists.length}
+                  className="px-3 py-8 text-center text-neutral-500"
+                >
+                  {query.trim()
+                    ? "Sin productos para esa búsqueda"
+                    : "No hay productos"}
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </DataTableScroll>
+    </div>
   );
 }

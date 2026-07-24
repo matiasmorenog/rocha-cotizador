@@ -22,6 +22,7 @@ const bodySchema = z.object({
       z.object({
         productId: z.string().min(1),
         qty: z.number().positive(),
+        orderByUnit: z.boolean().optional().default(false),
       }),
     )
     .min(1),
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
     productCode: string;
     productName: string;
     qty: Decimal;
+    orderByUnit: boolean;
     unitPrice: Decimal;
     lineTotal: Decimal;
   }> = [];
@@ -90,16 +92,42 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
+
+    const orderByUnit = item.orderByUnit === true;
+    if (orderByUnit && !product.allowsUnitOrder) {
+      return NextResponse.json(
+        {
+          error: `El producto ${product.code} no admite pedido por unidades`,
+        },
+        { status: 400 },
+      );
+    }
+
+    const qty = new Decimal(item.qty);
+    if (orderByUnit) {
+      const zero = new Decimal(0).toDecimalPlaces(2);
+      lines.push({
+        productId: product.id,
+        productCode: product.code,
+        productName: product.name,
+        qty,
+        orderByUnit: true,
+        unitPrice: zero,
+        lineTotal: zero,
+      });
+      continue;
+    }
+
     const unitPrice = unitPriceForProduct(
       product.basePrice,
       listPrices?.get(product.id) ?? null,
     );
-    const qty = new Decimal(item.qty);
     lines.push({
       productId: product.id,
       productCode: product.code,
       productName: product.name,
       qty,
+      orderByUnit: false,
       unitPrice,
       lineTotal: lineTotal(unitPrice, qty),
     });
@@ -122,6 +150,7 @@ export async function POST(req: NextRequest) {
           productCode: l.productCode,
           productName: l.productName,
           qty: l.qty,
+          orderByUnit: l.orderByUnit,
           unitPrice: l.unitPrice,
           lineTotal: l.lineTotal,
         })),

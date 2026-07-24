@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,26 +14,17 @@ export type PriceListOption = {
 };
 
 /** Compact create-only form. Edits (incl. list prices) happen inline in ProductAdminTable. */
-export function ProductAdminForm() {
+export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [rubro, setRubro] = useState("");
   const [basePrice, setBasePrice] = useState("");
   const [active, setActive] = useState(true);
+  const [allowsUnitOrder, setAllowsUnitOrder] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
-
-  if (!showCreate) {
-    return (
-      <Button type="button" onClick={() => setShowCreate(true)}>
-        <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-        Nuevo producto
-      </Button>
-    );
-  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -51,6 +41,7 @@ export function ProductAdminForm() {
         rubro,
         basePrice: Number(basePrice),
         active,
+        allowsUnitOrder,
       }),
     });
     setLoading(false);
@@ -65,6 +56,7 @@ export function ProductAdminForm() {
     setRubro("");
     setBasePrice("");
     setActive(true);
+    setAllowsUnitOrder(false);
     router.refresh();
   }
 
@@ -73,18 +65,7 @@ export function ProductAdminForm() {
       onSubmit={onSubmit}
       className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4"
     >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-neutral-800">Nuevo producto</p>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setShowCreate(false)}
-          aria-label="Cerrar formulario"
-        >
-          <X className="h-4 w-4" aria-hidden />
-        </Button>
-      </div>
+      <p className="text-sm font-medium text-neutral-800">Nuevo producto</p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1">
           <Label>Código</Label>
@@ -130,11 +111,32 @@ export function ProductAdminForm() {
         />
         Activo
       </label>
+      <label
+        htmlFor="product-unit-order-create"
+        className="flex cursor-pointer items-center gap-2.5 text-sm"
+      >
+        <Switch
+          id="product-unit-order-create"
+          checked={allowsUnitOrder}
+          onChange={(e) => setAllowsUnitOrder(e.target.checked)}
+        />
+        Permite pedido por unidades (precio al pesar)
+      </label>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
-      <Button type="submit" disabled={loading}>
-        {loading ? "Guardando…" : "Crear producto"}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" disabled={loading}>
+          {loading ? "Guardando…" : "Crear producto"}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={loading}
+          onClick={onCancel}
+        >
+          Cancelar
+        </Button>
+      </div>
     </form>
   );
 }

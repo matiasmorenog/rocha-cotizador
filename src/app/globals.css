@@ -14,26 +14,59 @@
   input:where([type="button"], [type="submit"], [type="reset"]):disabled {
     cursor: not-allowed;
   }
+
+  /* Brand focus: kill UA blue; keyboard-only via :focus-visible */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+  }
 }
 
 :root {
-  --background: #f6f4ef;
-  --foreground: #1c1917;
+  /* Surfaces: latte/coffee from ROCHA mark. Accent: classic maroon for CTAs. */
+  --background: #f5efe7;
+  --foreground: #2c241f;
   --brand-primary: #8b1e1e;
-  --brand-primary-soft: #f3e4e4;
+  --brand-primary-soft: #ebe2d8;
+  --brand-latte: #d2bfa9;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-ring: var(--brand-primary);
   --font-sans: var(--font-source-sans);
 }
 
+/*
+  Solid base on html so body bg does NOT propagate to the viewport canvas.
+  Propagated body gradients size to the viewport and repeat by default → hard
+  horizontal seam (~100vh) on tall scroll pages (admin lists, etc.).
+  Soft radials stay on a fixed, non-repeating layer (viewport-attached, no tile).
+*/
+html {
+  background-color: var(--background);
+}
+
 body {
-  background:
-    radial-gradient(ellipse 80% 50% at 10% -10%, #efe6d8 0%, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 100% 0%, #e8d9d4 0%, transparent 50%),
-    var(--background);
+  background-color: var(--background);
+  background-image:
+    radial-gradient(
+      ellipse 80% 50% at 10% -10%,
+      color-mix(in srgb, #e8ddd2 75%, transparent) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 100% 0%,
+      color-mix(in srgb, var(--brand-latte) 45%, transparent) 0%,
+      transparent 50%
+    );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-source-sans), system-ui, sans-serif;
 }
@@ -108,6 +141,22 @@ input[type="week"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
 
+/* Native <select>: custom chevron inset from the right edge (OS arrow ignores padding). */
+select:not([multiple]) {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-inline-end: 2.5rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23525252' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem 1rem;
+}
+
+select:not([multiple]):disabled {
+  opacity: 0.5;
+}
+
 /* Skeleton shimmer — adapted from nexus admin/storefront-skeleton */
 @keyframes rocha-skeleton-shimmer {
   0% {
@@ -121,9 +170,9 @@ input[type="week"]::-webkit-calendar-picker-indicator:hover {
 .rocha-skeleton {
   background: linear-gradient(
     90deg,
-    #ebe4dc 0%,
-    #f3e4e4 45%,
-    #ebe4dc 100%
+    var(--brand-primary-soft) 0%,
+    color-mix(in srgb, var(--brand-latte) 35%, var(--brand-primary-soft)) 45%,
+    var(--brand-primary-soft) 100%
   );
   background-size: 200% 100%;
   animation: rocha-skeleton-shimmer 1.4s ease-in-out infinite;
@@ -132,13 +181,15 @@ input[type="week"]::-webkit-calendar-picker-indicator:hover {
 @media (prefers-reduced-motion: reduce) {
   .rocha-skeleton {
     animation: none;
-    background: #ebe4dc;
+    background: var(--brand-primary-soft);
   }
 }
 
 @media print {
+  html,
   body {
     background: white !important;
+    background-image: none !important;
   }
   .print\:hidden {
     display: none !important;

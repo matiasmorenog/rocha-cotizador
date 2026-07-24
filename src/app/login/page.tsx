@@ -2,8 +2,27 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { auth } from "@/lib/auth";
+import { BrandBackdrop } from "@/components/brand-backdrop";
+import { BrandLogo } from "@/components/brand-logo";
 import { CustomerLoginForm } from "@/components/auth/customer-login-form";
+import { Skeleton } from "@/components/ui/skeleton";
 import { safeCallbackUrl } from "@/lib/callback-url";
+
+function LoginFormFallback() {
+  return (
+    <div className="mx-auto flex w-full max-w-sm flex-col gap-4" aria-hidden>
+      <div className="space-y-1.5">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-10 w-full rounded-md" />
+      </div>
+      <div className="space-y-1.5">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-10 w-full rounded-md" />
+      </div>
+      <Skeleton className="h-10 w-full rounded-md" />
+    </div>
+  );
+}
 
 export default async function LoginPage({
   searchParams,
@@ -23,26 +42,33 @@ export default async function LoginPage({
     : "/entrar";
 
   return (
-    <div className="mx-auto max-w-md space-y-6 rounded-xl border border-neutral-200 bg-white/90 p-6 shadow-sm">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold text-neutral-900">Acceso clientes</h1>
-        <p className="text-sm text-neutral-600">
-          Código de cliente y contraseña (PIN inicial la primera vez)
+    <BrandBackdrop className="mx-auto flex min-h-[60vh] max-w-md items-center py-4">
+      <div className="w-full space-y-6 rounded-xl border border-[var(--brand-latte)]/50 bg-[var(--brand-primary-soft)]/95 p-6 shadow-sm backdrop-blur-[2px]">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <BrandLogo size="xl" priority />
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold text-neutral-900">
+              Acceso clientes
+            </h1>
+            <p className="text-sm text-neutral-600">
+              Código de cliente y contraseña (PIN inicial la primera vez)
+            </p>
+            {callbackUrl.startsWith("/remitos/") ? (
+              <p className="text-xs text-neutral-500">
+                Después del login vas a ver el remito del enlace.
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <Suspense fallback={<LoginFormFallback />}>
+          <CustomerLoginForm />
+        </Suspense>
+        <p className="text-center text-xs text-neutral-500">
+          <Link href={chooserHref} className="underline">
+            Elegir otro tipo de acceso
+          </Link>
         </p>
-        {callbackUrl.startsWith("/remitos/") ? (
-          <p className="text-xs text-neutral-500">
-            Después del login vas a ver el remito del enlace.
-          </p>
-        ) : null}
       </div>
-      <Suspense fallback={<p className="text-center text-sm text-neutral-500">Cargando…</p>}>
-        <CustomerLoginForm />
-      </Suspense>
-      <p className="text-center text-xs text-neutral-500">
-        <Link href={chooserHref} className="underline">
-          Elegir otro tipo de acceso
-        </Link>
-      </p>
-    </div>
+    </BrandBackdrop>
   );
 }

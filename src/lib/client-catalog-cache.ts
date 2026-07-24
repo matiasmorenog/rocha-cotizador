@@ -1,8 +1,8 @@
 import type { ProductBase } from "@/lib/product-base";
 
 /** Bump key when cache shape/semantics change — clears poisoned empty catalogs. */
-const CATALOG_KEY = "rocha:product-catalog:v3";
-const UNIT_PRICES_KEY = "rocha:unit-prices:v3";
+const CATALOG_KEY = "rocha:product-catalog:v4";
+const UNIT_PRICES_KEY = "rocha:unit-prices:v4";
 const MAX_AGE_MS = 1000 * 60 * 60; // 1h
 
 export type { ProductBase };
@@ -28,6 +28,8 @@ function purgeLegacyCatalogKeys(): void {
   try {
     sessionStorage.removeItem("rocha:product-catalog:v1");
     sessionStorage.removeItem("rocha:product-catalog:v2");
+    sessionStorage.removeItem("rocha:product-catalog:v3");
+    sessionStorage.removeItem("rocha:unit-prices:v3");
     sessionStorage.removeItem("rocha:price-factor:v1");
     sessionStorage.removeItem("rocha:price-factor:v2");
   } catch {
@@ -130,10 +132,9 @@ export function filterCatalog(
 
   const matched: ProductBase[] = [];
   for (const p of products) {
-    if (
-      p.code.toLowerCase().includes(needle) ||
-      p.name.toLowerCase().includes(needle)
-    ) {
+    const code = String(p.code ?? "").toLowerCase();
+    const name = String(p.name ?? "").toLowerCase();
+    if (code.includes(needle) || name.includes(needle)) {
       matched.push(p);
       if (matched.length >= take) break;
     }

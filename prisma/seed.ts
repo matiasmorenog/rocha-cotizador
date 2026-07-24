@@ -14,6 +14,10 @@ import {
   EXCEL_PRICE_LIST_DEFAULTS,
   excelListaToPriceListKey,
 } from "../src/lib/pricing";
+import {
+  UNIT_ORDER_PRODUCT_CODES,
+  productAllowsUnitOrderByCode,
+} from "../src/lib/unit-order-products";
 import { padCustomerCode, pinFromCustomerCode } from "../src/lib/utils";
 import { assertSafeDestructiveDb } from "./assert-safe-db";
 
@@ -194,9 +198,13 @@ async function seedFromExcel(xlsxPath: string) {
     const name = cellText(row.getCell(3).value);
     // Col 5 (Excel "Mayorista") → Product.basePrice + base list item.
     // Col 4 ("Minorista") ignored — not a PriceList.
+    // Allow basePrice 0 only for unit-order SKUs (yellow LPM); other $0 rows
+    // are placeholders and must stay out of the catalog.
     const basePrice = cellNumber(row.getCell(5).value);
+    const allowsUnitOrder = productAllowsUnitOrderByCode(code);
 
-    if (!name || basePrice <= 0) continue;
+    if (!name || basePrice < 0) continue;
+    if (basePrice === 0 && !allowsUnitOrder) continue;
 
     const listPrices: Record<string, number> = {
       [BASE_PRICE_LIST_EXCEL_KEY]: basePrice,
@@ -213,6 +221,7 @@ async function seedFromExcel(xlsxPath: string) {
     const chunk = productRows.slice(i, i + CHUNK);
     const results = await Promise.all(
       chunk.map(async (row) => {
+        const allowsUnitOrder = productAllowsUnitOrderByCode(row.code);
         const product = await db.product.upsert({
           where: { code: row.code },
           create: {
@@ -220,12 +229,14 @@ async function seedFromExcel(xlsxPath: string) {
             name: row.name,
             rubro: row.rubro,
             basePrice: row.basePrice,
+            allowsUnitOrder,
             active: true,
           },
           update: {
             name: row.name,
             rubro: row.rubro,
             basePrice: row.basePrice,
+            allowsUnitOrder,
             active: true,
           },
         });
@@ -253,6 +264,7 @@ async function seedFromExcel(xlsxPath: string) {
     }
   }
   console.log(`Products upserted: ${products}; price list items: ${listItems}`);
+  await seedUnitOrderFlags();
 
   const clientsSheet = workbook.getWorksheet("Lista Clientes");
   if (!clientsSheet) throw new Error('Missing sheet "Lista Clientes"');
@@ -385,6 +397,18 @@ async function seedBusinessSettings() {
   console.log("Business settings ready (WhatsApp notify default)");
 }
 
+/** Excel LPM yellow products — allow unit OR kg orders (price TBD after weigh). */
+async function seedUnitOrderFlags() {
+  const codes = [...UNIT_ORDER_PRODUCT_CODES];
+  const result = await db.product.updateMany({
+    where: { code: { in: codes } },
+    data: { allowsUnitOrder: true },
+  });
+  console.log(
+    `Unit-order flag ON for ${result.count}/${codes.length} yellow LPM codes`,
+  );
+}
+
 async function main() {
   assertSafeDestructiveDb();
 
@@ -400,6 +424,7 @@ async function main() {
   const xlsxPath = path.join(process.cwd(), "prisma", "data", "rocha_data.xlsx");
   if (!fs.existsSync(xlsxPath)) {
     console.warn(`Excel not found at ${xlsxPath} — skipping catalog seed`);
+    await seedUnitOrderFlags();
     return;
   }
   await seedFromExcel(xlsxPath);
