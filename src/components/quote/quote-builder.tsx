@@ -264,7 +264,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
               />
             </div>
             {selectedAllowsUnit ? (
-              <div className="flex min-w-[9rem] flex-1 items-end gap-1.5 sm:flex-none">
+              <div className="flex min-w-[9rem] flex-1 items-end gap-3 sm:flex-none">
                 <div className="min-w-0 flex-1">
                   <Label htmlFor="order-mode">Modo</Label>
                   <select
@@ -280,12 +280,22 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                   </select>
                 </div>
                 {orderByUnit ? (
-                  <span
-                    className="mb-2 inline-flex shrink-0 text-amber-700"
-                    title={UNIT_ORDER_PRICE_WARNING}
-                    aria-label={UNIT_ORDER_PRICE_WARNING}
-                  >
-                    <AlertTriangle className="h-5 w-5" aria-hidden />
+                  <span className="group relative mb-2 ml-0.5 inline-flex shrink-0">
+                    <button
+                      type="button"
+                      className="inline-flex rounded text-amber-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-1"
+                      aria-describedby="unit-order-warning-tip"
+                      aria-label={UNIT_ORDER_PRICE_WARNING}
+                    >
+                      <AlertTriangle className="h-5 w-5" aria-hidden />
+                    </button>
+                    <span
+                      id="unit-order-warning-tip"
+                      role="tooltip"
+                      className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-56 -translate-x-1/2 rounded-md bg-neutral-900 px-2.5 py-1.5 text-center text-xs leading-snug text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 group-focus-within:opacity-100"
+                    >
+                      {UNIT_ORDER_PRICE_WARNING}
+                    </span>
                   </span>
                 ) : null}
               </div>
