@@ -198,9 +198,13 @@ async function seedFromExcel(xlsxPath: string) {
     const name = cellText(row.getCell(3).value);
     // Col 5 (Excel "Mayorista") → Product.basePrice + base list item.
     // Col 4 ("Minorista") ignored — not a PriceList.
+    // Allow basePrice 0 only for unit-order SKUs (yellow LPM); other $0 rows
+    // are placeholders and must stay out of the catalog.
     const basePrice = cellNumber(row.getCell(5).value);
+    const allowsUnitOrder = productAllowsUnitOrderByCode(code);
 
-    if (!name || basePrice <= 0) continue;
+    if (!name || basePrice < 0) continue;
+    if (basePrice === 0 && !allowsUnitOrder) continue;
 
     const listPrices: Record<string, number> = {
       [BASE_PRICE_LIST_EXCEL_KEY]: basePrice,
