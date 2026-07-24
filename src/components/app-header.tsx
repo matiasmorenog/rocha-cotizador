@@ -15,17 +15,15 @@ export async function AppHeader() {
   return (
     <>
       <header className="border-b border-[var(--brand-latte)]/60 bg-[var(--brand-primary-soft)]/80 print:hidden">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2.5">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-2">
           <div className="flex min-w-0 items-center gap-2">
             {isAdmin ? <AdminMenuButton /> : null}
             <Link
               href={isCustomer ? "/cotizar" : isAdmin ? "/admin" : "/"}
-              className="flex min-w-0 items-center gap-2.5"
+              className="flex min-w-0 items-center"
+              aria-label="Rocha Cotizador"
             >
               <BrandLogo size="sm" />
-              <span className="hidden truncate text-sm font-medium tracking-tight text-[var(--brand-primary)] sm:inline">
-                Cotizador
-              </span>
             </Link>
           </div>
           <nav className="flex items-center gap-3 text-sm">

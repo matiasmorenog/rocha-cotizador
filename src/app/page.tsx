@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { auth } from "@/lib/auth";
 
@@ -9,9 +10,12 @@ export default async function HomePage() {
   if (session?.user?.role === "ADMIN") redirect("/admin");
 
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-8 text-center">
-      <div className="flex flex-col items-center gap-4">
-        <BrandLogo size="lg" priority />
+    <BrandBackdrop
+      variant="mosaic"
+      className="flex min-h-[70vh] flex-col items-center justify-center gap-8 text-center"
+    >
+      <div className="flex flex-col items-center gap-5">
+        <BrandLogo size="xl" priority />
         <p className="mx-auto max-w-md text-neutral-600">
           Ingresá con tu código de cliente y contraseña para armar cotizaciones y
           ver remitos.
@@ -31,6 +35,6 @@ export default async function HomePage() {
           Admin
         </Link>
       </div>
-    </div>
+    </BrandBackdrop>
   );
 }

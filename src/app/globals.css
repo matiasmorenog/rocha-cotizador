@@ -17,10 +17,10 @@
 }
 
 :root {
-  /* Palette aligned with ROCHA tienda de café logo (latte + roasted brown). */
+  /* Surfaces: latte/coffee from ROCHA mark. Accent: classic maroon for CTAs. */
   --background: #f5efe7;
   --foreground: #2c241f;
-  --brand-primary: #6b5348;
+  --brand-primary: #8b1e1e;
   --brand-primary-soft: #ebe2d8;
   --brand-latte: #d2bfa9;
 }
@@ -97,9 +97,9 @@ input[type="week"]::-webkit-calendar-picker-indicator {
   padding: 0;
   cursor: pointer;
   opacity: 0.85;
-  /* Tint default glyph toward --brand-primary (#6b5348) */
-  filter: invert(28%) sepia(18%) saturate(700%) hue-rotate(346deg)
-    brightness(0.85) contrast(0.95);
+  /* Tint default glyph toward --brand-primary (#8b1e1e) */
+  filter: invert(14%) sepia(65%) saturate(2500%) hue-rotate(345deg)
+    brightness(0.9) contrast(0.95);
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator:hover,

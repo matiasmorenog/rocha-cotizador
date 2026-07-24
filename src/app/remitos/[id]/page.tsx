@@ -110,7 +110,7 @@ export default async function RemitoDetailPage({
       <article className="print-remito rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
         <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-4">
           <div>
-            <BrandLogo size="sm" className="h-10 w-auto print:h-12" />
+            <BrandLogo size="sm" className="h-11 w-auto print:h-14" />
             <h2 className="mt-3 text-xl font-semibold">Remito {quote.number}</h2>
             <p className="text-sm text-neutral-600">
               Fecha: {quote.createdAt.toLocaleDateString("es-AR")}

@@ -3,15 +3,16 @@ import { cn } from "@/lib/utils";
 
 type BrandLogoProps = {
   /** Visual size of the mark */
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   priority?: boolean;
 };
 
 const SIZE = {
-  sm: { width: 120, height: 48, className: "h-9 w-auto" },
-  md: { width: 180, height: 72, className: "h-14 w-auto" },
-  lg: { width: 280, height: 112, className: "h-24 w-auto sm:h-28" },
+  sm: { width: 140, height: 56, className: "h-11 w-auto" },
+  md: { width: 220, height: 88, className: "h-20 w-auto" },
+  lg: { width: 320, height: 128, className: "h-28 w-auto sm:h-32" },
+  xl: { width: 400, height: 160, className: "h-36 w-auto sm:h-44" },
 } as const;
 
 /** Official Rocha tienda de café mark — beige + coffee brown. */
