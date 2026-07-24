@@ -357,8 +357,8 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                     }
                     className="flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
                   >
-                    <option value="kg">kg</option>
-                    <option value="unit">unidades</option>
+                    <option value="kg">Kg</option>
+                    <option value="unit">Unidades</option>
                   </select>
                 </div>
                 {orderByUnit ? (
@@ -462,8 +462,8 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                           aria-label="Medida"
                           className="flex h-8 w-[7.5rem] rounded-md border border-neutral-300 bg-white pl-2 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
                         >
-                          <option value="kg">kg</option>
-                          <option value="unit">unidades</option>
+                          <option value="kg">Kg</option>
+                          <option value="unit">Unidades</option>
                         </select>
                       ) : (
                         <span className="text-neutral-500">kg</span>
