@@ -111,6 +111,7 @@ export async function POST(req: NextRequest) {
     let priceListId: string | null = null;
     if (
       listRaw &&
+      listRaw.toLowerCase() !== "precio base" &&
       listRaw.toLowerCase() !== "minorista (base)" &&
       listRaw.toLowerCase() !== "mayorista (base)" &&
       listRaw.toLowerCase() !== "mayorista" &&

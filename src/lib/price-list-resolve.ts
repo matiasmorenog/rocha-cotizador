@@ -13,7 +13,7 @@ export async function getPriceListUnitPricesByProductId(
   return new Map(items.map((i) => [i.productId, i.unitPrice]));
 }
 
-/** Resolve customer priceListId (null = Minorista base / Product.basePrice). */
+/** Resolve customer priceListId (null = Precio base / Product.basePrice). */
 export async function getCustomerPriceListId(
   customerId: string,
 ): Promise<string | null> {

@@ -85,7 +85,7 @@ export function ProductAdminForm() {
           <Input value={rubro} onChange={(e) => setRubro(e.target.value)} />
         </div>
         <div className="space-y-1">
-          <Label>Precio base (minorista)</Label>
+          <Label>Precio base</Label>
           <Input
             type="number"
             min={0}

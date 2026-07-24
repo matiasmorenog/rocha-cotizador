@@ -22,7 +22,7 @@ export function PriceListRowActions({
   async function onDelete() {
     const customersNote =
       customerCount > 0
-        ? ` ${customerCount} cliente(s) pasarán a Minorista (base).`
+        ? ` ${customerCount} cliente(s) pasarán a Precio base.`
         : "";
     if (
       !window.confirm(

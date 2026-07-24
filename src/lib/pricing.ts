@@ -2,7 +2,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 
 /**
  * Effective unit price for a customer.
- * `priceListId` null → Minorista base (`Product.basePrice`).
+ * `priceListId` null → Precio base (`Product.basePrice`).
  * Missing list item → fallback to `basePrice`.
  */
 export function unitPriceForProduct(
@@ -19,9 +19,12 @@ export function lineTotal(unitPrice: Decimal, qty: Decimal | number | string): D
   return unitPrice.mul(new Decimal(qty)).toDecimalPlaces(2);
 }
 
-/** Default PriceList names keyed by Excel lista number (cols 4, 6–9). */
+/**
+ * Default PriceList names keyed by Excel lista number (cols 6–9 only).
+ * Col 5 = Product.basePrice (Excel header "Mayorista"; UI = Precio base).
+ * Col 4 ("Minorista" in Excel) is NOT a seeded PriceList — customers with lista 4 → base.
+ */
 export const EXCEL_PRICE_LIST_DEFAULTS: Record<string, { name: string; column: number }> = {
-  "4": { name: "Minorista", column: 4 },
   "6": { name: "Lista 20% dto", column: 6 },
   "7": { name: "Lista 15% dto", column: 7 },
   "8": { name: "Lista 10% dto", column: 8 },
@@ -29,15 +32,14 @@ export const EXCEL_PRICE_LIST_DEFAULTS: Record<string, { name: string; column: n
 };
 
 /**
- * Display order for known Excel keys: highest discount first, then Minorista list.
- * excelKey 6→20%, 7→15%, 8→10%, 9→5%, 4→Minorista.
+ * Display order for known Excel keys: highest discount first.
+ * excelKey 6→20%, 7→15%, 8→10%, 9→5%.
  */
 const EXCEL_KEY_DISPLAY_ORDER: Record<string, number> = {
   "6": 0,
   "7": 1,
   "8": 2,
   "9": 3,
-  "4": 4,
 };
 
 export type PriceListSortable = {
@@ -84,15 +86,15 @@ export function sortPriceListsForDisplay<T extends PriceListSortable>(
 
 /**
  * Excel lista → price list excelKey.
- * "5" / empty / unknown → null (Product.basePrice = Minorista sin descuento in UI).
- * Excel sheet header for col 5 may still say "Mayorista"; product owner names that base Minorista.
+ * "4" / "5" / empty / unknown → null (Product.basePrice = Precio base in UI).
+ * Only 6–9 map to discount PriceLists. Col 4 in the sheet is not seeded as a list.
  */
 export function excelListaToPriceListKey(
   lista: string | number | null | undefined,
 ): string | null {
   if (lista === null || lista === undefined) return null;
   const key = String(lista).trim();
-  if (!key || key === "5") return null;
+  if (!key || key === "4" || key === "5") return null;
   if (key in EXCEL_PRICE_LIST_DEFAULTS) return key;
   return null;
 }

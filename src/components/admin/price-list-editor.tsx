@@ -118,7 +118,7 @@ export function PriceListEditor({
   async function fillFromBase() {
     if (
       !window.confirm(
-        "¿Sobrescribir todos los precios de esta lista con el precio base (minorista)?",
+        "¿Sobrescribir todos los precios de esta lista con el precio base?",
       )
     ) {
       return;
@@ -144,7 +144,7 @@ export function PriceListEditor({
   async function deleteList() {
     if (
       !window.confirm(
-        "¿Eliminar esta lista? Los clientes asignados pasarán a Minorista (base).",
+        "¿Eliminar esta lista? Los clientes asignados pasarán a Precio base.",
       )
     ) {
       return;

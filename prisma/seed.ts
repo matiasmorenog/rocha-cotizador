@@ -83,6 +83,27 @@ async function ensureExcelPriceLists(): Promise<Map<string, string>> {
   return map;
 }
 
+/**
+ * Drop legacy Excel PriceList excelKey "4" (Minorista) — not a real discount list.
+ * Customers on that list → priceListId null (base / Product.basePrice).
+ */
+async function removeOrphanExcelMinoristaList() {
+  const orphan = await db.priceList.findUnique({ where: { excelKey: "4" } });
+  if (!orphan) return;
+
+  const customersCleared = await db.customer.updateMany({
+    where: { priceListId: orphan.id },
+    data: { priceListId: null },
+  });
+  const itemsDeleted = await db.priceListItem.deleteMany({
+    where: { priceListId: orphan.id },
+  });
+  await db.priceList.delete({ where: { id: orphan.id } });
+  console.log(
+    `Removed orphan PriceList excelKey=4 ("${orphan.name}"): ${itemsDeleted.count} items, ${customersCleared.count} customers → base`,
+  );
+}
+
 async function seedFromExcel(xlsxPath: string) {
   const resetPins = process.env.RESET_PINS === "1";
   const workbook = new ExcelJS.Workbook();
@@ -92,6 +113,7 @@ async function seedFromExcel(xlsxPath: string) {
   if (!pricesSheet) throw new Error('Missing sheet "Lista de Precios"');
 
   const listByKey = await ensureExcelPriceLists();
+  await removeOrphanExcelMinoristaList();
   console.log(`Price lists ready: ${[...listByKey.keys()].join(", ")}`);
 
   let products = 0;
@@ -112,7 +134,7 @@ async function seedFromExcel(xlsxPath: string) {
     const code = codeRaw.padStart(4, "0");
     const rubro = cellText(row.getCell(2).value) || null;
     const name = cellText(row.getCell(3).value);
-    // Col 5: Excel header may say "Mayorista"; UI/product owner = precio base / Minorista.
+    // Col 5 (Excel "Mayorista") → Product.basePrice. Col 4 ("Minorista") ignored — not a PriceList.
     const basePrice = cellNumber(row.getCell(5).value);
 
     if (!name || basePrice <= 0) continue;
@@ -191,7 +213,7 @@ async function seedFromExcel(xlsxPath: string) {
     const priceListId = excelKey ? (listByKey.get(excelKey) ?? null) : null;
     const priceListLabel = excelKey
       ? (EXCEL_PRICE_LIST_DEFAULTS[excelKey]?.name ?? excelKey)
-      : "Minorista (base)";
+      : "Precio base";
 
     const address = cellText(row.getCell(4).value) || null;
     const comments = cellText(row.getCell(6).value);

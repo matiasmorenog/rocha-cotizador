@@ -57,7 +57,7 @@ export default async function AdminProductosPage({
       <div>
         <h1 className="text-2xl font-semibold text-neutral-900">Productos</h1>
         <p className="text-sm text-neutral-600">
-          Precio base = Minorista (sin descuento). Al crear solo pedimos base;
+          Precio base = sin lista de descuento. Al crear solo pedimos base;
           precios por lista se editan en la tabla o con “Rellenar desde…”.
         </p>
       </div>
