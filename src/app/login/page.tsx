@@ -5,7 +5,24 @@ import { auth } from "@/lib/auth";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { CustomerLoginForm } from "@/components/auth/customer-login-form";
+import { Skeleton } from "@/components/ui/skeleton";
 import { safeCallbackUrl } from "@/lib/callback-url";
+
+function LoginFormFallback() {
+  return (
+    <div className="mx-auto flex w-full max-w-sm flex-col gap-4" aria-hidden>
+      <div className="space-y-1.5">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-10 w-full rounded-md" />
+      </div>
+      <div className="space-y-1.5">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-10 w-full rounded-md" />
+      </div>
+      <Skeleton className="h-10 w-full rounded-md" />
+    </div>
+  );
+}
 
 export default async function LoginPage({
   searchParams,
@@ -43,7 +60,7 @@ export default async function LoginPage({
             ) : null}
           </div>
         </div>
-        <Suspense fallback={<p className="text-center text-sm text-neutral-500">Cargando…</p>}>
+        <Suspense fallback={<LoginFormFallback />}>
           <CustomerLoginForm />
         </Suspense>
         <p className="text-center text-xs text-neutral-500">

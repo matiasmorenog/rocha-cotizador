@@ -139,9 +139,9 @@ select:not([multiple]):disabled {
 .rocha-skeleton {
   background: linear-gradient(
     90deg,
-    #ebe4dc 0%,
-    #ebe2d8 45%,
-    #ebe4dc 100%
+    var(--brand-primary-soft) 0%,
+    color-mix(in srgb, var(--brand-latte) 35%, var(--brand-primary-soft)) 45%,
+    var(--brand-primary-soft) 100%
   );
   background-size: 200% 100%;
   animation: rocha-skeleton-shimmer 1.4s ease-in-out infinite;
@@ -150,7 +150,7 @@ select:not([multiple]):disabled {
 @media (prefers-reduced-motion: reduce) {
   .rocha-skeleton {
     animation: none;
-    background: #ebe4dc;
+    background: var(--brand-primary-soft);
   }
 }
 

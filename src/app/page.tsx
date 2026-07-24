@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
+import { SkeletonHomePage } from "@/components/ui/skeleton";
 import { auth } from "@/lib/auth";
 
-export default async function HomePage() {
+async function HomeContent() {
   const session = await auth();
   if (session?.user?.role === "CUSTOMER") redirect("/cotizar");
   if (session?.user?.role === "ADMIN") redirect("/admin");
@@ -35,5 +37,13 @@ export default async function HomePage() {
         </div>
       </div>
     </BrandBackdrop>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<SkeletonHomePage />}>
+      <HomeContent />
+    </Suspense>
   );
 }
