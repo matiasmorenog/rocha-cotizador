@@ -19,7 +19,7 @@ export async function AppHeader() {
             {isAdmin ? <AdminMenuButton /> : null}
             <Link
               href={isCustomer ? "/cotizar" : isAdmin ? "/admin" : "/"}
-              className="truncate text-base font-semibold tracking-tight text-neutral-900 sm:text-lg"
+              className="truncate text-base font-semibold tracking-tight text-[var(--brand-primary)] sm:text-lg"
             >
               Rocha Cotizador
             </Link>
