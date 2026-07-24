@@ -89,7 +89,7 @@ function ProductEditRow({
 
     const base = Number(basePrice.replace(",", "."));
     if (!Number.isFinite(base) || base < 0) {
-      setError("Precio mayorista inválido");
+      setError("Precio base inválido");
       setLoading(false);
       return;
     }
@@ -161,7 +161,7 @@ function ProductEditRow({
           onChange={(e) => setBasePrice(e.target.value)}
           required
           disabled={loading}
-          aria-label="Mayorista"
+          aria-label="Precio base"
         />
       </td>
       {activeLists.map((l) => (
@@ -286,7 +286,7 @@ export function ProductAdminTable({
             <th className="px-3 py-2">Código</th>
             <th className="px-3 py-2">Nombre</th>
             <th className="px-3 py-2">Rubro</th>
-            <th className="px-3 py-2">Mayorista</th>
+            <th className="px-3 py-2">Precio base</th>
             {activeLists.map((l) => (
               <th key={l.id} className="whitespace-nowrap px-3 py-2">
                 {l.name}

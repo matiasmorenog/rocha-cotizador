@@ -146,7 +146,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
           Lista de precios: {priceListName}
         </p>
       ) : customerId ? (
-        <p className="text-sm text-neutral-600">Lista de precios: Mayorista (base)</p>
+        <p className="text-sm text-neutral-600">Lista de precios: Minorista (base)</p>
       ) : null}
 
       <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">

@@ -118,7 +118,7 @@ export function PriceListEditor({
   async function fillFromBase() {
     if (
       !window.confirm(
-        "¿Sobrescribir todos los precios de esta lista con el precio Mayorista (base)?",
+        "¿Sobrescribir todos los precios de esta lista con el precio base (minorista)?",
       )
     ) {
       return;
@@ -137,14 +137,14 @@ export function PriceListEditor({
       setError(data.error ?? "No se pudo rellenar");
       return;
     }
-    setMessage("Lista rellenada desde Mayorista");
+    setMessage("Lista rellenada desde precio base");
     router.refresh();
   }
 
   async function deleteList() {
     if (
       !window.confirm(
-        "¿Eliminar esta lista? Los clientes asignados pasarán a Mayorista (base).",
+        "¿Eliminar esta lista? Los clientes asignados pasarán a Minorista (base).",
       )
     ) {
       return;
@@ -201,7 +201,7 @@ export function PriceListEditor({
           onClick={() => void fillFromBase()}
           disabled={filling}
         >
-          {filling ? "Rellenando…" : "Rellenar desde Mayorista"}
+          {filling ? "Rellenando…" : "Rellenar desde precio base"}
         </Button>
         <Button
           type="button"
@@ -237,7 +237,7 @@ export function PriceListEditor({
               <tr>
                 <th className="px-3 py-2">Código</th>
                 <th className="px-3 py-2">Producto</th>
-                <th className="px-3 py-2">Base</th>
+                <th className="px-3 py-2">Precio base</th>
                 <th className="px-3 py-2">Precio lista</th>
               </tr>
             </thead>
@@ -276,7 +276,7 @@ export function PriceListEditor({
         </DataTableScroll>
         {priceList.items.length === 0 ? (
           <p className="text-sm text-neutral-500">
-            Sin precios. Usá “Rellenar desde Mayorista” o el seed Excel.
+            Sin precios. Usá “Rellenar desde precio base” o el seed Excel.
           </p>
         ) : null}
       </div>

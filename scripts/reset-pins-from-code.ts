@@ -45,7 +45,7 @@ async function main() {
       code: c.code,
       name: c.name,
       pin,
-      priceList: c.priceList?.name ?? "Mayorista (base)",
+      priceList: c.priceList?.name ?? "Minorista (base)",
     });
     if (examples.length < 3) {
       examples.push({ code: c.code, pin });

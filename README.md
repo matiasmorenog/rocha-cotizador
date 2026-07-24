@@ -44,7 +44,7 @@ Abrí [http://localhost:3000](http://localhost:3000).
 
 ## Precios
 
-- Precio base producto = lista **Mayorista** (Excel lista 5).
+- Precio base producto = **Minorista** (`Product.basePrice`; Excel lista/col 5).
 - Admin asigna `% descuento` por cliente (oculto al cliente).
 - Cliente solo ve precio unitario e importe finales.
 - Seed mapea listas Excel 6/7/8/9 → 20/15/10/5%.

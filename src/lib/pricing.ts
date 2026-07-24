@@ -2,7 +2,7 @@ import { Decimal } from "@prisma/client/runtime/library";
 
 /**
  * Effective unit price for a customer.
- * `priceListId` null → Mayorista base (`basePrice`).
+ * `priceListId` null → Minorista base (`Product.basePrice`).
  * Missing list item → fallback to `basePrice`.
  */
 export function unitPriceForProduct(
@@ -28,7 +28,11 @@ export const EXCEL_PRICE_LIST_DEFAULTS: Record<string, { name: string; column: n
   "9": { name: "Lista 5% dto", column: 9 },
 };
 
-/** Excel lista → price list excelKey. "5" / empty / unknown → null (base Mayorista). */
+/**
+ * Excel lista → price list excelKey.
+ * "5" / empty / unknown → null (Product.basePrice = Minorista sin descuento in UI).
+ * Excel sheet header for col 5 may still say "Mayorista"; product owner names that base Minorista.
+ */
 export function excelListaToPriceListKey(
   lista: string | number | null | undefined,
 ): string | null {

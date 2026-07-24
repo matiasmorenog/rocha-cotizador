@@ -19,9 +19,9 @@ export default async function AdminListasPreciosPage() {
           Listas de precios
         </h1>
         <p className="text-sm text-neutral-600">
-          Precios fijos por producto. La lista Mayorista es el precio base del
-          producto (sin lista asignada). Podés eliminar listas; los clientes
-          asignados vuelven a Mayorista.
+          Precios fijos por producto. Sin lista asignada = Minorista (precio
+          base). Podés eliminar listas; los clientes asignados vuelven a
+          Minorista (base).
         </p>
       </div>
 

@@ -4,14 +4,15 @@
  * Customers (`clientes.xlsx`):
  *   código | nombre | email | teléfono | dirección | condicionesPago |
  *   horarioEntrega | notas | listaPrecios | activo | resetearPin
- *   - `listaPrecios`: name of PriceList or "Mayorista (base)" / empty for base.
+ *   - `listaPrecios`: name of PriceList or "Minorista (base)" / empty for base.
+ *     (Legacy exports may say "Mayorista (base)" — import still accepts that.)
  *   - `resetearPin` exported empty; on import, truthy values reset PIN via pinFromCustomerCode.
  *   - Password never exported. New customers always get PIN from code; existing keep passwordHash
  *     unless resetearPin is set.
  *
  * Products (`productos.xlsx`):
  *   código | nombre | rubro | precioBase | <nombre de cada PriceList>… | activo
- *   - `precioBase` = Mayorista.
+ *   - `precioBase` = Minorista (precio base del producto).
  *   - Extra columns match PriceList.name (case-insensitive). Empty cell clears that list price.
  *
  * Quotes range export is PDF (`/api/admin/quotes/export`) — see `quotes-export-pdf.ts`.

@@ -77,7 +77,7 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
             {value.code} — {value.name}
           </p>
           <p className="text-xs text-neutral-500">
-            Lista: {value.priceListName ?? "Mayorista (base)"}
+            Lista: {value.priceListName ?? "Minorista (base)"}
           </p>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={() => onChange(null)}>
@@ -138,7 +138,7 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
                   {c.code} — {c.name}
                 </span>
                 <span className="text-xs text-neutral-500">
-                  Lista: {c.priceList?.name ?? "Mayorista (base)"}
+                  Lista: {c.priceList?.name ?? "Minorista (base)"}
                 </span>
               </button>
             </li>

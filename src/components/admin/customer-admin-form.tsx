@@ -165,7 +165,7 @@ export function CustomerAdminForm({
               onChange={(e) => setPriceListId(e.target.value)}
               className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
             >
-              <option value="">Mayorista (base)</option>
+              <option value="">Minorista (base)</option>
               {inactiveSelected ? (
                 <option value={inactiveSelected.id}>
                   {inactiveSelected.name} (inactiva)

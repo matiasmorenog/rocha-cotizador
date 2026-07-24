@@ -53,8 +53,8 @@ export default async function AdminProductosPage({
       <div>
         <h1 className="text-2xl font-semibold text-neutral-900">Productos</h1>
         <p className="text-sm text-neutral-600">
-          Mayorista = precio base. Editá filas en la tabla; precios por lista
-          activa.
+          Precio base = Minorista (sin descuento). Al crear solo pedimos base;
+          precios por lista se editan en la tabla o con “Rellenar desde…”.
         </p>
       </div>
 
@@ -79,7 +79,7 @@ export default async function AdminProductosPage({
         entityLabel="productos"
       />
 
-      <ProductAdminForm priceLists={priceLists} />
+      <ProductAdminForm />
 
       <ProductAdminTable products={tableRows} priceLists={priceLists} />
     </div>

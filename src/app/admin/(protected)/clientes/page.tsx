@@ -127,7 +127,7 @@ export default async function AdminClientesPage({
                     )}
                   </td>
                   <td className="px-3 py-2">
-                    {c.priceList?.name ?? "Mayorista (base)"}
+                    {c.priceList?.name ?? "Minorista (base)"}
                   </td>
                   <td className="px-3 py-2">
                     <Badge variant={c.active ? "success" : "danger"}>

@@ -67,7 +67,7 @@ export function PriceListCreateForm() {
               htmlFor="fill-from-base"
               className="cursor-pointer text-sm whitespace-nowrap text-neutral-700"
             >
-              Rellenar desde Mayorista
+              Rellenar desde precio base
             </label>
           </div>
         </div>

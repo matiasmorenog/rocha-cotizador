@@ -53,7 +53,7 @@ export async function GET() {
       c.paymentTerms ?? "",
       c.deliveryHours ?? "",
       c.notes ?? "",
-      c.priceList?.name ?? "Mayorista (base)",
+      c.priceList?.name ?? "Minorista (base)",
       formatBool(c.active),
       "",
     ]);

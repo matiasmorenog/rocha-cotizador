@@ -18,7 +18,7 @@ Next.js 16 App Router, TypeScript, Tailwind 4, Prisma 6 + PostgreSQL, NextAuth v
 | `CUSTOMER` | Código 3 dígitos + contraseña (PIN inicial 4 dígitos recomendado cambiar; no obligatorio) | `/cotizar`, `/remitos`, `/cuenta` |
 | `ADMIN` | Email + password | `/admin/*` |
 
-Descuento por cliente: **lista de precios fijos** (`Customer.priceListId` → `PriceListItem.unitPrice`). Sin lista = Mayorista (`Product.basePrice`). APIs cliente nunca exponen datos de lista; solo `unitPrice` resuelto en server (`src/lib/pricing.ts`, `src/lib/price-list-resolve.ts`).
+Descuento por cliente: **lista de precios fijos** (`Customer.priceListId` → `PriceListItem.unitPrice`). Sin lista = Minorista / precio base (`Product.basePrice`). APIs cliente nunca exponen datos de lista; solo `unitPrice` resuelto en server (`src/lib/pricing.ts`, `src/lib/price-list-resolve.ts`).
 
 ## Archivos clave
 

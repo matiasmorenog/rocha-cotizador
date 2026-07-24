@@ -112,6 +112,7 @@ async function seedFromExcel(xlsxPath: string) {
     const code = codeRaw.padStart(4, "0");
     const rubro = cellText(row.getCell(2).value) || null;
     const name = cellText(row.getCell(3).value);
+    // Col 5: Excel header may say "Mayorista"; UI/product owner = precio base / Minorista.
     const basePrice = cellNumber(row.getCell(5).value);
 
     if (!name || basePrice <= 0) continue;
@@ -190,7 +191,7 @@ async function seedFromExcel(xlsxPath: string) {
     const priceListId = excelKey ? (listByKey.get(excelKey) ?? null) : null;
     const priceListLabel = excelKey
       ? (EXCEL_PRICE_LIST_DEFAULTS[excelKey]?.name ?? excelKey)
-      : "Mayorista (base)";
+      : "Minorista (base)";
 
     const address = cellText(row.getCell(4).value) || null;
     const comments = cellText(row.getCell(6).value);
