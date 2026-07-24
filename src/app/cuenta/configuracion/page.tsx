@@ -1,6 +1,6 @@
 import { requireCustomerSession } from "@/lib/session";
 import { db } from "@/lib/db";
-import { ChangePasswordForm } from "@/components/account/change-password-form";
+import { CustomerChangePasswordForm } from "@/components/account/customer-change-password-form";
 
 export default async function AccountConfigPage() {
   const session = await requireCustomerSession();
@@ -28,7 +28,7 @@ export default async function AccountConfigPage() {
               quieras.
             </p>
           ) : null}
-          <ChangePasswordForm />
+          <CustomerChangePasswordForm />
         </div>
       </div>
     </div>

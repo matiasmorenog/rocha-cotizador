@@ -1,24 +1,68 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 import { auth } from "@/lib/auth";
+import { BrandBackdrop } from "@/components/brand-backdrop";
+import { BrandLogo } from "@/components/brand-logo";
 import { AdminLoginForm } from "@/components/auth/admin-login-form";
+import { Skeleton } from "@/components/ui/skeleton";
+import { safeCallbackUrl } from "@/lib/callback-url";
 
-export default async function AdminLoginPage() {
+function LoginFormFallback() {
+  return (
+    <div className="mx-auto flex w-full max-w-sm flex-col gap-4" aria-hidden>
+      <div className="space-y-1.5">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-10 w-full rounded-md" />
+      </div>
+      <div className="space-y-1.5">
+        <Skeleton className="h-4 w-24" />
+        <Skeleton className="h-10 w-full rounded-md" />
+      </div>
+      <Skeleton className="h-10 w-full rounded-md" />
+    </div>
+  );
+}
+
+export default async function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string }>;
+}) {
+  const { callbackUrl: rawCallback } = await searchParams;
+  const callbackUrl = safeCallbackUrl(rawCallback, "/admin");
   const session = await auth();
-  if (session?.user?.role === "ADMIN") redirect("/admin");
+  if (session?.user?.role === "ADMIN") redirect(callbackUrl);
+
+  const customerLoginHref =
+    callbackUrl !== "/admin"
+      ? `/entrar?callbackUrl=${encodeURIComponent(callbackUrl)}`
+      : "/entrar";
 
   return (
-    <div className="mx-auto max-w-md space-y-6 rounded-xl border border-neutral-200 bg-white/90 p-6 shadow-sm">
-      <div className="space-y-1 text-center">
-        <h1 className="text-2xl font-semibold text-neutral-900">Admin</h1>
-        <p className="text-sm text-neutral-600">Acceso administradores</p>
+    <BrandBackdrop className="mx-auto flex min-h-[60vh] max-w-md items-center py-4">
+      <div className="w-full space-y-6 rounded-xl border border-[var(--brand-latte)]/50 bg-[var(--brand-primary-soft)]/95 p-6 shadow-sm backdrop-blur-[2px]">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <BrandLogo size="xl" priority />
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold text-neutral-900">Admin</h1>
+            <p className="text-sm text-neutral-600">Acceso administradores</p>
+            {callbackUrl.startsWith("/remitos/") ? (
+              <p className="text-xs text-neutral-500">
+                Después del login vas a ver el remito del enlace.
+              </p>
+            ) : null}
+          </div>
+        </div>
+        <Suspense fallback={<LoginFormFallback />}>
+          <AdminLoginForm />
+        </Suspense>
+        <p className="text-center text-xs text-neutral-500">
+          <Link href={customerLoginHref} className="underline">
+            Elegir otro tipo de acceso
+          </Link>
+        </p>
       </div>
-      <AdminLoginForm />
-      <p className="text-center text-xs text-neutral-500">
-        <Link href="/login" className="underline">
-          Volver a login cliente
-        </Link>
-      </p>
-    </div>
+    </BrandBackdrop>
   );
 }

@@ -3,13 +3,19 @@
  *
  * Customers (`clientes.xlsx`):
  *   código | nombre | email | teléfono | dirección | condicionesPago |
- *   horarioEntrega | notas | descuentoPercent | activo | resetearPin
+ *   horarioEntrega | notas | listaPrecios | activo | resetearPin
+ *   - `listaPrecios`: name of PriceList or "Precio base" / empty for base.
+ *     (Legacy exports may say "Minorista (base)" / "Mayorista (base)" — import still accepts those.)
  *   - `resetearPin` exported empty; on import, truthy values reset PIN via pinFromCustomerCode.
  *   - Password never exported. New customers always get PIN from code; existing keep passwordHash
  *     unless resetearPin is set.
  *
  * Products (`productos.xlsx`):
- *   código | nombre | rubro | precioBase | activo
+ *   código | nombre | rubro | precioBase | <nombre de cada PriceList>… |
+ *   permitePedidoUnidad | activo
+ *   - `precioBase` = Product.basePrice (precio base del producto).
+ *   - `permitePedidoUnidad`: sí/no — order by unit count (price TBD after weigh) or kg.
+ *   - Extra columns match PriceList.name (case-insensitive). Empty cell clears that list price.
  *
  * Quotes range export is PDF (`/api/admin/quotes/export`) — see `quotes-export-pdf.ts`.
  */
@@ -25,18 +31,23 @@ export const CUSTOMER_COLUMNS = [
   "condicionesPago",
   "horarioEntrega",
   "notas",
-  "descuentoPercent",
+  "listaPrecios",
   "activo",
   "resetearPin",
 ] as const;
 
-export const PRODUCT_COLUMNS = [
+/** Fixed product columns; price-list names are appended dynamically on export. */
+export const PRODUCT_BASE_COLUMNS = [
   "código",
   "nombre",
   "rubro",
   "precioBase",
+  "permitePedidoUnidad",
   "activo",
 ] as const;
+
+/** @deprecated Prefer PRODUCT_BASE_COLUMNS + dynamic list names. */
+export const PRODUCT_COLUMNS = PRODUCT_BASE_COLUMNS;
 
 export type ImportSummary = {
   created: number;

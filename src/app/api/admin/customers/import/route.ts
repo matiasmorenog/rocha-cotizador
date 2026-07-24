@@ -6,7 +6,6 @@ import { invalidateAfterCustomerMutation } from "@/lib/cache-tags";
 import { normalizePhone } from "@/lib/phone-contact";
 import { padCustomerCode, pinFromCustomerCode } from "@/lib/utils";
 import {
-  cellNumber,
   cellText,
   emptyToNull,
   getCellByHeader,
@@ -15,6 +14,8 @@ import {
   workbookFromBuffer,
   type ImportSummary,
 } from "@/lib/admin-excel";
+import { isBasePriceListLabel } from "@/lib/pricing";
+import { getBasePriceList } from "@/lib/price-list-resolve";
 
 export const runtime = "nodejs";
 
@@ -74,6 +75,14 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const priceLists = await db.priceList.findMany({
+    select: { id: true, name: true },
+  });
+  const listByName = new Map(
+    priceLists.map((l) => [l.name.trim().toLowerCase(), l.id]),
+  );
+  const baseList = await getBasePriceList();
+
   for (let r = 2; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r);
     const codeRaw = cellText(getCellByHeader(row, headers, "código"));
@@ -99,11 +108,21 @@ export async function POST(req: NextRequest) {
       continue;
     }
 
-    const discountRaw = cellNumber(
-      getCellByHeader(row, headers, "descuentoPercent"),
-    );
-    const discountPercent =
-      discountRaw === null ? 0 : Math.min(100, Math.max(0, discountRaw));
+    const listRaw = cellText(
+      getCellByHeader(row, headers, "listaprecios"),
+    ).trim();
+    let priceListId: string | null = baseList?.id ?? null;
+    if (!isBasePriceListLabel(listRaw)) {
+      const id = listByName.get(listRaw.toLowerCase());
+      if (!id) {
+        summary.errors.push({
+          row: r,
+          message: `Lista desconocida: ${listRaw}`,
+        });
+        continue;
+      }
+      priceListId = id;
+    }
 
     const phoneRaw = emptyToNull(
       cellText(getCellByHeader(row, headers, "teléfono")),
@@ -132,7 +151,7 @@ export async function POST(req: NextRequest) {
       if (existing) {
         const data: {
           name: string;
-          discountPercent: number;
+          priceListId: string | null;
           address: string | null;
           phone: string | null;
           email: string | null;
@@ -144,7 +163,7 @@ export async function POST(req: NextRequest) {
           mustChangePassword?: boolean;
         } = {
           name,
-          discountPercent,
+          priceListId,
           address,
           phone,
           email,
@@ -171,7 +190,7 @@ export async function POST(req: NextRequest) {
             name,
             passwordHash,
             mustChangePassword: true,
-            discountPercent,
+            priceListId,
             address,
             phone,
             email,

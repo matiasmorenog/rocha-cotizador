@@ -1,15 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProductBase } from "@/lib/product-base";
 import {
+  clearCachedCatalog,
   filterCatalog,
-  priceFactorFromDiscount,
   readCachedCatalog,
-  readCachedPriceFactor,
-  unitPriceFromFactor,
+  readCachedUnitPrices,
+  unitPriceFromMap,
   writeCachedCatalog,
-  writeCachedPriceFactor,
+  writeCachedUnitPrices,
 } from "@/lib/client-catalog-cache";
 
 export type CatalogSearchProduct = {
@@ -18,73 +18,127 @@ export type CatalogSearchProduct = {
   name: string;
   rubro: string | null;
   unitPrice: number;
+  allowsUnitOrder: boolean;
 };
 
 type UseProductCatalogOptions = {
   /** Admin quote-for-customer. */
   customerId?: string;
-  /** Admin UI already has discount — used until/alongside catalog factor. */
-  discountPercent?: number | null;
 };
 
 type CatalogState = {
   products: ProductBase[];
   version: string | null;
-  priceFactor: number;
+  unitPrices: Record<string, number>;
   ready: boolean;
   loading: boolean;
   error: string | null;
+};
+
+type CatalogSnapshot = {
+  products: ProductBase[];
+  unitPrices: Record<string, number>;
+  ready: boolean;
 };
 
 function customerKey(customerId?: string): string {
   return customerId?.trim() || "self";
 }
 
+function mapSearchRows(
+  products: ProductBase[],
+  unitPrices: Record<string, number>,
+  q: string,
+  take: number,
+): CatalogSearchProduct[] {
+  return filterCatalog(products, q, take).map((p) => ({
+    id: p.id,
+    code: p.code,
+    name: p.name,
+    rubro: p.rubro,
+    unitPrice: unitPriceFromMap(p.code, p.basePrice, unitPrices),
+    allowsUnitOrder: Boolean(p.allowsUnitOrder),
+  }));
+}
+
 function initialState(opts: UseProductCatalogOptions): CatalogState {
   const cached = typeof window !== "undefined" ? readCachedCatalog() : null;
   const key = customerKey(opts.customerId);
-  const cachedFactor =
-    typeof window !== "undefined" ? readCachedPriceFactor(key) : null;
-  const fromDiscount =
-    opts.discountPercent != null
-      ? priceFactorFromDiscount(Number(opts.discountPercent))
-      : null;
+  const cachedPrices =
+    typeof window !== "undefined" ? readCachedUnitPrices(key) : null;
 
   return {
     products: cached?.products ?? [],
     version: cached?.version ?? null,
-    priceFactor: fromDiscount ?? cachedFactor ?? 1,
+    unitPrices: cachedPrices?.unitPrices ?? {},
     ready: (cached?.products.length ?? 0) > 0,
     loading: true,
     error: null,
   };
 }
 
+async function fetchCatalogJson(params: URLSearchParams) {
+  const res = await fetch(`/api/products/catalog?${params}`);
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    unchanged?: boolean;
+    version?: string;
+    unitPrices?: Record<string, number>;
+    products?: ProductBase[];
+  };
+  return { res, data };
+}
+
 export function useProductCatalog(
   opts: UseProductCatalogOptions = {},
 ): CatalogState & {
   search: (q: string, take?: number) => CatalogSearchProduct[];
+  searchAsync: (q: string, take?: number) => Promise<CatalogSearchProduct[]>;
 } {
   const [state, setState] = useState<CatalogState>(() => initialState(opts));
+  const snapshotRef = useRef<CatalogSnapshot>({
+    products: state.products,
+    unitPrices: state.unitPrices,
+    ready: state.ready,
+  });
+  const loadPromiseRef = useRef<Promise<void> | null>(null);
+
+  useEffect(() => {
+    snapshotRef.current = {
+      products: state.products,
+      unitPrices: state.unitPrices,
+      ready: state.ready,
+    };
+  }, [state.products, state.unitPrices, state.ready]);
 
   useEffect(() => {
     let cancelled = false;
     const key = customerKey(opts.customerId);
 
     async function revalidate() {
-      setState((s) => ({ ...s, loading: true, error: null }));
-
       const cached = readCachedCatalog();
+      const hasLocal =
+        (cached?.products.length ?? 0) > 0 ||
+        snapshotRef.current.products.length > 0;
+
+      // Keep serving cached catalog while revalidating — do not block typing.
+      setState((s) => ({
+        ...s,
+        loading: !hasLocal,
+        error: null,
+      }));
+
       const params = new URLSearchParams();
-      if (cached?.version) params.set("v", cached.version);
+      if (cached?.version && cached.products.length > 0) {
+        params.set("v", cached.version);
+      }
       if (opts.customerId) params.set("customerId", opts.customerId);
 
       try {
-        const res = await fetch(`/api/products/catalog?${params}`);
+        let { res, data } = await fetchCatalogJson(params);
         if (cancelled) return;
 
         if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
           setState((s) => ({
             ...s,
             loading: false,
@@ -94,25 +148,18 @@ export function useProductCatalog(
           return;
         }
 
-        const data = (await res.json()) as {
-          unchanged: boolean;
-          version: string;
-          priceFactor: number;
-          products: ProductBase[];
-        };
+        const unitPrices =
+          data.unitPrices && typeof data.unitPrices === "object"
+            ? data.unitPrices
+            : {};
 
-        const priceFactor =
-          opts.discountPercent != null
-            ? priceFactorFromDiscount(Number(opts.discountPercent))
-            : data.priceFactor;
-
-        writeCachedPriceFactor(key, priceFactor);
-
-        if (data.unchanged && cached) {
+        if (data.unchanged && cached && cached.products.length > 0) {
+          const version = data.version ?? cached.version;
+          writeCachedUnitPrices(key, version, unitPrices);
           setState({
             products: cached.products,
-            version: data.version,
-            priceFactor,
+            version,
+            unitPrices,
             ready: true,
             loading: false,
             error: null,
@@ -120,17 +167,80 @@ export function useProductCatalog(
           return;
         }
 
-        const products = data.products ?? [];
+        // Server said unchanged but we have no products — force full fetch.
+        if (data.unchanged && params.has("v")) {
+          clearCachedCatalog();
+          const full = new URLSearchParams();
+          if (opts.customerId) full.set("customerId", opts.customerId);
+          ({ res, data } = await fetchCatalogJson(full));
+          if (cancelled) return;
+          if (!res.ok) {
+            setState((s) => ({
+              ...s,
+              loading: false,
+              error: data.error ?? "No se pudo cargar el catálogo",
+              ready: s.products.length > 0,
+            }));
+            return;
+          }
+        }
+
+        let products = data.products ?? [];
+
+        if (products.length === 0 && params.has("v")) {
+          clearCachedCatalog();
+          const full = new URLSearchParams();
+          if (opts.customerId) full.set("customerId", opts.customerId);
+          ({ res, data } = await fetchCatalogJson(full));
+          if (cancelled) return;
+          if (!res.ok) {
+            setState((s) => ({
+              ...s,
+              loading: false,
+              error: data.error ?? "No se pudo cargar el catálogo",
+              ready: s.products.length > 0,
+            }));
+            return;
+          }
+          products = data.products ?? [];
+        }
+
+        const nextPrices =
+          data.unitPrices && typeof data.unitPrices === "object"
+            ? data.unitPrices
+            : unitPrices;
+
+        if (products.length === 0) {
+          // Do not wipe a good in-memory catalog on a bad empty response.
+          setState((s) => {
+            if (s.products.length > 0) {
+              return { ...s, loading: false, ready: true, error: null };
+            }
+            clearCachedCatalog();
+            return {
+              products: [],
+              version: data.version ?? null,
+              unitPrices: nextPrices,
+              ready: false,
+              loading: false,
+              error: null,
+            };
+          });
+          return;
+        }
+
+        const version = data.version ?? cached?.version ?? "0";
         writeCachedCatalog({
-          version: data.version,
+          version,
           products,
           fetchedAt: Date.now(),
         });
+        writeCachedUnitPrices(key, version, nextPrices);
 
         setState({
           products,
-          version: data.version,
-          priceFactor,
+          version,
+          unitPrices: nextPrices,
           ready: true,
           loading: false,
           error: null,
@@ -146,24 +256,53 @@ export function useProductCatalog(
       }
     }
 
-    void revalidate();
+    const run = revalidate();
+    loadPromiseRef.current = run.then(
+      () => undefined,
+      () => undefined,
+    );
     return () => {
       cancelled = true;
     };
-  }, [opts.customerId, opts.discountPercent]);
+  }, [opts.customerId]);
 
-  const search = useCallback(
-    (q: string, take = 30): CatalogSearchProduct[] => {
-      return filterCatalog(state.products, q, take).map((p) => ({
-        id: p.id,
-        code: p.code,
-        name: p.name,
-        rubro: p.rubro,
-        unitPrice: unitPriceFromFactor(p.basePrice, state.priceFactor),
-      }));
+  const search = useCallback((q: string, take = 30): CatalogSearchProduct[] => {
+    const snap = snapshotRef.current;
+    return mapSearchRows(snap.products, snap.unitPrices, q, take);
+  }, []);
+
+  const searchAsync = useCallback(
+    async (q: string, take = 30): Promise<CatalogSearchProduct[]> => {
+      // Instant path: already have catalog in memory / sessionStorage.
+      const snap = snapshotRef.current;
+      if (snap.products.length > 0) {
+        return mapSearchRows(snap.products, snap.unitPrices, q, take);
+      }
+
+      // Cold start: wait for first catalog load, then filter locally.
+      if (loadPromiseRef.current) {
+        await loadPromiseRef.current;
+      }
+
+      const after = snapshotRef.current;
+      if (after.products.length > 0) {
+        return mapSearchRows(after.products, after.unitPrices, q, take);
+      }
+
+      // Last resort only if catalog still empty after load.
+      const params = new URLSearchParams({ q });
+      if (opts.customerId) params.set("customerId", opts.customerId);
+      try {
+        const res = await fetch(`/api/products/search?${params}`);
+        if (!res.ok) return [];
+        const data = (await res.json()) as { products?: CatalogSearchProduct[] };
+        return (data.products ?? []).slice(0, take);
+      } catch {
+        return [];
+      }
     },
-    [state.products, state.priceFactor],
+    [opts.customerId],
   );
 
-  return { ...state, search };
+  return { ...state, search, searchAsync };
 }

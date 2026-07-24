@@ -12,12 +12,13 @@ Cotizador B2B mayorista: clientes con código + contraseña arman cotizaciones; 
 
 ```bash
 cp .env.example .env
-# Ajustá DATABASE_URL / AUTH_SECRET / AUTH_URL
+# DATABASE_URL = Neon branch **development** (ep-noisy-darkness-a6ms81wq…), never main/prod
+# SEED_TARGET=development
 
-createdb rocha_cotizador   # si aún no existe
+createdb rocha_cotizador   # si aún no existe (alternativa local)
 npm install
 npx prisma db push
-npm run db:seed            # importa prisma/data/rocha_data.xlsx + genera PINs
+SEED_TARGET=development npm run db:seed   # Excel + PINs; blocked on Neon main
 npm run dev
 ```
 
@@ -38,12 +39,12 @@ Abrí [http://localhost:3000](http://localhost:3000).
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint `src/` |
 | `npm run db:push` | Sync schema |
-| `npm run db:seed` | Seed admin + Excel |
+| `npm run db:seed` | Seed admin + Excel (requires `SEED_TARGET=development` or `ALLOW_DESTRUCTIVE_DB=1`; refuses Neon main) |
 | `npm run db:studio` | Prisma Studio |
 
 ## Precios
 
-- Precio base producto = lista **Mayorista** (Excel lista 5).
+- Precio base producto = `Product.basePrice` (Excel lista/col 5).
 - Admin asigna `% descuento` por cliente (oculto al cliente).
 - Cliente solo ve precio unitario e importe finales.
 - Seed mapea listas Excel 6/7/8/9 → 20/15/10/5%.

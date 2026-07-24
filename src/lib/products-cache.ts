@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { CACHE_TAGS, invalidateProductsCache } from "@/lib/cache-tags";
 import type { ProductBase } from "@/lib/product-base";
 
 export type { ProductBase } from "@/lib/product-base";
@@ -8,42 +8,79 @@ export type { ProductBase } from "@/lib/product-base";
 /**
  * Version for client invalidation: any Product row change (incl. active toggle)
  * bumps `updatedAt`, so MAX covers create/update/deactivate/reactivate.
+ * Cached under products + price-lists tags — skip 3 aggregates when ETag/`?v=`
+ * matches and nothing mutated since last compute.
  */
+const getProductsCatalogVersionCached = unstable_cache(
+  async (): Promise<string> => {
+    const [products, lists, items] = await Promise.all([
+      db.product.aggregate({ _max: { updatedAt: true } }),
+      db.priceList.aggregate({ _max: { updatedAt: true } }),
+      db.priceListItem.aggregate({ _max: { updatedAt: true } }),
+    ]);
+    const stamps = [
+      products._max.updatedAt,
+      lists._max.updatedAt,
+      items._max.updatedAt,
+    ]
+      .filter(Boolean)
+      .map((d) => d!.toISOString());
+    return stamps.sort().at(-1) ?? "0";
+  },
+  ["products-catalog-version"],
+  { tags: [CACHE_TAGS.products, CACHE_TAGS.priceLists], revalidate: 3600 },
+);
+
 export async function getProductsCatalogVersion(): Promise<string> {
-  const result = await db.product.aggregate({
-    _max: { updatedAt: true },
+  return getProductsCatalogVersionCached();
+}
+
+async function fetchActiveProductsBaseUncached(): Promise<ProductBase[]> {
+  const rows = await db.product.findMany({
+    where: { active: true },
+    orderBy: [{ code: "asc" }],
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      rubro: true,
+      basePrice: true,
+      allowsUnitOrder: true,
+    },
   });
-  return result._max.updatedAt?.toISOString() ?? "0";
+  return rows.map((p) => ({
+    id: p.id,
+    code: p.code,
+    name: p.name,
+    rubro: p.rubro,
+    basePrice: Number(p.basePrice),
+    allowsUnitOrder: p.allowsUnitOrder,
+  }));
 }
 
 /**
  * Active products (basePrice only). Shared across customers.
  * Invalidate via tag `products` after admin product mutate / import.
+ *
+ * Empty Data Cache entries are treated as poison: bypass + expire tag so a
+ * brief empty window (pre-seed / blip) cannot stick for the full TTL.
  */
-export const getActiveProductsBase = unstable_cache(
-  async (): Promise<ProductBase[]> => {
-    const rows = await db.product.findMany({
-      where: { active: true },
-      orderBy: [{ code: "asc" }],
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        rubro: true,
-        basePrice: true,
-      },
-    });
-    return rows.map((p) => ({
-      id: p.id,
-      code: p.code,
-      name: p.name,
-      rubro: p.rubro,
-      basePrice: Number(p.basePrice),
-    }));
-  },
+const getActiveProductsBaseCached = unstable_cache(
+  async (): Promise<ProductBase[]> => fetchActiveProductsBaseUncached(),
   ["active-products-base"],
   { tags: [CACHE_TAGS.products], revalidate: 3600 },
 );
+
+export async function getActiveProductsBase(): Promise<ProductBase[]> {
+  const cached = await getActiveProductsBaseCached();
+  if (cached.length > 0) return cached;
+
+  const fresh = await fetchActiveProductsBaseUncached();
+  if (fresh.length > 0) {
+    invalidateProductsCache();
+  }
+  return fresh;
+}
 
 /** In-memory filter over cached catalog (no per-query DB hit). */
 export async function searchActiveProductsBase(

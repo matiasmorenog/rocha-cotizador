@@ -1,24 +1,27 @@
 /**
  * Set every Customer PIN to code.padStart(4, "0") (001 → 0001).
  * Also regenerates prisma/data/seed-pins.csv.
- * Usage: npx tsx scripts/reset-pins-from-code.ts
+ * Usage: SEED_TARGET=development npx tsx scripts/reset-pins-from-code.ts
  */
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import fs from "node:fs";
 import path from "node:path";
 import { PrismaClient } from "@prisma/client";
+import { assertSafeDestructiveDb } from "../prisma/assert-safe-db";
 import { pinFromCustomerCode } from "../src/lib/utils";
 
 const db = new PrismaClient();
 
 async function main() {
+  assertSafeDestructiveDb();
+
   const customers = await db.customer.findMany({
     select: {
       id: true,
       code: true,
       name: true,
-      discountPercent: true,
+      priceList: { select: { name: true } },
     },
     orderBy: { code: "asc" },
   });
@@ -27,7 +30,7 @@ async function main() {
     code: string;
     name: string;
     pin: string;
-    discountPercent: number;
+    priceList: string;
   }> = [];
   const examples: Array<{ code: string; pin: string }> = [];
 
@@ -42,7 +45,7 @@ async function main() {
       code: c.code,
       name: c.name,
       pin,
-      discountPercent: Number(c.discountPercent),
+      priceList: c.priceList?.name ?? "Precio base",
     });
     if (examples.length < 3) {
       examples.push({ code: c.code, pin });
@@ -51,10 +54,10 @@ async function main() {
 
   const csvPath = path.join(process.cwd(), "prisma", "data", "seed-pins.csv");
   const csv = [
-    "code,name,pin,discountPercent",
+    "code,name,pin,priceList",
     ...pins.map(
       (p) =>
-        `${p.code},"${p.name.replace(/"/g, '""')}",${p.pin},${p.discountPercent}`,
+        `${p.code},"${p.name.replace(/"/g, '""')}",${p.pin},"${p.priceList.replace(/"/g, '""')}"`,
     ),
   ].join("\n");
   fs.writeFileSync(csvPath, `${csv}\n`, "utf8");

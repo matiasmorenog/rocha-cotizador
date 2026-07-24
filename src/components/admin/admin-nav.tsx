@@ -11,7 +11,9 @@ const links = [
   { href: "/admin", label: "Dashboard", exact: true },
   { href: "/admin/clientes", label: "Clientes" },
   { href: "/admin/productos", label: "Productos" },
+  { href: "/admin/listas-precios", label: "Listas de precios" },
   { href: "/admin/cotizaciones", label: "Cotizaciones" },
+  { href: "/admin/configuracion", label: "Configuración" },
 ] as const;
 
 function isActive(pathname: string, href: string, exact?: boolean) {
@@ -36,7 +38,7 @@ function NavLinks({
             href={l.href}
             onClick={onNavigate}
             className={cn(
-              "rounded-md px-2 py-1.5 transition-colors",
+              "rounded-md px-2 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1",
               active
                 ? "bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
                 : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900",
@@ -72,7 +74,7 @@ function AdminSidebarPanel({
             type="button"
             onClick={onClose}
             aria-label="Cerrar menú"
-            className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
+            className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
           >
             <X className="h-5 w-5" />
           </button>

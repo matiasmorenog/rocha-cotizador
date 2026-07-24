@@ -2,10 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Decimal } from "@prisma/client/runtime/library";
 import { auth } from "@/lib/auth";
+import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
 import { invalidateAfterQuoteCreate } from "@/lib/cache-tags";
-import { lineTotal, priceForCustomer } from "@/lib/pricing";
+import { lineTotal, unitPriceForProduct } from "@/lib/pricing";
+import {
+  effectiveDiscountPriceListId,
+  getPriceListUnitPricesByProductId,
+} from "@/lib/price-list-resolve";
 import { nextQuoteNumber } from "@/lib/quotes";
+import { formatPrice } from "@/lib/utils";
+import { buildQuoteWhatsAppMessage, whatsappUrl } from "@/lib/whatsapp";
 
 const bodySchema = z.object({
   notes: z.string().optional(),
@@ -15,6 +22,7 @@ const bodySchema = z.object({
       z.object({
         productId: z.string().min(1),
         qty: z.number().positive(),
+        orderByUnit: z.boolean().optional().default(false),
       }),
     )
     .min(1),
@@ -59,12 +67,19 @@ export async function POST(req: NextRequest) {
     where: { id: { in: productIds }, active: true },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
+  const discountListId = await effectiveDiscountPriceListId(
+    customer.priceListId,
+  );
+  const listPrices = discountListId
+    ? await getPriceListUnitPricesByProductId(discountListId)
+    : null;
 
   const lines: Array<{
     productId: string;
     productCode: string;
     productName: string;
     qty: Decimal;
+    orderByUnit: boolean;
     unitPrice: Decimal;
     lineTotal: Decimal;
   }> = [];
@@ -77,13 +92,42 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-    const unitPrice = priceForCustomer(product.basePrice, customer.discountPercent);
+
+    const orderByUnit = item.orderByUnit === true;
+    if (orderByUnit && !product.allowsUnitOrder) {
+      return NextResponse.json(
+        {
+          error: `El producto ${product.code} no admite pedido por unidades`,
+        },
+        { status: 400 },
+      );
+    }
+
     const qty = new Decimal(item.qty);
+    if (orderByUnit) {
+      const zero = new Decimal(0).toDecimalPlaces(2);
+      lines.push({
+        productId: product.id,
+        productCode: product.code,
+        productName: product.name,
+        qty,
+        orderByUnit: true,
+        unitPrice: zero,
+        lineTotal: zero,
+      });
+      continue;
+    }
+
+    const unitPrice = unitPriceForProduct(
+      product.basePrice,
+      listPrices?.get(product.id) ?? null,
+    );
     lines.push({
       productId: product.id,
       productCode: product.code,
       productName: product.name,
       qty,
+      orderByUnit: false,
       unitPrice,
       lineTotal: lineTotal(unitPrice, qty),
     });
@@ -99,13 +143,14 @@ export async function POST(req: NextRequest) {
       customerId: customer.id,
       subtotal: total,
       total,
-      notes: parsed.data.notes || null,
+      notes: parsed.data.notes?.trim() || null,
       items: {
         create: lines.map((l) => ({
           productId: l.productId,
           productCode: l.productCode,
           productName: l.productName,
           qty: l.qty,
+          orderByUnit: l.orderByUnit,
           unitPrice: l.unitPrice,
           lineTotal: l.lineTotal,
         })),
@@ -116,5 +161,25 @@ export async function POST(req: NextRequest) {
 
   invalidateAfterQuoteCreate();
 
-  return NextResponse.json({ id: quote.id, number: quote.number });
+  const origin =
+    req.nextUrl.origin ||
+    process.env.AUTH_URL?.replace(/\/$/, "") ||
+    "";
+  const remitoUrl = `${origin}/remitos/${quote.id}`;
+  const notifyDigits = await getWhatsAppNotifyDigits();
+  const message = buildQuoteWhatsAppMessage({
+    quoteNumber: quote.number,
+    customerCode: customer.code,
+    customerName: customer.name,
+    totalLabel: formatPrice(quote.total),
+    notes: quote.notes,
+    remitoUrl,
+  });
+  const notifyWhatsappUrl = whatsappUrl(notifyDigits, message);
+
+  return NextResponse.json({
+    id: quote.id,
+    number: quote.number,
+    whatsappUrl: notifyWhatsappUrl,
+  });
 }

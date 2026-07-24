@@ -7,11 +7,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
+type PriceListOption = {
+  id: string;
+  name: string;
+  active: boolean;
+  isBase?: boolean;
+};
+
 type CustomerRow = {
   id: string;
   code: string;
   name: string;
-  discountPercent: string | number;
+  priceListId: string | null;
   address: string | null;
   phone: string | null;
   email: string | null;
@@ -21,12 +28,23 @@ type CustomerRow = {
   active: boolean;
 };
 
-export function CustomerAdminForm({ customer }: { customer?: CustomerRow }) {
+export function CustomerAdminForm({
+  customer,
+  priceLists,
+  onCancel,
+}: {
+  customer?: CustomerRow;
+  priceLists: PriceListOption[];
+  /** Create mode: dismiss form without saving. */
+  onCancel?: () => void;
+}) {
   const router = useRouter();
+  const baseListId =
+    priceLists.find((l) => l.isBase)?.id ?? priceLists[0]?.id ?? "";
   const [code, setCode] = useState(customer?.code ?? "");
   const [name, setName] = useState(customer?.name ?? "");
-  const [discountPercent, setDiscount] = useState(
-    String(customer?.discountPercent ?? "0"),
+  const [priceListId, setPriceListId] = useState(
+    customer?.priceListId ?? baseListId,
   );
   const [address, setAddress] = useState(customer?.address ?? "");
   const [phone, setPhone] = useState(customer?.phone ?? "");
@@ -39,6 +57,7 @@ export function CustomerAdminForm({ customer }: { customer?: CustomerRow }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const isEdit = Boolean(customer);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -52,7 +71,7 @@ export function CustomerAdminForm({ customer }: { customer?: CustomerRow }) {
         id: customer?.id,
         code,
         name,
-        discountPercent: Number(discountPercent),
+        priceListId: priceListId || baseListId || null,
         address,
         phone,
         email,
@@ -70,15 +89,29 @@ export function CustomerAdminForm({ customer }: { customer?: CustomerRow }) {
       return;
     }
     if (data.pin) {
-      setMessage(`Guardado. PIN inicial: ${data.pin} (el cliente debe cambiarlo por una contraseña)`);
+      setMessage(
+        `Guardado. PIN inicial: ${data.pin} (el cliente debe cambiarlo por una contraseña)`,
+      );
     } else {
       setMessage("Guardado");
     }
     router.refresh();
   }
 
+  const activeLists = priceLists.filter((l) => l.active);
+  const inactiveSelected =
+    priceListId && !activeLists.some((l) => l.id === priceListId)
+      ? priceLists.find((l) => l.id === priceListId)
+      : null;
+
   return (
-    <form onSubmit={onSubmit} className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4">
+    <form
+      onSubmit={onSubmit}
+      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
+    >
+      <p className="text-sm font-medium text-neutral-800">
+        {isEdit ? "Editar cliente" : "Nuevo cliente"}
+      </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label>Código</Label>
@@ -138,27 +171,38 @@ export function CustomerAdminForm({ customer }: { customer?: CustomerRow }) {
             </div>
           </div>
           <div className="space-y-1">
-            <Label>Descuento % (oculto al cliente)</Label>
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              step="0.01"
-              value={discountPercent}
-              onChange={(e) => setDiscount(e.target.value)}
+            <Label>Lista de precios</Label>
+            <select
+              value={priceListId}
+              onChange={(e) => setPriceListId(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-10 text-sm focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
               required
-            />
+            >
+              {inactiveSelected ? (
+                <option value={inactiveSelected.id}>
+                  {inactiveSelected.name} (inactiva)
+                </option>
+              ) : null}
+              {activeLists.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-neutral-500">
+              Precios fijos de la lista. El cliente solo ve el precio final.
+            </p>
           </div>
         </div>
       </div>
 
       <div className="space-y-1">
-        <Label>Notas</Label>
+        <Label>Observaciones</Label>
         <textarea
           rows={4}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
 
@@ -183,14 +227,28 @@ export function CustomerAdminForm({ customer }: { customer?: CustomerRow }) {
             checked={resetPin}
             onChange={(e) => setResetPin(e.target.checked)}
           />
-          Resetear a PIN inicial (el cliente deberá cambiarlo)
+          Regenerar PIN
         </label>
       ) : null}
+
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
-      <Button type="submit" disabled={loading}>
-        {loading ? "Guardando…" : customer ? "Actualizar" : "Crear cliente"}
-      </Button>
+
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" disabled={loading}>
+          {loading ? "Guardando…" : customer ? "Actualizar cliente" : "Crear cliente"}
+        </Button>
+        {!isEdit && onCancel ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading}
+            onClick={onCancel}
+          >
+            Cancelar
+          </Button>
+        ) : null}
+      </div>
     </form>
   );
 }

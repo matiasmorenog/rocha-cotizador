@@ -29,36 +29,75 @@ model User {
 }
 
 model Customer {
-  id                 String   @id @default(cuid())
-  code               String   @unique
+  id                 String     @id @default(cuid())
+  code               String     @unique
   name               String
   /// bcrypt hash — initial seed is a 4-digit PIN; clients must set a real password.
-  passwordHash       String   @map("pinHash")
-  mustChangePassword Boolean  @default(true)
-  discountPercent    Decimal  @default(0) @db.Decimal(5, 2)
+  passwordHash       String     @map("pinHash")
+  mustChangePassword Boolean    @default(true)
+  /// Prefer the isBase PriceList id; null still resolves as Precio base.
+  priceListId        String?
+  priceList          PriceList? @relation(fields: [priceListId], references: [id], onDelete: SetNull)
   address            String?
   phone              String?
   email              String?
   notes              String?
   paymentTerms       String?
   deliveryHours      String?
-  active             Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  active             Boolean    @default(true)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
   quotes             Quote[]
+
+  @@index([priceListId])
 }
 
 model Product {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  name      String
-  rubro     String?
-  basePrice Decimal  @db.Decimal(12, 2)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String          @id @default(cuid())
+  code            String          @unique
+  name            String
+  rubro           String?
+  basePrice       Decimal         @db.Decimal(12, 2)
+  /// When true, customer may order by unit count (price TBD after weigh) or by kg.
+  allowsUnitOrder Boolean         @default(false)
+  active          Boolean         @default(true)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  priceListItems  PriceListItem[]
 
   @@index([active, code])
+}
+
+/// Named price list with fixed unit prices (Excel ROUND).
+/// Exactly one row should have isBase=true ("Precio base", excelKey "5") — enforced in app.
+model PriceList {
+  id        String          @id @default(cuid())
+  name      String
+  /// Excel "Lista de Precio" key (e.g. "5", "6") for re-import; optional for manual lists.
+  excelKey  String?         @unique
+  /// True only for the Precio base list (synced with Product.basePrice).
+  isBase    Boolean         @default(false)
+  active    Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  items     PriceListItem[]
+  customers Customer[]
+
+  @@index([isBase])
+}
+
+model PriceListItem {
+  id          String    @id @default(cuid())
+  priceListId String
+  priceList   PriceList @relation(fields: [priceListId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  unitPrice   Decimal   @db.Decimal(12, 2)
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([priceListId, productId])
+  @@index([priceListId])
+  @@index([productId])
 }
 
 model Quote {
@@ -86,6 +125,8 @@ model QuoteItem {
   productCode String
   productName String
   qty         Decimal @db.Decimal(12, 3)
+  /// True when qty is unit count (not kg); unitPrice/lineTotal must be 0.
+  orderByUnit Boolean @default(false)
   unitPrice   Decimal @db.Decimal(12, 2)
   lineTotal   Decimal @db.Decimal(14, 2)
 
@@ -95,4 +136,12 @@ model QuoteItem {
 model QuoteSequence {
   id    Int @id @default(1)
   value Int @default(0)
+}
+
+/// Singleton app settings (id = 1). WhatsApp notify uses wa.me (no Business API).
+model BusinessSettings {
+  id                   Int    @id @default(1)
+  /// Digits for wa.me (e.g. 5491166904442). Display forms are normalized on save.
+  whatsappNotifyPhone  String @default("5491166904442")
+  updatedAt            DateTime @updatedAt
 }
