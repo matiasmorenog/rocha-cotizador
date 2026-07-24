@@ -266,7 +266,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
             {selectedAllowsUnit ? (
               <div className="flex min-w-[9rem] flex-1 items-end gap-3 sm:flex-none">
                 <div className="min-w-0 flex-1">
-                  <Label htmlFor="order-mode">Modo</Label>
+                  <Label htmlFor="order-mode">Medida</Label>
                   <select
                     id="order-mode"
                     value={orderByUnit ? "unit" : "kg"}
@@ -327,7 +327,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                 <th className="px-3 py-2 font-medium">Código</th>
                 <th className="px-3 py-2 font-medium">Producto</th>
                 <th className="px-3 py-2 font-medium">Cant.</th>
-                <th className="px-3 py-2 font-medium">Modo</th>
+                <th className="px-3 py-2 font-medium">Medida</th>
                 <th className="px-3 py-2 font-medium">Precio</th>
                 <th className="px-3 py-2 font-medium">Importe</th>
                 <th className="px-3 py-2" />
