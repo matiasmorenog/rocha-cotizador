@@ -167,8 +167,8 @@ export function PriceListEditor({
         onSubmit={saveMeta}
         className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4"
       >
-        <div className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-          <div className="space-y-1">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+          <div className="min-w-0 flex-1 space-y-1">
             <Label htmlFor="list-name">Nombre</Label>
             <Input
               id="list-name"
@@ -177,18 +177,25 @@ export function PriceListEditor({
               required
             />
           </div>
-          <label
-            htmlFor="list-active"
-            className="flex cursor-pointer items-center gap-2 text-sm"
-          >
-            <Switch
-              id="list-active"
-              checked={active}
-              onChange={(e) => setActive(e.target.checked)}
-            />
-            Activa
-          </label>
-          <Button type="submit" disabled={savingMeta}>
+          <div className="space-y-1">
+            <Label htmlFor="list-active" className="invisible select-none">
+              Activa
+            </Label>
+            <div className="flex h-10 items-center gap-2.5">
+              <Switch
+                id="list-active"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+              />
+              <label
+                htmlFor="list-active"
+                className="cursor-pointer text-sm whitespace-nowrap text-neutral-700"
+              >
+                Activa
+              </label>
+            </div>
+          </div>
+          <Button type="submit" className="shrink-0" disabled={savingMeta}>
             {savingMeta ? "Guardando…" : "Guardar nombre"}
           </Button>
         </div>
