@@ -202,7 +202,11 @@ export function PriceListEditor({
         >
           {filling ? "Rellenando…" : "Rellenar desde Mayorista"}
         </Button>
-        <Button type="button" variant="outline" onClick={() => void deleteList()}>
+        <Button
+          type="button"
+          variant="destructive"
+          onClick={() => void deleteList()}
+        >
           Eliminar lista
         </Button>
         <Button

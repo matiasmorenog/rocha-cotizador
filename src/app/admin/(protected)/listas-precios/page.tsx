@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { PriceListCreateForm } from "@/components/admin/price-list-create-form";
+import { PriceListRowActions } from "@/components/admin/price-list-row-actions";
 
 export default async function AdminListasPreciosPage() {
   const lists = await db.priceList.findMany({
@@ -20,7 +20,8 @@ export default async function AdminListasPreciosPage() {
         </h1>
         <p className="text-sm text-neutral-600">
           Precios fijos por producto. La lista Mayorista es el precio base del
-          producto (sin lista asignada).
+          producto (sin lista asignada). Podés eliminar listas; los clientes
+          asignados vuelven a Mayorista.
         </p>
       </div>
 
@@ -53,12 +54,11 @@ export default async function AdminListasPreciosPage() {
                   </Badge>
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <Link
-                    href={`/admin/listas-precios/${l.id}`}
-                    className="text-sm text-[var(--brand-primary)] underline hover:opacity-80"
-                  >
-                    Editar
-                  </Link>
+                  <PriceListRowActions
+                    id={l.id}
+                    name={l.name}
+                    customerCount={l._count.customers}
+                  />
                 </td>
               </tr>
             ))}
