@@ -40,33 +40,42 @@ export function PriceListCreateForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-4 sm:flex-row sm:items-end"
+      className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-4"
     >
-      <div className="min-w-0 flex-1 space-y-1">
-        <Label htmlFor="new-list-name">Nueva lista</Label>
-        <Input
-          id="new-list-name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Ej. Lista 20% dto"
-          required
-        />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+        <div className="min-w-0 flex-1 space-y-1">
+          <Label htmlFor="new-list-name">Nueva lista</Label>
+          <Input
+            id="new-list-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Ej. Lista 20% dto"
+            required
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="fill-from-base" className="text-neutral-500">
+            Precios
+          </Label>
+          <div className="flex h-10 items-center gap-2.5">
+            <Switch
+              id="fill-from-base"
+              checked={fillFromBase}
+              onChange={(e) => setFillFromBase(e.target.checked)}
+            />
+            <label
+              htmlFor="fill-from-base"
+              className="cursor-pointer text-sm whitespace-nowrap text-neutral-700"
+            >
+              Rellenar desde Mayorista
+            </label>
+          </div>
+        </div>
+        <Button type="submit" className="shrink-0" disabled={loading || !name.trim()}>
+          {loading ? "Creando…" : "Crear"}
+        </Button>
       </div>
-      <label
-        htmlFor="fill-from-base"
-        className="flex cursor-pointer items-center gap-2.5 text-sm text-neutral-700"
-      >
-        <Switch
-          id="fill-from-base"
-          checked={fillFromBase}
-          onChange={(e) => setFillFromBase(e.target.checked)}
-        />
-        Rellenar desde Mayorista
-      </label>
-      <Button type="submit" disabled={loading || !name.trim()}>
-        {loading ? "Creando…" : "Crear"}
-      </Button>
-      {error ? <p className="text-sm text-red-600 sm:w-full">{error}</p> : null}
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
     </form>
   );
 }
