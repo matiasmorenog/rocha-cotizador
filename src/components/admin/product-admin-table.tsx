@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Pencil, X } from "lucide-react";
 import {
@@ -300,60 +300,82 @@ export function ProductAdminTable({
   products: ProductTableRow[];
   priceLists: PriceListOption[];
 }) {
+  const [query, setQuery] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const activeLists = priceLists.filter((l) => l.active);
   const isBusy = editingId !== null;
 
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return products;
+    return products.filter(
+      (p) =>
+        p.code.toLowerCase().includes(needle) ||
+        p.name.toLowerCase().includes(needle) ||
+        (p.rubro ?? "").toLowerCase().includes(needle),
+    );
+  }, [products, query]);
+
   return (
-    <DataTableScroll>
-      <table className="w-full min-w-[36rem] text-sm">
-        <thead className="bg-neutral-50 text-left text-neutral-600">
-          <tr>
-            <th className="px-3 py-2">Código</th>
-            <th className="px-3 py-2">Nombre</th>
-            <th className="px-3 py-2">Rubro</th>
-            <th className="px-3 py-2">Precio base</th>
-            {activeLists.map((l) => (
-              <th key={l.id} className="whitespace-nowrap px-3 py-2">
-                {l.name}
-              </th>
-            ))}
-            <th className="px-3 py-2">Estado</th>
-            <th className="px-3 py-2">Pedido unid.</th>
-            <th className="px-3 py-2" />
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((p) =>
-            editingId === p.id ? (
-              <ProductEditRow
-                key={p.id}
-                product={p}
-                activeLists={activeLists}
-                onCancel={() => setEditingId(null)}
-              />
-            ) : (
-              <ProductViewRow
-                key={p.id}
-                product={p}
-                activeLists={activeLists}
-                editDisabled={isBusy}
-                onStartEdit={() => setEditingId(p.id)}
-              />
-            ),
-          )}
-          {products.length === 0 ? (
+    <div className="space-y-3">
+      <Input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar código, nombre o rubro…"
+        aria-label="Buscar productos"
+      />
+      <DataTableScroll>
+        <table className="w-full min-w-[36rem] text-sm">
+          <thead className="bg-neutral-50 text-left text-neutral-600">
             <tr>
-              <td
-                colSpan={6 + activeLists.length}
-                className="px-3 py-8 text-center text-neutral-500"
-              >
-                No hay productos
-              </td>
+              <th className="px-3 py-2">Código</th>
+              <th className="px-3 py-2">Nombre</th>
+              <th className="px-3 py-2">Rubro</th>
+              <th className="px-3 py-2">Precio base</th>
+              {activeLists.map((l) => (
+                <th key={l.id} className="whitespace-nowrap px-3 py-2">
+                  {l.name}
+                </th>
+              ))}
+              <th className="px-3 py-2">Estado</th>
+              <th className="px-3 py-2">Pedido unid.</th>
+              <th className="px-3 py-2" />
             </tr>
-          ) : null}
-        </tbody>
-      </table>
-    </DataTableScroll>
+          </thead>
+          <tbody>
+            {filtered.map((p) =>
+              editingId === p.id ? (
+                <ProductEditRow
+                  key={p.id}
+                  product={p}
+                  activeLists={activeLists}
+                  onCancel={() => setEditingId(null)}
+                />
+              ) : (
+                <ProductViewRow
+                  key={p.id}
+                  product={p}
+                  activeLists={activeLists}
+                  editDisabled={isBusy}
+                  onStartEdit={() => setEditingId(p.id)}
+                />
+              ),
+            )}
+            {filtered.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6 + activeLists.length}
+                  className="px-3 py-8 text-center text-neutral-500"
+                >
+                  {query.trim()
+                    ? "Sin productos para esa búsqueda"
+                    : "No hay productos"}
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </DataTableScroll>
+    </div>
   );
 }
