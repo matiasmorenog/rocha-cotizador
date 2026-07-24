@@ -331,7 +331,7 @@ export function ProductAdminTable({
               <th className="px-3 py-2">Código</th>
               <th className="px-3 py-2">Nombre</th>
               <th className="px-3 py-2">Rubro</th>
-              <th className="px-3 py-2">Precio base</th>
+              <th className="px-3 py-2">Base</th>
               {activeLists.map((l) => (
                 <th key={l.id} className="whitespace-nowrap px-3 py-2">
                   {l.name}
