@@ -29,6 +29,7 @@ export async function GET() {
       id: l.id,
       name: l.name,
       excelKey: l.excelKey,
+      isBase: l.isBase,
       active: l.active,
       itemCount: l._count.items,
       customerCount: l._count.customers,

@@ -10,16 +10,19 @@ export function PriceListRowActions({
   id,
   name,
   customerCount,
+  isBase = false,
 }: {
   id: string;
   name: string;
   customerCount: number;
+  isBase?: boolean;
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function onDelete() {
+    if (isBase) return;
     const customersNote =
       customerCount > 0
         ? ` ${customerCount} cliente(s) pasarán a Precio base.`
@@ -56,18 +59,20 @@ export function PriceListRowActions({
         >
           <Pencil className="h-4 w-4" aria-hidden />
         </Link>
-        <Button
-          type="button"
-          variant="destructive"
-          size="sm"
-          disabled={loading}
-          onClick={() => void onDelete()}
-          className="h-8 w-8 px-0"
-          aria-label="Eliminar"
-          title="Eliminar"
-        >
-          <Trash2 className="h-4 w-4" aria-hidden />
-        </Button>
+        {!isBase ? (
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            disabled={loading}
+            onClick={() => void onDelete()}
+            className="h-8 w-8 px-0"
+            aria-label="Eliminar"
+            title="Eliminar"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+          </Button>
+        ) : null}
       </div>
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
     </div>

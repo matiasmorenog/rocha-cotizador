@@ -21,8 +21,9 @@ export default async function AdminListasPreciosPage() {
           Listas de precios
         </h1>
         <p className="text-sm text-neutral-600">
-          Precios fijos por producto. Sin lista asignada = Precio base. Podés
-          eliminar listas; los clientes asignados vuelven a Precio base.
+          Precios fijos por producto. La lista Precio base refleja Product.basePrice
+          y no se puede eliminar. Otras listas se pueden borrar; clientes asignados
+          vuelven a Precio base.
         </p>
       </div>
 
@@ -59,6 +60,7 @@ export default async function AdminListasPreciosPage() {
                     id={l.id}
                     name={l.name}
                     customerCount={l._count.customers}
+                    isBase={l.isBase}
                   />
                 </td>
               </tr>

@@ -6,7 +6,10 @@ import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
 import { invalidateAfterQuoteCreate } from "@/lib/cache-tags";
 import { lineTotal, unitPriceForProduct } from "@/lib/pricing";
-import { getPriceListUnitPricesByProductId } from "@/lib/price-list-resolve";
+import {
+  effectiveDiscountPriceListId,
+  getPriceListUnitPricesByProductId,
+} from "@/lib/price-list-resolve";
 import { nextQuoteNumber } from "@/lib/quotes";
 import { formatPrice } from "@/lib/utils";
 import { buildQuoteWhatsAppMessage, whatsappUrl } from "@/lib/whatsapp";
@@ -63,8 +66,11 @@ export async function POST(req: NextRequest) {
     where: { id: { in: productIds }, active: true },
   });
   const byId = new Map(products.map((p) => [p.id, p]));
-  const listPrices = customer.priceListId
-    ? await getPriceListUnitPricesByProductId(customer.priceListId)
+  const discountListId = await effectiveDiscountPriceListId(
+    customer.priceListId,
+  );
+  const listPrices = discountListId
+    ? await getPriceListUnitPricesByProductId(discountListId)
     : null;
 
   const lines: Array<{

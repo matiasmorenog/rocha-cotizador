@@ -13,7 +13,34 @@ export async function getPriceListUnitPricesByProductId(
   return new Map(items.map((i) => [i.productId, i.unitPrice]));
 }
 
-/** Resolve customer priceListId (null = Precio base / Product.basePrice). */
+/** Singleton Precio base list (isBase=true). */
+export async function getBasePriceList(): Promise<{
+  id: string;
+  name: string;
+} | null> {
+  return db.priceList.findFirst({
+    where: { isBase: true },
+    select: { id: true, name: true },
+  });
+}
+
+/**
+ * null or isBase list → use Product.basePrice (no list overrides).
+ * Discount lists → return id for override lookup.
+ */
+export async function effectiveDiscountPriceListId(
+  priceListId: string | null | undefined,
+): Promise<string | null> {
+  if (!priceListId) return null;
+  const list = await db.priceList.findUnique({
+    where: { id: priceListId },
+    select: { isBase: true },
+  });
+  if (!list || list.isBase) return null;
+  return priceListId;
+}
+
+/** Resolve customer priceListId (null / isBase → treat as Precio base). */
 export async function getCustomerPriceListId(
   customerId: string,
 ): Promise<string | null> {
@@ -26,15 +53,16 @@ export async function getCustomerPriceListId(
 
 /**
  * Map product code → unit price for catalog/search.
- * Base products + optional list overrides.
+ * Base / isBase → Product.basePrice; else list overrides with base fallback.
  */
 export async function resolveUnitPricesForList(
   products: Array<{ id: string; code: string; basePrice: Decimal | number }>,
   priceListId: string | null,
 ): Promise<Record<string, number>> {
+  const discountListId = await effectiveDiscountPriceListId(priceListId);
   const overrides =
-    priceListId != null
-      ? await getPriceListUnitPricesByProductId(priceListId)
+    discountListId != null
+      ? await getPriceListUnitPricesByProductId(discountListId)
       : null;
 
   const out: Record<string, number> = {};
@@ -45,4 +73,27 @@ export async function resolveUnitPricesForList(
     );
   }
   return out;
+}
+
+/** Keep base PriceListItem in sync when Product.basePrice changes. */
+export async function syncBaseListItemForProduct(
+  productId: string,
+  basePrice: Decimal | number | string,
+): Promise<void> {
+  const base = await getBasePriceList();
+  if (!base) return;
+  await db.priceListItem.upsert({
+    where: {
+      priceListId_productId: {
+        priceListId: base.id,
+        productId,
+      },
+    },
+    create: {
+      priceListId: base.id,
+      productId,
+      unitPrice: basePrice,
+    },
+    update: { unitPrice: basePrice },
+  });
 }

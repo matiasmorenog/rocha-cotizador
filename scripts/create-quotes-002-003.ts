@@ -3,7 +3,10 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { Decimal } from "@prisma/client/runtime/library";
 import { assertSafeDestructiveDb } from "../prisma/assert-safe-db";
 import { unitPriceForProduct, lineTotal } from "../src/lib/pricing";
-import { getPriceListUnitPricesByProductId } from "../src/lib/price-list-resolve";
+import {
+  effectiveDiscountPriceListId,
+  getPriceListUnitPricesByProductId,
+} from "../src/lib/price-list-resolve";
 
 const db = new PrismaClient();
 assertSafeDestructiveDb();
@@ -40,8 +43,11 @@ async function createQuoteForCustomer(code: string, productOffset: number) {
     picked.push(...products.slice(0, 3 - picked.length));
   }
 
-  const listPrices = customer.priceListId
-    ? await getPriceListUnitPricesByProductId(customer.priceListId)
+  const discountListId = await effectiveDiscountPriceListId(
+    customer.priceListId,
+  );
+  const listPrices = discountListId
+    ? await getPriceListUnitPricesByProductId(discountListId)
     : null;
 
   const qtys = [2, 1.5, 3];

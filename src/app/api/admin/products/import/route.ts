@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { invalidateAfterProductMutation } from "@/lib/cache-tags";
+import { syncBaseListItemForProduct } from "@/lib/price-list-resolve";
 import {
   cellNumber,
   cellText,
@@ -72,13 +73,16 @@ export async function POST(req: NextRequest) {
   }
 
   const priceLists = await db.priceList.findMany({
-    select: { id: true, name: true },
+    select: { id: true, name: true, isBase: true },
   });
   const listByHeader = new Map(
     priceLists.map((l) => [l.name.trim().toLowerCase(), l.id]),
   );
+  const baseListIds = new Set(
+    priceLists.filter((l) => l.isBase).map((l) => l.id),
+  );
 
-  /** Columns that are price lists (not base product fields). */
+  /** Columns that are discount price lists (not base product fields / isBase list). */
   const listColumns: Array<{ header: string; priceListId: string }> = [];
   for (const [header] of headers) {
     if (
@@ -87,7 +91,9 @@ export async function POST(req: NextRequest) {
       continue;
     }
     const id = listByHeader.get(header);
-    if (id) listColumns.push({ header, priceListId: id });
+    if (id && !baseListIds.has(id)) {
+      listColumns.push({ header, priceListId: id });
+    }
   }
 
   for (let r = 2; r <= sheet.rowCount; r++) {
@@ -134,6 +140,8 @@ export async function POST(req: NextRequest) {
       const product = existing
         ? await db.product.update({ where: { code }, data })
         : await db.product.create({ data });
+
+      await syncBaseListItemForProduct(product.id, product.basePrice);
 
       if (existing) summary.updated += 1;
       else summary.created += 1;

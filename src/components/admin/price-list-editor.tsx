@@ -37,10 +37,12 @@ export function PriceListEditor({
     id: string;
     name: string;
     active: boolean;
+    isBase?: boolean;
     items: ItemRow[];
   };
 }) {
   const router = useRouter();
+  const isBase = priceList.isBase === true;
   const [name, setName] = useState(priceList.name);
   const [active, setActive] = useState(priceList.active);
   const [prices, setPrices] = useState<Record<string, string>>(() =>
@@ -116,6 +118,7 @@ export function PriceListEditor({
   }
 
   async function fillFromBase() {
+    if (isBase) return;
     if (
       !window.confirm(
         "¿Sobrescribir todos los precios de esta lista con el precio base?",
@@ -142,6 +145,7 @@ export function PriceListEditor({
   }
 
   async function deleteList() {
+    if (isBase) return;
     if (
       !window.confirm(
         "¿Eliminar esta lista? Los clientes asignados pasarán a Precio base.",
@@ -202,24 +206,28 @@ export function PriceListEditor({
       </form>
 
       <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => void fillFromBase()}
-          disabled={filling}
-        >
-          {filling ? "Rellenando…" : "Rellenar desde precio base"}
-        </Button>
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={() => void deleteList()}
-          className="h-10 w-10 px-0"
-          aria-label="Eliminar lista"
-          title="Eliminar lista"
-        >
-          <Trash2 className="h-4 w-4" aria-hidden />
-        </Button>
+        {!isBase ? (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => void fillFromBase()}
+            disabled={filling}
+          >
+            {filling ? "Rellenando…" : "Rellenar desde precio base"}
+          </Button>
+        ) : null}
+        {!isBase ? (
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => void deleteList()}
+            className="h-10 w-10 px-0"
+            aria-label="Eliminar lista"
+            title="Eliminar lista"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden />
+          </Button>
+        ) : null}
         <Button
           type="button"
           onClick={() => void savePrices()}
@@ -244,8 +252,12 @@ export function PriceListEditor({
               <tr>
                 <th className="px-3 py-2">Código</th>
                 <th className="px-3 py-2">Producto</th>
-                <th className="px-3 py-2">Precio base</th>
-                <th className="px-3 py-2">Precio lista</th>
+                {!isBase ? (
+                  <th className="px-3 py-2">Precio base</th>
+                ) : null}
+                <th className="px-3 py-2">
+                  {isBase ? "Precio base" : "Precio lista"}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -258,9 +270,11 @@ export function PriceListEditor({
                       <span className="ml-2 text-xs text-red-600">inactivo</span>
                     ) : null}
                   </td>
-                  <td className="px-3 py-2 text-neutral-600">
-                    {formatPrice(i.product.basePrice)}
-                  </td>
+                  {!isBase ? (
+                    <td className="px-3 py-2 text-neutral-600">
+                      {formatPrice(i.product.basePrice)}
+                    </td>
+                  ) : null}
                   <td className="px-3 py-2">
                     <Input
                       type="number"

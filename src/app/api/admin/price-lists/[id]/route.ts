@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { invalidateAfterPriceListMutation } from "@/lib/cache-tags";
+import { getBasePriceList } from "@/lib/price-list-resolve";
 
 async function requireAdmin() {
   const session = await auth();
@@ -54,6 +55,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       id: list.id,
       name: list.name,
       excelKey: list.excelKey,
+      isBase: list.isBase,
       active: list.active,
       customerCount: list._count.customers,
       items: list.items.map((i) => ({
@@ -107,11 +109,28 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
   }
 
   const { id } = await ctx.params;
-  try {
-    await db.priceList.delete({ where: { id } });
-    invalidateAfterPriceListMutation();
-    return NextResponse.json({ ok: true });
-  } catch {
+  const list = await db.priceList.findUnique({
+    where: { id },
+    select: { id: true, isBase: true },
+  });
+  if (!list) {
     return NextResponse.json({ error: "Lista no encontrada" }, { status: 404 });
   }
+  if (list.isBase) {
+    return NextResponse.json(
+      { error: "No se puede eliminar la lista Precio base" },
+      { status: 400 },
+    );
+  }
+
+  const base = await getBasePriceList();
+  await db.$transaction([
+    db.customer.updateMany({
+      where: { priceListId: id },
+      data: { priceListId: base?.id ?? null },
+    }),
+    db.priceList.delete({ where: { id } }),
+  ]);
+  invalidateAfterPriceListMutation();
+  return NextResponse.json({ ok: true });
 }

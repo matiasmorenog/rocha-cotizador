@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { invalidateAfterCustomerMutation } from "@/lib/cache-tags";
 import { normalizePhone } from "@/lib/phone-contact";
+import { getBasePriceList } from "@/lib/price-list-resolve";
 import { padCustomerCode, pinFromCustomerCode } from "@/lib/utils";
 
 async function requireAdmin() {
@@ -94,10 +95,16 @@ export async function POST(req: NextRequest) {
   const notes = emptyToNull(parsed.data.notes);
   const paymentTerms = emptyToNull(parsed.data.paymentTerms);
   const deliveryHours = emptyToNull(parsed.data.deliveryHours);
-  const priceListId =
+  const priceListIdRaw =
     parsed.data.priceListId === undefined
       ? undefined
       : emptyToNull(parsed.data.priceListId);
+
+  let priceListId = priceListIdRaw;
+  if (priceListIdRaw === null) {
+    const base = await getBasePriceList();
+    priceListId = base?.id ?? null;
+  }
 
   if (priceListId) {
     const list = await db.priceList.findUnique({ where: { id: priceListId } });
@@ -135,6 +142,11 @@ export async function POST(req: NextRequest) {
   if (!passwordHash || !pin) {
     pin = pinFromCustomerCode(code);
     passwordHash = await bcrypt.hash(pin, 10);
+  }
+
+  if (priceListId === undefined) {
+    const base = await getBasePriceList();
+    priceListId = base?.id ?? null;
   }
 
   const customer = await db.customer.create({

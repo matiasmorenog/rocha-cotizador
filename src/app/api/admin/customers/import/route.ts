@@ -14,6 +14,8 @@ import {
   workbookFromBuffer,
   type ImportSummary,
 } from "@/lib/admin-excel";
+import { isBasePriceListLabel } from "@/lib/pricing";
+import { getBasePriceList } from "@/lib/price-list-resolve";
 
 export const runtime = "nodejs";
 
@@ -79,6 +81,7 @@ export async function POST(req: NextRequest) {
   const listByName = new Map(
     priceLists.map((l) => [l.name.trim().toLowerCase(), l.id]),
   );
+  const baseList = await getBasePriceList();
 
   for (let r = 2; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r);
@@ -108,15 +111,8 @@ export async function POST(req: NextRequest) {
     const listRaw = cellText(
       getCellByHeader(row, headers, "listaprecios"),
     ).trim();
-    let priceListId: string | null = null;
-    if (
-      listRaw &&
-      listRaw.toLowerCase() !== "precio base" &&
-      listRaw.toLowerCase() !== "minorista (base)" &&
-      listRaw.toLowerCase() !== "mayorista (base)" &&
-      listRaw.toLowerCase() !== "mayorista" &&
-      listRaw !== "-"
-    ) {
+    let priceListId: string | null = baseList?.id ?? null;
+    if (!isBasePriceListLabel(listRaw)) {
       const id = listByName.get(listRaw.toLowerCase());
       if (!id) {
         summary.errors.push({

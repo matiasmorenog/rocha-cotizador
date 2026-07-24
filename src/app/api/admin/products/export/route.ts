@@ -38,11 +38,13 @@ export async function GET() {
       },
     }),
     db.priceList.findMany({
-      select: { id: true, name: true, excelKey: true },
+      select: { id: true, name: true, excelKey: true, isBase: true },
     }),
   ]);
 
-  const orderedLists = sortPriceListsForDisplay(priceLists);
+  const orderedLists = sortPriceListsForDisplay(priceLists).filter(
+    (l) => !l.isBase,
+  );
 
   const headers = [
     ...PRODUCT_BASE_COLUMNS.slice(0, 4),

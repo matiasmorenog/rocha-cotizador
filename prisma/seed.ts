@@ -9,6 +9,8 @@ import {
   parsePhoneContact,
 } from "../src/lib/phone-contact";
 import {
+  BASE_PRICE_LIST_EXCEL_KEY,
+  BASE_PRICE_LIST_NAME,
   EXCEL_PRICE_LIST_DEFAULTS,
   excelListaToPriceListKey,
 } from "../src/lib/pricing";
@@ -69,14 +71,57 @@ async function seedAdmin() {
   console.log(`Admin ready: ${email}`);
 }
 
-/** Ensure Excel-backed price lists exist; return excelKey → id. */
+/**
+ * Ensure singleton Precio base list (excelKey 5, isBase true).
+ * Clears isBase on any other list.
+ */
+async function ensureBasePriceList(): Promise<string> {
+  await db.priceList.updateMany({
+    where: { isBase: true, NOT: { excelKey: BASE_PRICE_LIST_EXCEL_KEY } },
+    data: { isBase: false },
+  });
+
+  const list = await db.priceList.upsert({
+    where: { excelKey: BASE_PRICE_LIST_EXCEL_KEY },
+    create: {
+      name: BASE_PRICE_LIST_NAME,
+      excelKey: BASE_PRICE_LIST_EXCEL_KEY,
+      isBase: true,
+      active: true,
+    },
+    update: {
+      isBase: true,
+      // Keep admin rename; only set name if still default-ish empty
+    },
+  });
+
+  // If name was never customized away from old labels, normalize to Precio base
+  if (
+    list.name === "Mayorista" ||
+    list.name === "Mayorista (base)" ||
+    list.name === "Minorista" ||
+    list.name === "Minorista (base)"
+  ) {
+    await db.priceList.update({
+      where: { id: list.id },
+      data: { name: BASE_PRICE_LIST_NAME },
+    });
+  }
+
+  return list.id;
+}
+
+/** Ensure Excel-backed discount price lists exist; return excelKey → id (includes base). */
 async function ensureExcelPriceLists(): Promise<Map<string, string>> {
   const map = new Map<string, string>();
+  const baseId = await ensureBasePriceList();
+  map.set(BASE_PRICE_LIST_EXCEL_KEY, baseId);
+
   for (const [excelKey, meta] of Object.entries(EXCEL_PRICE_LIST_DEFAULTS)) {
     const list = await db.priceList.upsert({
       where: { excelKey },
-      create: { name: meta.name, excelKey, active: true },
-      update: {},
+      create: { name: meta.name, excelKey, active: true, isBase: false },
+      update: { isBase: false },
     });
     map.set(excelKey, list.id);
   }
@@ -85,23 +130,35 @@ async function ensureExcelPriceLists(): Promise<Map<string, string>> {
 
 /**
  * Drop legacy Excel PriceList excelKey "4" (Minorista) — not a real discount list.
- * Customers on that list → priceListId null (base / Product.basePrice).
+ * Customers on that list → Precio base list id.
  */
-async function removeOrphanExcelMinoristaList() {
+async function removeOrphanExcelMinoristaList(baseListId: string) {
   const orphan = await db.priceList.findUnique({ where: { excelKey: "4" } });
   if (!orphan) return;
+  if (orphan.isBase || orphan.id === baseListId) return;
 
-  const customersCleared = await db.customer.updateMany({
+  const customersMoved = await db.customer.updateMany({
     where: { priceListId: orphan.id },
-    data: { priceListId: null },
+    data: { priceListId: baseListId },
   });
   const itemsDeleted = await db.priceListItem.deleteMany({
     where: { priceListId: orphan.id },
   });
   await db.priceList.delete({ where: { id: orphan.id } });
   console.log(
-    `Removed orphan PriceList excelKey=4 ("${orphan.name}"): ${itemsDeleted.count} items, ${customersCleared.count} customers → base`,
+    `Removed orphan PriceList excelKey=4 ("${orphan.name}"): ${itemsDeleted.count} items, ${customersMoved.count} customers → Precio base`,
   );
+}
+
+/** Reassign null priceListId customers to base list. */
+async function assignNullCustomersToBase(baseListId: string) {
+  const result = await db.customer.updateMany({
+    where: { priceListId: null },
+    data: { priceListId: baseListId },
+  });
+  if (result.count > 0) {
+    console.log(`Customers with null list → Precio base: ${result.count}`);
+  }
 }
 
 async function seedFromExcel(xlsxPath: string) {
@@ -113,7 +170,8 @@ async function seedFromExcel(xlsxPath: string) {
   if (!pricesSheet) throw new Error('Missing sheet "Lista de Precios"');
 
   const listByKey = await ensureExcelPriceLists();
-  await removeOrphanExcelMinoristaList();
+  const baseListId = listByKey.get(BASE_PRICE_LIST_EXCEL_KEY)!;
+  await removeOrphanExcelMinoristaList(baseListId);
   console.log(`Price lists ready: ${[...listByKey.keys()].join(", ")}`);
 
   let products = 0;
@@ -134,12 +192,15 @@ async function seedFromExcel(xlsxPath: string) {
     const code = codeRaw.padStart(4, "0");
     const rubro = cellText(row.getCell(2).value) || null;
     const name = cellText(row.getCell(3).value);
-    // Col 5 (Excel "Mayorista") → Product.basePrice. Col 4 ("Minorista") ignored — not a PriceList.
+    // Col 5 (Excel "Mayorista") → Product.basePrice + base list item.
+    // Col 4 ("Minorista") ignored — not a PriceList.
     const basePrice = cellNumber(row.getCell(5).value);
 
     if (!name || basePrice <= 0) continue;
 
-    const listPrices: Record<string, number> = {};
+    const listPrices: Record<string, number> = {
+      [BASE_PRICE_LIST_EXCEL_KEY]: basePrice,
+    };
     for (const [excelKey, meta] of Object.entries(EXCEL_PRICE_LIST_DEFAULTS)) {
       const unitPrice = cellNumber(row.getCell(meta.column).value);
       if (unitPrice > 0) listPrices[excelKey] = unitPrice;
@@ -210,10 +271,11 @@ async function seedFromExcel(xlsxPath: string) {
 
     const lista = cellText(row.getCell(3).value);
     const excelKey = excelListaToPriceListKey(lista);
-    const priceListId = excelKey ? (listByKey.get(excelKey) ?? null) : null;
-    const priceListLabel = excelKey
-      ? (EXCEL_PRICE_LIST_DEFAULTS[excelKey]?.name ?? excelKey)
-      : "Precio base";
+    const priceListId = listByKey.get(excelKey) ?? baseListId;
+    const priceListLabel =
+      excelKey === BASE_PRICE_LIST_EXCEL_KEY
+        ? BASE_PRICE_LIST_NAME
+        : (EXCEL_PRICE_LIST_DEFAULTS[excelKey]?.name ?? excelKey);
 
     const address = cellText(row.getCell(4).value) || null;
     const comments = cellText(row.getCell(6).value);
@@ -285,6 +347,8 @@ async function seedFromExcel(xlsxPath: string) {
     }
     customers += 1;
   }
+
+  await assignNullCustomersToBase(baseListId);
 
   console.log(`Customers upserted: ${customers}`);
 

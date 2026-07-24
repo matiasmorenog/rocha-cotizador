@@ -31,12 +31,12 @@ export default async function AdminClientesPage({
       take: 100,
     }),
     db.priceList.findMany({
-      select: { id: true, name: true, active: true, excelKey: true },
+      select: { id: true, name: true, active: true, excelKey: true, isBase: true },
     }),
   ]);
 
   const priceLists = sortPriceListsForDisplay(priceListsRaw).map(
-    ({ id, name, active }) => ({ id, name, active }),
+    ({ id, name, active, isBase }) => ({ id, name, active, isBase }),
   );
 
   const editing = edit ? customers.find((c) => c.id === edit) : undefined;

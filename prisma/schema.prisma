@@ -35,7 +35,7 @@ model Customer {
   /// bcrypt hash — initial seed is a 4-digit PIN; clients must set a real password.
   passwordHash       String     @map("pinHash")
   mustChangePassword Boolean    @default(true)
-  /// null = Mayorista base (`Product.basePrice`).
+  /// Prefer the isBase PriceList id; null still resolves as Precio base.
   priceListId        String?
   priceList          PriceList? @relation(fields: [priceListId], references: [id], onDelete: SetNull)
   address            String?
@@ -66,17 +66,22 @@ model Product {
   @@index([active, code])
 }
 
-/// Named price list with fixed unit prices (Excel ROUND). Not the Mayorista base.
+/// Named price list with fixed unit prices (Excel ROUND).
+/// Exactly one row should have isBase=true ("Precio base", excelKey "5") — enforced in app.
 model PriceList {
   id        String          @id @default(cuid())
   name      String
-  /// Excel "Lista de Precio" key (e.g. "4", "6") for re-import; optional for manual lists.
+  /// Excel "Lista de Precio" key (e.g. "5", "6") for re-import; optional for manual lists.
   excelKey  String?         @unique
+  /// True only for the Precio base list (synced with Product.basePrice).
+  isBase    Boolean         @default(false)
   active    Boolean         @default(true)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
   items     PriceListItem[]
   customers Customer[]
+
+  @@index([isBase])
 }
 
 model PriceListItem {

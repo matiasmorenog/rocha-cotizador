@@ -47,7 +47,11 @@ export default async function AdminListaPrecioDetailPage({
         </h1>
         <p className="text-sm text-neutral-600">
           {list._count.customers} cliente(s) ·{" "}
-          {list.excelKey ? `Excel lista ${list.excelKey}` : "Lista manual"}
+          {list.isBase
+            ? "Precio base (Product.basePrice)"
+            : list.excelKey
+              ? `Excel lista ${list.excelKey}`
+              : "Lista manual"}
         </p>
       </div>
 
@@ -57,6 +61,7 @@ export default async function AdminListaPrecioDetailPage({
           id: list.id,
           name: list.name,
           active: list.active,
+          isBase: list.isBase,
           items: list.items.map((i) => ({
             productId: i.productId,
             unitPrice: Number(i.unitPrice),

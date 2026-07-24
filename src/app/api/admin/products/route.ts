@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { invalidateAfterProductMutation } from "@/lib/cache-tags";
+import { syncBaseListItemForProduct } from "@/lib/price-list-resolve";
 
 async function requireAdmin() {
   const session = await auth();
@@ -49,8 +50,15 @@ export async function POST(req: NextRequest) {
     ? await db.product.update({ where: { id: parsed.data.id }, data })
     : await db.product.create({ data });
 
+  await syncBaseListItemForProduct(product.id, product.basePrice);
+
   if (parsed.data.listPrices) {
+    const base = await db.priceList.findFirst({
+      where: { isBase: true },
+      select: { id: true },
+    });
     for (const row of parsed.data.listPrices) {
+      if (base && row.priceListId === base.id) continue;
       if (row.unitPrice === null) {
         await db.priceListItem.deleteMany({
           where: {

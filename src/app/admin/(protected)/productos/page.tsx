@@ -32,13 +32,13 @@ export default async function AdminProductosPage({
       take: 100,
     }),
     db.priceList.findMany({
-      select: { id: true, name: true, active: true, excelKey: true },
+      select: { id: true, name: true, active: true, excelKey: true, isBase: true },
     }),
   ]);
 
-  const orderedLists = sortPriceListsForDisplay(priceLists).map(
-    ({ id, name, active }) => ({ id, name, active }),
-  );
+  const orderedLists = sortPriceListsForDisplay(priceLists)
+    .filter((l) => !l.isBase)
+    .map(({ id, name, active }) => ({ id, name, active }));
 
   const tableRows = products.map((p) => ({
     id: p.id,
@@ -57,8 +57,9 @@ export default async function AdminProductosPage({
       <div>
         <h1 className="text-2xl font-semibold text-neutral-900">Productos</h1>
         <p className="text-sm text-neutral-600">
-          Precio base = sin lista de descuento. Al crear solo pedimos base;
-          precios por lista se editan en la tabla o con “Rellenar desde…”.
+          Precio base = lista Precio base (también editable en Listas). Al crear
+          solo pedimos base; precios por lista de dto se editan en la tabla o con
+          “Rellenar desde…”.
         </p>
       </div>
 
