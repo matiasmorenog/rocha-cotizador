@@ -12,7 +12,8 @@ type BrandBackdropProps = {
 
 /**
  * Soft brand atmosphere behind auth/landing surfaces.
- * PNG has solid beige fill — mix-blend-multiply + low opacity blends into latte page bg.
+ * Logo PNG is solid beige (#D2BFA9-ish) — never use mix-blend-multiply
+ * against the latte page bg or the mark vanishes.
  */
 export function BrandBackdrop({
   children,
@@ -26,29 +27,29 @@ export function BrandBackdrop({
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none absolute inset-0 -z-10 select-none mix-blend-multiply",
-          isMosaic ? "opacity-[0.1]" : "opacity-[0.14]",
+          "pointer-events-none absolute inset-0 -z-10 select-none",
+          isMosaic ? "opacity-20" : "opacity-[0.22]",
         )}
         style={
           isMosaic
             ? {
                 backgroundImage: "url(/brand/rocha-logo.png)",
                 backgroundRepeat: "repeat",
-                backgroundSize: "180px",
+                backgroundSize: "220px",
                 backgroundPosition: "center top",
               }
             : {
                 backgroundImage: "url(/brand/rocha-logo.png)",
                 backgroundRepeat: "no-repeat",
-                backgroundSize: "min(72vw, 420px)",
-                backgroundPosition: "center 18%",
+                backgroundSize: "min(80vw, 520px)",
+                backgroundPosition: "center 12%",
               }
         }
       />
-      {/* Soft veil so form cards stay readable over the mark */}
+      {/* Light veil only — keep watermark readable */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_70%_55%_at_50%_35%,transparent_0%,var(--background)_78%)]"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_65%_50%_at_50%_40%,transparent_40%,var(--background)_92%)] opacity-60"
       />
       {children}
     </div>

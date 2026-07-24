@@ -10,12 +10,9 @@ export default async function HomePage() {
   if (session?.user?.role === "ADMIN") redirect("/admin");
 
   return (
-    <BrandBackdrop
-      variant="mosaic"
-      className="flex min-h-[70vh] flex-col items-center justify-center gap-8 text-center"
-    >
+    <BrandBackdrop className="flex min-h-[70vh] flex-col items-center justify-center gap-8 text-center">
       <div className="flex flex-col items-center gap-5">
-        <BrandLogo size="xl" priority />
+        <BrandLogo size="2xl" priority />
         <p className="mx-auto max-w-md text-neutral-600">
           Ingresá con tu código de cliente y contraseña para armar cotizaciones y
           ver remitos.

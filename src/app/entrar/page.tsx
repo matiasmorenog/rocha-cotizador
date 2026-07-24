@@ -33,9 +33,9 @@ export default async function EntrarPage({
 
   return (
     <BrandBackdrop className="mx-auto flex min-h-[60vh] max-w-md items-center py-4">
-      <div className="w-full space-y-6 rounded-xl border border-[var(--brand-latte)]/50 bg-white/90 p-6 shadow-sm">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <BrandLogo size="lg" priority />
+      <div className="w-full space-y-6 rounded-xl border border-[var(--brand-latte)]/50 bg-[var(--brand-primary-soft)]/95 p-6 shadow-sm backdrop-blur-[2px]">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <BrandLogo size="xl" priority />
           <div className="space-y-1">
             <h1 className="text-xl font-semibold text-neutral-900">Ingresar</h1>
             <p className="text-sm text-neutral-600">
