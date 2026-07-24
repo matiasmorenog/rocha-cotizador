@@ -24,25 +24,43 @@ export async function AppHeader() {
               Rocha Cotizador
             </Link>
           </div>
-          <nav className="flex items-center gap-3 text-sm">
-            {isCustomer ? (
-              <>
-                <Link href="/cotizar" className="text-neutral-700 hover:text-neutral-900">
-                  Cotizar
-                </Link>
-                <Link href="/remitos" className="text-neutral-700 hover:text-neutral-900">
-                  Remitos
-                </Link>
-                <Link
-                  href="/cuenta/configuracion"
-                  className="text-neutral-700 hover:text-neutral-900"
-                >
-                  Configuración
-                </Link>
+          {isCustomer || isAdmin ? (
+            <nav className="flex items-center gap-3 text-sm">
+              {isCustomer ? (
+                <>
+                  <Link href="/cotizar" className="text-neutral-700 hover:text-neutral-900">
+                    Cotizar
+                  </Link>
+                  <Link href="/remitos" className="text-neutral-700 hover:text-neutral-900">
+                    Remitos
+                  </Link>
+                  <Link
+                    href="/cuenta/configuracion"
+                    className="text-neutral-700 hover:text-neutral-900"
+                  >
+                    Configuración
+                  </Link>
+                  <form
+                    action={async () => {
+                      "use server";
+                      await signOut({ redirectTo: "/login" });
+                    }}
+                  >
+                    <button
+                      type="submit"
+                      aria-label="Salir"
+                      title="Salir"
+                      className="cursor-pointer rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
+                    >
+                      <LogOut className="h-4 w-4" aria-hidden />
+                    </button>
+                  </form>
+                </>
+              ) : (
                 <form
                   action={async () => {
                     "use server";
-                    await signOut({ redirectTo: "/login" });
+                    await signOut({ redirectTo: "/admin/login" });
                   }}
                 >
                   <button
@@ -54,34 +72,9 @@ export async function AppHeader() {
                     <LogOut className="h-4 w-4" aria-hidden />
                   </button>
                 </form>
-              </>
-            ) : isAdmin ? (
-              <form
-                action={async () => {
-                  "use server";
-                  await signOut({ redirectTo: "/admin/login" });
-                }}
-              >
-                <button
-                  type="submit"
-                  aria-label="Salir"
-                  title="Salir"
-                  className="cursor-pointer rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
-                >
-                  <LogOut className="h-4 w-4" aria-hidden />
-                </button>
-              </form>
-            ) : (
-              <>
-                <Link href="/login" className="text-neutral-700 hover:text-neutral-900">
-                  Cliente
-                </Link>
-                <Link href="/admin/login" className="text-neutral-700 hover:text-neutral-900">
-                  Admin
-                </Link>
-              </>
-            )}
-          </nav>
+              )}
+            </nav>
+          ) : null}
         </div>
       </header>
       {isCustomer ? <PinChangeHint show={mustChangePassword} /> : null}
