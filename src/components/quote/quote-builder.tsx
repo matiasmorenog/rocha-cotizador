@@ -243,10 +243,14 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
               </ul>
             ) : null}
             {open && query.trim().length > 0 && results.length === 0 && !catalogLoading ? (
-              <p className="mt-2 text-sm text-neutral-500">Sin productos</p>
+              <p className="absolute z-50 mt-1 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-500 shadow-lg">
+                Sin productos
+              </p>
             ) : null}
             {catalog.error && !catalog.ready ? (
-              <p className="mt-2 text-sm text-red-600">{catalog.error}</p>
+              <p className="absolute z-50 mt-1 w-full rounded-md border border-red-200 bg-white px-3 py-2 text-sm text-red-600 shadow-lg">
+                {catalog.error}
+              </p>
             ) : null}
           </div>
           <div className="flex flex-wrap items-end gap-2">
