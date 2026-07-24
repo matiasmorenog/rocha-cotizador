@@ -4,6 +4,7 @@
 - [x] Disparos de WhatsApp al confirmar cotización (`wa.me`, número configurable en `/admin/configuracion`)
 - [x] Listas de precios fijos asignables por cliente (Excel ROUND; sin descuento %)
 - [ ] Ajustar precios por cantidad o kg (precios 0 al pedir por cantidad)
+- [ ] Matchear skeletons (loading UI) con el layout final — cuando terminemos las pantallas admin/listas/productos
 - [x] Vercel Preview ≡ Development: **todas** las env vars (incl. `DATABASE_URL` → Neon `development` pooler, `AUTH_*`); Production aislado (`main`)
 - [x] Local `.env`: Neon `development` (direct) + `SEED_TARGET=development` — **no** seed contra prod
 - [ ] **Go-live:** passwords seed (admin + PINs clientes) se quedan como están hasta que el admin real diga que go-live está listo. Rotar **recién al último momento** antes del uso real en producción — no cambiar seed ni rotar nada ahora.
