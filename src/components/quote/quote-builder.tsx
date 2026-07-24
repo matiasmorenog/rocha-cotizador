@@ -395,11 +395,10 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                         step="any"
                         value={l.qty}
                         onChange={(e) => setQty(l.productId, Number(e.target.value))}
-                        aria-label="Cantidad"
+                        aria-label={
+                          l.orderByUnit ? "Cantidad en unidades" : "Cantidad en kg"
+                        }
                       />
-                      <span className="mt-0.5 block text-[10px] text-neutral-500">
-                        {l.orderByUnit ? "unidades" : "kg"}
-                      </span>
                     </td>
                     <td className="px-3 py-2">
                       {formatPrice(effectiveUnitPrice(l))}
