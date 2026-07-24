@@ -24,13 +24,15 @@ export function BrandLogo({
 }: BrandLogoProps) {
   const s = SIZE[size];
   return (
-    <Image
-      src="/brand/rocha-logo.png"
-      alt="ROCHA tienda de café"
-      width={s.width}
-      height={s.height}
-      priority={priority}
-      className={cn(s.className, "object-contain", className)}
-    />
+    <span className="inline-block overflow-hidden rounded-2xl">
+      <Image
+        src="/brand/rocha-logo.png"
+        alt="ROCHA tienda de café"
+        width={s.width}
+        height={s.height}
+        priority={priority}
+        className={cn(s.className, "object-contain", className)}
+      />
+    </span>
   );
 }
