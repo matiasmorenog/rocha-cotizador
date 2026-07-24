@@ -3,7 +3,6 @@ import { LogOut } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
 import { PinChangeHint } from "@/components/account/pin-change-hint";
 import { AdminMenuButton } from "@/components/admin/admin-menu-button";
-import { BrandLogo } from "@/components/brand-logo";
 
 export async function AppHeader() {
   const session = await auth();
@@ -15,15 +14,14 @@ export async function AppHeader() {
   return (
     <>
       <header className="border-b border-[var(--brand-latte)]/60 bg-[var(--brand-primary-soft)]/80 print:hidden">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:py-4">
-          <div className="flex min-w-0 items-center gap-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2">
             {isAdmin ? <AdminMenuButton /> : null}
             <Link
               href={isCustomer ? "/cotizar" : isAdmin ? "/admin" : "/"}
-              className="flex min-w-0 items-center"
-              aria-label="Rocha Cotizador"
+              className="truncate text-base font-semibold tracking-tight text-neutral-900 sm:text-lg"
             >
-              <BrandLogo size="sm" priority />
+              Rocha Cotizador
             </Link>
           </div>
           <nav className="flex items-center gap-3 text-sm">
