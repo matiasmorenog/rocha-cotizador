@@ -7,7 +7,7 @@ Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
 Corre en PR/push a `development` y `main`:
 
 1. `npm ci`
-2. `npx prisma generate` (con `DATABASE_URL` dummy)
+2. `npx prisma generate` (con `DATABASE_URL` dummy; schema includes `rhel-openssl-3.0.x` for Vercel)
 3. `npm run typecheck`
 4. `npm run lint`
 

@@ -70,7 +70,15 @@ Dashboard admin serializa queries en `$transaction` (no `Promise.all` de 4 count
 
 Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateAfterCustomerMutation`, `invalidateAfterQuoteCreate`).
 
-Build command (Vercel): `npm run build` → `prisma generate && next build` (`postinstall` también corre `prisma generate`).
+Build command (Vercel): `npm run build` → `prisma generate && next build` (`postinstall` también corre `prisma generate`). `binaryTargets` in `schema.prisma` must include `rhel-openssl-3.0.x` so the client works on Vercel when CI generates on Debian.
+
+### CI → producción (gate)
+
+- Auto-deploy Vercel en **`main` está OFF** (`vercel.json`).
+- Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production**.
+- Secrets en GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (ver [`docs/ci.md`](docs/ci.md)).
+
+Previews de `development` / PRs siguen con el deploy automático de Vercel.
 
 ### CI → producción (gate)
 
