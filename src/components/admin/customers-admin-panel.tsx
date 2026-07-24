@@ -1,0 +1,172 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { Pencil } from "lucide-react";
+import { CustomerAdminForm } from "@/components/admin/customer-admin-form";
+import { Badge } from "@/components/ui/badge";
+import { DataTableScroll } from "@/components/ui/data-table";
+import { Input } from "@/components/ui/input";
+import { whatsappUrl } from "@/lib/whatsapp";
+
+export type CustomerListRow = {
+  id: string;
+  code: string;
+  name: string;
+  priceListId: string | null;
+  priceListName: string | null;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  paymentTerms: string | null;
+  deliveryHours: string | null;
+  active: boolean;
+};
+
+export type PriceListOption = {
+  id: string;
+  name: string;
+  active: boolean;
+  isBase?: boolean;
+};
+
+export function CustomersAdminPanel({
+  customers,
+  priceLists,
+  initialEditId,
+}: {
+  customers: CustomerListRow[];
+  priceLists: PriceListOption[];
+  initialEditId?: string | null;
+}) {
+  const [query, setQuery] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(
+    initialEditId ?? null,
+  );
+
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return customers;
+    return customers.filter(
+      (c) =>
+        c.code.toLowerCase().includes(needle) ||
+        c.name.toLowerCase().includes(needle),
+    );
+  }, [customers, query]);
+
+  const editing = editingId
+    ? customers.find((c) => c.id === editingId)
+    : undefined;
+
+  return (
+    <>
+      <div className="flex gap-2">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar código o nombre…"
+          aria-label="Buscar clientes"
+          className="flex-1"
+        />
+      </div>
+
+      <CustomerAdminForm
+        key={editing?.id ?? "new"}
+        priceLists={priceLists}
+        customer={
+          editing
+            ? {
+                id: editing.id,
+                code: editing.code,
+                name: editing.name,
+                priceListId: editing.priceListId,
+                address: editing.address,
+                phone: editing.phone,
+                email: editing.email,
+                notes: editing.notes,
+                paymentTerms: editing.paymentTerms,
+                deliveryHours: editing.deliveryHours,
+                active: editing.active,
+              }
+            : undefined
+        }
+      />
+
+      <DataTableScroll>
+        <table className="w-full min-w-[40rem] text-sm">
+          <thead className="bg-neutral-50 text-left text-neutral-600">
+            <tr>
+              <th className="px-3 py-2">Código</th>
+              <th className="px-3 py-2">Nombre</th>
+              <th className="px-3 py-2">Dirección</th>
+              <th className="px-3 py-2">Teléfono</th>
+              <th className="px-3 py-2">Lista</th>
+              <th className="px-3 py-2">Estado</th>
+              <th className="px-3 py-2" />
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="px-3 py-8 text-center text-neutral-500"
+                >
+                  {query.trim()
+                    ? "Sin clientes para esa búsqueda"
+                    : "Sin clientes"}
+                </td>
+              </tr>
+            ) : (
+              filtered.map((c) => {
+                const wa = c.phone ? whatsappUrl(c.phone) : null;
+                return (
+                  <tr key={c.id} className="border-t border-neutral-100">
+                    <td className="px-3 py-2 font-mono">{c.code}</td>
+                    <td className="px-3 py-2">{c.name}</td>
+                    <td className="px-3 py-2 text-neutral-700">
+                      {c.address ?? "—"}
+                    </td>
+                    <td className="px-3 py-2 text-neutral-700">
+                      {c.phone && wa ? (
+                        <a
+                          href={wa}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[var(--brand-primary)] underline hover:opacity-80"
+                        >
+                          {c.phone}
+                        </a>
+                      ) : (
+                        (c.phone ?? "—")
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {c.priceListName ?? "Precio base"}
+                    </td>
+                    <td className="px-3 py-2">
+                      <Badge variant={c.active ? "success" : "danger"}>
+                        {c.active ? "Activo" : "Inactivo"}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(c.id)}
+                        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
+                        aria-label="Editar"
+                        title="Editar"
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </DataTableScroll>
+    </>
+  );
+}
