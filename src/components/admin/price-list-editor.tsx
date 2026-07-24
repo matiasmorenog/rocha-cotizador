@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -206,8 +207,11 @@ export function PriceListEditor({
           type="button"
           variant="destructive"
           onClick={() => void deleteList()}
+          className="h-10 w-10 px-0"
+          aria-label="Eliminar lista"
+          title="Eliminar lista"
         >
-          Eliminar lista
+          <Trash2 className="h-4 w-4" aria-hidden />
         </Button>
         <Button
           type="button"

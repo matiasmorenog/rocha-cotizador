@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function PriceListRowActions({
   id,
@@ -55,16 +56,18 @@ export function PriceListRowActions({
         >
           <Pencil className="h-4 w-4" aria-hidden />
         </Link>
-        <button
+        <Button
           type="button"
+          variant="destructive"
+          size="sm"
           disabled={loading}
           onClick={() => void onDelete()}
-          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-red-300 bg-white text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="h-8 w-8 px-0"
           aria-label="Eliminar"
           title="Eliminar"
         >
           <Trash2 className="h-4 w-4" aria-hidden />
-        </button>
+        </Button>
       </div>
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
     </div>
