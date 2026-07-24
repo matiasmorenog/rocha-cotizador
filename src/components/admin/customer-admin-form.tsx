@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ type PriceListOption = {
   id: string;
   name: string;
   active: boolean;
+  isBase?: boolean;
 };
 
 type CustomerRow = {
@@ -35,9 +37,13 @@ export function CustomerAdminForm({
   priceLists: PriceListOption[];
 }) {
   const router = useRouter();
+  const baseListId =
+    priceLists.find((l) => l.isBase)?.id ?? priceLists[0]?.id ?? "";
   const [code, setCode] = useState(customer?.code ?? "");
   const [name, setName] = useState(customer?.name ?? "");
-  const [priceListId, setPriceListId] = useState(customer?.priceListId ?? "");
+  const [priceListId, setPriceListId] = useState(
+    customer?.priceListId ?? baseListId,
+  );
   const [address, setAddress] = useState(customer?.address ?? "");
   const [phone, setPhone] = useState(customer?.phone ?? "");
   const [email, setEmail] = useState(customer?.email ?? "");
@@ -49,6 +55,17 @@ export function CustomerAdminForm({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const isEdit = Boolean(customer);
+
+  if (!isEdit && !showCreate) {
+    return (
+      <Button type="button" onClick={() => setShowCreate(true)}>
+        <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+        Nuevo cliente
+      </Button>
+    );
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -62,7 +79,7 @@ export function CustomerAdminForm({
         id: customer?.id,
         code,
         name,
-        priceListId: priceListId || null,
+        priceListId: priceListId || baseListId || null,
         address,
         phone,
         email,
@@ -100,6 +117,22 @@ export function CustomerAdminForm({
       onSubmit={onSubmit}
       className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
     >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium text-neutral-800">
+          {isEdit ? "Editar cliente" : "Nuevo cliente"}
+        </p>
+        {!isEdit ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowCreate(false)}
+            aria-label="Cerrar formulario"
+          >
+            <X className="h-4 w-4" aria-hidden />
+          </Button>
+        ) : null}
+      </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label>Código</Label>
@@ -164,8 +197,8 @@ export function CustomerAdminForm({
               value={priceListId}
               onChange={(e) => setPriceListId(e.target.value)}
               className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
+              required
             >
-              <option value="">Precio base</option>
               {inactiveSelected ? (
                 <option value={inactiveSelected.id}>
                   {inactiveSelected.name} (inactiva)

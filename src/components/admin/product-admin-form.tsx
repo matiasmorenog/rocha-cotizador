@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,16 @@ export function ProductAdminForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+
+  if (!showCreate) {
+    return (
+      <Button type="button" onClick={() => setShowCreate(true)}>
+        <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+        Nuevo producto
+      </Button>
+    );
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -62,7 +73,18 @@ export function ProductAdminForm() {
       onSubmit={onSubmit}
       className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4"
     >
-      <p className="text-sm font-medium text-neutral-800">Nuevo producto</p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium text-neutral-800">Nuevo producto</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowCreate(false)}
+          aria-label="Cerrar formulario"
+        >
+          <X className="h-4 w-4" aria-hidden />
+        </Button>
+      </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1">
           <Label>Código</Label>
