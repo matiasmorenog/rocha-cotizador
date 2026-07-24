@@ -338,7 +338,7 @@ export function ProductAdminTable({
                 </th>
               ))}
               <th className="px-3 py-2">Estado</th>
-              <th className="px-3 py-2">Pedido unid.</th>
+              <th className="px-3 py-2">Medida</th>
               <th className="px-3 py-2" />
             </tr>
           </thead>
