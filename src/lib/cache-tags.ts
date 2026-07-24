@@ -4,6 +4,8 @@ import { revalidateTag } from "next/cache";
 export const CACHE_TAGS = {
   products: "products",
   priceLists: "price-lists",
+  /** customerId → priceListId mapping (not unit prices). */
+  customers: "customers",
   adminDashboard: "admin-dashboard",
 } as const;
 
@@ -23,6 +25,10 @@ export function invalidatePriceListsCache() {
   expireTag(CACHE_TAGS.priceLists);
 }
 
+export function invalidateCustomersCache() {
+  expireTag(CACHE_TAGS.customers);
+}
+
 export function invalidateAdminDashboardCache() {
   expireTag(CACHE_TAGS.adminDashboard);
 }
@@ -34,14 +40,16 @@ export function invalidateAfterProductMutation() {
   invalidateAdminDashboardCache();
 }
 
-/** Price list create/update/items — unit prices for customers. */
+/** Price list create/update/items — unit prices; delete may reassign customers. */
 export function invalidateAfterPriceListMutation() {
   invalidatePriceListsCache();
   invalidateProductsCache();
+  invalidateCustomersCache();
 }
 
-/** Customer create/update/import — dashboard active-customer count. */
+/** Customer create/update/import — dashboard count + priceListId mapping. */
 export function invalidateAfterCustomerMutation() {
+  invalidateCustomersCache();
   invalidateAdminDashboardCache();
 }
 

@@ -8,21 +8,31 @@ export type { ProductBase } from "@/lib/product-base";
 /**
  * Version for client invalidation: any Product row change (incl. active toggle)
  * bumps `updatedAt`, so MAX covers create/update/deactivate/reactivate.
+ * Cached under products + price-lists tags — skip 3 aggregates when ETag/`?v=`
+ * matches and nothing mutated since last compute.
  */
+const getProductsCatalogVersionCached = unstable_cache(
+  async (): Promise<string> => {
+    const [products, lists, items] = await Promise.all([
+      db.product.aggregate({ _max: { updatedAt: true } }),
+      db.priceList.aggregate({ _max: { updatedAt: true } }),
+      db.priceListItem.aggregate({ _max: { updatedAt: true } }),
+    ]);
+    const stamps = [
+      products._max.updatedAt,
+      lists._max.updatedAt,
+      items._max.updatedAt,
+    ]
+      .filter(Boolean)
+      .map((d) => d!.toISOString());
+    return stamps.sort().at(-1) ?? "0";
+  },
+  ["products-catalog-version"],
+  { tags: [CACHE_TAGS.products, CACHE_TAGS.priceLists], revalidate: 3600 },
+);
+
 export async function getProductsCatalogVersion(): Promise<string> {
-  const [products, lists, items] = await Promise.all([
-    db.product.aggregate({ _max: { updatedAt: true } }),
-    db.priceList.aggregate({ _max: { updatedAt: true } }),
-    db.priceListItem.aggregate({ _max: { updatedAt: true } }),
-  ]);
-  const stamps = [
-    products._max.updatedAt,
-    lists._max.updatedAt,
-    items._max.updatedAt,
-  ]
-    .filter(Boolean)
-    .map((d) => d!.toISOString());
-  return stamps.sort().at(-1) ?? "0";
+  return getProductsCatalogVersionCached();
 }
 
 async function fetchActiveProductsBaseUncached(): Promise<ProductBase[]> {

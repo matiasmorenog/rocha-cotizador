@@ -43,14 +43,37 @@ export async function effectiveDiscountPriceListId(
   return priceListId;
 }
 
+export type CustomerPricingContext = {
+  priceListId: string | null;
+  active: boolean;
+};
+
+/**
+ * Cached customerId → priceListId (+ active). Invalidate via `customers` tag
+ * on customer mutate and price-list delete (reassigns customers).
+ */
+export async function getCachedCustomerPricingContext(
+  customerId: string,
+): Promise<CustomerPricingContext | null> {
+  const cached = unstable_cache(
+    async (): Promise<CustomerPricingContext | null> => {
+      const customer = await db.customer.findUnique({
+        where: { id: customerId },
+        select: { priceListId: true, active: true },
+      });
+      return customer;
+    },
+    ["customer-pricing-context", customerId],
+    { tags: [CACHE_TAGS.customers], revalidate: 3600 },
+  );
+  return cached();
+}
+
 /** Resolve customer priceListId (null / isBase → treat as Precio base). */
 export async function getCustomerPriceListId(
   customerId: string,
 ): Promise<string | null> {
-  const customer = await db.customer.findUnique({
-    where: { id: customerId },
-    select: { priceListId: true },
-  });
+  const customer = await getCachedCustomerPricingContext(customerId);
   return customer?.priceListId ?? null;
 }
 
