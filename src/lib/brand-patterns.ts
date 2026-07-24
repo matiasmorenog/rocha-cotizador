@@ -9,8 +9,10 @@ export const BRAND_PATTERNS: Record<
   {
     label: string;
     src: string;
-    /** CSS background-size for tiling */
+    /** CSS background-size */
     size: string;
+    /** CSS background-repeat */
+    repeat: "repeat" | "no-repeat";
     /** White/latte veil opacity (0–1) over the pattern */
     veil: number;
   }
@@ -19,19 +21,23 @@ export const BRAND_PATTERNS: Record<
     label: "Tazas / medialunas",
     src: "/brand/bg-pattern-cups.png",
     size: "420px",
+    repeat: "repeat",
     veil: 0.48,
   },
   beans: {
     label: "Granos / hojas",
     src: "/brand/bg-pattern-beans.png",
     size: "560px",
+    repeat: "repeat",
     veil: 0.55,
   },
+  // Portrait illustration (575×1024), not seamless — cover avoids mosaic seams.
   kraft: {
     label: "Kraft / equipo",
     src: "/brand/bg-pattern-kraft.png",
-    size: "480px",
-    veil: 0.62,
+    size: "cover",
+    repeat: "no-repeat",
+    veil: 0.58,
   },
 };
 

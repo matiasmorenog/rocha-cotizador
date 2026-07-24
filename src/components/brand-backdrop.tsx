@@ -13,8 +13,9 @@ type BrandBackdropProps = {
 };
 
 /**
- * Full-bleed tiled coffee pattern behind auth/landing surfaces.
- * Pattern is visible; a soft latte veil keeps forms readable.
+ * Full-bleed coffee backdrop behind auth/landing surfaces.
+ * Seamless tiles use repeat; kraft uses cover (portrait art, not tileable).
+ * Soft latte veil keeps forms readable.
  */
 export function BrandBackdrop({
   children,
@@ -30,9 +31,9 @@ export function BrandBackdrop({
         className="pointer-events-none fixed inset-0 -z-10 select-none"
         style={{
           backgroundImage: `url(${config.src})`,
-          backgroundRepeat: "repeat",
+          backgroundRepeat: config.repeat,
           backgroundSize: config.size,
-          backgroundPosition: "center top",
+          backgroundPosition: "center center",
         }}
       />
       <div
