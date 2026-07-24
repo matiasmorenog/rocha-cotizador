@@ -273,7 +273,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                     onChange={(e) =>
                       setLocalOrderByUnit(e.target.value === "unit")
                     }
-                    className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
+                    className="flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
                   >
                     <option value="kg">Por kg</option>
                     <option value="unit">Por unidades</option>

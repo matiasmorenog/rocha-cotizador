@@ -196,7 +196,7 @@ export function CustomerAdminForm({
             <select
               value={priceListId}
               onChange={(e) => setPriceListId(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
+              className="flex h-10 w-full rounded-md border border-neutral-300 bg-white pl-3 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
               required
             >
               {inactiveSelected ? (

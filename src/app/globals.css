@@ -108,6 +108,12 @@ input[type="week"]::-webkit-calendar-picker-indicator:hover {
   opacity: 1;
 }
 
+/* Native <select>: room between text, chevron, and right edge */
+select:not([multiple]) {
+  padding-inline-end: 2.25rem;
+  background-position: right 0.75rem center;
+}
+
 /* Skeleton shimmer — adapted from nexus admin/storefront-skeleton */
 @keyframes rocha-skeleton-shimmer {
   0% {
