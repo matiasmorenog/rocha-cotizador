@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CatalogSearchProduct[]>([]);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
   const [selected, setSelected] = useState<CatalogSearchProduct | null>(null);
   const [qty, setLocalQty] = useState("1");
   const [orderByUnit, setLocalOrderByUnit] = useState(false);
@@ -54,6 +55,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
   const [error, setError] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const searchRequestId = useRef(0);
 
   const catalogLoading = catalog.loading && !catalog.ready;
@@ -76,6 +78,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
       void searchAsyncRef.current(q).then((rows) => {
         if (cancelled || requestId !== searchRequestId.current) return;
         setResults(rows);
+        setHighlightIndex(rows.length > 0 ? 0 : -1);
         setOpen(true);
       });
     }, 200);
@@ -86,6 +89,14 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
   }, [query, catalog.ready]);
 
   useEffect(() => {
+    if (!open || highlightIndex < 0) return;
+    const el = listRef.current?.querySelector<HTMLElement>(
+      `[data-product-option="${highlightIndex}"]`,
+    );
+    el?.scrollIntoView({ block: "nearest" });
+  }, [highlightIndex, open, results]);
+
+  useEffect(() => {
     function onClick(e: MouseEvent) {
       if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
     }
@@ -93,13 +104,64 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
+  function pickProduct(p: CatalogSearchProduct) {
+    setSelected(p);
+    setLocalOrderByUnit(false);
+    setQuery("");
+    setResults([]);
+    setHighlightIndex(-1);
+    setOpen(false);
+    queueMicrotask(() => {
+      document.getElementById("qty")?.focus();
+    });
+  }
+
   function onQueryChange(value: string) {
     setSelected(null);
     setLocalOrderByUnit(false);
     setQuery(value);
+    setHighlightIndex(-1);
     if (value.trim().length < 1) {
       setResults([]);
       setOpen(false);
+    }
+  }
+
+  function onSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (selected) return;
+
+    if (e.key === "Escape") {
+      if (open) {
+        e.preventDefault();
+        setOpen(false);
+        setHighlightIndex(-1);
+      }
+      return;
+    }
+
+    if (!open || results.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIndex((i) => (i < 0 ? 0 : (i + 1) % results.length));
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIndex((i) =>
+        i < 0 ? results.length - 1 : (i - 1 + results.length) % results.length,
+      );
+      return;
+    }
+    if (e.key === "Enter") {
+      const pick =
+        highlightIndex >= 0 && highlightIndex < results.length
+          ? results[highlightIndex]
+          : results[0];
+      if (pick) {
+        e.preventDefault();
+        pickProduct(pick);
+      }
     }
   }
 
@@ -125,6 +187,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
     setLocalQty("1");
     setLocalOrderByUnit(false);
     setResults([]);
+    setHighlightIndex(-1);
     setOpen(false);
     setError(null);
     queueMicrotask(() => searchInputRef.current?.focus());
@@ -194,6 +257,15 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
               <Input
                 ref={searchInputRef}
                 id="product-search"
+                role="combobox"
+                aria-expanded={open && results.length > 0}
+                aria-controls="product-search-listbox"
+                aria-autocomplete="list"
+                aria-activedescendant={
+                  open && highlightIndex >= 0
+                    ? `product-option-${highlightIndex}`
+                    : undefined
+                }
                 placeholder={
                   catalog.ready
                     ? "Buscar por nombre o código…"
@@ -203,6 +275,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                 }
                 value={selected ? `${selected.code} — ${selected.name}` : query}
                 onChange={(e) => onQueryChange(e.target.value)}
+                onKeyDown={onSearchKeyDown}
                 onFocus={() => results.length > 0 && setOpen(true)}
                 autoComplete="off"
                 disabled={catalogLoading}
@@ -215,18 +288,28 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
               ) : null}
             </div>
             {open && results.length > 0 ? (
-              <ul className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg">
-                {results.map((p) => (
-                  <li key={p.id}>
+              <ul
+                ref={listRef}
+                id="product-search-listbox"
+                role="listbox"
+                className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
+              >
+                {results.map((p, index) => (
+                  <li key={p.id} role="presentation">
                     <button
                       type="button"
-                      className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-neutral-50"
-                      onClick={() => {
-                        setSelected(p);
-                        setLocalOrderByUnit(false);
-                        setQuery("");
-                        setOpen(false);
-                      }}
+                      id={`product-option-${index}`}
+                      role="option"
+                      aria-selected={index === highlightIndex}
+                      data-product-option={index}
+                      className={cn(
+                        "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm",
+                        index === highlightIndex
+                          ? "bg-[var(--brand-primary-soft)]"
+                          : "hover:bg-neutral-50",
+                      )}
+                      onMouseEnter={() => setHighlightIndex(index)}
+                      onClick={() => pickProduct(p)}
                     >
                       <span className="font-medium text-neutral-900">
                         {p.code} — {p.name}
