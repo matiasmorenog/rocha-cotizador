@@ -205,7 +205,7 @@ export function CustomerAdminForm({
       </div>
 
       <div className="space-y-1">
-        <Label>Notas</Label>
+        <Label>Observaciones</Label>
         <textarea
           rows={4}
           value={notes}
