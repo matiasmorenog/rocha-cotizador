@@ -29,18 +29,18 @@ export default async function HomePage({
             y ver remitos.
           </p>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+        <div className="flex flex-col items-center gap-3">
           <Link
             href={withBgParam("/login", pattern)}
-            className="inline-flex h-11 items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:brightness-95"
+            className="inline-flex h-11 w-full items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:brightness-95"
           >
             Ingresar como cliente
           </Link>
           <Link
             href={withBgParam("/admin/login", pattern)}
-            className="inline-flex h-11 items-center justify-center rounded-md border border-[var(--brand-latte)] bg-white px-4 text-sm font-medium text-neutral-800 hover:bg-[var(--brand-primary-soft)]"
+            className="text-sm text-neutral-500 underline underline-offset-2 hover:text-neutral-700"
           >
-            Admin
+            Ingresar como administrador
           </Link>
         </div>
       </div>

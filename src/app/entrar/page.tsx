@@ -51,18 +51,18 @@ export default async function EntrarPage({
           </div>
         </div>
 
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col items-center gap-3">
           <Link
             href={withBgParam(customerHref, pattern)}
-            className="inline-flex h-11 items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90"
+            className="inline-flex h-11 w-full items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90"
           >
             Soy cliente
           </Link>
           <Link
             href={withBgParam(adminHref, pattern)}
-            className="inline-flex h-11 items-center justify-center rounded-md border border-[var(--brand-latte)] bg-white px-4 text-sm font-medium text-neutral-900 transition-colors hover:bg-[var(--brand-primary-soft)]"
+            className="text-sm text-neutral-500 underline underline-offset-2 hover:text-neutral-700"
           >
-            Soy administrador
+            Ingresar como administrador
           </Link>
         </div>
       </div>
