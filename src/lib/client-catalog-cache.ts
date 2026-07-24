@@ -132,10 +132,9 @@ export function filterCatalog(
 
   const matched: ProductBase[] = [];
   for (const p of products) {
-    if (
-      p.code.toLowerCase().includes(needle) ||
-      p.name.toLowerCase().includes(needle)
-    ) {
+    const code = String(p.code ?? "").toLowerCase();
+    const name = String(p.name ?? "").toLowerCase();
+    if (code.includes(needle) || name.includes(needle)) {
       matched.push(p);
       if (matched.length >= take) break;
     }

@@ -39,6 +39,9 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
 
   const catalog = useProductCatalog({ customerId });
   const { searchAsync } = catalog;
+  // Keep latest searchAsync in a ref so catalog load (new callback identity)
+  // does not cancel an in-flight search — that left the 2nd product lookup empty.
+  const searchAsyncRef = useRef(searchAsync);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CatalogSearchProduct[]>([]);
@@ -50,10 +53,16 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchRequestId = useRef(0);
 
   const catalogLoading = catalog.loading && !catalog.ready;
   const selectedAllowsUnit = selected?.allowsUnitOrder === true;
   const hasUnitOrderLines = lines.some((l) => l.orderByUnit);
+
+  useEffect(() => {
+    searchAsyncRef.current = searchAsync;
+  }, [searchAsync]);
 
   useEffect(() => {
     const q = query.trim();
@@ -61,10 +70,11 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
       return;
     }
     let cancelled = false;
+    const requestId = ++searchRequestId.current;
     // Local filter first; searchAsync falls back to API if catalog empty.
     const handle = setTimeout(() => {
-      void searchAsync(q).then((rows) => {
-        if (cancelled) return;
+      void searchAsyncRef.current(q).then((rows) => {
+        if (cancelled || requestId !== searchRequestId.current) return;
         setResults(rows);
         setOpen(true);
       });
@@ -73,7 +83,8 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [query, searchAsync]);
+    // Re-run when catalog becomes ready so local filter replaces slow API fallback.
+  }, [query, catalog.ready]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -115,7 +126,9 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
     setLocalQty("1");
     setLocalOrderByUnit(false);
     setResults([]);
+    setOpen(false);
     setError(null);
+    queueMicrotask(() => searchInputRef.current?.focus());
   }
 
   async function submitQuote() {
@@ -180,6 +193,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
             <Label htmlFor="product-search">Producto</Label>
             <div className="relative">
               <Input
+                ref={searchInputRef}
                 id="product-search"
                 placeholder={
                   catalog.ready
@@ -202,7 +216,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
               ) : null}
             </div>
             {open && results.length > 0 ? (
-              <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg">
+              <ul className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg">
                 {results.map((p) => (
                   <li key={p.id}>
                     <button

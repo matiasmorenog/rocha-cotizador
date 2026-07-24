@@ -122,6 +122,24 @@ export function useProductCatalog(
           return;
         }
 
+        // Server said unchanged but we have no products — force full fetch.
+        if (data.unchanged && params.has("v")) {
+          clearCachedCatalog();
+          const full = new URLSearchParams();
+          if (opts.customerId) full.set("customerId", opts.customerId);
+          ({ res, data } = await fetchCatalogJson(full));
+          if (cancelled) return;
+          if (!res.ok) {
+            setState((s) => ({
+              ...s,
+              loading: false,
+              error: data.error ?? "No se pudo cargar el catálogo",
+              ready: s.products.length > 0,
+            }));
+            return;
+          }
+        }
+
         let products = data.products ?? [];
 
         if (products.length === 0 && params.has("v")) {
@@ -201,7 +219,7 @@ export function useProductCatalog(
         name: p.name,
         rubro: p.rubro,
         unitPrice: unitPriceFromMap(p.code, p.basePrice, state.unitPrices),
-        allowsUnitOrder: p.allowsUnitOrder,
+        allowsUnitOrder: Boolean(p.allowsUnitOrder),
       }));
     },
     [state.products, state.unitPrices],
