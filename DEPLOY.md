@@ -80,14 +80,6 @@ Build command (Vercel): `npm run build` → `prisma generate && next build` (`po
 
 Previews de `development` / PRs siguen con el deploy automático de Vercel.
 
-### CI → producción (gate)
-
-- Auto-deploy Vercel en **`main` está OFF** (`vercel.json`).
-- Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production**.
-- Secrets en GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (ver [`docs/ci.md`](docs/ci.md)).
-
-Previews de `development` / PRs siguen con el deploy automático de Vercel.
-
 ## Seed
 
 **Nunca** seed / reset PINs / scripts de mutación masiva contra Neon `main`.
