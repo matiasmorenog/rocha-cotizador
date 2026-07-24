@@ -273,7 +273,7 @@ function ProductViewRow({
       </td>
       <td className="px-3 py-2">
         <Badge variant={product.allowsUnitOrder ? "success" : "default"}>
-          {product.allowsUnitOrder ? "Unid. o kg" : "Solo kg"}
+          {product.allowsUnitOrder ? "Unidad/Kg" : "Solo kg"}
         </Badge>
       </td>
       <td className="px-3 py-2 text-right">
