@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 
 export type PickedCustomer = {
   id: string;
@@ -32,7 +33,9 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
   const [results, setResults] = useState<SearchHit[]>([]);
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [highlightIndex, setHighlightIndex] = useState(-1);
   const boxRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
 
   useEffect(() => {
     const q = query.trim();
@@ -49,10 +52,11 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
       setSearching(false);
       if (!res.ok) return;
       const data = await res.json();
-      setResults(
+      const hits =
         (data.customers as SearchHit[] | undefined)?.filter((c) => c.active) ??
-          [],
-      );
+        [];
+      setResults(hits);
+      setHighlightIndex(hits.length > 0 ? 0 : -1);
       setOpen(true);
     }, 200);
     return () => {
@@ -62,12 +66,80 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
   }, [query]);
 
   useEffect(() => {
+    if (!open || highlightIndex < 0) return;
+    const el = listRef.current?.querySelector<HTMLElement>(
+      `[data-customer-option="${highlightIndex}"]`,
+    );
+    el?.scrollIntoView({ block: "nearest" });
+  }, [highlightIndex, open, results]);
+
+  useEffect(() => {
     function onClick(e: MouseEvent) {
       if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
+
+  function pickCustomer(c: SearchHit) {
+    onChange({
+      id: c.id,
+      code: c.code,
+      name: c.name,
+      priceListName: c.priceList?.name ?? null,
+      active: c.active,
+    });
+    setQuery("");
+    setResults([]);
+    setHighlightIndex(-1);
+    setOpen(false);
+  }
+
+  function onQueryChange(next: string) {
+    setQuery(next);
+    setHighlightIndex(-1);
+    if (next.trim().length < 1) {
+      setResults([]);
+      setOpen(false);
+      setSearching(false);
+    }
+  }
+
+  function onSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Escape") {
+      if (open) {
+        e.preventDefault();
+        setOpen(false);
+        setHighlightIndex(-1);
+      }
+      return;
+    }
+
+    if (!open || results.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightIndex((i) => (i < 0 ? 0 : (i + 1) % results.length));
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightIndex((i) =>
+        i < 0 ? results.length - 1 : (i - 1 + results.length) % results.length,
+      );
+      return;
+    }
+    if (e.key === "Enter") {
+      const pick =
+        highlightIndex >= 0 && highlightIndex < results.length
+          ? results[highlightIndex]
+          : results[0];
+      if (pick) {
+        e.preventDefault();
+        pickCustomer(pick);
+      }
+    }
+  }
 
   if (value) {
     return (
@@ -93,17 +165,19 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
       <div className="relative">
         <Input
           id="customer-search"
+          role="combobox"
+          aria-expanded={open && results.length > 0}
+          aria-controls="customer-search-listbox"
+          aria-autocomplete="list"
+          aria-activedescendant={
+            open && highlightIndex >= 0
+              ? `customer-option-${highlightIndex}`
+              : undefined
+          }
           placeholder="Buscar por código o nombre…"
           value={query}
-          onChange={(e) => {
-            const next = e.target.value;
-            setQuery(next);
-            if (next.trim().length < 1) {
-              setResults([]);
-              setOpen(false);
-              setSearching(false);
-            }
-          }}
+          onChange={(e) => onQueryChange(e.target.value)}
+          onKeyDown={onSearchKeyDown}
           onFocus={() => results.length > 0 && setOpen(true)}
           autoComplete="off"
           className={searching ? "pr-10" : undefined}
@@ -115,24 +189,28 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
         ) : null}
       </div>
       {open && results.length > 0 ? (
-        <ul className="absolute left-4 right-4 z-20 mt-1 max-h-64 overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg">
-          {results.map((c) => (
-            <li key={c.id}>
+        <ul
+          ref={listRef}
+          id="customer-search-listbox"
+          role="listbox"
+          className="absolute left-4 right-4 z-20 mt-1 max-h-64 overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
+        >
+          {results.map((c, index) => (
+            <li key={c.id} role="presentation">
               <button
                 type="button"
-                className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-neutral-50"
-                onClick={() => {
-                  onChange({
-                    id: c.id,
-                    code: c.code,
-                    name: c.name,
-                    priceListName: c.priceList?.name ?? null,
-                    active: c.active,
-                  });
-                  setQuery("");
-                  setResults([]);
-                  setOpen(false);
-                }}
+                id={`customer-option-${index}`}
+                role="option"
+                aria-selected={index === highlightIndex}
+                data-customer-option={index}
+                className={cn(
+                  "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm",
+                  index === highlightIndex
+                    ? "bg-[var(--brand-primary-soft)]"
+                    : "hover:bg-neutral-50",
+                )}
+                onMouseEnter={() => setHighlightIndex(index)}
+                onClick={() => pickCustomer(c)}
               >
                 <span className="font-medium text-neutral-900">
                   {c.code} — {c.name}
