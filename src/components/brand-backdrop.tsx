@@ -8,7 +8,7 @@ import {
 type BrandBackdropProps = {
   children: React.ReactNode;
   className?: string;
-  /** Coffee pattern background. Default: light cups (best readability). */
+  /** Coffee pattern background. Default: beans (seamless tile). */
   pattern?: BrandPatternKey;
 };
 

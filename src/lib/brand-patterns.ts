@@ -1,8 +1,8 @@
-export const BRAND_PATTERN_KEYS = ["cups", "beans", "kraft"] as const;
+export const BRAND_PATTERN_KEYS = ["beans", "cups", "kraft"] as const;
 
 export type BrandPatternKey = (typeof BRAND_PATTERN_KEYS)[number];
 
-export const DEFAULT_BRAND_PATTERN: BrandPatternKey = "cups";
+export const DEFAULT_BRAND_PATTERN: BrandPatternKey = "beans";
 
 export const BRAND_PATTERNS: Record<
   BrandPatternKey,

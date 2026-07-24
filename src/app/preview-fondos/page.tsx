@@ -4,6 +4,7 @@ import { BrandLogo } from "@/components/brand-logo";
 import {
   BRAND_PATTERN_KEYS,
   BRAND_PATTERNS,
+  DEFAULT_BRAND_PATTERN,
   parseBrandPattern,
   type BrandPatternKey,
 } from "@/lib/brand-patterns";
@@ -33,6 +34,9 @@ export default async function PreviewFondosPage({
               <span className="font-medium text-neutral-900">
                 {BRAND_PATTERNS[pattern].label}
               </span>
+              {pattern === DEFAULT_BRAND_PATTERN ? (
+                <span className="text-neutral-500"> (default)</span>
+              ) : null}
             </p>
           </div>
         </div>
@@ -82,7 +86,10 @@ function PatternLink({
           : "inline-flex h-11 items-center justify-center rounded-md border border-[var(--brand-latte)] bg-white px-4 text-sm font-medium text-neutral-900 hover:bg-[var(--brand-primary-soft)]"
       }
     >
-      {BRAND_PATTERNS[pattern].label}{" "}
+      {BRAND_PATTERNS[pattern].label}
+      {pattern === DEFAULT_BRAND_PATTERN ? (
+        <span className="ml-1 text-xs opacity-90">· default</span>
+      ) : null}{" "}
       <span className="ml-1 text-xs opacity-70">(?bg={pattern})</span>
     </Link>
   );
