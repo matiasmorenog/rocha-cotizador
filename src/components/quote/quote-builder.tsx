@@ -372,30 +372,17 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                     </td>
                     <td className="px-3 py-2">
                       {l.allowsUnitOrder ? (
-                        <div className="flex flex-col gap-1">
-                          <button
-                            type="button"
-                            className={`rounded border px-2 py-0.5 text-xs ${
-                              !l.orderByUnit
-                                ? "border-[var(--brand-primary)] font-medium"
-                                : "border-neutral-300 text-neutral-600"
-                            }`}
-                            onClick={() => setOrderByUnit(l.productId, false)}
-                          >
-                            kg
-                          </button>
-                          <button
-                            type="button"
-                            className={`rounded border px-2 py-0.5 text-xs ${
-                              l.orderByUnit
-                                ? "border-[var(--brand-primary)] font-medium"
-                                : "border-neutral-300 text-neutral-600"
-                            }`}
-                            onClick={() => setOrderByUnit(l.productId, true)}
-                          >
-                            unid.
-                          </button>
-                        </div>
+                        <select
+                          value={l.orderByUnit ? "unit" : "kg"}
+                          onChange={(e) =>
+                            setOrderByUnit(l.productId, e.target.value === "unit")
+                          }
+                          aria-label="Medida"
+                          className="flex h-8 w-[7.5rem] rounded-md border border-neutral-300 bg-white pl-2 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
+                        >
+                          <option value="kg">Por kg</option>
+                          <option value="unit">Por unidades</option>
+                        </select>
                       ) : (
                         <span className="text-neutral-500">kg</span>
                       )}
