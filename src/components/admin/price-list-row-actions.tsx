@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Pencil, Trash2 } from "lucide-react";
 
 export function PriceListRowActions({
   id,
@@ -49,19 +49,22 @@ export function PriceListRowActions({
       <div className="flex items-center justify-end gap-2">
         <Link
           href={`/admin/listas-precios/${id}`}
-          className="text-sm text-[var(--brand-primary)] underline hover:opacity-80"
+          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
+          aria-label="Editar"
+          title="Editar"
         >
-          Editar
+          <Pencil className="h-4 w-4" aria-hidden />
         </Link>
-        <Button
+        <button
           type="button"
-          variant="destructive"
-          size="sm"
           disabled={loading}
           onClick={() => void onDelete()}
+          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-red-300 bg-white text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+          aria-label="Eliminar"
+          title="Eliminar"
         >
-          {loading ? "…" : "Eliminar"}
-        </Button>
+          <Trash2 className="h-4 w-4" aria-hidden />
+        </button>
       </div>
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
     </div>

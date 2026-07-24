@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 export function PriceListCreateForm() {
   const router = useRouter();
@@ -51,12 +52,14 @@ export function PriceListCreateForm() {
           required
         />
       </div>
-      <label className="flex cursor-pointer items-center gap-2 text-sm text-neutral-700">
-        <input
-          type="checkbox"
+      <label
+        htmlFor="fill-from-base"
+        className="flex cursor-pointer items-center gap-2.5 text-sm text-neutral-700"
+      >
+        <Switch
+          id="fill-from-base"
           checked={fillFromBase}
           onChange={(e) => setFillFromBase(e.target.checked)}
-          className="h-4 w-4"
         />
         Rellenar desde Mayorista
       </label>
