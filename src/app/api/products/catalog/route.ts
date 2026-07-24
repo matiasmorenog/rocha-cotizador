@@ -5,7 +5,7 @@ import {
   getActiveProductsBase,
   getProductsCatalogVersion,
 } from "@/lib/products-cache";
-import { resolveUnitPricesForList } from "@/lib/price-list-resolve";
+import { getCachedUnitPricesForCatalog } from "@/lib/price-list-resolve";
 
 /**
  * Shared base catalog + per-customer unitPrices map.
@@ -54,15 +54,7 @@ export async function GET(req: NextRequest) {
     req.headers.get("If-None-Match")?.replaceAll('"', "").trim() ||
     "";
 
-  const products = await getActiveProductsBase();
-  const unitPrices = await resolveUnitPricesForList(
-    products.map((p) => ({
-      id: p.id,
-      code: p.code,
-      basePrice: p.basePrice,
-    })),
-    priceListId,
-  );
+  const unitPrices = await getCachedUnitPricesForCatalog(priceListId, version);
 
   if (clientVersion && clientVersion === catalogKey) {
     return NextResponse.json(
@@ -81,6 +73,8 @@ export async function GET(req: NextRequest) {
       },
     );
   }
+
+  const products = await getActiveProductsBase();
 
   return NextResponse.json(
     {

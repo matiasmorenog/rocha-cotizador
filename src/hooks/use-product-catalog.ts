@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ProductBase } from "@/lib/product-base";
 import {
   clearCachedCatalog,
@@ -35,8 +35,30 @@ type CatalogState = {
   error: string | null;
 };
 
+type CatalogSnapshot = {
+  products: ProductBase[];
+  unitPrices: Record<string, number>;
+  ready: boolean;
+};
+
 function customerKey(customerId?: string): string {
   return customerId?.trim() || "self";
+}
+
+function mapSearchRows(
+  products: ProductBase[],
+  unitPrices: Record<string, number>,
+  q: string,
+  take: number,
+): CatalogSearchProduct[] {
+  return filterCatalog(products, q, take).map((p) => ({
+    id: p.id,
+    code: p.code,
+    name: p.name,
+    rubro: p.rubro,
+    unitPrice: unitPriceFromMap(p.code, p.basePrice, unitPrices),
+    allowsUnitOrder: Boolean(p.allowsUnitOrder),
+  }));
 }
 
 function initialState(opts: UseProductCatalogOptions): CatalogState {
@@ -74,15 +96,38 @@ export function useProductCatalog(
   searchAsync: (q: string, take?: number) => Promise<CatalogSearchProduct[]>;
 } {
   const [state, setState] = useState<CatalogState>(() => initialState(opts));
+  const snapshotRef = useRef<CatalogSnapshot>({
+    products: state.products,
+    unitPrices: state.unitPrices,
+    ready: state.ready,
+  });
+  const loadPromiseRef = useRef<Promise<void> | null>(null);
+
+  useEffect(() => {
+    snapshotRef.current = {
+      products: state.products,
+      unitPrices: state.unitPrices,
+      ready: state.ready,
+    };
+  }, [state.products, state.unitPrices, state.ready]);
 
   useEffect(() => {
     let cancelled = false;
     const key = customerKey(opts.customerId);
 
     async function revalidate() {
-      setState((s) => ({ ...s, loading: true, error: null }));
-
       const cached = readCachedCatalog();
+      const hasLocal =
+        (cached?.products.length ?? 0) > 0 ||
+        snapshotRef.current.products.length > 0;
+
+      // Keep serving cached catalog while revalidating — do not block typing.
+      setState((s) => ({
+        ...s,
+        loading: !hasLocal,
+        error: null,
+      }));
+
       const params = new URLSearchParams();
       if (cached?.version && cached.products.length > 0) {
         params.set("v", cached.version);
@@ -166,14 +211,20 @@ export function useProductCatalog(
             : unitPrices;
 
         if (products.length === 0) {
-          clearCachedCatalog();
-          setState({
-            products: [],
-            version: data.version ?? null,
-            unitPrices: nextPrices,
-            ready: false,
-            loading: false,
-            error: null,
+          // Do not wipe a good in-memory catalog on a bad empty response.
+          setState((s) => {
+            if (s.products.length > 0) {
+              return { ...s, loading: false, ready: true, error: null };
+            }
+            clearCachedCatalog();
+            return {
+              products: [],
+              version: data.version ?? null,
+              unitPrices: nextPrices,
+              ready: false,
+              loading: false,
+              error: null,
+            };
           });
           return;
         }
@@ -205,31 +256,40 @@ export function useProductCatalog(
       }
     }
 
-    void revalidate();
+    const run = revalidate();
+    loadPromiseRef.current = run.then(
+      () => undefined,
+      () => undefined,
+    );
     return () => {
       cancelled = true;
     };
   }, [opts.customerId]);
 
-  const search = useCallback(
-    (q: string, take = 30): CatalogSearchProduct[] => {
-      return filterCatalog(state.products, q, take).map((p) => ({
-        id: p.id,
-        code: p.code,
-        name: p.name,
-        rubro: p.rubro,
-        unitPrice: unitPriceFromMap(p.code, p.basePrice, state.unitPrices),
-        allowsUnitOrder: Boolean(p.allowsUnitOrder),
-      }));
-    },
-    [state.products, state.unitPrices],
-  );
+  const search = useCallback((q: string, take = 30): CatalogSearchProduct[] => {
+    const snap = snapshotRef.current;
+    return mapSearchRows(snap.products, snap.unitPrices, q, take);
+  }, []);
 
   const searchAsync = useCallback(
     async (q: string, take = 30): Promise<CatalogSearchProduct[]> => {
-      const local = search(q, take);
-      if (local.length > 0 || state.products.length > 0) return local;
+      // Instant path: already have catalog in memory / sessionStorage.
+      const snap = snapshotRef.current;
+      if (snap.products.length > 0) {
+        return mapSearchRows(snap.products, snap.unitPrices, q, take);
+      }
 
+      // Cold start: wait for first catalog load, then filter locally.
+      if (loadPromiseRef.current) {
+        await loadPromiseRef.current;
+      }
+
+      const after = snapshotRef.current;
+      if (after.products.length > 0) {
+        return mapSearchRows(after.products, after.unitPrices, q, take);
+      }
+
+      // Last resort only if catalog still empty after load.
       const params = new URLSearchParams({ q });
       if (opts.customerId) params.set("customerId", opts.customerId);
       try {
@@ -241,7 +301,7 @@ export function useProductCatalog(
         return [];
       }
     },
-    [search, state.products.length, opts.customerId],
+    [opts.customerId],
   );
 
   return { ...state, search, searchAsync };

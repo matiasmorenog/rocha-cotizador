@@ -1,6 +1,9 @@
 import { Decimal } from "@prisma/client/runtime/library";
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { unitPriceForProduct } from "@/lib/pricing";
+import { getActiveProductsBase } from "@/lib/products-cache";
 
 /** Load unit prices for a price list keyed by product id. */
 export async function getPriceListUnitPricesByProductId(
@@ -73,6 +76,36 @@ export async function resolveUnitPricesForList(
     );
   }
   return out;
+}
+
+/**
+ * Catalog unitPrices map cached by version + list.
+ * Invalidated with products / price-lists tags after admin mutations.
+ */
+export async function getCachedUnitPricesForCatalog(
+  priceListId: string | null,
+  catalogVersion: string,
+): Promise<Record<string, number>> {
+  const listKey = priceListId ?? "base";
+  const cached = unstable_cache(
+    async () => {
+      const products = await getActiveProductsBase();
+      return resolveUnitPricesForList(
+        products.map((p) => ({
+          id: p.id,
+          code: p.code,
+          basePrice: p.basePrice,
+        })),
+        priceListId,
+      );
+    },
+    ["catalog-unit-prices", listKey, catalogVersion],
+    {
+      tags: [CACHE_TAGS.products, CACHE_TAGS.priceLists],
+      revalidate: 3600,
+    },
+  );
+  return cached();
 }
 
 /** Keep base PriceListItem in sync when Product.basePrice changes. */

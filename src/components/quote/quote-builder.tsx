@@ -71,19 +71,18 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
     }
     let cancelled = false;
     const requestId = ++searchRequestId.current;
-    // Local filter first; searchAsync falls back to API if catalog empty.
+    // Prefer local catalog (after load). Debounce avoids spam while typing.
     const handle = setTimeout(() => {
       void searchAsyncRef.current(q).then((rows) => {
         if (cancelled || requestId !== searchRequestId.current) return;
         setResults(rows);
         setOpen(true);
       });
-    }, 50);
+    }, 200);
     return () => {
       cancelled = true;
       clearTimeout(handle);
     };
-    // Re-run when catalog becomes ready so local filter replaces slow API fallback.
   }, [query, catalog.ready]);
 
   useEffect(() => {
