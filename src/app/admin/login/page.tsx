@@ -5,16 +5,14 @@ import { auth } from "@/lib/auth";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { AdminLoginForm } from "@/components/auth/admin-login-form";
-import { parseBrandPattern, withBgParam } from "@/lib/brand-patterns";
 import { safeCallbackUrl } from "@/lib/callback-url";
 
 export default async function AdminLoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string; bg?: string }>;
+  searchParams: Promise<{ callbackUrl?: string }>;
 }) {
-  const { callbackUrl: rawCallback, bg } = await searchParams;
-  const pattern = parseBrandPattern(bg);
+  const { callbackUrl: rawCallback } = await searchParams;
   const callbackUrl = safeCallbackUrl(rawCallback, "/admin");
   const session = await auth();
   if (session?.user?.role === "ADMIN") redirect(callbackUrl);
@@ -25,10 +23,7 @@ export default async function AdminLoginPage({
       : "/entrar";
 
   return (
-    <BrandBackdrop
-      pattern={pattern}
-      className="mx-auto flex min-h-[60vh] max-w-md items-center py-4"
-    >
+    <BrandBackdrop className="mx-auto flex min-h-[60vh] max-w-md items-center py-4">
       <div className="w-full space-y-6 rounded-xl border border-[var(--brand-latte)]/50 bg-[var(--brand-primary-soft)]/95 p-6 shadow-sm backdrop-blur-[2px]">
         <div className="flex flex-col items-center gap-4 text-center">
           <BrandLogo size="xl" priority />
@@ -46,10 +41,7 @@ export default async function AdminLoginPage({
           <AdminLoginForm />
         </Suspense>
         <p className="text-center text-xs text-neutral-500">
-          <Link
-            href={withBgParam(customerLoginHref, pattern)}
-            className="underline"
-          >
+          <Link href={customerLoginHref} className="underline">
             Elegir otro tipo de acceso
           </Link>
         </p>
