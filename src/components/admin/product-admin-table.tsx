@@ -2,13 +2,17 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Pencil, X } from "lucide-react";
+import { Check, Pencil, Plus, X } from "lucide-react";
 import {
   AdminTableActions,
   AdminTableIconAction,
 } from "@/components/admin/admin-table";
-import type { PriceListOption } from "@/components/admin/product-admin-form";
+import {
+  ProductAdminForm,
+  type PriceListOption,
+} from "@/components/admin/product-admin-form";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
@@ -301,6 +305,7 @@ export function ProductAdminTable({
   priceLists: PriceListOption[];
 }) {
   const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const activeLists = priceLists.filter((l) => l.active);
   const isBusy = editingId !== null;
@@ -318,12 +323,28 @@ export function ProductAdminTable({
 
   return (
     <div className="space-y-3">
-      <Input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar código, nombre o rubro…"
-        aria-label="Buscar productos"
-      />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar código, nombre o rubro…"
+          aria-label="Buscar productos"
+          className="min-w-0 flex-1"
+        />
+        {!creating ? (
+          <Button
+            type="button"
+            className="w-full shrink-0 sm:w-auto"
+            onClick={() => setCreating(true)}
+          >
+            <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+            Nuevo producto
+          </Button>
+        ) : null}
+      </div>
+      {creating ? (
+        <ProductAdminForm onCancel={() => setCreating(false)} />
+      ) : null}
       <DataTableScroll>
         <table className="w-full min-w-[36rem] text-sm">
           <thead className="bg-neutral-50 text-left text-neutral-600">

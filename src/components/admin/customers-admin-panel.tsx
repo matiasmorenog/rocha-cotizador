@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil } from "lucide-react";
+import { Pencil, Plus } from "lucide-react";
 import { CustomerAdminForm } from "@/components/admin/customer-admin-form";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { whatsappUrl } from "@/lib/whatsapp";
@@ -40,6 +41,7 @@ export function CustomersAdminPanel({
   initialEditId?: string | null;
 }) {
   const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(
     initialEditId ?? null,
   );
@@ -57,40 +59,57 @@ export function CustomersAdminPanel({
   const editing = editingId
     ? customers.find((c) => c.id === editingId)
     : undefined;
+  const showForm = Boolean(editing) || creating;
 
   return (
-    <>
-      <div className="flex gap-2">
+    <div className="space-y-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Buscar código o nombre…"
           aria-label="Buscar clientes"
-          className="flex-1"
+          className="min-w-0 flex-1"
         />
+        {!showForm ? (
+          <Button
+            type="button"
+            className="w-full shrink-0 sm:w-auto"
+            onClick={() => {
+              setEditingId(null);
+              setCreating(true);
+            }}
+          >
+            <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+            Nuevo cliente
+          </Button>
+        ) : null}
       </div>
 
-      <CustomerAdminForm
-        key={editing?.id ?? "new"}
-        priceLists={priceLists}
-        customer={
-          editing
-            ? {
-                id: editing.id,
-                code: editing.code,
-                name: editing.name,
-                priceListId: editing.priceListId,
-                address: editing.address,
-                phone: editing.phone,
-                email: editing.email,
-                notes: editing.notes,
-                paymentTerms: editing.paymentTerms,
-                deliveryHours: editing.deliveryHours,
-                active: editing.active,
-              }
-            : undefined
-        }
-      />
+      {showForm ? (
+        <CustomerAdminForm
+          key={editing?.id ?? "new"}
+          priceLists={priceLists}
+          onCancel={creating ? () => setCreating(false) : undefined}
+          customer={
+            editing
+              ? {
+                  id: editing.id,
+                  code: editing.code,
+                  name: editing.name,
+                  priceListId: editing.priceListId,
+                  address: editing.address,
+                  phone: editing.phone,
+                  email: editing.email,
+                  notes: editing.notes,
+                  paymentTerms: editing.paymentTerms,
+                  deliveryHours: editing.deliveryHours,
+                  active: editing.active,
+                }
+              : undefined
+          }
+        />
+      ) : null}
 
       <DataTableScroll>
         <table className="w-full min-w-[40rem] text-sm">
@@ -152,7 +171,10 @@ export function CustomersAdminPanel({
                     <td className="px-3 py-2 text-right">
                       <button
                         type="button"
-                        onClick={() => setEditingId(c.id)}
+                        onClick={() => {
+                          setCreating(false);
+                          setEditingId(c.id);
+                        }}
                         className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
                         aria-label="Editar"
                         title="Editar"
@@ -167,6 +189,6 @@ export function CustomersAdminPanel({
           </tbody>
         </table>
       </DataTableScroll>
-    </>
+    </div>
   );
 }

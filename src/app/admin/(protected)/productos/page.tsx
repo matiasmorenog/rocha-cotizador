@@ -1,5 +1,4 @@
 import { db } from "@/lib/db";
-import { ProductAdminForm } from "@/components/admin/product-admin-form";
 import { ProductAdminTable } from "@/components/admin/product-admin-table";
 import { ExcelSyncPanel } from "@/components/admin/excel-sync-panel";
 import { sortPriceListsForDisplay } from "@/lib/pricing";
@@ -52,8 +51,6 @@ export default async function AdminProductosPage() {
         importUrl="/api/admin/products/import"
         entityLabel="productos"
       />
-
-      <ProductAdminForm />
 
       <ProductAdminTable products={tableRows} priceLists={orderedLists} />
     </div>

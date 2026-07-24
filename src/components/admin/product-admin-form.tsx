@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,7 +14,7 @@ export type PriceListOption = {
 };
 
 /** Compact create-only form. Edits (incl. list prices) happen inline in ProductAdminTable. */
-export function ProductAdminForm() {
+export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -26,16 +25,6 @@ export function ProductAdminForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
-
-  if (!showCreate) {
-    return (
-      <Button type="button" onClick={() => setShowCreate(true)}>
-        <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-        Nuevo producto
-      </Button>
-    );
-  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -143,7 +132,7 @@ export function ProductAdminForm() {
           type="button"
           variant="outline"
           disabled={loading}
-          onClick={() => setShowCreate(false)}
+          onClick={onCancel}
         >
           Cancelar
         </Button>

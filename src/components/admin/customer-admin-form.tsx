@@ -2,7 +2,6 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,9 +31,12 @@ type CustomerRow = {
 export function CustomerAdminForm({
   customer,
   priceLists,
+  onCancel,
 }: {
   customer?: CustomerRow;
   priceLists: PriceListOption[];
+  /** Create mode: dismiss form without saving. */
+  onCancel?: () => void;
 }) {
   const router = useRouter();
   const baseListId =
@@ -55,17 +57,7 @@ export function CustomerAdminForm({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
   const isEdit = Boolean(customer);
-
-  if (!isEdit && !showCreate) {
-    return (
-      <Button type="button" onClick={() => setShowCreate(true)}>
-        <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-        Nuevo cliente
-      </Button>
-    );
-  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -246,12 +238,12 @@ export function CustomerAdminForm({
         <Button type="submit" disabled={loading}>
           {loading ? "Guardando…" : customer ? "Actualizar cliente" : "Crear cliente"}
         </Button>
-        {!isEdit ? (
+        {!isEdit && onCancel ? (
           <Button
             type="button"
             variant="outline"
             disabled={loading}
-            onClick={() => setShowCreate(false)}
+            onClick={onCancel}
           >
             Cancelar
           </Button>

@@ -335,7 +335,7 @@ export function SkeletonAdminDashboardPage() {
   );
 }
 
-/** Clientes / productos — title + Excel sync + table. */
+/** Clientes / productos — title + Excel sync + search/CTA toolbar + table. */
 export function SkeletonAdminListPage({
   label = "Cargando listado",
   titleWidth = "w-32",
@@ -349,7 +349,13 @@ export function SkeletonAdminListPage({
     <SkeletonRegion label={label} className="space-y-6">
       <SkeletonPageHeader titleWidth={titleWidth} descriptionWidth={descriptionWidth} />
       <SkeletonExcelSyncPanel />
-      <SkeletonTableRows rows={8} cols={5} />
+      <div className="space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Skeleton className="h-10 min-w-0 flex-1 rounded-md" />
+          <Skeleton className="h-10 w-full shrink-0 rounded-md sm:w-36" />
+        </div>
+        <SkeletonTableRows rows={8} cols={5} />
+      </div>
     </SkeletonRegion>
   );
 }
