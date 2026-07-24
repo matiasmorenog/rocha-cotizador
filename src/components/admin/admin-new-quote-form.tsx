@@ -24,7 +24,7 @@ export function AdminNewQuoteForm() {
         <QuoteBuilder
           key={customer.id}
           customerId={customer.id}
-          discountPercent={customer.discountPercent}
+          priceListName={customer.priceListName}
         />
       ) : (
         <p className="text-sm text-neutral-500">

@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { invalidateAfterCustomerMutation } from "@/lib/cache-tags";
 import { normalizePhone } from "@/lib/phone-contact";
+import { getBasePriceList } from "@/lib/price-list-resolve";
 import { padCustomerCode, pinFromCustomerCode } from "@/lib/utils";
 
 async function requireAdmin() {
@@ -34,7 +35,8 @@ export async function GET(req: NextRequest) {
       id: true,
       code: true,
       name: true,
-      discountPercent: true,
+      priceListId: true,
+      priceList: { select: { id: true, name: true } },
       active: true,
       address: true,
       phone: true,
@@ -51,7 +53,7 @@ const upsertSchema = z.object({
   id: z.string().optional(),
   code: z.string().min(1),
   name: z.string().min(1),
-  discountPercent: z.number().min(0).max(100),
+  priceListId: z.string().nullable().optional(),
   address: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
   email: z.string().optional().nullable(),
@@ -93,6 +95,26 @@ export async function POST(req: NextRequest) {
   const notes = emptyToNull(parsed.data.notes);
   const paymentTerms = emptyToNull(parsed.data.paymentTerms);
   const deliveryHours = emptyToNull(parsed.data.deliveryHours);
+  const priceListIdRaw =
+    parsed.data.priceListId === undefined
+      ? undefined
+      : emptyToNull(parsed.data.priceListId);
+
+  let priceListId = priceListIdRaw;
+  if (priceListIdRaw === null) {
+    const base = await getBasePriceList();
+    priceListId = base?.id ?? null;
+  }
+
+  if (priceListId) {
+    const list = await db.priceList.findUnique({ where: { id: priceListId } });
+    if (!list) {
+      return NextResponse.json(
+        { error: "Lista de precios no encontrada" },
+        { status: 400 },
+      );
+    }
+  }
 
   if (parsed.data.id) {
     const customer = await db.customer.update({
@@ -100,7 +122,7 @@ export async function POST(req: NextRequest) {
       data: {
         code,
         name: parsed.data.name,
-        discountPercent: parsed.data.discountPercent,
+        ...(priceListId !== undefined ? { priceListId } : {}),
         address,
         phone,
         email,
@@ -122,13 +144,18 @@ export async function POST(req: NextRequest) {
     passwordHash = await bcrypt.hash(pin, 10);
   }
 
+  if (priceListId === undefined) {
+    const base = await getBasePriceList();
+    priceListId = base?.id ?? null;
+  }
+
   const customer = await db.customer.create({
     data: {
       code,
       name: parsed.data.name,
       passwordHash,
       mustChangePassword: true,
-      discountPercent: parsed.data.discountPercent,
+      priceListId: priceListId ?? null,
       address,
       phone,
       email,

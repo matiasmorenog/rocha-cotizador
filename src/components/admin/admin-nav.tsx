@@ -11,9 +11,9 @@ const links = [
   { href: "/admin", label: "Dashboard", exact: true },
   { href: "/admin/clientes", label: "Clientes" },
   { href: "/admin/productos", label: "Productos" },
+  { href: "/admin/listas-precios", label: "Listas de precios" },
   { href: "/admin/cotizaciones", label: "Cotizaciones" },
   { href: "/admin/configuracion", label: "Configuración" },
-  { href: "/admin/cuenta", label: "Mi cuenta" },
 ] as const;
 
 function isActive(pathname: string, href: string, exact?: boolean) {

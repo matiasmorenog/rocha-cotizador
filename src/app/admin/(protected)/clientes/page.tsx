@@ -6,6 +6,7 @@ import { CustomerAdminForm } from "@/components/admin/customer-admin-form";
 import { ExcelSyncPanel } from "@/components/admin/excel-sync-panel";
 import { Badge } from "@/components/ui/badge";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { sortPriceListsForDisplay } from "@/lib/pricing";
 
 export default async function AdminClientesPage({
   searchParams,
@@ -15,18 +16,28 @@ export default async function AdminClientesPage({
   const { q, edit } = await searchParams;
   const query = (q ?? "").trim();
 
-  const customers = await db.customer.findMany({
-    where: query
-      ? {
-          OR: [
-            { name: { contains: query, mode: "insensitive" } },
-            { code: { contains: query, mode: "insensitive" } },
-          ],
-        }
-      : undefined,
-    orderBy: { code: "asc" },
-    take: 100,
-  });
+  const [customers, priceListsRaw] = await Promise.all([
+    db.customer.findMany({
+      where: query
+        ? {
+            OR: [
+              { name: { contains: query, mode: "insensitive" } },
+              { code: { contains: query, mode: "insensitive" } },
+            ],
+          }
+        : undefined,
+      include: { priceList: { select: { id: true, name: true } } },
+      orderBy: { code: "asc" },
+      take: 100,
+    }),
+    db.priceList.findMany({
+      select: { id: true, name: true, active: true, excelKey: true, isBase: true },
+    }),
+  ]);
+
+  const priceLists = sortPriceListsForDisplay(priceListsRaw).map(
+    ({ id, name, active, isBase }) => ({ id, name, active, isBase }),
+  );
 
   const editing = edit ? customers.find((c) => c.id === edit) : undefined;
 
@@ -35,7 +46,7 @@ export default async function AdminClientesPage({
       <div>
         <h1 className="text-2xl font-semibold text-neutral-900">Clientes</h1>
         <p className="text-sm text-neutral-600">
-          El % de descuento es visible solo en admin. El cliente ve precios finales.
+          Asigná una lista de precios fijos. El cliente solo ve el precio final.
         </p>
       </div>
 
@@ -62,13 +73,14 @@ export default async function AdminClientesPage({
 
       <CustomerAdminForm
         key={editing?.id ?? "new"}
+        priceLists={priceLists}
         customer={
           editing
             ? {
                 id: editing.id,
                 code: editing.code,
                 name: editing.name,
-                discountPercent: Number(editing.discountPercent),
+                priceListId: editing.priceListId,
                 address: editing.address,
                 phone: editing.phone,
                 email: editing.email,
@@ -89,7 +101,7 @@ export default async function AdminClientesPage({
               <th className="px-3 py-2">Nombre</th>
               <th className="px-3 py-2">Dirección</th>
               <th className="px-3 py-2">Teléfono</th>
-              <th className="px-3 py-2">Desc. %</th>
+              <th className="px-3 py-2">Lista</th>
               <th className="px-3 py-2">Estado</th>
               <th className="px-3 py-2" />
             </tr>
@@ -98,43 +110,45 @@ export default async function AdminClientesPage({
             {customers.map((c) => {
               const wa = c.phone ? whatsappUrl(c.phone) : null;
               return (
-              <tr key={c.id} className="border-t border-neutral-100">
-                <td className="px-3 py-2 font-mono">{c.code}</td>
-                <td className="px-3 py-2">{c.name}</td>
-                <td className="px-3 py-2 text-neutral-700">
-                  {c.address ?? "—"}
-                </td>
-                <td className="px-3 py-2 text-neutral-700">
-                  {c.phone && wa ? (
-                    <a
-                      href={wa}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[var(--brand-primary)] underline hover:opacity-80"
+                <tr key={c.id} className="border-t border-neutral-100">
+                  <td className="px-3 py-2 font-mono">{c.code}</td>
+                  <td className="px-3 py-2">{c.name}</td>
+                  <td className="px-3 py-2 text-neutral-700">
+                    {c.address ?? "—"}
+                  </td>
+                  <td className="px-3 py-2 text-neutral-700">
+                    {c.phone && wa ? (
+                      <a
+                        href={wa}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[var(--brand-primary)] underline hover:opacity-80"
+                      >
+                        {c.phone}
+                      </a>
+                    ) : (
+                      (c.phone ?? "—")
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {c.priceList?.name ?? "Precio base"}
+                  </td>
+                  <td className="px-3 py-2">
+                    <Badge variant={c.active ? "success" : "danger"}>
+                      {c.active ? "Activo" : "Inactivo"}
+                    </Badge>
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <Link
+                      href={`/admin/clientes?edit=${c.id}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
+                      className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
+                      aria-label="Editar"
+                      title="Editar"
                     >
-                      {c.phone}
-                    </a>
-                  ) : (
-                    (c.phone ?? "—")
-                  )}
-                </td>
-                <td className="px-3 py-2">{Number(c.discountPercent)}%</td>
-                <td className="px-3 py-2">
-                  <Badge variant={c.active ? "success" : "danger"}>
-                    {c.active ? "Activo" : "Inactivo"}
-                  </Badge>
-                </td>
-                <td className="px-3 py-2 text-right">
-                  <Link
-                    href={`/admin/clientes?edit=${c.id}${query ? `&q=${encodeURIComponent(query)}` : ""}`}
-                    className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
-                    aria-label="Editar"
-                    title="Editar"
-                  >
-                    <Pencil className="h-4 w-4" aria-hidden />
-                  </Link>
-                </td>
-              </tr>
+                      <Pencil className="h-4 w-4" aria-hidden />
+                    </Link>
+                  </td>
+                </tr>
               );
             })}
           </tbody>

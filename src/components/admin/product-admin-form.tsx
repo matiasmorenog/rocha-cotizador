@@ -2,41 +2,50 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 
-type ProductRow = {
+export type PriceListOption = {
   id: string;
-  code: string;
   name: string;
-  rubro: string | null;
-  basePrice: string | number;
   active: boolean;
 };
 
-export function ProductAdminForm({ product }: { product?: ProductRow }) {
+/** Compact create-only form. Edits (incl. list prices) happen inline in ProductAdminTable. */
+export function ProductAdminForm() {
   const router = useRouter();
-  const [code, setCode] = useState(product?.code ?? "");
-  const [name, setName] = useState(product?.name ?? "");
-  const [rubro, setRubro] = useState(product?.rubro ?? "");
-  const [basePrice, setBasePrice] = useState(String(product?.basePrice ?? ""));
-  const [active, setActive] = useState(product?.active ?? true);
+  const [code, setCode] = useState("");
+  const [name, setName] = useState("");
+  const [rubro, setRubro] = useState("");
+  const [basePrice, setBasePrice] = useState("");
+  const [active, setActive] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+
+  if (!showCreate) {
+    return (
+      <Button type="button" onClick={() => setShowCreate(true)}>
+        <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+        Nuevo producto
+      </Button>
+    );
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setMessage(null);
+
     const res = await fetch("/api/admin/products", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        id: product?.id,
         code,
         name,
         rubro,
@@ -50,25 +59,55 @@ export function ProductAdminForm({ product }: { product?: ProductRow }) {
       setError(data.error ?? "Error al guardar");
       return;
     }
-    setMessage("Guardado");
-    if (!product) {
-      setCode("");
-      setName("");
-      setRubro("");
-      setBasePrice("");
-    }
+    setMessage("Producto creado");
+    setCode("");
+    setName("");
+    setRubro("");
+    setBasePrice("");
+    setActive(true);
     router.refresh();
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4">
-      <div className="grid gap-3 sm:grid-cols-2">
+    <form
+      onSubmit={onSubmit}
+      className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium text-neutral-800">Nuevo producto</p>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setShowCreate(false)}
+          aria-label="Cerrar formulario"
+        >
+          <X className="h-4 w-4" aria-hidden />
+        </Button>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1">
           <Label>Código</Label>
-          <Input value={code} onChange={(e) => setCode(e.target.value)} required />
+          <Input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            required
+          />
         </div>
         <div className="space-y-1">
-          <Label>Precio base (mayorista)</Label>
+          <Label>Nombre</Label>
+          <Input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Rubro</Label>
+          <Input value={rubro} onChange={(e) => setRubro(e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label>Precio base</Label>
           <Input
             type="number"
             min={0}
@@ -78,21 +117,14 @@ export function ProductAdminForm({ product }: { product?: ProductRow }) {
             required
           />
         </div>
-        <div className="space-y-1 sm:col-span-2">
-          <Label>Nombre</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} required />
-        </div>
-        <div className="space-y-1 sm:col-span-2">
-          <Label>Rubro</Label>
-          <Input value={rubro} onChange={(e) => setRubro(e.target.value)} />
-        </div>
       </div>
+
       <label
-        htmlFor="product-active"
+        htmlFor="product-active-create"
         className="flex cursor-pointer items-center gap-2.5 text-sm"
       >
         <Switch
-          id="product-active"
+          id="product-active-create"
           checked={active}
           onChange={(e) => setActive(e.target.checked)}
         />
@@ -101,7 +133,7 @@ export function ProductAdminForm({ product }: { product?: ProductRow }) {
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
       <Button type="submit" disabled={loading}>
-        {loading ? "Guardando…" : product ? "Actualizar" : "Crear producto"}
+        {loading ? "Guardando…" : "Crear producto"}
       </Button>
     </form>
   );

@@ -21,7 +21,7 @@ async function main() {
       id: true,
       code: true,
       name: true,
-      discountPercent: true,
+      priceList: { select: { name: true } },
     },
     orderBy: { code: "asc" },
   });
@@ -30,7 +30,7 @@ async function main() {
     code: string;
     name: string;
     pin: string;
-    discountPercent: number;
+    priceList: string;
   }> = [];
   const examples: Array<{ code: string; pin: string }> = [];
 
@@ -45,7 +45,7 @@ async function main() {
       code: c.code,
       name: c.name,
       pin,
-      discountPercent: Number(c.discountPercent),
+      priceList: c.priceList?.name ?? "Precio base",
     });
     if (examples.length < 3) {
       examples.push({ code: c.code, pin });
@@ -54,10 +54,10 @@ async function main() {
 
   const csvPath = path.join(process.cwd(), "prisma", "data", "seed-pins.csv");
   const csv = [
-    "code,name,pin,discountPercent",
+    "code,name,pin,priceList",
     ...pins.map(
       (p) =>
-        `${p.code},"${p.name.replace(/"/g, '""')}",${p.pin},${p.discountPercent}`,
+        `${p.code},"${p.name.replace(/"/g, '""')}",${p.pin},"${p.priceList.replace(/"/g, '""')}"`,
     ),
   ].join("\n");
   fs.writeFileSync(csvPath, `${csv}\n`, "utf8");

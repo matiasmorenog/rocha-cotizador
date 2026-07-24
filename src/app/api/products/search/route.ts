@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { priceForCustomer } from "@/lib/pricing";
 import { searchActiveProductsBase } from "@/lib/products-cache";
+import { resolveUnitPricesForList } from "@/lib/price-list-resolve";
 
 /** Fallback search API — quote UI prefers local catalog filter. */
 export async function GET(req: NextRequest) {
@@ -16,17 +16,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ products: [] });
   }
 
-  // Catalog from shared cache (basePrice only); discount applied below per request.
   const products = await searchActiveProductsBase(q, 30);
 
-  let discountPercent = 0;
+  let priceListId: string | null = null;
 
   if (session.user.role === "CUSTOMER" && session.user.customerId) {
     const customer = await db.customer.findUnique({
       where: { id: session.user.customerId },
-      select: { discountPercent: true },
+      select: { priceListId: true },
     });
-    discountPercent = Number(customer?.discountPercent ?? 0);
+    priceListId = customer?.priceListId ?? null;
   } else if (session.user.role === "ADMIN") {
     const customerId = (req.nextUrl.searchParams.get("customerId") ?? "").trim();
     if (!customerId) {
@@ -37,13 +36,22 @@ export async function GET(req: NextRequest) {
     }
     const customer = await db.customer.findUnique({
       where: { id: customerId },
-      select: { discountPercent: true, active: true },
+      select: { priceListId: true, active: true },
     });
     if (!customer) {
       return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
     }
-    discountPercent = Number(customer.discountPercent ?? 0);
+    priceListId = customer.priceListId;
   }
+
+  const unitPrices = await resolveUnitPricesForList(
+    products.map((p) => ({
+      id: p.id,
+      code: p.code,
+      basePrice: p.basePrice,
+    })),
+    priceListId,
+  );
 
   return NextResponse.json({
     products: products.map((p) => ({
@@ -51,7 +59,7 @@ export async function GET(req: NextRequest) {
       code: p.code,
       name: p.name,
       rubro: p.rubro,
-      unitPrice: Number(priceForCustomer(p.basePrice, discountPercent)),
+      unitPrice: unitPrices[p.code] ?? p.basePrice,
     })),
   });
 }

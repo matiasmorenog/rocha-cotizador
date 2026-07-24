@@ -10,10 +10,19 @@ export type { ProductBase } from "@/lib/product-base";
  * bumps `updatedAt`, so MAX covers create/update/deactivate/reactivate.
  */
 export async function getProductsCatalogVersion(): Promise<string> {
-  const result = await db.product.aggregate({
-    _max: { updatedAt: true },
-  });
-  return result._max.updatedAt?.toISOString() ?? "0";
+  const [products, lists, items] = await Promise.all([
+    db.product.aggregate({ _max: { updatedAt: true } }),
+    db.priceList.aggregate({ _max: { updatedAt: true } }),
+    db.priceListItem.aggregate({ _max: { updatedAt: true } }),
+  ]);
+  const stamps = [
+    products._max.updatedAt,
+    lists._max.updatedAt,
+    items._max.updatedAt,
+  ]
+    .filter(Boolean)
+    .map((d) => d!.toISOString());
+  return stamps.sort().at(-1) ?? "0";
 }
 
 async function fetchActiveProductsBaseUncached(): Promise<ProductBase[]> {

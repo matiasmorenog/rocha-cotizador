@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { invalidateAfterProductMutation } from "@/lib/cache-tags";
+import { syncBaseListItemForProduct } from "@/lib/price-list-resolve";
 
 async function requireAdmin() {
   const session = await auth();
@@ -17,6 +18,14 @@ const schema = z.object({
   rubro: z.string().optional().nullable(),
   basePrice: z.number().nonnegative(),
   active: z.boolean().optional(),
+  listPrices: z
+    .array(
+      z.object({
+        priceListId: z.string().min(1),
+        unitPrice: z.number().nonnegative().nullable(),
+      }),
+    )
+    .optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -40,6 +49,41 @@ export async function POST(req: NextRequest) {
   const product = parsed.data.id
     ? await db.product.update({ where: { id: parsed.data.id }, data })
     : await db.product.create({ data });
+
+  await syncBaseListItemForProduct(product.id, product.basePrice);
+
+  if (parsed.data.listPrices) {
+    const base = await db.priceList.findFirst({
+      where: { isBase: true },
+      select: { id: true },
+    });
+    for (const row of parsed.data.listPrices) {
+      if (base && row.priceListId === base.id) continue;
+      if (row.unitPrice === null) {
+        await db.priceListItem.deleteMany({
+          where: {
+            priceListId: row.priceListId,
+            productId: product.id,
+          },
+        });
+        continue;
+      }
+      await db.priceListItem.upsert({
+        where: {
+          priceListId_productId: {
+            priceListId: row.priceListId,
+            productId: product.id,
+          },
+        },
+        create: {
+          priceListId: row.priceListId,
+          productId: product.id,
+          unitPrice: row.unitPrice,
+        },
+        update: { unitPrice: row.unitPrice },
+      });
+    }
+  }
 
   invalidateAfterProductMutation();
 
