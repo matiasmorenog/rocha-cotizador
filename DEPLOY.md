@@ -70,7 +70,7 @@ Dashboard admin serializa queries en `$transaction` (no `Promise.all` de 4 count
 
 Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateAfterCustomerMutation`, `invalidateAfterQuoteCreate`).
 
-Build command (Vercel): `npm run build` → `prisma generate && next build` (`postinstall` también corre `prisma generate`).
+Build command (Vercel): `npm run build` → `prisma generate && next build` (`postinstall` también corre `prisma generate`). `binaryTargets` in `schema.prisma` must include `rhel-openssl-3.0.x` so the client works on Vercel when CI generates on Debian.
 
 ### CI → producción (gate)
 
