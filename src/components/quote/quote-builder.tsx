@@ -355,7 +355,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                     onChange={(e) =>
                       setLocalOrderByUnit(e.target.value === "unit")
                     }
-                    className="flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-9 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
+                    className="flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-9 text-sm focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
                   >
                     <option value="kg">Kg</option>
                     <option value="unit">Unidades</option>
@@ -460,7 +460,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                             setOrderByUnit(l.productId, e.target.value === "unit")
                           }
                           aria-label="Medida"
-                          className="flex h-8 w-[7.5rem] rounded-md border border-neutral-300 bg-white pl-2 pr-8 text-xs focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
+                          className="flex h-8 w-[7.5rem] rounded-md border border-neutral-300 bg-white pl-2 pr-8 text-xs focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
                         >
                           <option value="kg">Kg</option>
                           <option value="unit">Unidades</option>
@@ -510,7 +510,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Opcional — aclaraciones del pedido (horario, detalle, etc.)"
-          className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
         />
       </div>
 

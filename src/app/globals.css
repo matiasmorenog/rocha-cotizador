@@ -14,6 +14,16 @@
   input:where([type="button"], [type="submit"], [type="reset"]):disabled {
     cursor: not-allowed;
   }
+
+  /* Brand focus: kill UA blue; keyboard-only via :focus-visible */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--brand-primary);
+    outline-offset: 2px;
+  }
 }
 
 :root {
@@ -28,6 +38,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-ring: var(--brand-primary);
   --font-sans: var(--font-source-sans);
 }
 
