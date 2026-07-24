@@ -58,10 +58,10 @@ export async function AppHeader() {
             ) : isAdmin ? (
               <>
                 <Link
-                  href="/admin/cuenta"
+                  href="/admin/configuracion#cuenta"
                   className="text-neutral-700 hover:text-neutral-900"
                 >
-                  Mi cuenta
+                  Configuración
                 </Link>
                 <form
                   action={async () => {
