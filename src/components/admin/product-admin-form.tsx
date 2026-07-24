@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -76,18 +76,7 @@ export function ProductAdminForm() {
       onSubmit={onSubmit}
       className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4"
     >
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-sm font-medium text-neutral-800">Nuevo producto</p>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => setShowCreate(false)}
-          aria-label="Cerrar formulario"
-        >
-          <X className="h-4 w-4" aria-hidden />
-        </Button>
-      </div>
+      <p className="text-sm font-medium text-neutral-800">Nuevo producto</p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="space-y-1">
           <Label>Código</Label>
@@ -146,9 +135,19 @@ export function ProductAdminForm() {
       </label>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
-      <Button type="submit" disabled={loading}>
-        {loading ? "Guardando…" : "Crear producto"}
-      </Button>
+      <div className="flex flex-wrap gap-2">
+        <Button type="submit" disabled={loading}>
+          {loading ? "Guardando…" : "Crear producto"}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={loading}
+          onClick={() => setShowCreate(false)}
+        >
+          Cancelar
+        </Button>
+      </div>
     </form>
   );
 }
