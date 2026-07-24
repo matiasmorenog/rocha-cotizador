@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
-import { formatPrice } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import {
   effectiveLineTotal,
   effectiveUnitPrice,
@@ -168,7 +168,14 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
       ) : null}
 
       <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-[1fr_120px_auto]">
+        <div
+          className={cn(
+            "grid gap-3",
+            selectedAllowsUnit
+              ? "md:grid-cols-[1fr_minmax(0,auto)_auto]"
+              : "md:grid-cols-[1fr_120px_auto]",
+          )}
+        >
           <div className="relative" ref={boxRef}>
             <Label htmlFor="product-search">Producto</Label>
             <div className="relative">
@@ -228,16 +235,47 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
               <p className="mt-2 text-sm text-red-600">{catalog.error}</p>
             ) : null}
           </div>
-          <div>
-            <Label htmlFor="qty">
-              {selectedAllowsUnit && orderByUnit ? "Cantidad (unid.)" : "Cantidad (kg)"}
-            </Label>
-            <Input
-              id="qty"
-              inputMode="decimal"
-              value={qty}
-              onChange={(e) => setLocalQty(e.target.value)}
-            />
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="w-[120px] min-w-[6rem] flex-1 sm:flex-none">
+              <Label htmlFor="qty">
+                {selectedAllowsUnit && orderByUnit
+                  ? "Cantidad (unid.)"
+                  : "Cantidad (kg)"}
+              </Label>
+              <Input
+                id="qty"
+                inputMode="decimal"
+                value={qty}
+                onChange={(e) => setLocalQty(e.target.value)}
+              />
+            </div>
+            {selectedAllowsUnit ? (
+              <div className="flex min-w-[9rem] flex-1 items-end gap-1.5 sm:flex-none">
+                <div className="min-w-0 flex-1">
+                  <Label htmlFor="order-mode">Modo</Label>
+                  <select
+                    id="order-mode"
+                    value={orderByUnit ? "unit" : "kg"}
+                    onChange={(e) =>
+                      setLocalOrderByUnit(e.target.value === "unit")
+                    }
+                    className="flex h-10 w-full rounded-md border border-neutral-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)] focus:ring-offset-1"
+                  >
+                    <option value="kg">Por kg</option>
+                    <option value="unit">Por unidades</option>
+                  </select>
+                </div>
+                {orderByUnit ? (
+                  <span
+                    className="mb-2 inline-flex shrink-0 text-amber-700"
+                    title={UNIT_ORDER_PRICE_WARNING}
+                    aria-label={UNIT_ORDER_PRICE_WARNING}
+                  >
+                    <AlertTriangle className="h-5 w-5" aria-hidden />
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           <div className="flex items-end">
             <Button type="button" onClick={addLine} disabled={!selected}>
@@ -245,39 +283,6 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
             </Button>
           </div>
         </div>
-
-        {selectedAllowsUnit ? (
-          <div className="mt-3 space-y-2">
-            <p className="text-xs font-medium text-neutral-600">Modo de pedido</p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className={`rounded-md border px-3 py-1.5 text-sm ${
-                  !orderByUnit
-                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10 font-medium text-neutral-900"
-                    : "border-neutral-300 bg-white text-neutral-700"
-                }`}
-                onClick={() => setLocalOrderByUnit(false)}
-              >
-                Por kg
-              </button>
-              <button
-                type="button"
-                className={`rounded-md border px-3 py-1.5 text-sm ${
-                  orderByUnit
-                    ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/10 font-medium text-neutral-900"
-                    : "border-neutral-300 bg-white text-neutral-700"
-                }`}
-                onClick={() => setLocalOrderByUnit(true)}
-              >
-                Por unidades
-              </button>
-            </div>
-            {orderByUnit ? (
-              <p className="text-sm text-amber-800">{UNIT_ORDER_PRICE_WARNING}</p>
-            ) : null}
-          </div>
-        ) : null}
       </div>
 
       {hasUnitOrderLines ? (
