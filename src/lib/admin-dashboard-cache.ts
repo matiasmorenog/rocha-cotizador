@@ -17,57 +17,51 @@ export type AdminDashboardData = {
   recent: AdminDashboardRecentQuote[];
 };
 
+function dayKey(d = new Date()): string {
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
 /**
- * Slow-changing counts only. Quote lists must NEVER live in Data Cache —
- * external wipes / deletes would otherwise show stale rows for up to TTL
- * (stale-while-revalidate) even on a fresh post-login hard navigation.
+ * Dashboard counts + recent quotes.
+ * Sequential queries inside $transaction — one Neon connection (connection_limit=1).
+ * TTL 5 min; tag `admin-dashboard` expired on quote create / wipe / related mutations.
  */
-const getCachedDashboardCounts = unstable_cache(
-  async (): Promise<{ customers: number; products: number }> => {
+const getCachedAdminDashboard = unstable_cache(
+  async (day: string): Promise<AdminDashboardData> => {
+    const [y, m, d] = day.split("-").map(Number);
+    const start = new Date(y, m - 1, d);
+    start.setHours(0, 0, 0, 0);
+
     return db.$transaction(async (tx) => {
       const customers = await tx.customer.count({ where: { active: true } });
       const products = await tx.product.count({ where: { active: true } });
-      return { customers, products };
+      const quotesToday = await tx.quote.count({
+        where: { createdAt: { gte: start } },
+      });
+      const recentRows = await tx.quote.findMany({
+        take: 8,
+        orderBy: { createdAt: "desc" },
+        include: { customer: { select: { code: true, name: true } } },
+      });
+
+      return {
+        customers,
+        products,
+        quotesToday,
+        recent: recentRows.map((q) => ({
+          id: q.id,
+          number: q.number,
+          total: Number(q.total),
+          createdAt: q.createdAt.toISOString(),
+          customer: q.customer,
+        })),
+      };
     });
   },
-  ["admin-dashboard-counts"],
-  { tags: [CACHE_TAGS.adminDashboard], revalidate: 120 },
+  ["admin-dashboard"],
+  { tags: [CACHE_TAGS.adminDashboard], revalidate: 300 },
 );
 
-async function getFreshDashboardQuotes(): Promise<{
-  quotesToday: number;
-  recent: AdminDashboardRecentQuote[];
-}> {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-
-  return db.$transaction(async (tx) => {
-    const quotesToday = await tx.quote.count({
-      where: { createdAt: { gte: start } },
-    });
-    const recentRows = await tx.quote.findMany({
-      take: 8,
-      orderBy: { createdAt: "desc" },
-      include: { customer: { select: { code: true, name: true } } },
-    });
-
-    return {
-      quotesToday,
-      recent: recentRows.map((q) => ({
-        id: q.id,
-        number: q.number,
-        total: Number(q.total),
-        createdAt: q.createdAt.toISOString(),
-        customer: q.customer,
-      })),
-    };
-  });
-}
-
-export async function getAdminDashboardData(): Promise<AdminDashboardData> {
-  const [counts, quotes] = await Promise.all([
-    getCachedDashboardCounts(),
-    getFreshDashboardQuotes(),
-  ]);
-  return { ...counts, ...quotes };
+export function getAdminDashboardData(): Promise<AdminDashboardData> {
+  return getCachedAdminDashboard(dayKey());
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
 import { formatPrice } from "@/lib/utils";
 
-/** Dynamic shell; quote rows inside are never Data-Cached (see admin-dashboard-cache). */
+/** Dynamic shell; dashboard payload uses tagged Data Cache (TTL 5m, bust on quote create). */
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {

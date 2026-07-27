@@ -1,4 +1,4 @@
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 /** Shared cache tags — never put per-customer unitPrice or auth under these. */
 export const CACHE_TAGS = {
@@ -53,12 +53,15 @@ export function invalidateAfterCustomerMutation() {
   invalidateAdminDashboardCache();
 }
 
-/** Quote create — dashboard counts may include quotesToday; keep tag warm after create. */
+/** Quote create — expire dashboard Data Cache + refresh list routes. */
 export function invalidateAfterQuoteCreate() {
   invalidateAdminDashboardCache();
+  revalidatePath("/admin");
+  revalidatePath("/admin/cotizaciones");
+  revalidatePath("/remitos");
 }
 
-/** Quote wipe / bulk delete — expire dashboard tags (counts). Lists read DB uncached. */
+/** Quote wipe / bulk delete — same bust as create (tag + list paths). */
 export function invalidateAfterQuoteWipe() {
-  invalidateAdminDashboardCache();
+  invalidateAfterQuoteCreate();
 }
