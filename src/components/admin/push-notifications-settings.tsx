@@ -510,13 +510,14 @@ export function PushNotificationsSettings() {
         <div className="mt-3">
           <Button
             type="button"
+            className="w-full justify-center sm:w-auto sm:min-w-[17.5rem]"
             disabled={testing || testingSystem || busy}
             onClick={testInAppNotification}
           >
             {testing ? (
               <>
                 <Spinner className="mr-2 text-white" />
-                Probando…
+                Probar notificación en la app
               </>
             ) : (
               "Probar notificación en la app"
@@ -619,18 +620,19 @@ export function PushNotificationsSettings() {
         </p>
         <OsSystemGuide os={osGuide} />
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           {status === "subscribed" ? (
             <Button
               type="button"
               variant="outline"
+              className="w-full justify-center sm:w-auto sm:min-w-[17.5rem]"
               disabled={busy || testing || testingSystem}
               onClick={disable}
             >
               {busy ? (
                 <>
                   <Spinner className="mr-2" />
-                  Desactivando…
+                  Desactivar notificaciones del sistema
                 </>
               ) : (
                 "Desactivar notificaciones del sistema"
@@ -641,13 +643,14 @@ export function PushNotificationsSettings() {
             status !== "loading" ? (
             <Button
               type="button"
+              className="w-full justify-center sm:w-auto sm:min-w-[17.5rem]"
               disabled={busy || testing || testingSystem}
               onClick={enable}
             >
               {busy ? (
                 <>
                   <Spinner className="mr-2 text-white" />
-                  Activando…
+                  Activar notificaciones del sistema
                 </>
               ) : (
                 "Activar notificaciones del sistema"
@@ -657,6 +660,7 @@ export function PushNotificationsSettings() {
 
           <Button
             type="button"
+            className="w-full justify-center sm:w-auto sm:min-w-[17.5rem]"
             disabled={
               busy ||
               testing ||
@@ -673,7 +677,7 @@ export function PushNotificationsSettings() {
             {testingSystem ? (
               <>
                 <Spinner className="mr-2 text-white" />
-                Probando…
+                Probar notificación del sistema
               </>
             ) : (
               "Probar notificación del sistema"
