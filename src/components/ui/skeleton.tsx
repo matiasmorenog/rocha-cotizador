@@ -325,7 +325,7 @@ export function SkeletonAdminConfigPage() {
               <Skeleton className="h-10 w-56 rounded-md" />
             </div>
           </div>
-          {/* Sistema opcional + Windows/macOS/Android/iOS */}
+          {/* Sistema + Windows/macOS/Android/iOS */}
           <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
             <Skeleton className="h-4 w-56" />
             <Skeleton className="h-3 w-full" />

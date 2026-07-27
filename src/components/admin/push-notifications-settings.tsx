@@ -523,7 +523,7 @@ export function PushNotificationsSettings() {
     "no-vapid":
       "Faltan claves VAPID en el servidor (solo afecta notificaciones OS).",
     subscribed: "Notificaciones del sistema activas en este navegador.",
-    unsubscribed: "Notificaciones del sistema no activadas (opcional).",
+    unsubscribed: "Notificaciones del sistema no activadas.",
     error: "Error al configurar notificaciones del sistema.",
   };
 
@@ -617,10 +617,10 @@ export function PushNotificationsSettings() {
         ) : null}
       </div>
 
-      {/* —— Notificaciones del sistema (opcional) —— */}
+      {/* —— Notificaciones del sistema —— */}
       <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-800">
         <p className="font-semibold text-neutral-900">
-          Notificaciones del sistema (opcional)
+          Notificaciones del sistema
         </p>
         <p className="mt-1 text-neutral-600">
           Notificaciones del navegador cuando el admin está cerrado o en
