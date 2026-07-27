@@ -466,32 +466,28 @@ export function PushNotificationsSettings() {
         return;
       }
 
-      // Close prior Probar OS toasts. Otherwise getNotifications() still
-      // finds the first rocha-test* and skips local fallback on 2nd click
-      // when FCM is silent / suppressed.
-      try {
-        const prior = await reg.getNotifications();
-        await Promise.all(
-          prior
-            .filter(
-              (n) =>
-                typeof n.tag === "string" && n.tag.startsWith("rocha-test"),
-            )
-            .map((n) => n.close()),
-        );
-      } catch {
-        // ignore
-      }
-
+      // Do not close prior OS toasts — they must stack. Unique tags below
+      // prevent the browser from replacing siblings. Fallback only looks
+      // for a toast created after this Probar (avoids 2nd-click skip when
+      // an older rocha-test* is still open and FCM is silent).
+      const requestedAt = Date.now();
       const result = await postPushTest(sub.endpoint);
       if (result.ok) {
         // If FCM delivered but OS UI suppressed, show one local OS toast.
         await new Promise((r) => setTimeout(r, 1200));
         const existing = await reg.getNotifications();
-        const hasOs = existing.some(
-          (n) =>
-            typeof n.tag === "string" && n.tag.startsWith("rocha-test"),
-        );
+        const hasOs = existing.some((n) => {
+          if (typeof n.tag !== "string" || !n.tag.startsWith("rocha-test")) {
+            return false;
+          }
+          // Same-machine show time — ignore older stacked toasts.
+          if (typeof n.timestamp === "number") {
+            return n.timestamp >= requestedAt - 50;
+          }
+          // Tag embeds Date.now() from server or local fallback.
+          const m = /^rocha-test(?:-local)?-(\d+)$/.exec(n.tag);
+          return m ? Number(m[1]) >= requestedAt - 5_000 : false;
+        });
         if (!hasOs && Notification.permission === "granted") {
           const { icon, badge } = pushNotificationBrandAssets(
             window.location.origin,

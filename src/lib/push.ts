@@ -245,7 +245,7 @@ export async function notifyAdminsNewQuote(
         title,
         body,
         url,
-        tag: `rocha-quote-${quote.id}`,
+        tag: `rocha-quote-${quote.id}-${Date.now()}`,
       },
       `quote ${quote.number}`,
     );
