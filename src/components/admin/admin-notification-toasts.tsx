@@ -39,7 +39,7 @@ export function AdminNotificationToasts({ toasts, onDismiss }: Props) {
         <div
           key={toast.id}
           role="status"
-          className={`admin-toast-enter pointer-events-auto overflow-hidden rounded-lg border border-[var(--brand-latte)] border-l-4 bg-[var(--brand-primary-soft)] shadow-lg ${toneAccent[toast.tone]}`}
+          className={`admin-toast-enter pointer-events-auto overflow-hidden rounded-lg border border-[var(--brand-latte)] border-l-4 bg-[#fffdf9] shadow-[0_8px_24px_rgba(44,36,31,0.12)] ${toneAccent[toast.tone]}`}
         >
           <div className="flex items-start gap-2 p-3">
             <a
@@ -62,7 +62,7 @@ export function AdminNotificationToasts({ toasts, onDismiss }: Props) {
             <button
               type="button"
               aria-label="Cerrar notificación"
-              className="shrink-0 rounded-md px-1.5 py-0.5 text-sm leading-none text-[var(--foreground)]/55 transition-colors hover:bg-white/70 hover:text-[var(--foreground)]"
+              className="shrink-0 rounded-md px-1.5 py-0.5 text-sm leading-none text-[var(--foreground)]/55 transition-colors hover:bg-[var(--brand-primary-soft)] hover:text-[var(--foreground)]"
               onClick={() => onDismiss(toast.id)}
             >
               ×
