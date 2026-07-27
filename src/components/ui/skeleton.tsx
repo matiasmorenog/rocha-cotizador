@@ -369,8 +369,24 @@ export function SkeletonAdminConfigPage() {
       {/* Mi cuenta */}
       <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
         <Skeleton className="mb-1 h-3 w-24" />
-        <Skeleton className="mb-3 h-4 w-56" />
-        <Skeleton className="mb-3 h-4 w-36" />
+        <Skeleton className="mb-4 h-4 w-56" />
+        <Skeleton className="mb-3 h-4 w-28" />
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <div className="space-y-1.5">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <div className="space-y-1.5">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+        <Skeleton className="mb-3 mt-6 h-4 w-36" />
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Skeleton className="h-4 w-36" />

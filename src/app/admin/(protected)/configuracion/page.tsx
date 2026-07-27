@@ -2,6 +2,7 @@ import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { requireAdminSession } from "@/lib/session";
 import { PushNotificationsSettings } from "@/components/admin/push-notifications-settings";
 import { WhatsAppSettingsForm } from "@/components/admin/whatsapp-settings-form";
+import { AdminChangeEmailForm } from "@/components/account/admin-change-email-form";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 
 export default async function AdminConfigPage() {
@@ -40,11 +41,21 @@ export default async function AdminConfigPage() {
         <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
           Mi cuenta
         </h2>
-        <p className="mb-3 text-sm text-neutral-600">
+        <p className="mb-4 text-sm text-neutral-600">
           {session.user.name ?? "Admin"}
           {session.user.email ? ` · ${session.user.email}` : null}
         </p>
         <h3 className="mb-3 text-sm font-medium text-neutral-800">
+          Cambiar email
+        </h3>
+        {session.user.email ? (
+          <AdminChangeEmailForm currentEmail={session.user.email} />
+        ) : (
+          <p className="mb-4 text-sm text-neutral-500">
+            No hay email asociado a esta cuenta.
+          </p>
+        )}
+        <h3 className="mb-3 mt-6 text-sm font-medium text-neutral-800">
           Cambiar contraseña
         </h3>
         <ChangePasswordForm
