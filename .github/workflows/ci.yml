@@ -75,8 +75,56 @@ jobs:
       - name: Pull Vercel production env
         run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
+      # Schema gate BEFORE build/deploy: code must not ship ahead of Neon main.
+      # Prefer secret DATABASE_URL_PRODUCTION; else load DATABASE_URL from vercel pull.
+      - name: Pre-deploy schema sync gate
+        env:
+          DATABASE_URL_PRODUCTION: ${{ secrets.DATABASE_URL_PRODUCTION }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/check-schema-sync.sh
+          if [[ -n "${DATABASE_URL_PRODUCTION:-}" ]]; then
+            export DATABASE_URL="$DATABASE_URL_PRODUCTION"
+            echo "Using GitHub secret DATABASE_URL_PRODUCTION for schema gate"
+          else
+            ENV_FILE=".vercel/.env.production.local"
+            if [[ ! -f "$ENV_FILE" ]]; then
+              echo "error: missing $ENV_FILE after vercel pull, and no DATABASE_URL_PRODUCTION secret." >&2
+              echo "Add Actions secret DATABASE_URL_PRODUCTION (Neon main, preferably direct URL)." >&2
+              exit 1
+            fi
+            export DATABASE_URL="$(node scripts/read-vercel-database-url.js "$ENV_FILE")"
+            echo "Using DATABASE_URL from vercel pull (production)"
+          fi
+          bash scripts/check-schema-sync.sh
+
       - name: Build for production
         run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy prebuilt to production
         run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Post-deploy health check
+        run: |
+          set -euo pipefail
+          URL="${PRODUCTION_HEALTH_URL:-https://rocha-cotizador.vercel.app/api/health}"
+          echo "Probing $URL"
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            code="$(curl -sS -o /tmp/health.json -w "%{http_code}" "$URL" || echo 000)"
+            echo "attempt $i → HTTP $code"
+            if [[ "$code" == "200" ]]; then
+              cat /tmp/health.json
+              echo
+              ok=1
+              break
+            fi
+            sleep 10
+          done
+          if [[ "$ok" != "1" ]]; then
+            echo "FAIL: /api/health did not return 200 after deploy" >&2
+            cat /tmp/health.json 2>/dev/null || true
+            echo >&2
+            echo "If body has schema_drift: Neon main is behind prisma/schema.prisma — db push, redeploy." >&2
+            exit 1
+          fi
