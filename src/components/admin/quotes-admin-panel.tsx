@@ -244,7 +244,7 @@ export function QuotesAdminPanel({
           </thead>
           <tbody>
             {afterCutoff.length > 0 ? (
-              <tr className="border-y-2 border-amber-300/90 bg-amber-50/50">
+              <tr className="border-t border-neutral-200 bg-amber-50/50">
                 <td colSpan={6} className="px-3 py-0">
                   <button
                     type="button"
@@ -276,6 +276,20 @@ export function QuotesAdminPanel({
                   <QuoteDataRow key={qrow.id} qrow={qrow} muted />
                 ))
               : null}
+
+            {afterCutoff.length > 0 && main.length > 0 ? (
+              <tr
+                aria-hidden
+                className="pointer-events-none"
+              >
+                <td
+                  colSpan={6}
+                  className="border-y-2 border-amber-300/90 bg-amber-100/70 p-0"
+                >
+                  <div className="h-1.5 w-full bg-amber-200/80" />
+                </td>
+              </tr>
+            ) : null}
 
             {main.map((qrow) => (
               <QuoteDataRow key={qrow.id} qrow={qrow} />
