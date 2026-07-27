@@ -7,6 +7,7 @@ import {
   ensureFreshServiceWorker,
   resetServiceWorker,
   PUSH_BROADCAST_CHANNEL,
+  dispatchAdminInAppToast,
 } from "@/lib/push-sw-client";
 
 type Status =
@@ -27,6 +28,18 @@ type TestApiResult = {
   total?: number;
   staleRemoved?: number;
   status: number;
+};
+
+type StepResult = {
+  label: string;
+  ok: boolean;
+  detail: string;
+};
+
+type ProbarReport = {
+  ok: boolean;
+  steps: StepResult[];
+  note: string;
 };
 
 function urlBase64ToUint8Array(base64String: string): BufferSource {
@@ -96,7 +109,6 @@ async function subscribeFresh(publicKey: string): Promise<PushSubscription> {
     throw new Error(data.error ?? "No se pudo guardar la suscripción");
   }
 
-  // Verify DB endpoint matches this browser's PushSubscription.
   const verifyRes = await fetch("/api/admin/push/subscribe");
   const verifyData = await verifyRes.json().catch(() => ({}));
   const stored: string[] = Array.isArray(verifyData.endpoints)
@@ -158,7 +170,45 @@ async function testPushWithResubRetry(
   return { result, didResub: true };
 }
 
-type InAppPush = { title: string; body: string; url: string };
+function MacOsChecklist() {
+  return (
+    <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-800">
+      <p className="font-semibold text-neutral-900">
+        Checklist macOS / Chrome (si no ves el toast del sistema)
+      </p>
+      <ul className="mt-2 list-disc space-y-1.5 pl-5 text-neutral-700">
+        <li>
+          <span className="font-medium">Ajustes macOS</span> → Notificaciones →
+          Google Chrome → <span className="font-medium">Permitir</span>{" "}
+          (no “Entregar en silencio” / Deliver Quietly).
+        </li>
+        <li>
+          Desactivá <span className="font-medium">Focus / No molestar</span> al
+          probar. En Chrome: Configuración → Privacidad → Notificaciones del
+          sitio → desmarcá{" "}
+          <span className="font-medium">“Use Focus filters”</span> si está.
+        </li>
+        <li>
+          Chrome → candado del sitio (localhost) → Notificaciones →{" "}
+          <span className="font-medium">Permitir</span>.
+        </li>
+      </ul>
+      <p className="mt-2 text-xs text-neutral-600">
+        Nota: Focus a menudo oculta toasts del service worker, pero el aviso
+        verde/rojo <span className="font-medium">dentro de la página</span>{" "}
+        siempre debería aparecer. Eso confirma que el push funciona aunque el
+        OS lo silencie.
+      </p>
+      <p className="mt-2 break-all rounded bg-white px-2 py-1.5 font-mono text-xs text-neutral-600">
+        chrome://settings/content/notifications
+      </p>
+      <p className="mt-1 text-xs text-neutral-500">
+        Pegá esa URL en la barra de Chrome (las páginas web no pueden abrirla
+        solas).
+      </p>
+    </div>
+  );
+}
 
 export function PushNotificationsSettings() {
   const [status, setStatus] = useState<Status>("loading");
@@ -166,7 +216,7 @@ export function PushNotificationsSettings() {
   const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [inApp, setInApp] = useState<InAppPush | null>(null);
+  const [probar, setProbar] = useState<ProbarReport | null>(null);
   const [perm, setPerm] = useState<NotificationPermission | "unknown">(
     "unknown",
   );
@@ -210,7 +260,8 @@ export function PushNotificationsSettings() {
     };
   }, []);
 
-  // Dual path: when /admin tab open, SW still showNotification + also posts here.
+  // Dual path: when /admin tab open, SW still showNotification + also posts here
+  // (settings page also gets the global banner via AdminPushSwRegister).
   useEffect(() => {
     function onPushMessage(raw: unknown) {
       if (!raw || typeof raw !== "object") return;
@@ -219,14 +270,10 @@ export function PushNotificationsSettings() {
       const title =
         typeof msg.title === "string" ? msg.title : "Nueva cotización";
       const body = typeof msg.body === "string" ? msg.body : "";
-      const url =
-        typeof msg.url === "string" ? msg.url : "/admin/cotizaciones";
-      console.log("[push] in-app fallback received", { title, body, url });
-      setInApp({ title, body, url });
+      console.log("[push] settings page SW message", { title, body });
     }
 
     const onSwMessage = (event: MessageEvent) => {
-      console.log("[push] navigator.serviceWorker message", event.data);
       onPushMessage(event.data);
     };
     navigator.serviceWorker?.addEventListener("message", onSwMessage);
@@ -234,10 +281,7 @@ export function PushNotificationsSettings() {
     let channel: BroadcastChannel | null = null;
     try {
       channel = new BroadcastChannel(PUSH_BROADCAST_CHANNEL);
-      channel.onmessage = (event) => {
-        console.log("[push] BroadcastChannel message", event.data);
-        onPushMessage(event.data);
-      };
+      channel.onmessage = (event) => onPushMessage(event.data);
     } catch {
       // BroadcastChannel unsupported
     }
@@ -252,6 +296,7 @@ export function PushNotificationsSettings() {
     setBusy(true);
     setError(null);
     setMessage(null);
+    setProbar(null);
 
     try {
       if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
@@ -276,7 +321,6 @@ export function PushNotificationsSettings() {
 
       await subscribeFresh(key.publicKey);
 
-      // Silent verify — if FCM already stale/mismatch, resub once and retest.
       const { result, didResub } = await testPushWithResubRetry(key.publicKey);
       if (!result.ok) {
         setStatus("unsubscribed");
@@ -293,6 +337,12 @@ export function PushNotificationsSettings() {
           ? "Avisos activados (suscripción renovada y verificada)."
           : "Avisos del navegador activados y verificados.",
       );
+      dispatchAdminInAppToast({
+        title: "Avisos activados",
+        body: "Suscripción Web Push verificada. Si macOS oculta el toast, este banner confirma que funciona.",
+        url: "/admin/configuracion",
+        tone: "success",
+      });
     } catch (err) {
       console.error(err);
       const detail =
@@ -310,6 +360,7 @@ export function PushNotificationsSettings() {
     setBusy(true);
     setError(null);
     setMessage(null);
+    setProbar(null);
 
     try {
       const reg =
@@ -337,13 +388,41 @@ export function PushNotificationsSettings() {
     setTesting(true);
     setError(null);
     setMessage(null);
-    setInApp(null);
+    setProbar(null);
 
-    const lines: string[] = [];
+    const steps: StepResult[] = [];
+
+    function finish(ok: boolean, note: string) {
+      const report: ProbarReport = { ok, steps: [...steps], note };
+      setProbar(report);
+      dispatchAdminInAppToast({
+        title: ok
+          ? "Prueba OK (aviso in-app)"
+          : "Prueba FALLÓ (aviso in-app)",
+        body: [
+          ...steps.map(
+            (s) => `${s.ok ? "✓" : "✗"} ${s.label}: ${s.detail}`,
+          ),
+          note,
+        ].join(" · "),
+        url: "/admin/configuracion",
+        tone: ok ? "success" : "error",
+      });
+      if (!ok) {
+        setError(note);
+      } else {
+        setMessage(note);
+      }
+    }
 
     try {
       if (!("Notification" in window)) {
-        setError("Notification API no disponible.");
+        steps.push({
+          label: "Local",
+          ok: false,
+          detail: "Notification API no disponible",
+        });
+        finish(false, "Notification API no disponible.");
         return;
       }
 
@@ -352,34 +431,52 @@ export function PushNotificationsSettings() {
         const p = await Notification.requestPermission();
         setPerm(p);
         if (p !== "granted") {
-          setError(
+          steps.push({
+            label: "Local",
+            ok: false,
+            detail: `permiso = ${p}`,
+          });
+          finish(
+            false,
             `Permiso Notification = ${p}. Activá permisos OS/Chrome primero.`,
           );
           return;
         }
       }
 
-      // 1) Direct Notification — proves OS permission + banners not blocked.
+      // 1) Direct Notification — proves OS permission (may still be silenced by Focus).
       try {
         const n = new Notification("Prueba local (sin push)", {
-          body: "Si ves esto, permiso OS OK. Si el push falla después → SW.",
+          body: "Si ves el toast OS, permiso OK. Si no, mirá Focus / Deliver Quietly — el panel verde de abajo igual cuenta.",
           requireInteraction: true,
           tag: `rocha-local-${Date.now()}`,
         });
         n.onclick = () => n.close();
-        lines.push("1) Notification local: OK (deberías ver toast OS).");
+        steps.push({
+          label: "1) Local (new Notification)",
+          ok: true,
+          detail: "API OK — toast OS puede estar oculto por Focus",
+        });
       } catch (err) {
         const detail = err instanceof Error ? err.message : String(err);
-        lines.push(`1) Notification local: FALLÓ (${detail}).`);
-        setError(lines.join(" "));
+        steps.push({
+          label: "1) Local (new Notification)",
+          ok: false,
+          detail,
+        });
+        finish(false, `Notification local falló: ${detail}`);
         return;
       }
 
       const key = await fetchVapidPublicKey();
       if ("error" in key) {
         if (key.noVapid) setStatus("no-vapid");
-        lines.push(`2) Push: ${key.error}`);
-        setError(lines.join(" "));
+        steps.push({
+          label: "2) Push API",
+          ok: false,
+          detail: key.error,
+        });
+        finish(false, key.error);
         return;
       }
 
@@ -387,14 +484,15 @@ export function PushNotificationsSettings() {
 
       if (!result.ok) {
         setStatus("unsubscribed");
-        lines.push(
-          `2) Push API: FALLÓ (${result.error ?? result.status}). ${
-            result.needResub
-              ? "Suscripción expirada — Activá avisos de nuevo."
-              : "Mirá logs server."
-          }`,
-        );
-        setError(lines.join(" "));
+        const detail = result.needResub
+          ? `${result.error ?? result.status} — Activá avisos de nuevo`
+          : (result.error ?? String(result.status));
+        steps.push({
+          label: "2) Push API",
+          ok: false,
+          detail,
+        });
+        finish(false, `Push API falló: ${detail}`);
         return;
       }
 
@@ -403,38 +501,58 @@ export function PushNotificationsSettings() {
         result.sent != null && result.total != null
           ? `${result.sent}/${result.total}`
           : "ok";
-      lines.push(
-        didResub
-          ? `2) Push API: suscripción renovada, enviado (${sent}). Esperá toast SW.`
-          : `2) Push API: enviado (${sent}). Esperá toast SW; si no, Application → Service Workers → console.`,
-      );
+      steps.push({
+        label: "2) Push API",
+        ok: true,
+        detail: didResub
+          ? `suscripción renovada, enviado ${sent}`
+          : `enviado ${sent}`,
+      });
 
-      // Belt-and-suspenders: page can show OS toast without waiting for push event.
-      // Proves registration.showNotification works while tab is open.
+      // 3) Belt: registration.showNotification from page
       try {
         const reg = await ensureFreshServiceWorker();
         await reg.showNotification("Prueba desde página (belt)", {
-          body: "Push API OK. Si ves esto, registration.showNotification funciona (sin esperar el push event).",
+          body: "Push API OK. registration.showNotification desde la página.",
           requireInteraction: true,
           tag: `rocha-page-${Date.now()}`,
           data: { url: "/admin/configuracion" },
         });
-        lines.push("3) registration.showNotification: OK (deberías ver 2do toast).");
+        steps.push({
+          label: "3) Belt (showNotification)",
+          ok: true,
+          detail: "API OK — toast OS puede estar oculto por Focus",
+        });
         console.log("[push] page showNotification ok after push API");
       } catch (err) {
         const detail = err instanceof Error ? err.message : String(err);
-        lines.push(`3) registration.showNotification: FALLÓ (${detail}).`);
+        steps.push({
+          label: "3) Belt (showNotification)",
+          ok: false,
+          detail,
+        });
         console.error("[push] page showNotification failed", err);
+        finish(
+          false,
+          `Push OK pero showNotification falló: ${detail}`,
+        );
+        return;
       }
 
-      setMessage(lines.join(" "));
+      finish(
+        true,
+        "Local + Push + Belt OK. Si no hay toast macOS, Focus/Deliver Quietly lo ocultan — el banner verde de arriba y este panel confirman éxito.",
+      );
     } catch (err) {
       console.error(err);
-      setError(
+      const detail =
         err instanceof Error
           ? err.message
-          : "Error al probar notificaciones.",
-      );
+          : "Error al probar notificaciones.";
+      if (steps.length === 0) {
+        steps.push({ label: "Prueba", ok: false, detail });
+      }
+      finish(false, detail);
     } finally {
       setTesting(false);
     }
@@ -452,7 +570,7 @@ export function PushNotificationsSettings() {
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <p className="text-sm text-neutral-600">
         Recibí un aviso en Chrome (escritorio o móvil) cuando un{" "}
         <span className="font-medium">cliente</span> confirme una cotización,
@@ -469,16 +587,50 @@ export function PushNotificationsSettings() {
         ) : null}
       </p>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {message ? <p className="text-sm text-green-700">{message}</p> : null}
+      <MacOsChecklist />
 
-      {inApp ? (
-        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
-          <p className="font-medium">{inApp.title}</p>
-          <p>{inApp.body}</p>
-          <p className="mt-1 text-xs text-amber-800">
-            Fallback in-app (tab abierta). Toast OS también debería aparecer.
+      {error && !probar ? (
+        <p className="text-sm text-red-600">{error}</p>
+      ) : null}
+      {message && !probar ? (
+        <p className="text-sm text-green-700">{message}</p>
+      ) : null}
+
+      {probar ? (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className={`rounded-lg border-2 px-4 py-4 shadow-md ${
+            probar.ok
+              ? "border-emerald-600 bg-emerald-50 text-emerald-950"
+              : "border-red-600 bg-red-50 text-red-950"
+          }`}
+        >
+          <p className="text-base font-bold sm:text-lg">
+            {probar.ok
+              ? "Resultado de la prueba: OK"
+              : "Resultado de la prueba: FALLÓ"}
           </p>
+          <p className="mt-1 text-xs font-medium uppercase tracking-wide opacity-80">
+            Aviso dentro de la página — no depende del toast de macOS
+          </p>
+          <ul className="mt-3 space-y-2 text-sm">
+            {probar.steps.map((step) => (
+              <li
+                key={step.label}
+                className="flex gap-2 rounded-md bg-white/70 px-3 py-2"
+              >
+                <span className="font-bold" aria-hidden>
+                  {step.ok ? "✓" : "✗"}
+                </span>
+                <span>
+                  <span className="font-semibold">{step.label}</span>
+                  <span className="block text-neutral-700">{step.detail}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 text-sm font-medium">{probar.note}</p>
         </div>
       ) : null}
 
