@@ -295,8 +295,8 @@ export function SkeletonAccountPage() {
 }
 
 /**
- * Admin `/admin/configuracion` — three cards:
- * Notificaciones (app+sistema), WhatsApp, Mi cuenta.
+ * Admin `/admin/configuracion` — two cards:
+ * Notificaciones (in-app, sistema, WhatsApp), Mi cuenta (email, contraseña).
  */
 export function SkeletonAdminConfigPage() {
   return (
@@ -306,15 +306,15 @@ export function SkeletonAdminConfigPage() {
     >
       <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-72" />
 
-      {/* Notificaciones (app + sistema) */}
+      {/* Notificaciones */}
       <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-        <Skeleton className="mb-3 h-3 w-48" />
+        <Skeleton className="mb-3 h-3 w-32" />
         <div className="space-y-4">
           <div className="space-y-2">
             <Skeleton className="h-3 w-full" />
             <Skeleton className="h-3 w-64" />
           </div>
-          {/* In-app + toggle + Probar */}
+          {/* In-app */}
           <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
             <Skeleton className="h-4 w-52" />
             <Skeleton className="h-3 w-full" />
@@ -325,7 +325,7 @@ export function SkeletonAdminConfigPage() {
               <Skeleton className="h-10 w-56 rounded-md" />
             </div>
           </div>
-          {/* Sistema + Windows/macOS/Android/iOS */}
+          {/* Sistema */}
           <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
             <Skeleton className="h-4 w-56" />
             <Skeleton className="h-3 w-full" />
@@ -346,23 +346,23 @@ export function SkeletonAdminConfigPage() {
               <Skeleton className="h-10 w-64 rounded-md" />
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Notificaciones / WhatsApp */}
-      <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-        <Skeleton className="mb-3 h-3 w-44" />
-        <div className="space-y-4">
-          <div className="space-y-1">
-            <Skeleton className="h-4 w-52" />
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-10 w-14 shrink-0 rounded-md" />
-              <Skeleton className="h-10 min-w-0 flex-1 rounded-md" />
-            </div>
+          {/* WhatsApp */}
+          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
+            <Skeleton className="h-4 w-24" />
             <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-56" />
+            <div className="mt-3 space-y-4">
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-52" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-10 w-14 shrink-0 rounded-md" />
+                  <Skeleton className="h-10 min-w-0 flex-1 rounded-md" />
+                </div>
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+              <Skeleton className="h-10 w-24 rounded-md" />
+            </div>
           </div>
-          <Skeleton className="h-10 w-24 rounded-md" />
         </div>
       </section>
 
@@ -370,37 +370,47 @@ export function SkeletonAdminConfigPage() {
       <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
         <Skeleton className="mb-1 h-3 w-24" />
         <Skeleton className="mb-4 h-4 w-56" />
-        <Skeleton className="mb-3 h-4 w-28" />
         <div className="space-y-4">
-          <div className="space-y-1.5">
+          {/* Cambiar email */}
+          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
             <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-3 w-full" />
+            <div className="mt-3 space-y-4">
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-10 w-full rounded-md" />
-          </div>
-          <div className="space-y-1.5">
+          {/* Cambiar contraseña */}
+          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
             <Skeleton className="h-4 w-36" />
-            <Skeleton className="h-10 w-full rounded-md" />
+            <Skeleton className="h-3 w-full" />
+            <div className="mt-3 space-y-4">
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
           </div>
-          <Skeleton className="h-10 w-full rounded-md" />
-        </div>
-        <Skeleton className="mb-3 mt-6 h-4 w-36" />
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Skeleton className="h-4 w-36" />
-            <Skeleton className="h-10 w-full rounded-md" />
-          </div>
-          <div className="space-y-1.5">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-10 w-full rounded-md" />
-          </div>
-          <div className="space-y-1.5">
-            <Skeleton className="h-4 w-40" />
-            <Skeleton className="h-10 w-full rounded-md" />
-          </div>
-          <Skeleton className="h-10 w-full rounded-md" />
         </div>
       </section>
     </SkeletonRegion>
