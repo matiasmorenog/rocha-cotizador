@@ -53,7 +53,7 @@ export function AdminLoginForm() {
       return;
     }
     saveLastAdminEmail(submittedEmail);
-    // Keep "Ingresando…" and hard-nav so callback (e.g. remito) loads with session.
+    // Keep "Ingresando…" and hard-nav so callback loads with session (no Router Cache).
     window.location.assign(callbackUrl);
   }
 

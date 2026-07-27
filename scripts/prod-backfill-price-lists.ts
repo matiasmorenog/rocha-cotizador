@@ -6,6 +6,9 @@
  *   CONFIRM_PROD_BACKFILL=1
  *   DATABASE_URL = Neon main direct (ep-cool-mud, no -pooler)
  *
+ * After run: POST /api/revalidate (REVALIDATE_SECRET + AUTH_URL) so Vercel
+ * Data Cache expires all tags — see invalidateAfterDbScript.
+ *
  * Customer→list map from pre-drop discountPercent snapshot (2026-07-24).
  */
 import path from "node:path";
