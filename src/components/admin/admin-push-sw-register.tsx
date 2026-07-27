@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ensureFreshServiceWorker,
   PUSH_BROADCAST_CHANNEL,
@@ -13,32 +13,67 @@ type Banner = {
   body: string;
   url: string;
   tone: "info" | "success" | "error";
+  source: "inbox" | "push" | "test";
 };
 
+type InboxItem = {
+  id: string;
+  title: string;
+  body: string;
+  url: string;
+  createdAt: string;
+};
+
+const POLL_MS = 8_000;
+const SEEN_KEY = "rocha-admin-inbox-seen";
+
+function loadSeenIds(): Set<string> {
+  try {
+    const raw = sessionStorage.getItem(SEEN_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((x): x is string => typeof x === "string"));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveSeenIds(ids: Set<string>) {
+  try {
+    const trimmed = [...ids].slice(-200);
+    sessionStorage.setItem(SEEN_KEY, JSON.stringify(trimmed));
+  } catch {
+    // ignore quota
+  }
+}
+
 /**
- * Keep the admin Web Push service worker registered whenever an admin
- * session loads. Shows a large in-app banner on ANY `/admin` page when:
- * - SW push arrives (BroadcastChannel / postMessage)
- * - Probar / page code dispatches ADMIN_INAPP_TOAST_EVENT
- *
- * macOS Focus / Chrome "Use Focus filters" / Deliver Quietly often hide
- * OS toasts while page-origin Notification or this banner still work.
+ * Safe path: poll AdminInbox while any `/admin` tab is open.
+ * Optional: SW BroadcastChannel when Web Push arrives in this browser.
+ * Never depends on macOS/Windows OS toast visibility.
  */
 export function AdminPushSwRegister() {
   const [banner, setBanner] = useState<Banner | null>(null);
+  const sinceRef = useRef<string>(new Date().toISOString());
+  const seenRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
-      return;
-    }
+    if (typeof window === "undefined") return;
 
-    void ensureFreshServiceWorker().catch((err) => {
-      console.warn("[push] service worker register failed", err);
-    });
+    seenRef.current = loadSeenIds();
+    sinceRef.current = new Date().toISOString();
 
     function show(next: Banner) {
       console.log("[push] in-app banner", next);
       setBanner(next);
+    }
+
+    // Best-effort SW (optional Web Push enhancement).
+    if ("serviceWorker" in navigator) {
+      void ensureFreshServiceWorker().catch((err) => {
+        console.warn("[push] service worker register failed", err);
+      });
     }
 
     function onPushMessage(raw: unknown) {
@@ -50,22 +85,18 @@ export function AdminPushSwRegister() {
       const body = typeof msg.body === "string" ? msg.body : "";
       const url =
         typeof msg.url === "string" ? msg.url : "/admin/cotizaciones";
-      show({ title, body, url, tone: "info" });
+      show({ title, body, url, tone: "info", source: "push" });
     }
 
     const onSwMessage = (event: MessageEvent) => {
-      console.log("[push] navigator.serviceWorker message", event.data);
       onPushMessage(event.data);
     };
-    navigator.serviceWorker.addEventListener("message", onSwMessage);
+    navigator.serviceWorker?.addEventListener("message", onSwMessage);
 
     let channel: BroadcastChannel | null = null;
     try {
       channel = new BroadcastChannel(PUSH_BROADCAST_CHANNEL);
-      channel.onmessage = (event) => {
-        console.log("[push] BroadcastChannel message", event.data);
-        onPushMessage(event.data);
-      };
+      channel.onmessage = (event) => onPushMessage(event.data);
     } catch {
       // unsupported
     }
@@ -78,12 +109,76 @@ export function AdminPushSwRegister() {
         body: detail.body ?? "",
         url: detail.url ?? "/admin/configuracion",
         tone: detail.tone ?? "success",
+        source: "test",
       });
     }
     window.addEventListener(ADMIN_INAPP_TOAST_EVENT, onCustomToast);
 
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    async function pollOnce() {
+      if (cancelled || document.visibilityState === "hidden") return;
+      try {
+        const res = await fetch(
+          `/api/admin/push/inbox?since=${encodeURIComponent(sinceRef.current)}`,
+          { credentials: "same-origin" },
+        );
+        if (!res.ok) return;
+        const data = (await res.json().catch(() => null)) as {
+          items?: InboxItem[];
+          serverNow?: string;
+        } | null;
+        if (!data?.items?.length) {
+          if (typeof data?.serverNow === "string") {
+            // Keep cursor moving even with empty polls (clock skew safety).
+          }
+          return;
+        }
+
+        const fresh = data.items.filter((item) => !seenRef.current.has(item.id));
+        for (const item of data.items) {
+          seenRef.current.add(item.id);
+          if (item.createdAt > sinceRef.current) {
+            sinceRef.current = item.createdAt;
+          }
+        }
+        saveSeenIds(seenRef.current);
+
+        if (fresh.length > 0) {
+          const latest = fresh[fresh.length - 1]!;
+          show({
+            title: latest.title,
+            body: latest.body,
+            url: latest.url || "/admin/cotizaciones",
+            tone: "info",
+            source: "inbox",
+          });
+        }
+      } catch (err) {
+        console.warn("[push] inbox poll failed", err);
+      }
+    }
+
+    function schedule() {
+      if (cancelled) return;
+      timer = setTimeout(() => {
+        void pollOnce().finally(() => schedule());
+      }, POLL_MS);
+    }
+
+    void pollOnce().finally(() => schedule());
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void pollOnce();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
-      navigator.serviceWorker.removeEventListener("message", onSwMessage);
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      navigator.serviceWorker?.removeEventListener("message", onSwMessage);
       channel?.close();
       window.removeEventListener(ADMIN_INAPP_TOAST_EVENT, onCustomToast);
     };
@@ -101,6 +196,13 @@ export function AdminPushSwRegister() {
   const mutedClass =
     banner.tone === "info" ? "text-neutral-900/80" : "text-white/90";
 
+  const sourceLabel =
+    banner.source === "inbox"
+      ? "Camino seguro (avisos en la app)"
+      : banner.source === "push"
+        ? "Web Push (mismo navegador)"
+        : "Prueba in-app";
+
   return (
     <div
       role="alert"
@@ -110,7 +212,7 @@ export function AdminPushSwRegister() {
       <div className="mx-auto flex max-w-3xl flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
           <p className="text-xs font-bold uppercase tracking-wide opacity-90">
-            Aviso in-app (no depende del toast del sistema)
+            {sourceLabel} — no depende del toast del sistema
           </p>
           <p className="mt-1 text-lg font-bold leading-tight sm:text-xl">
             {banner.title}
@@ -121,9 +223,8 @@ export function AdminPushSwRegister() {
             </p>
           ) : null}
           <p className={`mt-2 text-xs ${mutedClass}`}>
-            Si no ves el globo de macOS/Chrome: Focus, “Use Focus filters” o
-            Deliver Quietly pueden ocultarlo. Este banner confirma que el push
-            llegó a la pestaña.
+            Con el admin abierto, este banner aparece aunque Windows/macOS
+            bloquee las notificaciones del navegador.
           </p>
         </div>
         <div className="flex shrink-0 gap-2">

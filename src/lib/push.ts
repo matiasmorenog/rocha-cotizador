@@ -140,13 +140,87 @@ async function sendToSubscriptions(
   return { ok, total: results.length, staleRemoved };
 }
 
+export type AdminInboxItemDto = {
+  id: string;
+  title: string;
+  body: string;
+  url: string;
+  quoteId: string | null;
+  kind: string;
+  createdAt: string;
+};
+
+/** Safe path: persist in-app alert (works even when macOS blocks OS toasts). */
+export async function enqueueAdminInbox(input: {
+  title: string;
+  body: string;
+  url: string;
+  quoteId?: string | null;
+  kind?: "quote" | "test";
+}): Promise<AdminInboxItemDto> {
+  const row = await db.adminInboxItem.create({
+    data: {
+      title: input.title,
+      body: input.body,
+      url: input.url,
+      quoteId: input.quoteId ?? null,
+      kind: input.kind ?? "quote",
+    },
+  });
+  return {
+    id: row.id,
+    title: row.title,
+    body: row.body,
+    url: row.url,
+    quoteId: row.quoteId,
+    kind: row.kind,
+    createdAt: row.createdAt.toISOString(),
+  };
+}
+
+export async function listAdminInboxSince(
+  since: Date,
+  limit = 20,
+): Promise<AdminInboxItemDto[]> {
+  const rows = await db.adminInboxItem.findMany({
+    where: { createdAt: { gt: since } },
+    orderBy: { createdAt: "asc" },
+    take: Math.min(Math.max(limit, 1), 50),
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    body: row.body,
+    url: row.url,
+    quoteId: row.quoteId,
+    kind: row.kind,
+    createdAt: row.createdAt.toISOString(),
+  }));
+}
+
 /**
- * Notify all ADMIN users with a stored PushSubscription.
+ * Always enqueue in-app inbox; Web Push is best-effort optional enhancement.
  * Never throws — callers may await safely from quote create.
  */
 export async function notifyAdminsNewQuote(
   quote: NewQuotePushPayload,
 ): Promise<void> {
+  const title = `Nueva cotización #${quote.number}`;
+  const body = quote.customerName;
+  const url = `/remitos/${quote.id}`;
+
+  try {
+    await enqueueAdminInbox({
+      title,
+      body,
+      url,
+      quoteId: quote.id,
+      kind: "quote",
+    });
+  } catch (err) {
+    console.error("[push] enqueueAdminInbox failed", err);
+  }
+
   try {
     const subscriptions = await db.pushSubscription.findMany({
       where: { user: { role: "ADMIN" } },
@@ -154,20 +228,31 @@ export async function notifyAdminsNewQuote(
     await sendToSubscriptions(
       subscriptions,
       {
-        title: `Nueva cotización #${quote.number}`,
-        body: quote.customerName,
-        url: `/remitos/${quote.id}`,
+        title,
+        body,
+        url,
         tag: `rocha-quote-${quote.id}`,
       },
       `quote ${quote.number}`,
     );
   } catch (err) {
-    console.error("[push] notifyAdminsNewQuote failed", err);
+    console.error("[push] notifyAdminsNewQuote web-push failed", err);
   }
+}
+
+/** In-app Probar — creates inbox row; no OS permission needed. */
+export async function enqueueAdminInboxTest(): Promise<AdminInboxItemDto> {
+  return enqueueAdminInbox({
+    title: "Prueba aviso in-app",
+    body: "Camino seguro OK. Este aviso no depende de notificaciones del sistema (Windows/macOS).",
+    url: "/admin/configuracion",
+    kind: "test",
+  });
 }
 
 /**
  * Send a test push to one admin's stored subscriptions (or a single endpoint).
+ * Optional enhancement when OS notifications are allowed.
  */
 export async function sendTestPushToAdmin(opts: {
   userId: string;
@@ -182,8 +267,8 @@ export async function sendTestPushToAdmin(opts: {
   return sendToSubscriptions(
     subscriptions,
     {
-      title: "Prueba Rocha Cotizador",
-      body: "Si ves esto, Web Push + service worker funcionan.",
+      title: "Prueba Rocha Cotizador (sistema)",
+      body: "Opcional: Web Push + macOS/Chrome deben permitir notificaciones.",
       url: "/admin/configuracion",
       tag: `rocha-test-${Date.now()}`,
     },

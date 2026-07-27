@@ -45,6 +45,21 @@ model PushSubscription {
   @@index([userId])
 }
 
+/// In-app admin alerts (safe path — no OS notification required).
+/// Written when a customer creates a quote; polled while /admin is open.
+model AdminInboxItem {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  url       String
+  quoteId   String?
+  /// "quote" | "test"
+  kind      String   @default("quote")
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
 model Customer {
   id                 String     @id @default(cuid())
   code               String     @unique
