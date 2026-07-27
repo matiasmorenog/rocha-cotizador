@@ -1,6 +1,7 @@
 import { requireAdminSession } from "@/lib/session";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { AdminPushSafe } from "@/components/admin/admin-push-safe";
+import { AdminPageSafe } from "@/components/admin/admin-page-safe";
 
 export default async function AdminLayout({
   children,
@@ -15,7 +16,9 @@ export default async function AdminLayout({
       <AdminPushSafe />
       <div className="admin-shell">
         <AdminNav />
-        <div className="min-w-0 flex-1">{children}</div>
+        <div className="min-w-0 flex-1">
+          <AdminPageSafe>{children}</AdminPageSafe>
+        </div>
       </div>
     </>
   );
