@@ -538,13 +538,15 @@ export function PushNotificationsSettings() {
       </p>
 
       {/* —— Notificaciones en la app —— */}
-      <div className="rounded-md border-2 border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-950">
-        <p className="font-semibold">Notificaciones en la app</p>
-        <p className="mt-1 text-emerald-900/90">
+      <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-800">
+        <p className="font-semibold text-neutral-900">
+          Notificaciones en la app
+        </p>
+        <p className="mt-1 text-neutral-600">
           Con el admin abierto, las notificaciones aparecen como toast abajo a
           la derecha.
         </p>
-        <p className="mt-2 text-emerald-950">
+        <p className="mt-2 text-neutral-800">
           Estado:{" "}
           <span className="font-medium">
             {inAppEnabled ? "Activadas en este navegador" : "Desactivadas"}
@@ -609,7 +611,7 @@ export function PushNotificationsSettings() {
           </Button>
         </div>
         {!inAppEnabled ? (
-          <p className="mt-2 text-xs text-emerald-900/80">
+          <p className="mt-2 text-xs text-neutral-500">
             Para probar, activá las notificaciones en la app primero.
           </p>
         ) : null}
