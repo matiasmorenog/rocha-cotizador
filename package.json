@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
+    "db:check-sync": "bash scripts/check-schema-sync.sh",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio"
   },
