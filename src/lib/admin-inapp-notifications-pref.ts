@@ -25,5 +25,8 @@ export async function patchAdminInAppNotificationsEnabled(
         : "No se pudo guardar la preferencia",
     );
   }
-  return data.enabled !== false;
+  if (typeof data.enabled !== "boolean") {
+    throw new Error("Respuesta inválida al guardar la preferencia");
+  }
+  return data.enabled;
 }

@@ -284,13 +284,22 @@ export function PushNotificationsSettings() {
     };
   }, []);
 
+  async function syncInAppSession(enabled: boolean) {
+    const next = await update({ inAppNotificationsEnabled: enabled });
+    if (!next?.user || next.user.inAppNotificationsEnabled !== enabled) {
+      throw new Error(
+        "Se guardó en el servidor pero la sesión no se actualizó. Recargá la página.",
+      );
+    }
+  }
+
   async function enableInApp() {
     setBusyInApp(true);
     setError(null);
     setMessage(null);
     try {
       const enabled = await patchAdminInAppNotificationsEnabled(true);
-      await update({ inAppNotificationsEnabled: enabled });
+      await syncInAppSession(enabled);
       setMessage("Notificaciones en la app activadas en tu cuenta.");
     } catch (err) {
       setError(
@@ -309,7 +318,7 @@ export function PushNotificationsSettings() {
     setMessage(null);
     try {
       const enabled = await patchAdminInAppNotificationsEnabled(false);
-      await update({ inAppNotificationsEnabled: enabled });
+      await syncInAppSession(enabled);
       setMessage("Notificaciones en la app desactivadas en tu cuenta.");
     } catch (err) {
       setError(

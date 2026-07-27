@@ -51,6 +51,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
 
+        // Prefer column from findUnique; raw fallback if PrismaClient is stale
+        // after schema push (field missing on in-memory client).
+        let inAppNotificationsEnabled = user.inAppNotificationsEnabled;
+        if (typeof inAppNotificationsEnabled !== "boolean") {
+          const rows = await db.$queryRaw<
+            Array<{ inAppNotificationsEnabled: boolean }>
+          >`
+            SELECT "inAppNotificationsEnabled"
+            FROM "User"
+            WHERE id = ${user.id}
+          `;
+          inAppNotificationsEnabled =
+            rows[0]?.inAppNotificationsEnabled ?? true;
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -59,7 +74,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           customerId: null,
           customerCode: null,
           mustChangePassword: false,
-          inAppNotificationsEnabled: user.inAppNotificationsEnabled,
+          inAppNotificationsEnabled,
         };
       },
     }),
