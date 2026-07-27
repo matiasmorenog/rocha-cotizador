@@ -16,6 +16,8 @@ export type QuoteListRow = {
   status: string;
   total: number;
   createdAt: string;
+  /** ISO date `YYYY-MM-DD` or full ISO; display as calendar day. */
+  deliveryDate: string | null;
   customer: { code: string; name: string };
 };
 
@@ -160,12 +162,13 @@ export function QuotesAdminPanel({
       />
 
       <DataTableScroll>
-        <table className="w-full min-w-[36rem] text-sm">
+        <table className="w-full min-w-[42rem] text-sm">
           <thead className="bg-neutral-50 text-left text-neutral-600">
             <tr>
               <th className="px-3 py-2">Número</th>
               <th className="px-3 py-2">Cliente</th>
-              <th className="px-3 py-2">Fecha</th>
+              <th className="px-3 py-2">Pedido</th>
+              <th className="px-3 py-2">Entrega</th>
               <th className="px-3 py-2">Estado</th>
               <th className="px-3 py-2">Total</th>
             </tr>
@@ -190,6 +193,15 @@ export function QuotesAdminPanel({
                   })}
                 </td>
                 <td className="px-3 py-2">
+                  {qrow.deliveryDate
+                    ? new Date(
+                        qrow.deliveryDate.length === 10
+                          ? `${qrow.deliveryDate}T12:00:00.000Z`
+                          : qrow.deliveryDate,
+                      ).toLocaleDateString("es-AR", { timeZone: "UTC" })
+                    : "—"}
+                </td>
+                <td className="px-3 py-2">
                   <Badge variant="success">
                     {quoteStatusLabel(qrow.status)}
                   </Badge>
@@ -202,7 +214,7 @@ export function QuotesAdminPanel({
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={6}
                   className="px-3 py-8 text-center text-neutral-500"
                 >
                   {query.trim()

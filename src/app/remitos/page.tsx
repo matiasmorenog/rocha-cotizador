@@ -1,6 +1,10 @@
 import Link from "next/link";
 import { requireCustomerSession } from "@/lib/session";
 import { db } from "@/lib/db";
+import {
+  formatDeliveryDateDisplay,
+  resolveDeliveryDate,
+} from "@/lib/delivery-date";
 import { formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { quoteStatusLabel } from "@/lib/quote-status";
@@ -21,11 +25,12 @@ export default async function RemitosPage() {
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold text-neutral-900">Mis remitos</h1>
       <DataTableScroll>
-        <table className="w-full min-w-[28rem] text-sm">
+        <table className="w-full min-w-[32rem] text-sm">
           <thead className="bg-neutral-50 text-left text-neutral-600">
             <tr>
               <th className="px-3 py-2 font-medium">Número</th>
-              <th className="px-3 py-2 font-medium">Fecha</th>
+              <th className="px-3 py-2 font-medium">Pedido</th>
+              <th className="px-3 py-2 font-medium">Entrega</th>
               <th className="px-3 py-2 font-medium">Estado</th>
               <th className="px-3 py-2 font-medium">Total</th>
             </tr>
@@ -33,7 +38,7 @@ export default async function RemitosPage() {
           <tbody>
             {quotes.length === 0 ? (
               <tr>
-                <td colSpan={4} className="px-3 py-8 text-center text-neutral-500">
+                <td colSpan={5} className="px-3 py-8 text-center text-neutral-500">
                   Todavía no hay cotizaciones.
                 </td>
               </tr>
@@ -41,12 +46,18 @@ export default async function RemitosPage() {
               quotes.map((q) => (
                 <tr key={q.id} className="border-t border-neutral-100">
                   <td className="px-3 py-2">
-                    <Link href={`/remitos/${q.id}`} className="font-medium text-[var(--brand-primary)] hover:underline">
+                    <Link
+                      href={`/remitos/${q.id}`}
+                      className="font-medium text-[var(--brand-primary)] hover:underline"
+                    >
                       {q.number}
                     </Link>
                   </td>
                   <td className="px-3 py-2">
                     {q.createdAt.toLocaleString("es-AR")}
+                  </td>
+                  <td className="px-3 py-2">
+                    {formatDeliveryDateDisplay(resolveDeliveryDate(q))}
                   </td>
                   <td className="px-3 py-2">
                     <Badge variant="success">{quoteStatusLabel(q.status)}</Badge>

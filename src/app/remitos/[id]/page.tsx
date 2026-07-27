@@ -15,6 +15,10 @@ import { BrandLogo } from "@/components/brand-logo";
 import { PrintButton } from "@/components/quote/print-button";
 import { WhatsAppNotifyButton } from "@/components/quote/whatsapp-notify-button";
 import { DataTableScroll } from "@/components/ui/data-table";
+import {
+  formatDeliveryDateDisplay,
+  resolveDeliveryDate,
+} from "@/lib/delivery-date";
 
 export const dynamic = "force-dynamic";
 
@@ -95,10 +99,12 @@ export default async function RemitoDetailPage({
       customerName: quote.customer.name,
       totalLabel: formatPrice(quote.total),
       notes: quote.notes,
+      deliveryDate: resolveDeliveryDate(quote),
       remitoUrl,
     }),
   );
   const showWhatsappCta = whatsapp === "1" && Boolean(notifyWhatsappUrl);
+  const deliveryDate = resolveDeliveryDate(quote);
 
   return (
     <div className="space-y-4">
@@ -107,6 +113,9 @@ export default async function RemitoDetailPage({
           <h1 className="text-2xl font-semibold text-neutral-900">Remito {quote.number}</h1>
           <p className="text-sm text-neutral-600">
             {quote.createdAt.toLocaleString("es-AR")}
+          </p>
+          <p className="text-sm text-neutral-700">
+            Entrega: {formatDeliveryDateDisplay(deliveryDate)}
           </p>
         </div>
         <div className="flex gap-2">
@@ -131,6 +140,9 @@ export default async function RemitoDetailPage({
             <h2 className="mt-3 text-xl font-semibold">Remito {quote.number}</h2>
             <p className="text-sm text-neutral-600">
               Fecha: {quote.createdAt.toLocaleDateString("es-AR")}
+            </p>
+            <p className="text-sm font-medium text-neutral-800">
+              Entrega: {formatDeliveryDateDisplay(deliveryDate)}
             </p>
           </div>
           <div className="text-sm text-neutral-800">

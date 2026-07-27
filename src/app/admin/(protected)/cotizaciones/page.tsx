@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { QuotesAdminPanel } from "@/components/admin/quotes-admin-panel";
 import { resolveQuotesExportRange } from "@/lib/argentina-time";
+import { formatDateOnlyYmd } from "@/lib/delivery-date";
 
 /** Always hit DB — quote lists must reflect deletes/wipes immediately. */
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export default async function AdminCotizacionesPage({
     status: q.status,
     total: Number(q.total),
     createdAt: q.createdAt.toISOString(),
+    deliveryDate: q.deliveryDate ? formatDateOnlyYmd(q.deliveryDate) : null,
     customer: q.customer,
   }));
 
