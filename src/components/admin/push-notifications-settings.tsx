@@ -22,6 +22,12 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
   return out;
 }
 
+async function ensureServiceWorker(): Promise<ServiceWorkerRegistration> {
+  const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  await navigator.serviceWorker.ready;
+  return reg;
+}
+
 export function PushNotificationsSettings() {
   const [status, setStatus] = useState<Status>("loading");
   const [busy, setBusy] = useState(false);
@@ -49,8 +55,9 @@ export function PushNotificationsSettings() {
       }
 
       try {
-        const reg = await navigator.serviceWorker.getRegistration("/");
-        const existing = reg ? await reg.pushManager.getSubscription() : null;
+        // Always re-register so push events can wake an active SW.
+        const reg = await ensureServiceWorker();
+        const existing = await reg.pushManager.getSubscription();
         if (!cancelled) {
           setStatus(existing ? "subscribed" : "unsubscribed");
         }
@@ -91,10 +98,7 @@ export function PushNotificationsSettings() {
         return;
       }
 
-      const reg = await navigator.serviceWorker.register("/sw.js", {
-        scope: "/",
-      });
-      await navigator.serviceWorker.ready;
+      const reg = await ensureServiceWorker();
 
       let sub = await reg.pushManager.getSubscription();
       if (!sub) {
@@ -139,7 +143,9 @@ export function PushNotificationsSettings() {
     setMessage(null);
 
     try {
-      const reg = await navigator.serviceWorker.getRegistration("/");
+      const reg =
+        (await navigator.serviceWorker.getRegistration("/")) ??
+        (await ensureServiceWorker().catch(() => null));
       const sub = reg ? await reg.pushManager.getSubscription() : null;
       if (sub) {
         await fetch("/api/admin/push/subscribe", {
@@ -172,8 +178,10 @@ export function PushNotificationsSettings() {
   return (
     <div className="space-y-3">
       <p className="text-sm text-neutral-600">
-        Recibí un aviso en Chrome (escritorio o móvil) cuando un cliente confirme
-        una cotización, aunque no tengas el admin abierto.
+        Recibí un aviso en Chrome (escritorio o móvil) cuando un{" "}
+        <span className="font-medium">cliente</span> confirme una cotización,
+        aunque no tengas el admin abierto. Cotizaciones creadas desde el admin
+        no disparan aviso.
       </p>
       <p className="text-sm text-neutral-800">
         Estado: <span className="font-medium">{statusLabel[status]}</span>

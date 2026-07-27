@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Keep pdfkit outside the bundle so AFM font files resolve from node_modules
-  serverExternalPackages: ["pdfkit"],
+  // pdfkit: AFM fonts from node_modules; web-push: avoid bundling HTTP/crypto
+  serverExternalPackages: ["pdfkit", "web-push"],
 };
 
 export default nextConfig;

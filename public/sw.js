@@ -1,5 +1,13 @@
 /* Rocha Cotizador — admin Web Push service worker */
 
+self.addEventListener("install", (event) => {
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener("push", (event) => {
   let data = { title: "Rocha Cotizador", body: "", url: "/admin/cotizaciones" };
   try {
@@ -16,6 +24,9 @@ self.addEventListener("push", (event) => {
       data: { url: data.url || "/admin/cotizaciones" },
       icon: "/favicon.ico",
       badge: "/favicon.ico",
+      tag: "rocha-new-quote",
+      renotify: true,
+      requireInteraction: true,
     }),
   );
 });

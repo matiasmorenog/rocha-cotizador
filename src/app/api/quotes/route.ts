@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { z } from "zod";
 import { Decimal } from "@prisma/client/runtime/library";
 import { auth } from "@/lib/auth";
@@ -164,11 +164,13 @@ export async function POST(req: NextRequest) {
 
   // Customer-created quotes only — admin self-create must not notify.
   if (session.user.role === "CUSTOMER") {
-    void notifyAdminsNewQuote({
-      id: quote.id,
-      number: quote.number,
-      customerName: customer.name,
-    });
+    after(() =>
+      notifyAdminsNewQuote({
+        id: quote.id,
+        number: quote.number,
+        customerName: customer.name,
+      }),
+    );
   }
 
   const origin =

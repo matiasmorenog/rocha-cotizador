@@ -7,31 +7,41 @@ export type NewQuotePushPayload = {
   customerName: string;
 };
 
-function vapidConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY &&
-      process.env.VAPID_PRIVATE_KEY &&
-      process.env.VAPID_SUBJECT,
-  );
+/** Strip accidental surrounding quotes from .env values. */
+function envTrim(value: string | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim().replace(/^["']|["']$/g, "");
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function vapidPublicKey(): string | null {
+  return envTrim(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+}
+
+function vapidPrivateKey(): string | null {
+  return envTrim(process.env.VAPID_PRIVATE_KEY);
+}
+
+function vapidSubject(): string | null {
+  return envTrim(process.env.VAPID_SUBJECT);
 }
 
 function configureWebPush() {
-  if (!vapidConfigured()) return false;
-  webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT!,
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!,
-  );
+  const subject = vapidSubject();
+  const publicKey = vapidPublicKey();
+  const privateKey = vapidPrivateKey();
+  if (!subject || !publicKey || !privateKey) return false;
+  webpush.setVapidDetails(subject, publicKey, privateKey);
   return true;
 }
 
 export function getVapidPublicKey(): string | null {
-  return process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null;
+  return vapidPublicKey();
 }
 
 /**
  * Notify all ADMIN users with a stored PushSubscription.
- * Never throws — safe to fire-and-forget from quote create.
+ * Never throws — schedule with next/server `after()` from quote create.
  */
 export async function notifyAdminsNewQuote(
   quote: NewQuotePushPayload,
@@ -48,13 +58,26 @@ export async function notifyAdminsNewQuote(
     const subscriptions = await db.pushSubscription.findMany({
       where: { user: { role: "ADMIN" } },
     });
-    if (subscriptions.length === 0) return;
+    if (subscriptions.length === 0) {
+      console.warn(
+        "[push] no admin PushSubscription rows; skip notify for quote",
+        quote.number,
+      );
+      return;
+    }
 
     const payload = JSON.stringify({
       title: `Nueva cotización #${quote.number}`,
       body: quote.customerName,
       url: `/remitos/${quote.id}`,
     });
+
+    console.info(
+      "[push] notifying",
+      subscriptions.length,
+      "admin subscription(s) for quote",
+      quote.number,
+    );
 
     await Promise.all(
       subscriptions.map(async (sub) => {
@@ -77,7 +100,7 @@ export async function notifyAdminsNewQuote(
               .catch(() => undefined);
             return;
           }
-          console.error("[push] send failed", sub.endpoint, err);
+          console.error("[push] send failed", sub.endpoint.slice(0, 48), err);
         }
       }),
     );
