@@ -119,12 +119,21 @@ Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateA
 
 Ops / wipe / scripts out-of-band: `POST /api/revalidate` con `REVALIDATE_SECRET` + `AUTH_URL` → `invalidateAfterDbScript` (todas las tags + paths admin/remitos). Obligatorio tras cualquier mutación DB fuera de la app.
 
+**Después de cada deploy a producción** (automático en Actions `deploy-production`, o manual si hace falta):
+
+```bash
+vercel cache purge --type data --yes --token "$VERCEL_TOKEN"
+vercel cache invalidate --tag products,price-lists,customers,admin-dashboard --yes --token "$VERCEL_TOKEN"
+```
+
+Tags = `Object.values(CACHE_TAGS)` en `src/lib/cache-tags.ts`. Si agregás una tag nueva, actualizá también el step de CI y este comando.
+
 Build command (Vercel): `npm run build` → `prisma generate && next build` (`postinstall` también corre `prisma generate`). `binaryTargets` in `schema.prisma` must include `rhel-openssl-3.0.x` so the client works on Vercel when CI generates on Debian.
 
 ### CI → producción (gate)
 
 - Auto-deploy Vercel en **`main` está OFF** (`vercel.json`).
-- Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production** (incluye **pre-deploy schema sync** + **post-deploy smoke**: `/api/health` + homepage).
+- Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production** (incluye **pre-deploy schema sync** + **post-deploy smoke**: `/api/health` + homepage + **post-deploy cache revalidate**: purge data + invalidate all `CACHE_TAGS`).
 - Secrets en GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (ver [`docs/ci.md`](docs/ci.md)).
 - Opcional pero recomendado: `DATABASE_URL_PRODUCTION` (Neon `main`, preferible URL **direct**) para el gate de schema sin depender solo de `vercel pull`.
 
