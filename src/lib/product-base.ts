@@ -6,6 +6,6 @@ export type ProductBase = {
   rubro: string | null;
   /** Serialized Decimal — apply discount outside shared catalog cache. */
   basePrice: number;
-  /** Product may be ordered by unit count (price 0 until weighed) or by kg. */
+  /** Product may be ordered by unit count (price 0 until weighed) or by kg; false = cantidad. */
   allowsUnitOrder: boolean;
 };
