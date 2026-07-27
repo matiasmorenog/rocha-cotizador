@@ -1,32 +1,29 @@
-/** localStorage preference — in-app admin toasts (default: enabled). */
+/**
+ * Account-level in-app admin toast preference.
+ * Read: NextAuth session/JWT (useSession) — no DB.
+ * Write: PATCH /api/admin/push/inapp-pref then session.update(...).
+ */
 
-export const ADMIN_INAPP_PREF_KEY = "rocha-admin-inapp-notifications";
-export const ADMIN_INAPP_PREF_EVENT = "rocha-admin-inapp-pref";
-
-export type AdminInAppPrefDetail = { enabled: boolean };
-
-/** Default true when unset. */
-export function isAdminInAppNotificationsEnabled(): boolean {
-  if (typeof window === "undefined") return true;
-  try {
-    const v = localStorage.getItem(ADMIN_INAPP_PREF_KEY);
-    if (v === null) return true;
-    return v !== "0";
-  } catch {
-    return true;
+/** Persist preference for the logged-in admin (one DB write). */
+export async function patchAdminInAppNotificationsEnabled(
+  enabled: boolean,
+): Promise<boolean> {
+  const res = await fetch("/api/admin/push/inapp-pref", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({ enabled }),
+  });
+  const data = (await res.json().catch(() => ({}))) as {
+    enabled?: unknown;
+    error?: string;
+  };
+  if (!res.ok) {
+    throw new Error(
+      typeof data.error === "string"
+        ? data.error
+        : "No se pudo guardar la preferencia",
+    );
   }
-}
-
-export function setAdminInAppNotificationsEnabled(enabled: boolean): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(ADMIN_INAPP_PREF_KEY, enabled ? "1" : "0");
-  } catch {
-    // ignore quota / private mode
-  }
-  window.dispatchEvent(
-    new CustomEvent<AdminInAppPrefDetail>(ADMIN_INAPP_PREF_EVENT, {
-      detail: { enabled },
-    }),
-  );
+  return data.enabled !== false;
 }

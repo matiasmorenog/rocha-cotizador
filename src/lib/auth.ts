@@ -59,6 +59,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           customerId: null,
           customerCode: null,
           mustChangePassword: false,
+          inAppNotificationsEnabled: user.inAppNotificationsEnabled,
         };
       },
     }),
@@ -93,22 +94,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.role = user.role;
         token.customerId = user.customerId ?? null;
         token.customerCode = user.customerCode ?? null;
         token.mustChangePassword = user.mustChangePassword ?? false;
+        token.inAppNotificationsEnabled =
+          user.inAppNotificationsEnabled ?? true;
         token.sub = user.id;
         token.email = user.email;
         token.name = user.name;
       }
-      if (trigger === "update" && token.customerId) {
-        const customer = await db.customer.findUnique({
-          where: { id: String(token.customerId) },
-          select: { mustChangePassword: true },
-        });
-        token.mustChangePassword = customer?.mustChangePassword ?? false;
+      if (trigger === "update") {
+        if (token.customerId) {
+          const customer = await db.customer.findUnique({
+            where: { id: String(token.customerId) },
+            select: { mustChangePassword: true },
+          });
+          token.mustChangePassword = customer?.mustChangePassword ?? false;
+        }
+        // After PATCH: client passes value — refresh JWT without another DB read.
+        if (
+          session &&
+          typeof (session as { inAppNotificationsEnabled?: unknown })
+            .inAppNotificationsEnabled === "boolean"
+        ) {
+          token.inAppNotificationsEnabled = (
+            session as { inAppNotificationsEnabled: boolean }
+          ).inAppNotificationsEnabled;
+        }
       }
       return token;
     },
@@ -124,6 +139,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           customerCode:
             typeof token.customerCode === "string" ? token.customerCode : null,
           mustChangePassword: Boolean(token.mustChangePassword),
+          // Missing on old JWTs → default true (matches DB default).
+          inAppNotificationsEnabled: token.inAppNotificationsEnabled !== false,
           email: typeof token.email === "string" ? token.email : null,
           name: typeof token.name === "string" ? token.name : null,
         },

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -9,10 +10,7 @@ import {
   dispatchAdminInAppToast,
 } from "@/lib/push-sw-client";
 import { pushNotificationBrandAssets } from "@/lib/push-notification-brand";
-import {
-  isAdminInAppNotificationsEnabled,
-  setAdminInAppNotificationsEnabled,
-} from "@/lib/admin-inapp-notifications-pref";
+import { patchAdminInAppNotificationsEnabled } from "@/lib/admin-inapp-notifications-pref";
 
 type Status =
   | "loading"
@@ -229,6 +227,7 @@ function OsSystemGuide({ os }: { os: OsGuide }) {
 }
 
 export function PushNotificationsSettings() {
+  const { data: session, status: sessionStatus, update } = useSession();
   const [status, setStatus] = useState<Status>("loading");
   const [busy, setBusy] = useState(false);
   const [busyInApp, setBusyInApp] = useState(false);
@@ -237,14 +236,14 @@ export function PushNotificationsSettings() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [osGuide, setOsGuide] = useState<OsGuide>("windows");
-  const [inAppEnabled, setInAppEnabled] = useState(() =>
-    typeof window === "undefined"
-      ? true
-      : isAdminInAppNotificationsEnabled(),
-  );
   const [perm, setPerm] = useState<NotificationPermission | "unknown">(
     "unknown",
   );
+
+  // From JWT/session — no DB hit on Config visit.
+  const inAppPrefLoaded = sessionStatus !== "loading";
+  const inAppEnabled =
+    session?.user?.inAppNotificationsEnabled !== false;
 
   useEffect(() => {
     let cancelled = false;
@@ -285,24 +284,42 @@ export function PushNotificationsSettings() {
     };
   }, []);
 
-  function enableInApp() {
+  async function enableInApp() {
     setBusyInApp(true);
     setError(null);
     setMessage(null);
-    setAdminInAppNotificationsEnabled(true);
-    setInAppEnabled(true);
-    setMessage("Notificaciones en la app activadas.");
-    setBusyInApp(false);
+    try {
+      const enabled = await patchAdminInAppNotificationsEnabled(true);
+      await update({ inAppNotificationsEnabled: enabled });
+      setMessage("Notificaciones en la app activadas en tu cuenta.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo activar las notificaciones en la app.",
+      );
+    } finally {
+      setBusyInApp(false);
+    }
   }
 
-  function disableInApp() {
+  async function disableInApp() {
     setBusyInApp(true);
     setError(null);
     setMessage(null);
-    setAdminInAppNotificationsEnabled(false);
-    setInAppEnabled(false);
-    setMessage("Notificaciones en la app desactivadas.");
-    setBusyInApp(false);
+    try {
+      const enabled = await patchAdminInAppNotificationsEnabled(false);
+      await update({ inAppNotificationsEnabled: enabled });
+      setMessage("Notificaciones en la app desactivadas en tu cuenta.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "No se pudo desactivar las notificaciones en la app.",
+      );
+    } finally {
+      setBusyInApp(false);
+    }
   }
 
   async function enable() {
@@ -385,7 +402,7 @@ export function PushNotificationsSettings() {
     setMessage(null);
 
     try {
-      if (!isAdminInAppNotificationsEnabled()) {
+      if (!inAppEnabled) {
         const note =
           "Activá las notificaciones en la app antes de probarlas.";
         setError(note);
@@ -481,8 +498,10 @@ export function PushNotificationsSettings() {
             return false;
           }
           // Same-machine show time — ignore older stacked toasts.
-          if (typeof n.timestamp === "number") {
-            return n.timestamp >= requestedAt - 50;
+          const shownAt = (n as Notification & { timestamp?: number })
+            .timestamp;
+          if (typeof shownAt === "number") {
+            return shownAt >= requestedAt - 50;
           }
           // Tag embeds Date.now() from server or local fallback.
           const m = /^rocha-test(?:-local)?-(\d+)$/.exec(n.tag);
@@ -500,7 +519,7 @@ export function PushNotificationsSettings() {
             badge,
             silent: false,
             data: { url: "/admin/configuracion" },
-          });
+          } as NotificationOptions);
         }
         return;
       }
@@ -563,7 +582,11 @@ export function PushNotificationsSettings() {
         <p className="mt-2 text-neutral-800">
           Estado:{" "}
           <span className="font-medium">
-            {inAppEnabled ? "Activadas en este navegador" : "Desactivadas"}
+            {!inAppPrefLoaded
+              ? "Cargando…"
+              : inAppEnabled
+                ? "Activadas en tu cuenta"
+                : "Desactivadas en tu cuenta"}
           </span>
         </p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -572,8 +595,14 @@ export function PushNotificationsSettings() {
               type="button"
               variant="outline"
               className="w-full justify-center sm:w-auto sm:min-w-[17.5rem]"
-              disabled={busyInApp || testing || testingSystem || busy}
-              onClick={disableInApp}
+              disabled={
+                !inAppPrefLoaded ||
+                busyInApp ||
+                testing ||
+                testingSystem ||
+                busy
+              }
+              onClick={() => void disableInApp()}
             >
               {busyInApp ? (
                 <>
@@ -588,8 +617,14 @@ export function PushNotificationsSettings() {
             <Button
               type="button"
               className="w-full justify-center sm:w-auto sm:min-w-[17.5rem]"
-              disabled={busyInApp || testing || testingSystem || busy}
-              onClick={enableInApp}
+              disabled={
+                !inAppPrefLoaded ||
+                busyInApp ||
+                testing ||
+                testingSystem ||
+                busy
+              }
+              onClick={() => void enableInApp()}
             >
               {busyInApp ? (
                 <>
@@ -605,9 +640,14 @@ export function PushNotificationsSettings() {
             type="button"
             className="w-full justify-center sm:w-auto sm:min-w-[17.5rem]"
             disabled={
-              testing || testingSystem || busy || busyInApp || !inAppEnabled
+              !inAppPrefLoaded ||
+              testing ||
+              testingSystem ||
+              busy ||
+              busyInApp ||
+              !inAppEnabled
             }
-            onClick={testInAppNotification}
+            onClick={() => void testInAppNotification()}
             title={
               !inAppEnabled
                 ? "Activá las notificaciones en la app primero"

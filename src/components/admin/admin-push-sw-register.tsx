@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import {
   ensureFreshServiceWorker,
   PUSH_BROADCAST_CHANNEL,
@@ -11,11 +12,10 @@ import {
   AdminNotificationToasts,
   type AdminToastItem,
 } from "@/components/admin/admin-notification-toasts";
-import { playAdminNotificationSound, unlockAdminNotificationSound } from "@/lib/admin-notification-sound";
 import {
-  ADMIN_INAPP_PREF_EVENT,
-  isAdminInAppNotificationsEnabled,
-} from "@/lib/admin-inapp-notifications-pref";
+  playAdminNotificationSound,
+  unlockAdminNotificationSound,
+} from "@/lib/admin-notification-sound";
 
 type InboxItem = {
   id: string;
@@ -59,10 +59,14 @@ function fingerprint(title: string, body: string, url: string): string {
 
 /**
  * Poll AdminInbox while any `/admin` tab is open.
+ * In-app pref from session/JWT only — never hits DB for the preference.
  * Optional: SW BroadcastChannel when Web Push arrives in this browser.
- * Renders compact toasts — never depends on OS toast visibility.
  */
 export function AdminPushSwRegister() {
+  const { data: session } = useSession();
+  const inAppEnabled = session?.user?.inAppNotificationsEnabled !== false;
+  const enabledRef = useRef(inAppEnabled);
+
   const [toasts, setToasts] = useState<AdminToastItem[]>([]);
   const sinceRef = useRef<string>(new Date().toISOString());
   const seenRef = useRef<Set<string>>(new Set());
@@ -71,6 +75,19 @@ export function AdminPushSwRegister() {
   );
   /** Recent fingerprints → timestamp; blocks double emit (Probar+poll, BC+postMessage). */
   const recentFpRef = useRef<Map<string, number>>(new Map());
+
+  // Keep poll/toast gates in sync with session without reading refs during render.
+  useEffect(() => {
+    enabledRef.current = inAppEnabled;
+    if (inAppEnabled) return;
+    for (const t of timersRef.current.values()) clearTimeout(t);
+    timersRef.current.clear();
+  }, [inAppEnabled]);
+
+  // Drop toast state when pref turns off so they don't reappear on re-enable.
+  if (!inAppEnabled && toasts.length > 0) {
+    setToasts([]);
+  }
 
   function dismiss(id: string) {
     const timer = timersRef.current.get(id);
@@ -90,7 +107,7 @@ export function AdminPushSwRegister() {
   }
 
   function pushToast(next: Omit<AdminToastItem, "id"> & { id?: string }) {
-    if (!isAdminInAppNotificationsEnabled()) return;
+    if (!enabledRef.current) return;
 
     const id =
       next.id ??
@@ -199,21 +216,13 @@ export function AdminPushSwRegister() {
     }
     window.addEventListener(ADMIN_INAPP_TOAST_EVENT, onCustomToast);
 
-    function onInAppPref() {
-      if (!isAdminInAppNotificationsEnabled()) {
-        setToasts([]);
-        for (const t of toastTimers.values()) clearTimeout(t);
-        toastTimers.clear();
-      }
-    }
-    window.addEventListener(ADMIN_INAPP_PREF_EVENT, onInAppPref);
-
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     async function pollOnce() {
       if (cancelled || document.visibilityState === "hidden") return;
-      if (!isAdminInAppNotificationsEnabled()) return;
+      // Session/JWT only — no pref API / DB on the 8s interval.
+      if (!enabledRef.current) return;
       try {
         const res = await fetch(
           `/api/admin/push/inbox?since=${encodeURIComponent(sinceRef.current)}`,
@@ -226,7 +235,9 @@ export function AdminPushSwRegister() {
         } | null;
         if (!data?.items?.length) return;
 
-        const fresh = data.items.filter((item) => !seenRef.current.has(item.id));
+        const fresh = data.items.filter(
+          (item) => !seenRef.current.has(item.id),
+        );
         for (const item of data.items) {
           seenRef.current.add(item.id);
           if (item.createdAt > sinceRef.current) {
@@ -273,7 +284,6 @@ export function AdminPushSwRegister() {
       navigator.serviceWorker?.removeEventListener("message", onSwMessage);
       channel?.close();
       window.removeEventListener(ADMIN_INAPP_TOAST_EVENT, onCustomToast);
-      window.removeEventListener(ADMIN_INAPP_PREF_EVENT, onInAppPref);
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
     };
@@ -282,6 +292,9 @@ export function AdminPushSwRegister() {
   }, []);
 
   return (
-    <AdminNotificationToasts toasts={toasts} onDismiss={dismiss} />
+    <AdminNotificationToasts
+      toasts={inAppEnabled ? toasts : []}
+      onDismiss={dismiss}
+    />
   );
 }
