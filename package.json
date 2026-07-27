@@ -10,9 +10,11 @@
     "start": "next start",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
+    "ci:check-admin-chrome": "bash scripts/check-admin-chrome.sh",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
     "db:check-sync": "bash scripts/check-schema-sync.sh",
+    "ci:post-deploy-smoke": "bash scripts/post-deploy-smoke.sh",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio"
   },

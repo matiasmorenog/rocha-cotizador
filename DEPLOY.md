@@ -124,11 +124,33 @@ Build command (Vercel): `npm run build` → `prisma generate && next build` (`po
 ### CI → producción (gate)
 
 - Auto-deploy Vercel en **`main` está OFF** (`vercel.json`).
-- Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production** (incluye **pre-deploy schema sync** + **post-deploy `/api/health`**).
+- Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production** (incluye **pre-deploy schema sync** + **post-deploy smoke**: `/api/health` + homepage).
 - Secrets en GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (ver [`docs/ci.md`](docs/ci.md)).
 - Opcional pero recomendado: `DATABASE_URL_PRODUCTION` (Neon `main`, preferible URL **direct**) para el gate de schema sin depender solo de `vercel pull`.
 
 Previews de `development` / PRs siguen con el deploy automático de Vercel.
+
+## Client production (obligatorio)
+
+Producto **real frente a clientes**. Outages recientes no se repiten:
+
+1. **Schema:** nunca mergear a `main` un cambio de `prisma/schema.prisma` sin `db push` a Neon **main** ya verificado (`npm run db:check-sync` / gate de Actions). `db push` local = solo Neon **development**.
+2. **Chrome crítico (sidebar admin):** nunca usar utilidades Tailwind one-off de visibilidad (`hidden lg:block`, etc.) para chrome que debe vivir siempre. Visibilidad del sidebar = clases en `src/app/globals.css` (`.admin-desktop-sidebar`). CI falla si falta la clase o si `admin-nav` vuelve a `lg:block`.
+3. **Hard refresh:** tras deploy de CSS/layout, pedí a quien reporte UI rota un hard refresh (Cmd/Ctrl+Shift+R) antes de asumir regresión — cache de chunk CSS viejo miente.
+
+## Rollback rápido
+
+Si prod queda mal tras un release:
+
+```bash
+# Preferido — promover el deployment anterior sano:
+vercel rollback https://rocha-cotizador.vercel.app --token "$VERCEL_TOKEN"
+
+# Alternativa UI: Vercel → Project → Deployments → ⋮ en el deployment verde anterior → Promote
+# Alternativa Actions: re-run del último workflow verde en `main` (Redeploy)
+```
+
+Después del rollback: confirmar `GET /api/health` → 200 y login admin. Si el fallo era **schema_drift**, rollback de código solo no alcanza — hay que alinear Neon `main` (push o revert de columnas) con el schema del código que queda en prod.
 
 ## Seed
 
@@ -193,13 +215,15 @@ Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1
 
 - [ ] Secrets GitHub `VERCEL_*` cargados (+ opcional `DATABASE_URL_PRODUCTION`)
 - [ ] Merge a `development` solo con `lint-and-typecheck` verde
-- [ ] Release: PR `development` → `main`; esperar job `deploy-production` verde (schema gate + health)
-- [ ] Smoke en https://rocha-cotizador.vercel.app tras el release — `GET /api/health` → `{ "ok": true }`
+- [ ] Release: PR `development` → `main`; esperar job `deploy-production` verde (schema gate + smoke health/homepage)
+- [ ] Smoke en https://rocha-cotizador.vercel.app tras el release — `GET /api/health` → `{ "ok": true }` + homepage 200
 
 ### Smoke test producción
 
 - [ ] `GET https://rocha-cotizador.vercel.app/api/health` → 200
-- [ ] Login admin + cliente
+- [ ] Homepage https://rocha-cotizador.vercel.app/ → 200
+- [ ] Login admin + cliente (hard refresh si falta sidebar)
+
 - [ ] Cotizar → observaciones → confirmar → remito
 - [ ] Link remito sin sesión → `/entrar` → admin ve remito
 - [ ] WhatsApp `wa.me` abre con datos del pedido
