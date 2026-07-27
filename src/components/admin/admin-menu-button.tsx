@@ -22,7 +22,7 @@ export function AdminMenuButton() {
       aria-label="Abrir menú"
       aria-expanded={open}
       aria-controls="admin-mobile-nav"
-      className="rounded-md p-2 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900 lg:hidden"
+      className="admin-mobile-only rounded-md p-2 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
     >
       <Menu className="h-5 w-5" />
     </button>

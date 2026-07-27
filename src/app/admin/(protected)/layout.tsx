@@ -1,6 +1,6 @@
 import { requireAdminSession } from "@/lib/session";
 import { AdminNav } from "@/components/admin/admin-nav";
-import { AdminPushSwRegister } from "@/components/admin/admin-push-sw-register";
+import { AdminPushSafe } from "@/components/admin/admin-push-safe";
 
 export default async function AdminLayout({
   children,
@@ -10,10 +10,13 @@ export default async function AdminLayout({
   await requireAdminSession();
 
   return (
-    <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-6">
-      <AdminPushSwRegister />
-      <AdminNav />
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
+    <>
+      {/* Outside flex shell — toast UI is fixed; must not share crash domain with nav. */}
+      <AdminPushSafe />
+      <div className="admin-shell">
+        <AdminNav />
+        <div className="min-w-0 flex-1">{children}</div>
+      </div>
+    </>
   );
 }
