@@ -109,7 +109,7 @@ function AdminMobileDrawer({ pathname }: { pathname: string }) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 lg:hidden print:hidden">
+    <div className="admin-mobile-drawer-root fixed inset-0 z-50 print:hidden">
       <button
         type="button"
         aria-label="Cerrar menú"
@@ -139,7 +139,8 @@ export function AdminNav() {
 
   return (
     <>
-      <aside className="sticky top-6 hidden h-fit w-56 shrink-0 self-start rounded-lg border border-neutral-200 bg-white p-4 print:hidden lg:block">
+      {/* Visibility via globals.css `.admin-desktop-sidebar` — not Tailwind `hidden lg:block`. */}
+      <aside className="admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 print:hidden">
         <AdminSidebarPanel pathname={pathname} />
       </aside>
 

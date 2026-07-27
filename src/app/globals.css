@@ -194,6 +194,54 @@ select:not([multiple]):disabled {
   animation: admin-toast-enter 0.28s ease-out both;
 }
 
+/*
+  Admin shell breakpoints — plain CSS so visibility never depends on a single
+  Tailwind `hidden` + `lg:block` utility pair (if that variant is missing from
+  the prod CSS chunk, the sidebar stays display:none forever).
+*/
+.admin-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.admin-desktop-sidebar {
+  display: none;
+  height: fit-content;
+  width: 14rem; /* w-56 */
+  flex-shrink: 0;
+  align-self: flex-start;
+  position: sticky;
+  top: 1.5rem; /* top-6 */
+}
+
+.admin-mobile-only {
+  display: inline-flex;
+}
+
+.admin-mobile-drawer-root {
+  display: block;
+}
+
+@media (min-width: 1024px) {
+  .admin-shell {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .admin-desktop-sidebar {
+    display: block;
+  }
+
+  .admin-mobile-only {
+    display: none;
+  }
+
+  .admin-mobile-drawer-root {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rocha-skeleton {
     animation: none;
