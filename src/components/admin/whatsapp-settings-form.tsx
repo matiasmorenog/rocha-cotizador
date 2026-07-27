@@ -66,7 +66,7 @@ export function WhatsAppSettingsForm({ initialPhone }: Props) {
             id="whatsapp-notify"
             value={localPhone}
             onChange={(e) => setLocalPhone(maskWhatsAppLocalInput(e.target.value))}
-            placeholder="9 11-6690-4442"
+            placeholder="9 11-xxxx-xxxx"
             inputMode="tel"
             autoComplete="tel-national"
             className="font-mono tracking-wide"
@@ -75,7 +75,7 @@ export function WhatsAppSettingsForm({ initialPhone }: Props) {
         </div>
         <p id="whatsapp-notify-hint" className="text-xs text-neutral-500">
           Código de país fijo (+54, solo Argentina). Escribí el móvil con el 9,
-          ej. <span className="font-mono">9 11-6690-4442</span>. Al confirmar
+          ej. <span className="font-mono">9 11-xxxx-xxxx</span>. Al confirmar
           una cotización se abre WhatsApp (wa.me) hacia este número.
         </p>
       </div>
