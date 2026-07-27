@@ -122,6 +122,7 @@ export type QuoteWhatsAppMessageInput = {
   customerName: string;
   totalLabel: string;
   notes?: string | null;
+  deliveryDate?: Date | null;
   remitoUrl: string;
 };
 
@@ -132,6 +133,12 @@ export function buildQuoteWhatsAppMessage(input: QuoteWhatsAppMessageInput): str
     `Cliente: ${input.customerCode} — ${input.customerName}`,
     `Total: ${input.totalLabel}`,
   ];
+  if (input.deliveryDate) {
+    const label = input.deliveryDate.toLocaleDateString("es-AR", {
+      timeZone: "UTC",
+    });
+    lines.push(`Entrega: ${label}`);
+  }
   const notes = input.notes?.trim();
   if (notes) {
     lines.push(`Obs: ${notes}`);

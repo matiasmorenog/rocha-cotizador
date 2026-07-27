@@ -144,12 +144,15 @@ model Quote {
   subtotal   Decimal     @db.Decimal(14, 2)
   total      Decimal     @db.Decimal(14, 2)
   notes      String?
+  /// Requested delivery / fulfillment calendar day (Argentina). Nullable for legacy rows.
+  deliveryDate DateTime? @db.Date
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   items      QuoteItem[]
 
   @@index([customerId, createdAt])
   @@index([createdAt])
+  @@index([deliveryDate])
 }
 
 model QuoteItem {

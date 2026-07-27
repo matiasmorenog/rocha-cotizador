@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { resolveQuotesExportRange } from "@/lib/argentina-time";
+import { formatDateOnlyYmd } from "@/lib/delivery-date";
 
 async function requireAdmin() {
   const session = await auth();
@@ -42,6 +43,7 @@ export async function GET(req: NextRequest) {
         status: q.status,
         total: Number(q.total),
         createdAt: q.createdAt.toISOString(),
+        deliveryDate: q.deliveryDate ? formatDateOnlyYmd(q.deliveryDate) : null,
         customer: q.customer,
       })),
     },

@@ -204,6 +204,7 @@ Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1
 - [ ] WhatsApp notificaciones: número correcto en `/admin/configuracion`
 - [ ] VAPID Web Push en Vercel (Production + Preview/Development) + admin activó notificaciones en `/admin/configuracion`
 - [ ] `prisma db push` en Neon `main` incluye tabla `PushSubscription` (si el release trae ese modelo)
+- [ ] `prisma db push` en Neon `main` incluye columna `Quote.deliveryDate` (`DATE`, nullable) si el release trae pedidos con fecha de entrega
 
 ### Release (cada PR `development` → `main` con cambios de schema)
 
@@ -224,9 +225,10 @@ Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1
 - [ ] Homepage https://rocha-cotizador.vercel.app/ → 200
 - [ ] Login admin + cliente (hard refresh si falta sidebar)
 
+- [ ] Cotizar → elegir fecha de entrega (≥ mínimo por corte 16:00 AR) → confirmar → remito muestra Entrega
 - [ ] Cotizar → observaciones → confirmar → remito
 - [ ] Link remito sin sesión → `/entrar` → admin ve remito
-- [ ] WhatsApp `wa.me` abre con datos del pedido
+- [ ] WhatsApp `wa.me` abre con datos del pedido (incluye Entrega)
 - [ ] Imprimir remito
 - [ ] Buscador productos (catálogo) lista resultados
 
