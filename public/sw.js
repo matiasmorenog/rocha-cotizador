@@ -1,6 +1,8 @@
 /* Rocha Cotizador — admin Web Push service worker */
 
 const PUSH_CHANNEL = "rocha-admin-push";
+const FALLBACK_TITLE = "Nueva cotización";
+const FALLBACK_URL = "/admin/cotizaciones";
 
 self.addEventListener("install", (event) => {
   console.log("[push-sw] install");
@@ -14,29 +16,50 @@ self.addEventListener("activate", (event) => {
 
 function parsePushData(event) {
   const defaults = {
-    title: "Rocha Cotizador",
+    title: FALLBACK_TITLE,
     body: "",
-    url: "/admin/cotizaciones",
+    url: FALLBACK_URL,
   };
   if (!event.data) {
-    console.warn("[push-sw] push event with no data");
+    console.warn("[push-sw] push event with no data — using fallback");
     return defaults;
   }
+
+  let text = "";
   try {
-    const text = event.data.text();
-    console.log("[push-sw] raw payload text:", text);
+    text = event.data.text();
+  } catch (err) {
+    console.warn("[push-sw] event.data.text() failed", err);
+    return defaults;
+  }
+
+  console.log("[push-sw] raw payload text:", text);
+
+  if (!text || !text.trim()) {
+    return defaults;
+  }
+
+  try {
     const parsed = JSON.parse(text);
     if (parsed && typeof parsed === "object") {
-      return { ...defaults, ...parsed };
+      return {
+        title:
+          typeof parsed.title === "string" && parsed.title.trim()
+            ? parsed.title
+            : FALLBACK_TITLE,
+        body: typeof parsed.body === "string" ? parsed.body : "",
+        url:
+          typeof parsed.url === "string" && parsed.url.trim()
+            ? parsed.url
+            : FALLBACK_URL,
+        tag: typeof parsed.tag === "string" ? parsed.tag : undefined,
+      };
     }
   } catch (err) {
-    console.warn("[push-sw] JSON.parse failed, fallback text", err);
-    try {
-      return { ...defaults, body: event.data.text() };
-    } catch {
-      // keep defaults
-    }
+    console.warn("[push-sw] JSON.parse failed — fallback title + raw body", err);
+    return { ...defaults, body: text.slice(0, 180) };
   }
+
   return defaults;
 }
 
@@ -63,37 +86,74 @@ async function broadcastToClients(payload) {
   }
 }
 
-self.addEventListener("push", (event) => {
+/**
+ * Always show an OS notification — even if payload parse fails.
+ * Must stay inside event.waitUntil so Chrome does not kill the SW early.
+ */
+async function handlePush(event) {
   console.log("[push-sw] push event received");
-  const data = parsePushData(event);
-  console.log("[push-sw] showing notification", data);
+  let data;
+  try {
+    data = parsePushData(event);
+  } catch (err) {
+    console.error("[push-sw] parsePushData threw — hard fallback", err);
+    data = {
+      title: FALLBACK_TITLE,
+      body: "",
+      url: FALLBACK_URL,
+    };
+  }
 
-  event.waitUntil(
-    (async () => {
-      // Always show OS notification (required for userVisibleOnly + focused-tab Chrome quirks).
-      await self.registration.showNotification(
-        data.title || "Rocha Cotizador",
-        {
-          body: data.body || "",
-          data: { url: data.url || "/admin/cotizaciones" },
-          tag: data.tag || `rocha-push-${Date.now()}`,
-          renotify: true,
-          requireInteraction: true,
-          silent: false,
-        },
-      );
-      await broadcastToClients(data);
-      console.log("[push-sw] showNotification + broadcast done");
-    })().catch((err) => {
-      console.error("[push-sw] showNotification failed", err);
-    }),
-  );
+  const title = data.title || FALLBACK_TITLE;
+  const options = {
+    body: data.body || "",
+    data: { url: data.url || FALLBACK_URL },
+    tag: data.tag || `rocha-push-${Date.now()}`,
+    renotify: true,
+    requireInteraction: true,
+    silent: false,
+  };
+
+  console.log("[push-sw] showing notification", { title, ...options });
+
+  try {
+    await self.registration.showNotification(title, options);
+    console.log("[push-sw] showNotification done");
+  } catch (err) {
+    console.error("[push-sw] showNotification failed", err);
+    // Last resort: try again with minimal options
+    try {
+      await self.registration.showNotification(FALLBACK_TITLE, {
+        body: "Abrí el admin para ver la cotización.",
+        data: { url: FALLBACK_URL },
+        tag: `rocha-push-fallback-${Date.now()}`,
+      });
+    } catch (err2) {
+      console.error("[push-sw] fallback showNotification also failed", err2);
+    }
+  }
+
+  try {
+    await broadcastToClients({
+      title,
+      body: options.body,
+      url: options.data.url,
+      tag: options.tag,
+    });
+  } catch (err) {
+    console.warn("[push-sw] broadcast failed", err);
+  }
+}
+
+self.addEventListener("push", (event) => {
+  // CRITICAL: always waitUntil the full showNotification path.
+  event.waitUntil(handlePush(event));
 });
 
 self.addEventListener("notificationclick", (event) => {
   console.log("[push-sw] notificationclick", event.notification?.data);
   event.notification.close();
-  const url = event.notification.data?.url || "/admin/cotizaciones";
+  const url = event.notification.data?.url || FALLBACK_URL;
   const target = new URL(url, self.location.origin).href;
 
   event.waitUntil(

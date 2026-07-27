@@ -18,6 +18,26 @@ const subscribeSchema = z.object({
   userAgent: z.string().optional(),
 });
 
+/** List this admin's stored endpoints (for client ↔ DB match after Activar). */
+export async function GET() {
+  const session = await requireAdmin();
+  if (!session) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  const rows = await db.pushSubscription.findMany({
+    where: { userId: session.user.id },
+    select: { id: true, endpoint: true, updatedAt: true },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    endpoints: rows.map((r) => r.endpoint),
+    subscriptions: rows,
+  });
+}
+
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
   if (!session) {
@@ -47,7 +67,7 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ id: sub.id, ok: true });
+  return NextResponse.json({ id: sub.id, ok: true, endpoint: sub.endpoint });
 }
 
 const deleteSchema = z.object({

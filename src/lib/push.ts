@@ -72,12 +72,15 @@ async function sendToSubscriptions(
     return { ok: 0, total: 0, staleRemoved: 0 };
   }
 
+  // JSON string body — web-push encrypts and sets Content-Encoding: aes128gcm.
   const body = JSON.stringify(payload);
   console.info(
     "[push] notifying",
     subscriptions.length,
     "subscription(s) for",
     logLabel,
+    "payloadBytes",
+    Buffer.byteLength(body, "utf8"),
   );
 
   const results = await Promise.all(
@@ -96,13 +99,20 @@ async function sendToSubscriptions(
             keys: { p256dh: sub.p256dh, auth: sub.auth },
           },
           body,
-          { TTL: 60 * 60, urgency: "high" },
+          {
+            TTL: 60 * 60,
+            urgency: "high",
+            // Explicit so FCM/Chrome always get encrypted payload headers.
+            contentEncoding: "aes128gcm",
+          },
         );
         console.info(
           "[push] send ok",
           host,
           "status",
           res.statusCode,
+          "encoding",
+          "aes128gcm",
           logLabel,
         );
         return { ok: true as const, stale: false };

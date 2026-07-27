@@ -95,6 +95,23 @@ async function subscribeFresh(publicKey: string): Promise<PushSubscription> {
   if (!res.ok) {
     throw new Error(data.error ?? "No se pudo guardar la suscripción");
   }
+
+  // Verify DB endpoint matches this browser's PushSubscription.
+  const verifyRes = await fetch("/api/admin/push/subscribe");
+  const verifyData = await verifyRes.json().catch(() => ({}));
+  const stored: string[] = Array.isArray(verifyData.endpoints)
+    ? verifyData.endpoints
+    : [];
+  if (!stored.includes(json.endpoint)) {
+    console.error("[push] endpoint mismatch after Activar", {
+      browser: json.endpoint,
+      stored,
+    });
+    throw new Error(
+      "Suscripción guardada no coincide con este navegador. Reintentá Activar.",
+    );
+  }
+  console.log("[push] endpoint verified in DB", json.endpoint.slice(-48));
   return sub;
 }
 
@@ -199,7 +216,8 @@ export function PushNotificationsSettings() {
       if (!raw || typeof raw !== "object") return;
       const msg = raw as Record<string, unknown>;
       if (msg.type !== "ROCHA_PUSH") return;
-      const title = typeof msg.title === "string" ? msg.title : "Rocha Cotizador";
+      const title =
+        typeof msg.title === "string" ? msg.title : "Nueva cotización";
       const body = typeof msg.body === "string" ? msg.body : "";
       const url =
         typeof msg.url === "string" ? msg.url : "/admin/cotizaciones";
@@ -208,6 +226,7 @@ export function PushNotificationsSettings() {
     }
 
     const onSwMessage = (event: MessageEvent) => {
+      console.log("[push] navigator.serviceWorker message", event.data);
       onPushMessage(event.data);
     };
     navigator.serviceWorker?.addEventListener("message", onSwMessage);
@@ -215,7 +234,10 @@ export function PushNotificationsSettings() {
     let channel: BroadcastChannel | null = null;
     try {
       channel = new BroadcastChannel(PUSH_BROADCAST_CHANNEL);
-      channel.onmessage = (event) => onPushMessage(event.data);
+      channel.onmessage = (event) => {
+        console.log("[push] BroadcastChannel message", event.data);
+        onPushMessage(event.data);
+      };
     } catch {
       // BroadcastChannel unsupported
     }
@@ -386,6 +408,25 @@ export function PushNotificationsSettings() {
           ? `2) Push API: suscripción renovada, enviado (${sent}). Esperá toast SW.`
           : `2) Push API: enviado (${sent}). Esperá toast SW; si no, Application → Service Workers → console.`,
       );
+
+      // Belt-and-suspenders: page can show OS toast without waiting for push event.
+      // Proves registration.showNotification works while tab is open.
+      try {
+        const reg = await ensureFreshServiceWorker();
+        await reg.showNotification("Prueba desde página (belt)", {
+          body: "Push API OK. Si ves esto, registration.showNotification funciona (sin esperar el push event).",
+          requireInteraction: true,
+          tag: `rocha-page-${Date.now()}`,
+          data: { url: "/admin/configuracion" },
+        });
+        lines.push("3) registration.showNotification: OK (deberías ver 2do toast).");
+        console.log("[push] page showNotification ok after push API");
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        lines.push(`3) registration.showNotification: FALLÓ (${detail}).`);
+        console.error("[push] page showNotification failed", err);
+      }
+
       setMessage(lines.join(" "));
     } catch (err) {
       console.error(err);

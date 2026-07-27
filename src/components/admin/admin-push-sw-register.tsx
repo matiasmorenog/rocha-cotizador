@@ -30,7 +30,7 @@ export function AdminPushSwRegister() {
       const msg = raw as Record<string, unknown>;
       if (msg.type !== "ROCHA_PUSH") return;
       const title =
-        typeof msg.title === "string" ? msg.title : "Rocha Cotizador";
+        typeof msg.title === "string" ? msg.title : "Nueva cotización";
       const body = typeof msg.body === "string" ? msg.body : "";
       const url =
         typeof msg.url === "string" ? msg.url : "/admin/cotizaciones";
@@ -39,6 +39,7 @@ export function AdminPushSwRegister() {
     }
 
     const onSwMessage = (event: MessageEvent) => {
+      console.log("[push] navigator.serviceWorker message", event.data);
       onPushMessage(event.data);
     };
     navigator.serviceWorker.addEventListener("message", onSwMessage);
@@ -46,7 +47,10 @@ export function AdminPushSwRegister() {
     let channel: BroadcastChannel | null = null;
     try {
       channel = new BroadcastChannel(PUSH_BROADCAST_CHANNEL);
-      channel.onmessage = (event) => onPushMessage(event.data);
+      channel.onmessage = (event) => {
+        console.log("[push] BroadcastChannel message", event.data);
+        onPushMessage(event.data);
+      };
     } catch {
       // unsupported
     }
