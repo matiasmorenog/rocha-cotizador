@@ -11,6 +11,7 @@ import {
   AdminNotificationToasts,
   type AdminToastItem,
 } from "@/components/admin/admin-notification-toasts";
+import { playAdminNotificationSound, unlockAdminNotificationSound } from "@/lib/admin-notification-sound";
 
 type InboxItem = {
   id: string;
@@ -100,6 +101,7 @@ export function AdminPushSwRegister() {
     recentFpRef.current.set(fp, now);
 
     console.log("[push] in-app toast", { id, ...next });
+    playAdminNotificationSound();
     setToasts((prev) => {
       const withoutDup = prev.filter((t) => t.id !== id);
       return [...withoutDup, { ...next, id }].slice(-MAX_TOASTS);
@@ -118,6 +120,15 @@ export function AdminPushSwRegister() {
     const toastTimers = timersRef.current;
     seenRef.current = loadSeenIds();
     sinceRef.current = new Date().toISOString();
+
+    // Best-effort: unlock Web Audio after first gesture in admin.
+    const unlock = () => {
+      unlockAdminNotificationSound();
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
 
     // Best-effort SW (optional Web Push enhancement).
     if ("serviceWorker" in navigator) {
@@ -237,6 +248,8 @@ export function AdminPushSwRegister() {
       navigator.serviceWorker?.removeEventListener("message", onSwMessage);
       channel?.close();
       window.removeEventListener(ADMIN_INAPP_TOAST_EVENT, onCustomToast);
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
     };
     // pushToast/dismiss close over stable refs; mount-once listeners.
     // eslint-disable-next-line react-hooks/exhaustive-deps

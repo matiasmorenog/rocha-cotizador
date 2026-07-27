@@ -192,9 +192,14 @@ export function PushNotificationsSettings() {
   const [status, setStatus] = useState<Status>("loading");
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [testingSystem, setTestingSystem] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [probar, setProbar] = useState<ProbarReport | null>(null);
+  const [probarSystem, setProbarSystem] = useState<{
+    ok: boolean;
+    note: string;
+  } | null>(null);
   const [osGuide, setOsGuide] = useState<OsGuide>("windows");
   const [perm, setPerm] = useState<NotificationPermission | "unknown">(
     "unknown",
@@ -244,6 +249,7 @@ export function PushNotificationsSettings() {
     setError(null);
     setMessage(null);
     setProbar(null);
+    setProbarSystem(null);
 
     try {
       if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
@@ -289,6 +295,7 @@ export function PushNotificationsSettings() {
     setError(null);
     setMessage(null);
     setProbar(null);
+    setProbarSystem(null);
 
     try {
       const reg =
@@ -314,40 +321,34 @@ export function PushNotificationsSettings() {
     }
   }
 
-  /**
-   * Primary: in-app test toast. Optional Web Push if subscribed (never fails Probar).
-   */
-  async function testNotification() {
+  /** In-app toast test only (inbox). */
+  async function testInAppNotification() {
     setTesting(true);
     setError(null);
     setMessage(null);
     setProbar(null);
-
-    const steps: StepResult[] = [];
+    setProbarSystem(null);
 
     try {
-      // 1) In-app inbox + toast
       const inboxRes = await fetch("/api/admin/push/inbox/test", {
         method: "POST",
         credentials: "same-origin",
       });
       const inboxData = await inboxRes.json().catch(() => ({}));
       if (!inboxRes.ok || !inboxData.item) {
-        steps.push({
-          label: "1) Notificación en la app",
+        const note =
+          typeof inboxData.error === "string"
+            ? inboxData.error
+            : "No se pudo enviar la notificación de prueba. Revisá la sesión o la red.";
+        setProbar({
           ok: false,
-          detail: inboxData.error ?? `HTTP ${inboxRes.status}`,
+          steps: [{ label: "Notificación en la app", ok: false, detail: note }],
+          note,
         });
-        const report: ProbarReport = {
-          ok: false,
-          steps,
-          note: "No se pudo enviar la notificación de prueba. Revisá la sesión o la red.",
-        };
-        setProbar(report);
-        setError(report.note);
+        setError(note);
         dispatchAdminInAppToast({
           title: "Prueba fallida",
-          body: report.note,
+          body: note,
           tone: "error",
         });
         return;
@@ -366,60 +367,15 @@ export function PushNotificationsSettings() {
         tone: "success",
         inboxId: item.id,
       });
-      steps.push({
-        label: "1) Notificación en la app",
-        ok: true,
-        detail: "Notificación de prueba enviada",
-      });
-
-      // 2) Optional OS / Web Push
-      if (status === "subscribed" && "Notification" in window) {
-        try {
-          const reg = await ensureFreshServiceWorker();
-          const sub = await reg.pushManager.getSubscription();
-          if (sub) {
-            const result = await postPushTest(sub.endpoint);
-            if (result.ok) {
-              steps.push({
-                label: "2) Notificaciones del sistema",
-                ok: true,
-                detail: `Notificación del sistema enviada (${result.sent ?? "?"}/${result.total ?? "?"})`,
-              });
-            } else {
-              steps.push({
-                label: "2) Notificaciones del sistema",
-                ok: false,
-                detail:
-                  result.error ??
-                  "No se pudo enviar la notificación del sistema.",
-              });
-            }
-          } else {
-            steps.push({
-              label: "2) Notificaciones del sistema",
-              ok: false,
-              detail: "Sin suscripción local — Activá notificaciones del sistema.",
-            });
-          }
-        } catch (err) {
-          const detail = err instanceof Error ? err.message : String(err);
-          steps.push({
-            label: "2) Notificaciones del sistema",
-            ok: false,
-            detail: detail,
-          });
-        }
-      } else {
-        steps.push({
-          label: "2) Notificaciones del sistema",
-          ok: true,
-          detail: "Omitido — notificaciones del sistema no activadas.",
-        });
-      }
-
       const report: ProbarReport = {
         ok: true,
-        steps,
+        steps: [
+          {
+            label: "Notificación en la app",
+            ok: true,
+            detail: "Notificación de prueba enviada",
+          },
+        ],
         note: "Notificación de prueba enviada.",
       };
       setProbar(report);
@@ -428,8 +384,11 @@ export function PushNotificationsSettings() {
       console.error(err);
       const detail =
         err instanceof Error ? err.message : "Error al probar notificaciones.";
-      steps.push({ label: "Prueba", ok: false, detail });
-      setProbar({ ok: false, steps, note: detail });
+      setProbar({
+        ok: false,
+        steps: [{ label: "Notificación en la app", ok: false, detail }],
+        note: detail,
+      });
       setError(detail);
       dispatchAdminInAppToast({
         title: "Prueba fallida",
@@ -438,6 +397,68 @@ export function PushNotificationsSettings() {
       });
     } finally {
       setTesting(false);
+    }
+  }
+
+  /** OS / Web Push test via POST /api/admin/push/test. */
+  async function testSystemNotification() {
+    setTestingSystem(true);
+    setError(null);
+    setMessage(null);
+    setProbarSystem(null);
+
+    try {
+      if (status !== "subscribed" || !("Notification" in window)) {
+        const note =
+          "Activá las notificaciones del sistema antes de probarlas.";
+        setProbarSystem({ ok: false, note });
+        setError(note);
+        return;
+      }
+
+      const reg = await ensureFreshServiceWorker();
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        const note =
+          "Sin suscripción en este navegador. Activá las notificaciones del sistema.";
+        setStatus("unsubscribed");
+        setProbarSystem({ ok: false, note });
+        setError(note);
+        return;
+      }
+
+      const result = await postPushTest(sub.endpoint);
+      if (result.ok) {
+        const note = "Notificación del sistema enviada.";
+        setProbarSystem({ ok: true, note });
+        setMessage(note);
+        return;
+      }
+
+      if (result.needResub) {
+        setStatus("unsubscribed");
+        const note =
+          result.error ??
+          "La suscripción expiró. Activá de nuevo las notificaciones del sistema.";
+        setProbarSystem({ ok: false, note });
+        setError(note);
+        return;
+      }
+
+      const note =
+        result.error ?? "No se pudo enviar la notificación del sistema.";
+      setProbarSystem({ ok: false, note });
+      setError(note);
+    } catch (err) {
+      console.error(err);
+      const detail =
+        err instanceof Error
+          ? err.message
+          : "Error al probar notificaciones del sistema.";
+      setProbarSystem({ ok: false, note: detail });
+      setError(detail);
+    } finally {
+      setTestingSystem(false);
     }
   }
 
@@ -470,8 +491,8 @@ export function PushNotificationsSettings() {
         <div className="mt-3">
           <Button
             type="button"
-            disabled={testing || busy}
-            onClick={testNotification}
+            disabled={testing || testingSystem || busy}
+            onClick={testInAppNotification}
           >
             {testing ? (
               <>
@@ -479,7 +500,7 @@ export function PushNotificationsSettings() {
                 Probando…
               </>
             ) : (
-              "Probar notificación"
+              "Probar notificación en la app"
             )}
           </Button>
         </div>
@@ -527,7 +548,8 @@ export function PushNotificationsSettings() {
         </p>
         <p className="mt-1 text-neutral-600">
           Notificaciones del navegador cuando el admin está cerrado o en
-          segundo plano. Requiere permiso del sistema operativo.
+          segundo plano. Requiere permiso del sistema operativo. El sonido es
+          el del sistema (el navegador no permite un sonido custom fiable).
         </p>
         <p className="mt-2 text-neutral-800">
           Estado: <span className="font-medium">{statusLabel[status]}</span>
@@ -578,12 +600,12 @@ export function PushNotificationsSettings() {
         </p>
         <OsSystemGuide os={osGuide} />
 
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           {status === "subscribed" ? (
             <Button
               type="button"
               variant="outline"
-              disabled={busy || testing}
+              disabled={busy || testing || testingSystem}
               onClick={disable}
             >
               {busy ? (
@@ -598,7 +620,11 @@ export function PushNotificationsSettings() {
           ) : status !== "unsupported" &&
             status !== "denied" &&
             status !== "loading" ? (
-            <Button type="button" disabled={busy || testing} onClick={enable}>
+            <Button
+              type="button"
+              disabled={busy || testing || testingSystem}
+              onClick={enable}
+            >
               {busy ? (
                 <>
                   <Spinner className="mr-2 text-white" />
@@ -609,13 +635,55 @@ export function PushNotificationsSettings() {
               )}
             </Button>
           ) : null}
+
+          <Button
+            type="button"
+            disabled={
+              busy ||
+              testing ||
+              testingSystem ||
+              status !== "subscribed"
+            }
+            onClick={testSystemNotification}
+            title={
+              status !== "subscribed"
+                ? "Activá las notificaciones del sistema primero"
+                : undefined
+            }
+          >
+            {testingSystem ? (
+              <>
+                <Spinner className="mr-2 text-white" />
+                Probando…
+              </>
+            ) : (
+              "Probar notificación del sistema"
+            )}
+          </Button>
         </div>
+        {status !== "subscribed" &&
+        status !== "loading" &&
+        status !== "unsupported" ? (
+          <p className="mt-2 text-xs text-neutral-500">
+            Para probar el sistema, activá las notificaciones del sistema
+            primero.
+          </p>
+        ) : null}
+        {probarSystem ? (
+          <p
+            className={`mt-2 text-sm font-medium ${
+              probarSystem.ok ? "text-green-700" : "text-red-600"
+            }`}
+          >
+            {probarSystem.note}
+          </p>
+        ) : null}
       </div>
 
-      {error && !probar ? (
+      {error && !probar && !probarSystem ? (
         <p className="text-sm text-red-600">{error}</p>
       ) : null}
-      {message && !probar ? (
+      {message && !probar && !probarSystem ? (
         <p className="text-sm text-green-700">{message}</p>
       ) : null}
     </div>

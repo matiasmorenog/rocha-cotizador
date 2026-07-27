@@ -337,7 +337,10 @@ export function SkeletonAdminConfigPage() {
               <Skeleton className="h-3 w-full" />
               <Skeleton className="h-3 w-48" />
             </div>
-            <Skeleton className="h-10 w-56 rounded-md" />
+            <div className="flex flex-wrap gap-2">
+              <Skeleton className="h-10 w-56 rounded-md" />
+              <Skeleton className="h-10 w-64 rounded-md" />
+            </div>
           </div>
         </div>
       </section>
