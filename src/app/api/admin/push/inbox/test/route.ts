@@ -4,7 +4,7 @@ import { enqueueAdminInboxTest } from "@/lib/push";
 
 /**
  * POST /api/admin/push/inbox/test
- * Enqueue a test in-app alert (safe path — no Web Push / OS needed).
+ * Enqueue a test in-app notification.
  */
 export async function POST() {
   const session = await auth();

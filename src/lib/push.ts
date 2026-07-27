@@ -150,7 +150,7 @@ export type AdminInboxItemDto = {
   createdAt: string;
 };
 
-/** Safe path: persist in-app alert (works even when macOS blocks OS toasts). */
+/** Persist in-app notification for admin inbox polling. */
 export async function enqueueAdminInbox(input: {
   title: string;
   body: string;
@@ -240,11 +240,11 @@ export async function notifyAdminsNewQuote(
   }
 }
 
-/** In-app Probar — creates inbox row; no OS permission needed. */
+/** Probar — creates inbox row for in-app toast. */
 export async function enqueueAdminInboxTest(): Promise<AdminInboxItemDto> {
   return enqueueAdminInbox({
-    title: "Prueba notificación in-app",
-    body: "Camino seguro OK. Esta notificación no depende de notificaciones del sistema (Windows/macOS).",
+    title: "Notificación de prueba",
+    body: "Así se ven las notificaciones en el admin.",
     url: "/admin/configuracion",
     kind: "test",
   });
@@ -267,8 +267,8 @@ export async function sendTestPushToAdmin(opts: {
   return sendToSubscriptions(
     subscriptions,
     {
-      title: "Prueba Rocha Cotizador (sistema)",
-      body: "Opcional: Web Push + macOS/Chrome deben permitir notificaciones.",
+      title: "Notificación de prueba",
+      body: "Notificación del sistema de Rocha Cotizador.",
       url: "/admin/configuracion",
       tag: `rocha-test-${Date.now()}`,
     },

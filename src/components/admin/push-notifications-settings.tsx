@@ -271,7 +271,7 @@ export function PushNotificationsSettings() {
       await subscribeFresh(key.publicKey);
       setStatus("subscribed");
       setMessage(
-        "Notificaciones del sistema activadas (opcional). El camino seguro in-app ya funciona sin esto.",
+        "Notificaciones del sistema activadas.",
       );
     } catch (err) {
       console.error(err);
@@ -315,8 +315,7 @@ export function PushNotificationsSettings() {
   }
 
   /**
-   * Primary: inbox test → toast in-app = success (camino seguro).
-   * Optional: Web Push if subscribed — reported separately, never fails Probar.
+   * Primary: in-app test toast. Optional Web Push if subscribed (never fails Probar).
    */
   async function testNotification() {
     setTesting(true);
@@ -327,7 +326,7 @@ export function PushNotificationsSettings() {
     const steps: StepResult[] = [];
 
     try {
-      // 1) Safe path — inbox + toast
+      // 1) In-app inbox + toast
       const inboxRes = await fetch("/api/admin/push/inbox/test", {
         method: "POST",
         credentials: "same-origin",
@@ -335,19 +334,19 @@ export function PushNotificationsSettings() {
       const inboxData = await inboxRes.json().catch(() => ({}));
       if (!inboxRes.ok || !inboxData.item) {
         steps.push({
-          label: "1) Notificaciones en la app (camino seguro)",
+          label: "1) Notificación en la app",
           ok: false,
           detail: inboxData.error ?? `HTTP ${inboxRes.status}`,
         });
         const report: ProbarReport = {
           ok: false,
           steps,
-          note: "Falló el camino seguro. Revisá la sesión admin / red.",
+          note: "No se pudo enviar la notificación de prueba. Revisá la sesión o la red.",
         };
         setProbar(report);
         setError(report.note);
         dispatchAdminInAppToast({
-          title: "Prueba FALLÓ",
+          title: "Prueba fallida",
           body: report.note,
           tone: "error",
         });
@@ -368,9 +367,9 @@ export function PushNotificationsSettings() {
         inboxId: item.id,
       });
       steps.push({
-        label: "1) Notificaciones en la app (camino seguro)",
+        label: "1) Notificación en la app",
         ok: true,
-        detail: "Toast in-app mostrado — éxito (no hace falta toast del OS)",
+        detail: "Notificación de prueba enviada",
       });
 
       // 2) Optional OS / Web Push
@@ -382,22 +381,22 @@ export function PushNotificationsSettings() {
             const result = await postPushTest(sub.endpoint);
             if (result.ok) {
               steps.push({
-                label: "2) Notificaciones del sistema (opcional)",
+                label: "2) Notificaciones del sistema",
                 ok: true,
-                detail: `Push API enviado (${result.sent ?? "?"}/${result.total ?? "?"}). Si no ves toast OS, el SO lo bloquea — no es fallo.`,
+                detail: `Notificación del sistema enviada (${result.sent ?? "?"}/${result.total ?? "?"})`,
               });
             } else {
               steps.push({
-                label: "2) Notificaciones del sistema (opcional)",
+                label: "2) Notificaciones del sistema",
                 ok: false,
                 detail:
                   result.error ??
-                  "Push falló. El camino seguro igual está OK.",
+                  "No se pudo enviar la notificación del sistema.",
               });
             }
           } else {
             steps.push({
-              label: "2) Notificaciones del sistema (opcional)",
+              label: "2) Notificaciones del sistema",
               ok: false,
               detail: "Sin suscripción local — Activá notificaciones del sistema.",
             });
@@ -405,23 +404,23 @@ export function PushNotificationsSettings() {
         } catch (err) {
           const detail = err instanceof Error ? err.message : String(err);
           steps.push({
-            label: "2) Notificaciones del sistema (opcional)",
+            label: "2) Notificaciones del sistema",
             ok: false,
-            detail: `${detail} — el camino seguro igual está OK.`,
+            detail: detail,
           });
         }
       } else {
         steps.push({
-          label: "2) Notificaciones del sistema (opcional)",
+          label: "2) Notificaciones del sistema",
           ok: true,
-          detail: "Omitido (no activados). No hace falta para el camino seguro.",
+          detail: "Omitido — notificaciones del sistema no activadas.",
         });
       }
 
       const report: ProbarReport = {
         ok: true,
         steps,
-        note: "Éxito = toast abajo a la derecha. No hace falta ver el toast de Windows/macOS.",
+        note: "Notificación de prueba enviada.",
       };
       setProbar(report);
       setMessage(report.note);
@@ -433,7 +432,7 @@ export function PushNotificationsSettings() {
       setProbar({ ok: false, steps, note: detail });
       setError(detail);
       dispatchAdminInAppToast({
-        title: "Prueba FALLÓ",
+        title: "Prueba fallida",
         body: detail,
         tone: "error",
       });
@@ -461,14 +460,12 @@ export function PushNotificationsSettings() {
         admin no disparan notificación.
       </p>
 
-      {/* —— Camino seguro —— */}
+      {/* —— Notificaciones en la app —— */}
       <div className="rounded-md border-2 border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-950">
-        <p className="font-semibold">Notificaciones en la app (siempre)</p>
+        <p className="font-semibold">Notificaciones en la app</p>
         <p className="mt-1 text-emerald-900/90">
-          Con cualquier página <span className="font-medium">/admin</span>{" "}
-          abierta, aparece un toast abajo a la derecha. No depende de Windows
-          ni macOS. Este es el{" "}
-          <span className="font-medium">camino seguro</span>.
+          Con el admin abierto, las notificaciones aparecen como toast abajo a
+          la derecha.
         </p>
         <div className="mt-3">
           <Button
@@ -482,7 +479,7 @@ export function PushNotificationsSettings() {
                 Probando…
               </>
             ) : (
-              "Probar notificación in-app"
+              "Probar notificación"
             )}
           </Button>
         </div>
@@ -500,8 +497,8 @@ export function PushNotificationsSettings() {
         >
           <p className="text-base font-bold sm:text-lg">
             {probar.ok
-              ? "Resultado: OK (toast in-app)"
-              : "Resultado: FALLÓ"}
+              ? "Notificación de prueba enviada"
+              : "No se pudo enviar la notificación de prueba"}
           </p>
           <ul className="mt-3 space-y-2 text-sm">
             {probar.steps.map((step) => (
@@ -529,11 +526,8 @@ export function PushNotificationsSettings() {
           Notificaciones del sistema (opcional)
         </p>
         <p className="mt-1 text-neutral-600">
-          Toast de Chrome/Edge cuando el admin está cerrado o en segundo plano.
-          Requiere que el sistema operativo permita notificaciones del
-          navegador. Si el OS las bloquea,{" "}
-          <span className="font-medium">no es un fallo</span> del cotizador —
-          usá el camino seguro.
+          Notificaciones del navegador cuando el admin está cerrado o en
+          segundo plano. Requiere permiso del sistema operativo.
         </p>
         <p className="mt-2 text-neutral-800">
           Estado: <span className="font-medium">{statusLabel[status]}</span>

@@ -39,7 +39,7 @@ DATABASE_URL=postgresql://...-pooler...?sslmode=require&pgbouncer=true&connectio
 AUTH_SECRET=                    # openssl rand -base64 32
 AUTH_URL=https://rocha-cotizador.vercel.app
 
-# Web Push (admin avisos de cotización nueva) — mismas keys en Preview + Production + local
+# Web Push (admin notificaciones de cotización nueva) — mismas keys en Preview + Production + local
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=   # npx web-push generate-vapid-keys
 VAPID_PRIVATE_KEY=              # nunca commitear
 VAPID_SUBJECT=https://rocha-cotizador.vercel.app
@@ -47,7 +47,7 @@ VAPID_SUBJECT=https://rocha-cotizador.vercel.app
 
 En Vercel: **Production** → Neon `main` (pooled) + secrets prod. **Preview ≡ Development** → Neon `development` (pooled) + mismos `AUTH_*`. Local `.env` (gitignored): Neon `development` **direct** + `AUTH_URL=http://localhost:3000` + `SEED_TARGET=development`.
 
-### Web Push (avisos admin)
+### Web Push (notificaciones admin)
 
 Cuando un **cliente** crea una cotización, el servidor manda Web Push a admins suscriptos (Chrome). Config:
 
@@ -57,7 +57,7 @@ Cuando un **cliente** crea una cotización, el servidor manda Web Push a admins 
    - `VAPID_PRIVATE_KEY`
    - `VAPID_SUBJECT` (URL del sitio, ej. `https://rocha-cotizador.vercel.app` — contacto VAPID, no envía mail)
 3. Schema: modelo `PushSubscription` — `npx prisma db push` en Neon **development**; **antes del release a prod** también contra Neon `main`.
-4. Admin activa en `/admin/configuracion` → “Activar avisos del navegador”.
+4. Admin activa en `/admin/configuracion` → “Activar notificaciones del sistema”.
 
 Sin estas env, el create de cotización sigue OK (solo se loguea y se salta el push).
 
@@ -148,8 +148,8 @@ Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1
 
 - [ ] Confirmar `AUTH_SECRET` fuerte y distinto en Production
 - [ ] Confirmar `AUTH_URL=https://rocha-cotizador.vercel.app` en Production
-- [ ] WhatsApp avisos: número correcto en `/admin/configuracion`
-- [ ] VAPID Web Push en Vercel (Production + Preview/Development) + admin activó avisos en `/admin/configuracion`
+- [ ] WhatsApp notificaciones: número correcto en `/admin/configuracion`
+- [ ] VAPID Web Push en Vercel (Production + Preview/Development) + admin activó notificaciones en `/admin/configuracion`
 - [ ] `prisma db push` en Neon `main` incluye tabla `PushSubscription` (si el release trae ese modelo)
 
 ### CI / deploy

@@ -52,7 +52,7 @@ function fingerprint(title: string, body: string, url: string): string {
 }
 
 /**
- * Safe path: poll AdminInbox while any `/admin` tab is open.
+ * Poll AdminInbox while any `/admin` tab is open.
  * Optional: SW BroadcastChannel when Web Push arrives in this browser.
  * Renders compact toasts — never depends on OS toast visibility.
  */

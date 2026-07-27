@@ -4,7 +4,7 @@ import { listAdminInboxSince } from "@/lib/push";
 
 /**
  * GET /api/admin/push/inbox?since=<ISO>
- * Lightweight poll for in-app admin alerts (safe path; no OS toast).
+ * Lightweight poll for in-app admin notifications.
  */
 export async function GET(req: NextRequest) {
   const session = await auth();
