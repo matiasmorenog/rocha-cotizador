@@ -243,8 +243,8 @@ export async function notifyAdminsNewQuote(
 /** In-app Probar — creates inbox row; no OS permission needed. */
 export async function enqueueAdminInboxTest(): Promise<AdminInboxItemDto> {
   return enqueueAdminInbox({
-    title: "Prueba aviso in-app",
-    body: "Camino seguro OK. Este aviso no depende de notificaciones del sistema (Windows/macOS).",
+    title: "Prueba notificación in-app",
+    body: "Camino seguro OK. Esta notificación no depende de notificaciones del sistema (Windows/macOS).",
     url: "/admin/configuracion",
     kind: "test",
   });

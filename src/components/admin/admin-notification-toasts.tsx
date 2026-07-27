@@ -56,12 +56,12 @@ export function AdminNotificationToasts({ toasts, onDismiss }: Props) {
                 </p>
               ) : null}
               <p className="mt-1.5 text-[10px] font-medium uppercase tracking-wide text-[var(--foreground)]/50">
-                Abrir · aviso en la app
+                Abrir · notificación en la app
               </p>
             </a>
             <button
               type="button"
-              aria-label="Cerrar aviso"
+              aria-label="Cerrar notificación"
               className="shrink-0 rounded-md px-1.5 py-0.5 text-sm leading-none text-[var(--foreground)]/55 transition-colors hover:bg-white/70 hover:text-[var(--foreground)]"
               onClick={() => onDismiss(toast.id)}
             >

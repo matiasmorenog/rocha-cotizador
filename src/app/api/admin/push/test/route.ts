@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
         total: 0,
         staleRemoved: 0,
         error:
-          "No hay suscripción guardada para este admin. Activá avisos primero.",
+          "No hay suscripción guardada para este admin. Activá notificaciones primero.",
       },
       { status: 404 },
     );
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         total: result.total,
         staleRemoved: result.staleRemoved,
         error: stale
-          ? "Suscripción expirada — Activá avisos de nuevo"
+          ? "Suscripción expirada — Activá notificaciones de nuevo"
           : "FCM/web-push falló para todas las suscripciones.",
       },
       { status: stale ? 410 : 502 },

@@ -263,7 +263,7 @@ export function PushNotificationsSettings() {
       if (permission !== "granted") {
         setStatus(permission === "denied" ? "denied" : "unsubscribed");
         setError(
-          "Permiso de notificaciones del sistema denegado. Los avisos en la app siguen funcionando con el admin abierto.",
+          "Permiso de notificaciones del sistema denegado. Las notificaciones en la app siguen funcionando con el admin abierto.",
         );
         return;
       }
@@ -271,13 +271,13 @@ export function PushNotificationsSettings() {
       await subscribeFresh(key.publicKey);
       setStatus("subscribed");
       setMessage(
-        "Avisos del sistema activados (opcional). El camino seguro in-app ya funciona sin esto.",
+        "Notificaciones del sistema activadas (opcional). El camino seguro in-app ya funciona sin esto.",
       );
     } catch (err) {
       console.error(err);
       const detail =
         err instanceof Error && err.message ? ` (${err.message})` : "";
-      setError(`No se pudieron activar los avisos del sistema.${detail}`);
+      setError(`No se pudieron activar las notificaciones del sistema.${detail}`);
       setStatus("error");
     } finally {
       setBusy(false);
@@ -305,10 +305,10 @@ export function PushNotificationsSettings() {
       }
       setStatus("unsubscribed");
       setMessage(
-        "Avisos del sistema desactivados. Los avisos en la app siguen activos.",
+        "Notificaciones del sistema desactivadas. Las notificaciones en la app siguen activas.",
       );
     } catch {
-      setError("No se pudieron desactivar los avisos del sistema.");
+      setError("No se pudieron desactivar las notificaciones del sistema.");
     } finally {
       setBusy(false);
     }
@@ -335,7 +335,7 @@ export function PushNotificationsSettings() {
       const inboxData = await inboxRes.json().catch(() => ({}));
       if (!inboxRes.ok || !inboxData.item) {
         steps.push({
-          label: "1) Avisos en la app (camino seguro)",
+          label: "1) Notificaciones en la app (camino seguro)",
           ok: false,
           detail: inboxData.error ?? `HTTP ${inboxRes.status}`,
         });
@@ -368,7 +368,7 @@ export function PushNotificationsSettings() {
         inboxId: item.id,
       });
       steps.push({
-        label: "1) Avisos en la app (camino seguro)",
+        label: "1) Notificaciones en la app (camino seguro)",
         ok: true,
         detail: "Toast in-app mostrado — éxito (no hace falta toast del OS)",
       });
@@ -382,13 +382,13 @@ export function PushNotificationsSettings() {
             const result = await postPushTest(sub.endpoint);
             if (result.ok) {
               steps.push({
-                label: "2) Avisos del sistema (opcional)",
+                label: "2) Notificaciones del sistema (opcional)",
                 ok: true,
                 detail: `Push API enviado (${result.sent ?? "?"}/${result.total ?? "?"}). Si no ves toast OS, el SO lo bloquea — no es fallo.`,
               });
             } else {
               steps.push({
-                label: "2) Avisos del sistema (opcional)",
+                label: "2) Notificaciones del sistema (opcional)",
                 ok: false,
                 detail:
                   result.error ??
@@ -397,22 +397,22 @@ export function PushNotificationsSettings() {
             }
           } else {
             steps.push({
-              label: "2) Avisos del sistema (opcional)",
+              label: "2) Notificaciones del sistema (opcional)",
               ok: false,
-              detail: "Sin suscripción local — Activá avisos del sistema.",
+              detail: "Sin suscripción local — Activá notificaciones del sistema.",
             });
           }
         } catch (err) {
           const detail = err instanceof Error ? err.message : String(err);
           steps.push({
-            label: "2) Avisos del sistema (opcional)",
+            label: "2) Notificaciones del sistema (opcional)",
             ok: false,
             detail: `${detail} — el camino seguro igual está OK.`,
           });
         }
       } else {
         steps.push({
-          label: "2) Avisos del sistema (opcional)",
+          label: "2) Notificaciones del sistema (opcional)",
           ok: true,
           detail: "Omitido (no activados). No hace falta para el camino seguro.",
         });
@@ -428,7 +428,7 @@ export function PushNotificationsSettings() {
     } catch (err) {
       console.error(err);
       const detail =
-        err instanceof Error ? err.message : "Error al probar avisos.";
+        err instanceof Error ? err.message : "Error al probar notificaciones.";
       steps.push({ label: "Prueba", ok: false, detail });
       setProbar({ ok: false, steps, note: detail });
       setError(detail);
@@ -446,24 +446,24 @@ export function PushNotificationsSettings() {
     loading: "Comprobando…",
     unsupported: "Este navegador no soporta Web Push del sistema.",
     denied:
-      "Permiso del sistema bloqueado. Los avisos en la app siguen funcionando.",
-    "no-vapid": "Faltan claves VAPID en el servidor (solo afecta avisos OS).",
-    subscribed: "Avisos del sistema activos en este navegador.",
-    unsubscribed: "Avisos del sistema no activados (opcional).",
-    error: "Error al configurar avisos del sistema.",
+      "Permiso del sistema bloqueado. Las notificaciones en la app siguen funcionando.",
+    "no-vapid": "Faltan claves VAPID en el servidor (solo afecta notificaciones OS).",
+    subscribed: "Notificaciones del sistema activas en este navegador.",
+    unsubscribed: "Notificaciones del sistema no activadas (opcional).",
+    error: "Error al configurar notificaciones del sistema.",
   };
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-neutral-600">
         Cuando un <span className="font-medium">cliente</span> confirma una
-        cotización, el admin recibe un aviso. Cotizaciones creadas desde el
-        admin no disparan aviso.
+        cotización, el admin recibe una notificación. Cotizaciones creadas desde el
+        admin no disparan notificación.
       </p>
 
       {/* —— Camino seguro —— */}
       <div className="rounded-md border-2 border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-950">
-        <p className="font-semibold">Avisos en la app (siempre)</p>
+        <p className="font-semibold">Notificaciones en la app (siempre)</p>
         <p className="mt-1 text-emerald-900/90">
           Con cualquier página <span className="font-medium">/admin</span>{" "}
           abierta, aparece un toast abajo a la derecha. No depende de Windows
@@ -482,7 +482,7 @@ export function PushNotificationsSettings() {
                 Probando…
               </>
             ) : (
-              "Probar aviso in-app"
+              "Probar notificación in-app"
             )}
           </Button>
         </div>
@@ -523,10 +523,10 @@ export function PushNotificationsSettings() {
         </div>
       ) : null}
 
-      {/* —— Avisos del sistema (opcional) —— */}
+      {/* —— Notificaciones del sistema (opcional) —— */}
       <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-800">
         <p className="font-semibold text-neutral-900">
-          Avisos del sistema (opcional)
+          Notificaciones del sistema (opcional)
         </p>
         <p className="mt-1 text-neutral-600">
           Toast de Chrome/Edge cuando el admin está cerrado o en segundo plano.
@@ -598,7 +598,7 @@ export function PushNotificationsSettings() {
                   Desactivando…
                 </>
               ) : (
-                "Desactivar avisos del sistema"
+                "Desactivar notificaciones del sistema"
               )}
             </Button>
           ) : status !== "unsupported" &&
@@ -611,7 +611,7 @@ export function PushNotificationsSettings() {
                   Activando…
                 </>
               ) : (
-                "Activar avisos del sistema"
+                "Activar notificaciones del sistema"
               )}
             </Button>
           ) : null}

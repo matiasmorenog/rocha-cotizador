@@ -21,14 +21,14 @@ export default async function AdminConfigPage() {
 
       <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-          Avisos (app + sistema)
+          Notificaciones (app + sistema)
         </h2>
         <PushNotificationsSettings />
       </section>
 
       <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-          Avisos / WhatsApp
+          Notificaciones / WhatsApp
         </h2>
         <WhatsAppSettingsForm initialPhone={whatsappNotifyPhone} />
       </section>

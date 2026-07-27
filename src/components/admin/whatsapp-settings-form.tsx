@@ -54,7 +54,7 @@ export function WhatsAppSettingsForm({ initialPhone }: Props) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="space-y-1">
-        <Label htmlFor="whatsapp-notify">Teléfono WhatsApp (avisos)</Label>
+        <Label htmlFor="whatsapp-notify">Teléfono WhatsApp (notificaciones)</Label>
         <div className="flex items-center gap-2">
           <span
             className="inline-flex h-10 shrink-0 items-center rounded-md border border-neutral-200 bg-neutral-50 px-3 text-sm font-medium text-neutral-700"
