@@ -75,6 +75,23 @@ export async function POST(req: NextRequest) {
     ? await getPriceListUnitPricesByProductId(discountListId)
     : null;
 
+  // Same SKU may appear twice only with different measure (kg vs units).
+  const seenMeasureKeys = new Set<string>();
+  for (const item of parsed.data.items) {
+    const orderByUnit = item.orderByUnit === true;
+    const key = `${item.productId}:${orderByUnit ? "u" : "k"}`;
+    if (seenMeasureKeys.has(key)) {
+      return NextResponse.json(
+        {
+          error:
+            "Líneas duplicadas: el mismo producto y medida no pueden repetirse",
+        },
+        { status: 400 },
+      );
+    }
+    seenMeasureKeys.add(key);
+  }
+
   const lines: Array<{
     productId: string;
     productCode: string;

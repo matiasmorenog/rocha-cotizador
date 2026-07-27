@@ -427,7 +427,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
               ) : (
                 lines.map((l) => (
                   <tr
-                    key={l.productId}
+                    key={l.id}
                     className={`border-t border-neutral-100 ${
                       l.orderByUnit ? "bg-amber-50/40" : ""
                     }`}
@@ -448,7 +448,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                         min={0.001}
                         step="any"
                         value={l.qty}
-                        onChange={(e) => setQty(l.productId, Number(e.target.value))}
+                        onChange={(e) => setQty(l.id, Number(e.target.value))}
                         aria-label={quoteLineQtyAriaLabel(
                           l.orderByUnit,
                           l.allowsUnitOrder,
@@ -460,7 +460,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                         <select
                           value={l.orderByUnit ? "unit" : "kg"}
                           onChange={(e) =>
-                            setOrderByUnit(l.productId, e.target.value === "unit")
+                            setOrderByUnit(l.id, e.target.value === "unit")
                           }
                           aria-label="Medida"
                           className="flex h-8 w-[7.5rem] rounded-md border border-neutral-300 bg-white pl-2 pr-8 text-xs focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
@@ -486,7 +486,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                         variant="secondary"
                         size="sm"
                         className="px-2 hover:border-red-400 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => remove(l.productId)}
+                        onClick={() => remove(l.id)}
                         aria-label="Quitar"
                         title="Quitar"
                       >
