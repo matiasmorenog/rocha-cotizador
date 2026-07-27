@@ -1,6 +1,7 @@
 import PDFDocument from "pdfkit";
 import { formatArgentinaDateTime } from "@/lib/argentina-time";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
+import { quoteLineMeasureLabel } from "@/lib/order-measure";
 import { formatPrice, formatQty } from "@/lib/utils";
 
 export type QuoteForPdf = {
@@ -13,6 +14,7 @@ export type QuoteForPdf = {
     productName: string;
     qty: number | string | { toNumber?: () => number; toString: () => string };
     orderByUnit?: boolean;
+    allowsUnitOrder?: boolean;
     unitPrice: number | string | { toNumber?: () => number; toString: () => string };
     lineTotal: number | string | { toNumber?: () => number; toString: () => string };
   }>;
@@ -110,7 +112,10 @@ function drawQuoteBlock(doc: PDFKit.PDFDocument, quote: QuoteForPdf) {
     for (const item of quote.items) {
       ensureSpace(doc, 36);
       const y = doc.y;
-      const unitLabel = item.orderByUnit ? "unid." : "kg";
+      const unitLabel = quoteLineMeasureLabel(
+        item.orderByUnit === true,
+        item.allowsUnitOrder === true,
+      );
       const nameText = item.orderByUnit
         ? `${item.productName}\n(${UNIT_ORDER_PRICE_WARNING})`
         : item.productName;

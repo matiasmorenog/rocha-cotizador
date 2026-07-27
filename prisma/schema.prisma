@@ -93,6 +93,7 @@ model Product {
   rubro           String?
   basePrice       Decimal         @db.Decimal(12, 2)
   /// When true, customer may order by unit count (price TBD after weigh) or by kg.
+  /// When false, customer orders by fixed-price quantity (unidades).
   allowsUnitOrder Boolean         @default(false)
   active          Boolean         @default(true)
   createdAt       DateTime        @default(now())

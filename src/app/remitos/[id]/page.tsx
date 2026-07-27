@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
+import { quoteLineMeasureLabel } from "@/lib/order-measure";
 import { formatPrice, formatQty } from "@/lib/utils";
 import {
   buildQuoteWhatsAppMessage,
@@ -53,6 +54,20 @@ export default async function RemitoDetailPage({
     },
   });
   if (!quote) notFound();
+
+  const productIds = quote.items
+    .map((item) => item.productId)
+    .filter((id): id is string => Boolean(id));
+  const products =
+    productIds.length > 0
+      ? await db.product.findMany({
+          where: { id: { in: productIds } },
+          select: { id: true, allowsUnitOrder: true },
+        })
+      : [];
+  const allowsUnitOrderByProductId = new Map(
+    products.map((p) => [p.id, p.allowsUnitOrder]),
+  );
 
   if (
     session.user.role === "CUSTOMER" &&
@@ -141,13 +156,17 @@ export default async function RemitoDetailPage({
               </tr>
             </thead>
             <tbody>
-              {quote.items.map((item) => (
+              {quote.items.map((item) => {
+                const allowsUnitOrder = item.productId
+                  ? (allowsUnitOrderByProductId.get(item.productId) ?? false)
+                  : false;
+                return (
                 <tr key={item.id} className="border-b border-neutral-100">
                   <td className="py-2 pr-2 font-mono text-xs">{item.productCode}</td>
                   <td className="py-2 pr-2">
                     {formatQty(item.qty)}{" "}
                     <span className="text-neutral-500">
-                      {item.orderByUnit ? "unid." : "kg"}
+                      {quoteLineMeasureLabel(item.orderByUnit, allowsUnitOrder)}
                     </span>
                   </td>
                   <td className="py-2 pr-2">
@@ -165,7 +184,8 @@ export default async function RemitoDetailPage({
                     {formatPrice(item.lineTotal)}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </DataTableScroll>

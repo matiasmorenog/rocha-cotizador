@@ -1,6 +1,7 @@
 /**
  * Product codes from Excel LPM (yellow fill on col A) that allow order by
  * unit count OR kg. Price for unit orders is confirmed after weighing.
+ * All other products are sold by fixed-price quantity (cantidad), not kg.
  */
 export const UNIT_ORDER_PRODUCT_CODES = [
   "0001",
