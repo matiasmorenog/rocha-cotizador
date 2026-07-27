@@ -278,15 +278,12 @@ export function QuotesAdminPanel({
               : null}
 
             {afterCutoff.length > 0 && main.length > 0 ? (
-              <tr
-                aria-hidden
-                className="pointer-events-none"
-              >
+              <tr aria-hidden className="pointer-events-none">
                 <td
                   colSpan={6}
-                  className="border-y-2 border-amber-300/90 bg-amber-100/70 p-0"
+                  className="border-0 p-0"
                 >
-                  <div className="h-1.5 w-full bg-amber-200/80" />
+                  <div className="h-0.5 w-full bg-amber-300" />
                 </td>
               </tr>
             ) : null}
