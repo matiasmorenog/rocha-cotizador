@@ -2,8 +2,7 @@ import Link from "next/link";
 import { requireCustomerSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import {
-  formatDeliveryDateDisplay,
-  resolveDeliveryDate,
+  formatDeliveryDateLabel,
 } from "@/lib/delivery-date";
 import { formatPrice } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -56,8 +55,8 @@ export default async function RemitosPage() {
                   <td className="px-3 py-2">
                     {q.createdAt.toLocaleString("es-AR")}
                   </td>
-                  <td className="px-3 py-2">
-                    {formatDeliveryDateDisplay(resolveDeliveryDate(q))}
+                  <td className="px-3 py-2 text-neutral-700">
+                    {formatDeliveryDateLabel(q.deliveryDate)}
                   </td>
                   <td className="px-3 py-2">
                     <Badge variant="success">{quoteStatusLabel(q.status)}</Badge>

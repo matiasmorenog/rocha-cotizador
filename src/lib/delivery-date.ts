@@ -89,14 +89,46 @@ export function formatDeliveryDateDisplay(date: Date): string {
 }
 
 /**
+ * List/UI label: formatted date, or "Sin fecha" for legacy nulls (pre-deliveryDate).
+ */
+export function formatDeliveryDateLabel(
+  deliveryDate: Date | string | null | undefined,
+): string {
+  if (deliveryDate == null || deliveryDate === "") return "Sin fecha";
+  if (deliveryDate instanceof Date) {
+    if (Number.isNaN(deliveryDate.getTime())) return "Sin fecha";
+    return formatDeliveryDateDisplay(deliveryDate);
+  }
+  const parsed =
+    deliveryDate.length === 10
+      ? parseDateOnlyYmd(deliveryDate)
+      : new Date(deliveryDate);
+  if (!parsed || Number.isNaN(parsed.getTime())) return "Sin fecha";
+  return formatDeliveryDateDisplay(parsed);
+}
+
+/**
  * Resolve stored delivery date, or infer default from `createdAt` for legacy rows.
+ * Prefer `formatDeliveryDateLabel` in UI lists (honest "Sin fecha"); use this for
+ * ops that need a concrete day (e.g. optional backfill).
  */
 export function resolveDeliveryDate(quote: {
-  deliveryDate: Date | null;
-  createdAt: Date;
+  deliveryDate: Date | string | null | undefined;
+  createdAt: Date | string;
 }): Date {
-  if (quote.deliveryDate) return quote.deliveryDate;
-  return parseDateOnlyYmd(earliestDeliveryDateYmd(quote.createdAt))!;
+  if (quote.deliveryDate) {
+    if (quote.deliveryDate instanceof Date) return quote.deliveryDate;
+    const parsed =
+      quote.deliveryDate.length === 10
+        ? parseDateOnlyYmd(quote.deliveryDate)
+        : new Date(quote.deliveryDate);
+    if (parsed && !Number.isNaN(parsed.getTime())) return parsed;
+  }
+  const createdAt =
+    quote.createdAt instanceof Date
+      ? quote.createdAt
+      : new Date(quote.createdAt);
+  return parseDateOnlyYmd(earliestDeliveryDateYmd(createdAt))!;
 }
 
 /**

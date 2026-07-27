@@ -7,6 +7,7 @@ import { DataTableScroll } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { ARGENTINA_TZ } from "@/lib/argentina-time";
+import { formatDeliveryDateLabel } from "@/lib/delivery-date";
 import { quoteStatusLabel } from "@/lib/quote-status";
 import { formatPrice } from "@/lib/utils";
 
@@ -16,7 +17,7 @@ export type QuoteListRow = {
   status: string;
   total: number;
   createdAt: string;
-  /** ISO date `YYYY-MM-DD` or full ISO; display as calendar day. */
+  /** `YYYY-MM-DD` when set; null = legacy quote before deliveryDate. */
   deliveryDate: string | null;
   customer: { code: string; name: string };
 };
@@ -192,14 +193,8 @@ export function QuotesAdminPanel({
                     timeZone: ARGENTINA_TZ,
                   })}
                 </td>
-                <td className="px-3 py-2">
-                  {qrow.deliveryDate
-                    ? new Date(
-                        qrow.deliveryDate.length === 10
-                          ? `${qrow.deliveryDate}T12:00:00.000Z`
-                          : qrow.deliveryDate,
-                      ).toLocaleDateString("es-AR", { timeZone: "UTC" })
-                    : "—"}
+                <td className="px-3 py-2 text-neutral-700">
+                  {formatDeliveryDateLabel(qrow.deliveryDate)}
                 </td>
                 <td className="px-3 py-2">
                   <Badge variant="success">

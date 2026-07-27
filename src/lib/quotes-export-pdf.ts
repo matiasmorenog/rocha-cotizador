@@ -1,6 +1,6 @@
 import PDFDocument from "pdfkit";
 import { formatArgentinaDateTime } from "@/lib/argentina-time";
-import { formatDeliveryDateDisplay } from "@/lib/delivery-date";
+import { formatDeliveryDateLabel } from "@/lib/delivery-date";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import { quoteLineMeasureLabel } from "@/lib/order-measure";
 import { formatPrice, formatQty } from "@/lib/utils";
@@ -89,17 +89,15 @@ function drawQuoteBlock(doc: PDFKit.PDFDocument, quote: QuoteForPdf) {
     .fillColor("#525252")
     .text(formatArgentinaDateTime(quote.createdAt), MARGIN, doc.y + 2);
 
-  if (quote.deliveryDate) {
-    doc
-      .font("Helvetica")
-      .fontSize(9)
-      .fillColor("#171717")
-      .text(
-        `Entrega: ${formatDeliveryDateDisplay(quote.deliveryDate)}`,
-        MARGIN,
-        doc.y + 2,
-      );
-  }
+  doc
+    .font("Helvetica")
+    .fontSize(9)
+    .fillColor("#171717")
+    .text(
+      `Entrega: ${formatDeliveryDateLabel(quote.deliveryDate)}`,
+      MARGIN,
+      doc.y + 2,
+    );
 
   doc
     .font("Helvetica-Bold")
