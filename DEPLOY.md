@@ -23,6 +23,31 @@ Solo **dos** branches Neon. Preview **no** crea branch Neon por deploy.
 
 **Vercel Preview ≡ Development:** mismas variables (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, …) y mismo Neon `development`. **Production** aislado (Neon `main` + secrets propios). No copiar Production → Preview/Development.
 
+### Schema drift / wrong DB (léelo antes de un release)
+
+**Local DB ≠ production.** Son dos bases Neon distintas.
+
+| Dónde | Neon branch | Cómo lo reconocés (host prefix) |
+|-------|-------------|----------------------------------|
+| Local `.env` `DATABASE_URL` | **development** | `ep-noisy-darkness…` (direct, sin `-pooler`) |
+| Vercel Preview / Development | **development** | `ep-noisy-darkness…-pooler…` |
+| Vercel **Production** | **main** | `ep-cool-mud…-pooler…` |
+
+- `npx prisma db push` con tu `.env` local **solo** actualiza Neon **development**. **No** toca producción.
+- Si el release cambia `prisma/schema.prisma`, **antes** del merge a `main` hacé `db push` contra Neon **main** con la URL **direct** de Production (dashboard Neon / `vercel env pull --environment=production`), **no** el pooler y **no** el `.env` local.
+- Ejemplo (password en dashboard; no commitear):
+
+```bash
+# WRONG — local .env = development only
+npx prisma db push
+
+# RIGHT — Neon main direct (host ep-cool-mud… without -pooler)
+DATABASE_URL="postgresql://…@ep-cool-mud-….us-west-2.aws.neon.tech/neondb?sslmode=require" npx prisma db push
+DATABASE_URL="…" npm run db:check-sync
+```
+
+Outage histórico: código en prod pedía `User.inAppNotificationsEnabled` / tablas nuevas; Neon `main` sin la columna → Auth Configuration → login admin fallaba como “password incorrecta”. Gates: pre-deploy `scripts/check-schema-sync.sh` + `GET /api/health` (ver [`docs/ci.md`](docs/ci.md)).
+
 Hosts (password en dashboard / `vercel env`; no commitear):
 
 | Uso | Host |
@@ -30,6 +55,7 @@ Hosts (password en dashboard / `vercel env`; no commitear):
 | Preview + Vercel Development (pooled) | `ep-noisy-darkness-a6ms81wq-pooler.us-west-2.aws.neon.tech` |
 | Local / `db push` (direct) | `ep-noisy-darkness-a6ms81wq.us-west-2.aws.neon.tech` |
 | Production (pooled) | `ep-cool-mud-a6k5vosf-pooler.us-west-2.aws.neon.tech` |
+| Production `db push` (direct) | `ep-cool-mud-a6k5vosf.us-west-2.aws.neon.tech` (sin `-pooler`) |
 
 ## Variables
 
@@ -85,17 +111,22 @@ Dashboard admin serializa queries en `$transaction` (no `Promise.all` de 4 count
 | Tag | Qué cachea | Invalidar |
 |-----|------------|-----------|
 | `products` | Catálogo base activos (`basePrice`, sin `unitPrice`) | Admin producto create/update + import Excel |
-| `admin-dashboard` | Counts + últimas cotizaciones (TTL ~120s) | Quote create; también product/customer mutate |
+| `price-lists` | Precios por lista | Price list mutate; product import |
+| `customers` | Mapping customerId → priceListId | Customer mutate; price list delete |
+| `admin-dashboard` | Counts + últimas cotizaciones (TTL 1h) | Quote create/wipe; product/customer mutate |
 
-Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateAfterCustomerMutation`, `invalidateAfterQuoteCreate`).
+Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateAfterCustomerMutation`, `invalidateAfterQuoteCreate`, `invalidateAllDataCaches`, `invalidateAfterDbScript`).
+
+Ops / wipe / scripts out-of-band: `POST /api/revalidate` con `REVALIDATE_SECRET` + `AUTH_URL` → `invalidateAfterDbScript` (todas las tags + paths admin/remitos). Obligatorio tras cualquier mutación DB fuera de la app.
 
 Build command (Vercel): `npm run build` → `prisma generate && next build` (`postinstall` también corre `prisma generate`). `binaryTargets` in `schema.prisma` must include `rhel-openssl-3.0.x` so the client works on Vercel when CI generates on Debian.
 
 ### CI → producción (gate)
 
 - Auto-deploy Vercel en **`main` está OFF** (`vercel.json`).
-- Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production**.
+- Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production** (incluye **pre-deploy schema sync** + **post-deploy `/api/health`**).
 - Secrets en GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (ver [`docs/ci.md`](docs/ci.md)).
+- Opcional pero recomendado: `DATABASE_URL_PRODUCTION` (Neon `main`, preferible URL **direct**) para el gate de schema sin depender solo de `vercel pull`.
 
 Previews de `development` / PRs siguen con el deploy automático de Vercel.
 
@@ -152,15 +183,22 @@ Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1
 - [ ] VAPID Web Push en Vercel (Production + Preview/Development) + admin activó notificaciones en `/admin/configuracion`
 - [ ] `prisma db push` en Neon `main` incluye tabla `PushSubscription` (si el release trae ese modelo)
 
+### Release (cada PR `development` → `main` con cambios de schema)
+
+- [ ] `prisma db push` en Neon **main** (URL Production **direct** `ep-cool-mud…`, **no** local `.env` / `ep-noisy-darkness…`)
+- [ ] `DATABASE_URL=<neon-main-direct> npm run db:check-sync` verde
+- [ ] Checklist del PR template (sección Release) completa
+
 ### CI / deploy
 
-- [ ] Secrets GitHub `VERCEL_*` cargados
+- [ ] Secrets GitHub `VERCEL_*` cargados (+ opcional `DATABASE_URL_PRODUCTION`)
 - [ ] Merge a `development` solo con `lint-and-typecheck` verde
-- [ ] Release: PR `development` → `main`; esperar job `deploy-production` verde
-- [ ] Smoke en https://rocha-cotizador.vercel.app tras el release
+- [ ] Release: PR `development` → `main`; esperar job `deploy-production` verde (schema gate + health)
+- [ ] Smoke en https://rocha-cotizador.vercel.app tras el release — `GET /api/health` → `{ "ok": true }`
 
 ### Smoke test producción
 
+- [ ] `GET https://rocha-cotizador.vercel.app/api/health` → 200
 - [ ] Login admin + cliente
 - [ ] Cotizar → observaciones → confirmar → remito
 - [ ] Link remito sin sesión → `/entrar` → admin ve remito

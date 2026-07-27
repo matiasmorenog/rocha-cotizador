@@ -16,6 +16,8 @@ import { PrintButton } from "@/components/quote/print-button";
 import { WhatsAppNotifyButton } from "@/components/quote/whatsapp-notify-button";
 import { DataTableScroll } from "@/components/ui/data-table";
 
+export const dynamic = "force-dynamic";
+
 export default async function RemitoDetailPage({
   params,
   searchParams,

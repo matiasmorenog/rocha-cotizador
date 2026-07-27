@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { quoteStatusLabel } from "@/lib/quote-status";
 import { DataTableScroll } from "@/components/ui/data-table";
 
+/** Always hit DB — never serve a statically cached remitos list after deletes/wipes. */
+export const dynamic = "force-dynamic";
+
 export default async function RemitosPage() {
   const session = await requireCustomerSession();
   const quotes = await db.quote.findMany({

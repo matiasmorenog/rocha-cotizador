@@ -3,6 +3,9 @@ import { db } from "@/lib/db";
 import { QuotesAdminPanel } from "@/components/admin/quotes-admin-panel";
 import { resolveQuotesExportRange } from "@/lib/argentina-time";
 
+/** Always hit DB — quote lists must reflect deletes/wipes immediately. */
+export const dynamic = "force-dynamic";
+
 export default async function AdminCotizacionesPage({
   searchParams,
 }: {

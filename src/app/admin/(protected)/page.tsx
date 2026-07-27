@@ -2,6 +2,9 @@ import Link from "next/link";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
 import { formatPrice } from "@/lib/utils";
 
+/** Dynamic shell; dashboard payload uses tagged Data Cache (TTL 1h, bust on quote create / wipe). */
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboardPage() {
   const { customers, products, quotesToday, recent } = await getAdminDashboardData();
 

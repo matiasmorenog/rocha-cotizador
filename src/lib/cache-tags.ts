@@ -1,4 +1,4 @@
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 /** Shared cache tags — never put per-customer unitPrice or auth under these. */
 export const CACHE_TAGS = {
@@ -33,6 +33,28 @@ export function invalidateAdminDashboardCache() {
   expireTag(CACHE_TAGS.adminDashboard);
 }
 
+/**
+ * Expire every shared Data Cache tag (products, price-lists, customers,
+ * admin-dashboard). Used by wipe / DB scripts via POST /api/revalidate.
+ */
+export function invalidateAllDataCaches() {
+  for (const tag of Object.values(CACHE_TAGS)) {
+    expireTag(tag);
+  }
+}
+
+/**
+ * Ops / wipe / DB scripts: bust all tagged Data Cache + admin/remitos list paths.
+ * Prefer HTTP POST /api/revalidate from scripts (out-of-process). Call in-process
+ * only when the script runs inside the Next.js runtime.
+ */
+export function invalidateAfterDbScript() {
+  invalidateAllDataCaches();
+  revalidatePath("/admin");
+  revalidatePath("/admin/cotizaciones");
+  revalidatePath("/remitos");
+}
+
 /** Product create/update/import — catalog + dashboard counts. */
 export function invalidateAfterProductMutation() {
   invalidateProductsCache();
@@ -53,7 +75,15 @@ export function invalidateAfterCustomerMutation() {
   invalidateAdminDashboardCache();
 }
 
-/** Quote create — dashboard “today” + recent list. */
+/** Quote create — expire dashboard Data Cache + refresh list routes. */
 export function invalidateAfterQuoteCreate() {
   invalidateAdminDashboardCache();
+  revalidatePath("/admin");
+  revalidatePath("/admin/cotizaciones");
+  revalidatePath("/remitos");
+}
+
+/** Quote wipe / bulk delete — dashboard tag + list paths (in-app). */
+export function invalidateAfterQuoteWipe() {
+  invalidateAfterQuoteCreate();
 }
