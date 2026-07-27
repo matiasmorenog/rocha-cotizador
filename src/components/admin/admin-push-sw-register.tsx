@@ -23,6 +23,7 @@ type InboxItem = {
 const POLL_MS = 8_000;
 const TOAST_TTL_MS = 6_000;
 const MAX_TOASTS = 4;
+const DEDUPE_MS = 8_000;
 const SEEN_KEY = "rocha-admin-inbox-seen";
 
 function loadSeenIds(): Set<string> {
@@ -46,6 +47,10 @@ function saveSeenIds(ids: Set<string>) {
   }
 }
 
+function fingerprint(title: string, body: string, url: string): string {
+  return `${title}\0${body}\0${url}`;
+}
+
 /**
  * Safe path: poll AdminInbox while any `/admin` tab is open.
  * Optional: SW BroadcastChannel when Web Push arrives in this browser.
@@ -58,6 +63,8 @@ export function AdminPushSwRegister() {
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map(),
   );
+  /** Recent fingerprints → timestamp; blocks double emit (Probar+poll, BC+postMessage). */
+  const recentFpRef = useRef<Map<string, number>>(new Map());
 
   function dismiss(id: string) {
     const timer = timersRef.current.get(id);
@@ -68,10 +75,30 @@ export function AdminPushSwRegister() {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }
 
+  function markInboxSeen(inboxId: string, createdAt?: string) {
+    seenRef.current.add(inboxId);
+    saveSeenIds(seenRef.current);
+    if (createdAt && createdAt > sinceRef.current) {
+      sinceRef.current = createdAt;
+    }
+  }
+
   function pushToast(next: Omit<AdminToastItem, "id"> & { id?: string }) {
     const id =
       next.id ??
       `toast-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const fp = fingerprint(next.title, next.body, next.url);
+    const now = Date.now();
+    for (const [key, at] of recentFpRef.current) {
+      if (now - at > DEDUPE_MS) recentFpRef.current.delete(key);
+    }
+    const lastAt = recentFpRef.current.get(fp);
+    if (lastAt !== undefined && now - lastAt < DEDUPE_MS) {
+      console.log("[push] toast deduped", { id, fp: next.title });
+      return;
+    }
+    recentFpRef.current.set(fp, now);
+
     console.log("[push] in-app toast", { id, ...next });
     setToasts((prev) => {
       const withoutDup = prev.filter((t) => t.id !== id);
@@ -108,6 +135,7 @@ export function AdminPushSwRegister() {
       const body = typeof msg.body === "string" ? msg.body : "";
       const url =
         typeof msg.url === "string" ? msg.url : "/admin/cotizaciones";
+      // Same SW push arrives via BroadcastChannel AND clients.postMessage.
       pushToast({ title, body, url, tone: "info", source: "push" });
     }
 
@@ -127,7 +155,15 @@ export function AdminPushSwRegister() {
     function onCustomToast(event: Event) {
       const detail = (event as CustomEvent<AdminInAppToastDetail>).detail;
       if (!detail?.title) return;
+      const inboxId =
+        typeof detail.inboxId === "string" && detail.inboxId
+          ? detail.inboxId
+          : null;
+      if (inboxId) {
+        markInboxSeen(inboxId);
+      }
       pushToast({
+        id: inboxId ? `inbox-${inboxId}` : undefined,
         title: detail.title,
         body: detail.body ?? "",
         url: detail.url ?? "/admin/configuracion",

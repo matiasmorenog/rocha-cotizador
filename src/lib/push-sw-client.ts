@@ -10,6 +10,8 @@ export type AdminInAppToastDetail = {
   body: string;
   url?: string;
   tone?: "info" | "success" | "error";
+  /** When set, toast id = inbox-{id} and poll skips this row. */
+  inboxId?: string;
 };
 
 /** Show an admin corner toast even if macOS/Chrome hides OS notifications. */

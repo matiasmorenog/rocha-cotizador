@@ -355,6 +355,7 @@ export function PushNotificationsSettings() {
       }
 
       const item = inboxData.item as {
+        id: string;
         title: string;
         body: string;
         url: string;
@@ -364,6 +365,7 @@ export function PushNotificationsSettings() {
         body: item.body,
         url: item.url,
         tone: "success",
+        inboxId: item.id,
       });
       steps.push({
         label: "1) Avisos en la app (camino seguro)",
