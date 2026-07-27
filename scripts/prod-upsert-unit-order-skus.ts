@@ -8,6 +8,9 @@
  *   CONFIRM_PROD_BACKFILL=1
  *   DATABASE_URL = Neon main direct (ep-cool-mud, no -pooler)
  *
+ * After run: POST /api/revalidate (REVALIDATE_SECRET + AUTH_URL) so Vercel
+ * Data Cache expires all tags — see invalidateAfterDbScript.
+ *
  * Usage:
  *   CONFIRM_PROD_BACKFILL=1 DATABASE_URL='postgresql://…@ep-cool-mud-….neon.tech/neondb?sslmode=require' \
  *     npx tsx scripts/prod-upsert-unit-order-skus.ts
