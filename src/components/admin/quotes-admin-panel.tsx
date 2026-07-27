@@ -161,8 +161,8 @@ export function QuotesAdminPanel({
             </p>
             <p className="text-xs text-neutral-500">
               Por defecto: ayer {ORDER_CUTOFF_HOUR_AR}:00 → ahora (hora
-              Argentina). Las ingresadas después del cierre del día se listan
-              al final, bajo una fila expansible.
+              Argentina). Las ingresadas después del cierre van arriba, en una
+              fila expansible (orden más reciente primero).
             </p>
           </div>
 
@@ -243,10 +243,6 @@ export function QuotesAdminPanel({
             </tr>
           </thead>
           <tbody>
-            {main.map((qrow) => (
-              <QuoteDataRow key={qrow.id} qrow={qrow} />
-            ))}
-
             {afterCutoff.length > 0 ? (
               <tr className="border-t border-amber-200/80 bg-amber-50/50">
                 <td colSpan={6} className="px-3 py-0">
@@ -280,6 +276,10 @@ export function QuotesAdminPanel({
                   <QuoteDataRow key={qrow.id} qrow={qrow} muted />
                 ))
               : null}
+
+            {main.map((qrow) => (
+              <QuoteDataRow key={qrow.id} qrow={qrow} />
+            ))}
 
             {showEmpty ? (
               <tr>
