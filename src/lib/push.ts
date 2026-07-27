@@ -52,18 +52,24 @@ type StoredSub = {
   auth: string;
 };
 
+export type PushSendResult = {
+  ok: number;
+  total: number;
+  staleRemoved: number;
+};
+
 async function sendToSubscriptions(
   subscriptions: StoredSub[],
   payload: PushPayload,
   logLabel: string,
-): Promise<{ ok: number; total: number }> {
+): Promise<PushSendResult> {
   if (!configureWebPush()) {
     console.warn("[push] VAPID env missing; skip", logLabel);
-    return { ok: 0, total: 0 };
+    return { ok: 0, total: 0, staleRemoved: 0 };
   }
   if (subscriptions.length === 0) {
     console.warn("[push] no subscriptions; skip", logLabel);
-    return { ok: 0, total: 0 };
+    return { ok: 0, total: 0, staleRemoved: 0 };
   }
 
   const body = JSON.stringify(payload);
@@ -99,7 +105,7 @@ async function sendToSubscriptions(
           res.statusCode,
           logLabel,
         );
-        return true;
+        return { ok: true as const, stale: false };
       } catch (err: unknown) {
         const statusCode =
           err && typeof err === "object" && "statusCode" in err
@@ -110,17 +116,18 @@ async function sendToSubscriptions(
           await db.pushSubscription
             .delete({ where: { endpoint: sub.endpoint } })
             .catch(() => undefined);
-          return false;
+          return { ok: false as const, stale: true };
         }
         console.error("[push] send failed", host, err);
-        return false;
+        return { ok: false as const, stale: false };
       }
     }),
   );
 
-  const ok = results.filter(Boolean).length;
+  const ok = results.filter((r) => r.ok).length;
+  const staleRemoved = results.filter((r) => r.stale).length;
   console.info("[push] done", logLabel, "ok", ok, "/", results.length);
-  return { ok, total: results.length };
+  return { ok, total: results.length, staleRemoved };
 }
 
 /**
@@ -155,7 +162,7 @@ export async function notifyAdminsNewQuote(
 export async function sendTestPushToAdmin(opts: {
   userId: string;
   endpoint?: string;
-}): Promise<{ ok: number; total: number }> {
+}): Promise<PushSendResult> {
   const subscriptions = await db.pushSubscription.findMany({
     where: {
       userId: opts.userId,

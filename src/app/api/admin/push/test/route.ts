@@ -27,20 +27,42 @@ export async function POST(req: NextRequest) {
   if (result.total === 0) {
     return NextResponse.json(
       {
+        ok: false,
+        needResub: true,
+        sent: 0,
+        total: 0,
+        staleRemoved: 0,
         error:
           "No hay suscripción guardada para este admin. Activá avisos primero.",
-        ...result,
       },
       { status: 404 },
     );
   }
 
+  if (result.ok === 0) {
+    const stale = result.staleRemoved > 0;
+    return NextResponse.json(
+      {
+        ok: false,
+        needResub: true,
+        sent: 0,
+        total: result.total,
+        staleRemoved: result.staleRemoved,
+        error: stale
+          ? "Suscripción expirada — Activá avisos de nuevo"
+          : "FCM/web-push falló para todas las suscripciones.",
+      },
+      { status: stale ? 410 : 502 },
+    );
+  }
+
   return NextResponse.json({
-    ...result,
-    ok: result.ok > 0,
+    ok: true,
+    needResub: false,
+    sent: result.ok,
+    total: result.total,
+    staleRemoved: result.staleRemoved,
     message:
-      result.ok > 0
-        ? "Push enviado. Si no ves toast OS, mirá consola del service worker."
-        : "FCM/web-push falló para todas las suscripciones.",
+      "Push enviado. Si no ves toast OS, mirá consola del service worker.",
   });
 }

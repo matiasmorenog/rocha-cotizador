@@ -18,6 +18,17 @@ type Status =
   | "unsubscribed"
   | "error";
 
+type TestApiResult = {
+  ok: boolean;
+  needResub?: boolean;
+  error?: string;
+  message?: string;
+  sent?: number;
+  total?: number;
+  staleRemoved?: number;
+  status: number;
+};
+
 function urlBase64ToUint8Array(base64String: string): BufferSource {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
@@ -25,6 +36,109 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
   const out = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
   return out;
+}
+
+async function fetchVapidPublicKey(): Promise<
+  { publicKey: string } | { error: string; noVapid?: boolean }
+> {
+  const keyRes = await fetch("/api/admin/push/vapid-public-key");
+  const keyData = await keyRes.json().catch(() => ({}));
+  if (!keyRes.ok || !keyData.publicKey) {
+    return {
+      error: keyData.error ?? "VAPID no configurado en el servidor",
+      noVapid: true,
+    };
+  }
+  return { publicKey: keyData.publicKey as string };
+}
+
+/** Drop browser + DB sub, reset SW, subscribe fresh, POST to server. */
+async function subscribeFresh(publicKey: string): Promise<PushSubscription> {
+  const existingReg = await navigator.serviceWorker.getRegistration("/");
+  const existing = existingReg
+    ? await existingReg.pushManager.getSubscription()
+    : null;
+  if (existing) {
+    try {
+      await fetch("/api/admin/push/subscribe", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: existing.endpoint }),
+      });
+    } catch {
+      // continue — local unsubscribe still needed
+    }
+    await existing.unsubscribe().catch(() => undefined);
+  }
+
+  const reg = await resetServiceWorker();
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(publicKey),
+  });
+
+  const json = sub.toJSON();
+  if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+    throw new Error("El navegador no devolvió una suscripción válida.");
+  }
+
+  const res = await fetch("/api/admin/push/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      endpoint: json.endpoint,
+      keys: json.keys,
+      userAgent: navigator.userAgent,
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error ?? "No se pudo guardar la suscripción");
+  }
+  return sub;
+}
+
+async function postPushTest(endpoint: string): Promise<TestApiResult> {
+  const res = await fetch("/api/admin/push/test", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ endpoint }),
+  });
+  const data = await res.json().catch(() => ({}));
+  return {
+    ok: Boolean(res.ok && data.ok === true),
+    needResub:
+      Boolean(data.needResub) || res.status === 410 || res.status === 404,
+    error: typeof data.error === "string" ? data.error : undefined,
+    message: typeof data.message === "string" ? data.message : undefined,
+    sent: typeof data.sent === "number" ? data.sent : undefined,
+    total: typeof data.total === "number" ? data.total : undefined,
+    staleRemoved:
+      typeof data.staleRemoved === "number" ? data.staleRemoved : undefined,
+    status: res.status,
+  };
+}
+
+/**
+ * Send test push. On failure, refresh VAPID subscription once and retry.
+ */
+async function testPushWithResubRetry(
+  publicKey: string,
+): Promise<{ result: TestApiResult; didResub: boolean }> {
+  const reg = await ensureFreshServiceWorker();
+  let sub = await reg.pushManager.getSubscription();
+  if (!sub) {
+    sub = await subscribeFresh(publicKey);
+    const result = await postPushTest(sub.endpoint);
+    return { result, didResub: true };
+  }
+
+  let result = await postPushTest(sub.endpoint);
+  if (result.ok) return { result, didResub: false };
+
+  sub = await subscribeFresh(publicKey);
+  result = await postPushTest(sub.endpoint);
+  return { result, didResub: true };
 }
 
 type InAppPush = { title: string; body: string; url: string };
@@ -123,11 +237,10 @@ export function PushNotificationsSettings() {
         return;
       }
 
-      const keyRes = await fetch("/api/admin/push/vapid-public-key");
-      const keyData = await keyRes.json().catch(() => ({}));
-      if (!keyRes.ok || !keyData.publicKey) {
-        setStatus("no-vapid");
-        setError(keyData.error ?? "VAPID no configurado en el servidor");
+      const key = await fetchVapidPublicKey();
+      if ("error" in key) {
+        if (key.noVapid) setStatus("no-vapid");
+        setError(key.error);
         return;
       }
 
@@ -139,57 +252,25 @@ export function PushNotificationsSettings() {
         return;
       }
 
-      // Hard reset SW so push always hits current `/sw.js`, then resubscribe.
-      const existingReg = await navigator.serviceWorker.getRegistration("/");
-      const existing = existingReg
-        ? await existingReg.pushManager.getSubscription()
-        : null;
-      if (existing) {
-        try {
-          await fetch("/api/admin/push/subscribe", {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ endpoint: existing.endpoint }),
-          });
-        } catch {
-          // continue — local unsubscribe still needed
-        }
-        await existing.unsubscribe().catch(() => undefined);
-      }
+      await subscribeFresh(key.publicKey);
 
-      const reg = await resetServiceWorker();
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          keyData.publicKey as string,
-        ),
-      });
-
-      const json = sub.toJSON();
-      if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
-        setError("El navegador no devolvió una suscripción válida.");
-        setStatus("error");
-        return;
-      }
-
-      const res = await fetch("/api/admin/push/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          endpoint: json.endpoint,
-          keys: json.keys,
-          userAgent: navigator.userAgent,
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo guardar la suscripción");
-        setStatus("error");
+      // Silent verify — if FCM already stale/mismatch, resub once and retest.
+      const { result, didResub } = await testPushWithResubRetry(key.publicKey);
+      if (!result.ok) {
+        setStatus("unsubscribed");
+        setError(
+          result.error ??
+            "Suscripción expirada — Activá avisos de nuevo",
+        );
         return;
       }
 
       setStatus("subscribed");
-      setMessage("Avisos del navegador activados.");
+      setMessage(
+        didResub
+          ? "Avisos activados (suscripción renovada y verificada)."
+          : "Avisos del navegador activados y verificados.",
+      );
     } catch (err) {
       console.error(err);
       const detail =
@@ -272,33 +353,38 @@ export function PushNotificationsSettings() {
         return;
       }
 
-      // 2) Ensure SW + current endpoint, then server push to self.
-      const reg = await ensureFreshServiceWorker();
-      const sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        lines.push(
-          "2) Push: no hay suscripción local. Activá avisos y reintentá.",
-        );
-        setMessage(lines.join(" "));
+      const key = await fetchVapidPublicKey();
+      if ("error" in key) {
+        if (key.noVapid) setStatus("no-vapid");
+        lines.push(`2) Push: ${key.error}`);
+        setError(lines.join(" "));
         return;
       }
 
-      const res = await fetch("/api/admin/push/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ endpoint: sub.endpoint }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) {
+      const { result, didResub } = await testPushWithResubRetry(key.publicKey);
+
+      if (!result.ok) {
+        setStatus("unsubscribed");
         lines.push(
-          `2) Push API: FALLÓ (${data.error ?? res.status}). Mirá logs server.`,
+          `2) Push API: FALLÓ (${result.error ?? result.status}). ${
+            result.needResub
+              ? "Suscripción expirada — Activá avisos de nuevo."
+              : "Mirá logs server."
+          }`,
         );
         setError(lines.join(" "));
         return;
       }
 
+      setStatus("subscribed");
+      const sent =
+        result.sent != null && result.total != null
+          ? `${result.sent}/${result.total}`
+          : "ok";
       lines.push(
-        `2) Push API: enviado (${data.ok}/${data.total}). Esperá toast SW; si no, Application → Service Workers → console.`,
+        didResub
+          ? `2) Push API: suscripción renovada, enviado (${sent}). Esperá toast SW.`
+          : `2) Push API: enviado (${sent}). Esperá toast SW; si no, Application → Service Workers → console.`,
       );
       setMessage(lines.join(" "));
     } catch (err) {
