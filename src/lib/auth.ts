@@ -45,37 +45,52 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = String(credentials?.password ?? "");
         if (!email || !password) return null;
 
-        const user = await db.user.findUnique({ where: { email } });
-        if (!user?.passwordHash || user.role !== "ADMIN") return null;
+        try {
+          // Explicit select — omit newer columns so schema drift (e.g. missing
+          // inAppNotificationsEnabled on Neon main) cannot throw and surface as
+          // Auth.js "Configuration" (UI shows as wrong email/password).
+          const user = await db.user.findUnique({
+            where: { email },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              passwordHash: true,
+              role: true,
+            },
+          });
+          if (!user?.passwordHash || user.role !== "ADMIN") return null;
 
-        const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
+          const valid = await bcrypt.compare(password, user.passwordHash);
+          if (!valid) return null;
 
-        // Prefer column from findUnique; raw fallback if PrismaClient is stale
-        // after schema push (field missing on in-memory client).
-        let inAppNotificationsEnabled = user.inAppNotificationsEnabled;
-        if (typeof inAppNotificationsEnabled !== "boolean") {
-          const rows = await db.$queryRaw<
-            Array<{ inAppNotificationsEnabled: boolean }>
-          >`
-            SELECT "inAppNotificationsEnabled"
-            FROM "User"
-            WHERE id = ${user.id}
-          `;
-          inAppNotificationsEnabled =
-            rows[0]?.inAppNotificationsEnabled ?? true;
+          let inAppNotificationsEnabled = true;
+          try {
+            const pref = await db.user.findUnique({
+              where: { id: user.id },
+              select: { inAppNotificationsEnabled: true },
+            });
+            if (typeof pref?.inAppNotificationsEnabled === "boolean") {
+              inAppNotificationsEnabled = pref.inAppNotificationsEnabled;
+            }
+          } catch {
+            // Column/client drift — keep default true; login must still succeed.
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: "ADMIN" as const,
+            customerId: null,
+            customerCode: null,
+            mustChangePassword: false,
+            inAppNotificationsEnabled,
+          };
+        } catch (err) {
+          console.error("[auth] admin authorize failed", err);
+          return null;
         }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: "ADMIN" as const,
-          customerId: null,
-          customerCode: null,
-          mustChangePassword: false,
-          inAppNotificationsEnabled,
-        };
       },
     }),
     Credentials({

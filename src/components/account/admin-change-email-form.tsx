@@ -2,6 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { ChangeEmailForm } from "@/components/account/change-email-form";
+import { saveLastAdminEmail } from "@/lib/last-login";
 
 type Props = {
   currentEmail: string;
@@ -22,6 +23,7 @@ export function AdminChangeEmailForm({ currentEmail }: Props) {
             "Se guardó en el servidor pero la sesión no se actualizó. Recargá la página.",
           );
         }
+        saveLastAdminEmail(email);
       }}
     />
   );
