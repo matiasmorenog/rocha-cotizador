@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  ensureFreshServiceWorker,
+  resetServiceWorker,
+  PUSH_BROADCAST_CHANNEL,
+} from "@/lib/push-sw-client";
 
 type Status =
   | "loading"
@@ -22,21 +27,18 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
   return out;
 }
 
-async function ensureServiceWorker(): Promise<ServiceWorkerRegistration> {
-  const reg = await navigator.serviceWorker.register("/sw.js", {
-    scope: "/",
-    updateViaCache: "none",
-  });
-  await navigator.serviceWorker.ready;
-  await reg.update().catch(() => undefined);
-  return reg;
-}
+type InAppPush = { title: string; body: string; url: string };
 
 export function PushNotificationsSettings() {
   const [status, setStatus] = useState<Status>("loading");
   const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [inApp, setInApp] = useState<InAppPush | null>(null);
+  const [perm, setPerm] = useState<NotificationPermission | "unknown">(
+    "unknown",
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -53,14 +55,15 @@ export function PushNotificationsSettings() {
         return;
       }
 
+      setPerm(Notification.permission);
+
       if (Notification.permission === "denied") {
         if (!cancelled) setStatus("denied");
         return;
       }
 
       try {
-        // Always re-register so push events can wake an active SW.
-        const reg = await ensureServiceWorker();
+        const reg = await ensureFreshServiceWorker();
         const existing = await reg.pushManager.getSubscription();
         if (!cancelled) {
           setStatus(existing ? "subscribed" : "unsubscribed");
@@ -73,6 +76,39 @@ export function PushNotificationsSettings() {
     void check();
     return () => {
       cancelled = true;
+    };
+  }, []);
+
+  // Dual path: when /admin tab open, SW still showNotification + also posts here.
+  useEffect(() => {
+    function onPushMessage(raw: unknown) {
+      if (!raw || typeof raw !== "object") return;
+      const msg = raw as Record<string, unknown>;
+      if (msg.type !== "ROCHA_PUSH") return;
+      const title = typeof msg.title === "string" ? msg.title : "Rocha Cotizador";
+      const body = typeof msg.body === "string" ? msg.body : "";
+      const url =
+        typeof msg.url === "string" ? msg.url : "/admin/cotizaciones";
+      console.log("[push] in-app fallback received", { title, body, url });
+      setInApp({ title, body, url });
+    }
+
+    const onSwMessage = (event: MessageEvent) => {
+      onPushMessage(event.data);
+    };
+    navigator.serviceWorker?.addEventListener("message", onSwMessage);
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel(PUSH_BROADCAST_CHANNEL);
+      channel.onmessage = (event) => onPushMessage(event.data);
+    } catch {
+      // BroadcastChannel unsupported
+    }
+
+    return () => {
+      navigator.serviceWorker?.removeEventListener("message", onSwMessage);
+      channel?.close();
     };
   }, []);
 
@@ -96,15 +132,18 @@ export function PushNotificationsSettings() {
       }
 
       const permission = await Notification.requestPermission();
+      setPerm(permission);
       if (permission !== "granted") {
         setStatus(permission === "denied" ? "denied" : "unsubscribed");
         setError("Permiso de notificaciones denegado o pendiente.");
         return;
       }
 
-      const reg = await ensureServiceWorker();
-      // Always resubscribe so keys match current VAPID public key.
-      const existing = await reg.pushManager.getSubscription();
+      // Hard reset SW so push always hits current `/sw.js`, then resubscribe.
+      const existingReg = await navigator.serviceWorker.getRegistration("/");
+      const existing = existingReg
+        ? await existingReg.pushManager.getSubscription()
+        : null;
       if (existing) {
         try {
           await fetch("/api/admin/push/subscribe", {
@@ -118,6 +157,7 @@ export function PushNotificationsSettings() {
         await existing.unsubscribe().catch(() => undefined);
       }
 
+      const reg = await resetServiceWorker();
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(
@@ -171,7 +211,7 @@ export function PushNotificationsSettings() {
     try {
       const reg =
         (await navigator.serviceWorker.getRegistration("/")) ??
-        (await ensureServiceWorker().catch(() => null));
+        (await ensureFreshServiceWorker().catch(() => null));
       const sub = reg ? await reg.pushManager.getSubscription() : null;
       if (sub) {
         await fetch("/api/admin/push/subscribe", {
@@ -187,6 +227,89 @@ export function PushNotificationsSettings() {
       setError("No se pudieron desactivar las notificaciones.");
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function testNotification() {
+    setTesting(true);
+    setError(null);
+    setMessage(null);
+    setInApp(null);
+
+    const lines: string[] = [];
+
+    try {
+      if (!("Notification" in window)) {
+        setError("Notification API no disponible.");
+        return;
+      }
+
+      setPerm(Notification.permission);
+      if (Notification.permission !== "granted") {
+        const p = await Notification.requestPermission();
+        setPerm(p);
+        if (p !== "granted") {
+          setError(
+            `Permiso Notification = ${p}. Activá permisos OS/Chrome primero.`,
+          );
+          return;
+        }
+      }
+
+      // 1) Direct Notification — proves OS permission + banners not blocked.
+      try {
+        const n = new Notification("Prueba local (sin push)", {
+          body: "Si ves esto, permiso OS OK. Si el push falla después → SW.",
+          requireInteraction: true,
+          tag: `rocha-local-${Date.now()}`,
+        });
+        n.onclick = () => n.close();
+        lines.push("1) Notification local: OK (deberías ver toast OS).");
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        lines.push(`1) Notification local: FALLÓ (${detail}).`);
+        setError(lines.join(" "));
+        return;
+      }
+
+      // 2) Ensure SW + current endpoint, then server push to self.
+      const reg = await ensureFreshServiceWorker();
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub) {
+        lines.push(
+          "2) Push: no hay suscripción local. Activá avisos y reintentá.",
+        );
+        setMessage(lines.join(" "));
+        return;
+      }
+
+      const res = await fetch("/api/admin/push/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: sub.endpoint }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        lines.push(
+          `2) Push API: FALLÓ (${data.error ?? res.status}). Mirá logs server.`,
+        );
+        setError(lines.join(" "));
+        return;
+      }
+
+      lines.push(
+        `2) Push API: enviado (${data.ok}/${data.total}). Esperá toast SW; si no, Application → Service Workers → console.`,
+      );
+      setMessage(lines.join(" "));
+    } catch (err) {
+      console.error(err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Error al probar notificaciones.",
+      );
+    } finally {
+      setTesting(false);
     }
   }
 
@@ -211,36 +334,77 @@ export function PushNotificationsSettings() {
       </p>
       <p className="text-sm text-neutral-800">
         Estado: <span className="font-medium">{statusLabel[status]}</span>
+        {perm !== "unknown" ? (
+          <>
+            {" "}
+            · Permiso: <span className="font-medium">{perm}</span>
+          </>
+        ) : null}
       </p>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
 
-      {status === "subscribed" ? (
-        <Button type="button" variant="outline" disabled={busy} onClick={disable}>
-          {busy ? (
-            <>
-              <Spinner className="mr-2" />
-              Desactivando…
-            </>
-          ) : (
-            "Desactivar avisos"
-          )}
-        </Button>
-      ) : status !== "unsupported" &&
-        status !== "denied" &&
-        status !== "loading" ? (
-        <Button type="button" disabled={busy} onClick={enable}>
-          {busy ? (
-            <>
-              <Spinner className="mr-2 text-white" />
-              Activando…
-            </>
-          ) : (
-            "Activar avisos del navegador"
-          )}
-        </Button>
+      {inApp ? (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+          <p className="font-medium">{inApp.title}</p>
+          <p>{inApp.body}</p>
+          <p className="mt-1 text-xs text-amber-800">
+            Fallback in-app (tab abierta). Toast OS también debería aparecer.
+          </p>
+        </div>
       ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        {status === "subscribed" ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy || testing}
+            onClick={disable}
+          >
+            {busy ? (
+              <>
+                <Spinner className="mr-2" />
+                Desactivando…
+              </>
+            ) : (
+              "Desactivar avisos"
+            )}
+          </Button>
+        ) : status !== "unsupported" &&
+          status !== "denied" &&
+          status !== "loading" ? (
+          <Button type="button" disabled={busy || testing} onClick={enable}>
+            {busy ? (
+              <>
+                <Spinner className="mr-2 text-white" />
+                Activando…
+              </>
+            ) : (
+              "Activar avisos del navegador"
+            )}
+          </Button>
+        ) : null}
+
+        {status !== "unsupported" && status !== "loading" ? (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={busy || testing}
+            onClick={testNotification}
+          >
+            {testing ? (
+              <>
+                <Spinner className="mr-2" />
+                Probando…
+              </>
+            ) : (
+              "Probar notificación"
+            )}
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

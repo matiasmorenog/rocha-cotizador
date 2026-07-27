@@ -39,6 +39,90 @@ export function getVapidPublicKey(): string | null {
   return vapidPublicKey();
 }
 
+export type PushPayload = {
+  title: string;
+  body: string;
+  url: string;
+  tag?: string;
+};
+
+type StoredSub = {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+};
+
+async function sendToSubscriptions(
+  subscriptions: StoredSub[],
+  payload: PushPayload,
+  logLabel: string,
+): Promise<{ ok: number; total: number }> {
+  if (!configureWebPush()) {
+    console.warn("[push] VAPID env missing; skip", logLabel);
+    return { ok: 0, total: 0 };
+  }
+  if (subscriptions.length === 0) {
+    console.warn("[push] no subscriptions; skip", logLabel);
+    return { ok: 0, total: 0 };
+  }
+
+  const body = JSON.stringify(payload);
+  console.info(
+    "[push] notifying",
+    subscriptions.length,
+    "subscription(s) for",
+    logLabel,
+  );
+
+  const results = await Promise.all(
+    subscriptions.map(async (sub) => {
+      const host = (() => {
+        try {
+          return new URL(sub.endpoint).host;
+        } catch {
+          return "invalid-endpoint";
+        }
+      })();
+      try {
+        const res = await webpush.sendNotification(
+          {
+            endpoint: sub.endpoint,
+            keys: { p256dh: sub.p256dh, auth: sub.auth },
+          },
+          body,
+          { TTL: 60 * 60, urgency: "high" },
+        );
+        console.info(
+          "[push] send ok",
+          host,
+          "status",
+          res.statusCode,
+          logLabel,
+        );
+        return true;
+      } catch (err: unknown) {
+        const statusCode =
+          err && typeof err === "object" && "statusCode" in err
+            ? Number((err as { statusCode: unknown }).statusCode)
+            : null;
+        if (statusCode === 404 || statusCode === 410) {
+          console.warn("[push] stale subscription removed", host, statusCode);
+          await db.pushSubscription
+            .delete({ where: { endpoint: sub.endpoint } })
+            .catch(() => undefined);
+          return false;
+        }
+        console.error("[push] send failed", host, err);
+        return false;
+      }
+    }),
+  );
+
+  const ok = results.filter(Boolean).length;
+  console.info("[push] done", logLabel, "ok", ok, "/", results.length);
+  return { ok, total: results.length };
+}
+
 /**
  * Notify all ADMIN users with a stored PushSubscription.
  * Never throws — callers may await safely from quote create.
@@ -47,92 +131,45 @@ export async function notifyAdminsNewQuote(
   quote: NewQuotePushPayload,
 ): Promise<void> {
   try {
-    if (!configureWebPush()) {
-      console.warn(
-        "[push] VAPID env missing; skip admin notify for quote",
-        quote.number,
-      );
-      return;
-    }
-
     const subscriptions = await db.pushSubscription.findMany({
       where: { user: { role: "ADMIN" } },
     });
-    if (subscriptions.length === 0) {
-      console.warn(
-        "[push] no admin PushSubscription rows; skip notify for quote",
-        quote.number,
-      );
-      return;
-    }
-
-    const payload = JSON.stringify({
-      title: `Nueva cotización #${quote.number}`,
-      body: quote.customerName,
-      url: `/remitos/${quote.id}`,
-    });
-
-    console.info(
-      "[push] notifying",
-      subscriptions.length,
-      "admin subscription(s) for quote",
-      quote.number,
-    );
-
-    const results = await Promise.all(
-      subscriptions.map(async (sub) => {
-        const host = (() => {
-          try {
-            return new URL(sub.endpoint).host;
-          } catch {
-            return "invalid-endpoint";
-          }
-        })();
-        try {
-          const res = await webpush.sendNotification(
-            {
-              endpoint: sub.endpoint,
-              keys: { p256dh: sub.p256dh, auth: sub.auth },
-            },
-            payload,
-            { TTL: 60 * 60, urgency: "high" },
-          );
-          console.info(
-            "[push] send ok",
-            host,
-            "status",
-            res.statusCode,
-            "quote",
-            quote.number,
-          );
-          return true;
-        } catch (err: unknown) {
-          const statusCode =
-            err && typeof err === "object" && "statusCode" in err
-              ? Number((err as { statusCode: unknown }).statusCode)
-              : null;
-          if (statusCode === 404 || statusCode === 410) {
-            console.warn("[push] stale subscription removed", host, statusCode);
-            await db.pushSubscription
-              .delete({ where: { endpoint: sub.endpoint } })
-              .catch(() => undefined);
-            return false;
-          }
-          console.error("[push] send failed", host, err);
-          return false;
-        }
-      }),
-    );
-
-    console.info(
-      "[push] done quote",
-      quote.number,
-      "ok",
-      results.filter(Boolean).length,
-      "/",
-      results.length,
+    await sendToSubscriptions(
+      subscriptions,
+      {
+        title: `Nueva cotización #${quote.number}`,
+        body: quote.customerName,
+        url: `/remitos/${quote.id}`,
+        tag: `rocha-quote-${quote.id}`,
+      },
+      `quote ${quote.number}`,
     );
   } catch (err) {
     console.error("[push] notifyAdminsNewQuote failed", err);
   }
+}
+
+/**
+ * Send a test push to one admin's stored subscriptions (or a single endpoint).
+ */
+export async function sendTestPushToAdmin(opts: {
+  userId: string;
+  endpoint?: string;
+}): Promise<{ ok: number; total: number }> {
+  const subscriptions = await db.pushSubscription.findMany({
+    where: {
+      userId: opts.userId,
+      ...(opts.endpoint ? { endpoint: opts.endpoint } : {}),
+    },
+  });
+  return sendToSubscriptions(
+    subscriptions,
+    {
+      title: "Prueba Rocha Cotizador",
+      body: "Si ves esto, Web Push + service worker funcionan.",
+      url: "/admin/configuracion",
+      tag: `rocha-test-${Date.now()}`,
+    },
+    "test-push",
+  );
 }
