@@ -11,12 +11,22 @@ import {
   getPriceListUnitPricesByProductId,
 } from "@/lib/price-list-resolve";
 import { notifyAdminsNewQuote } from "@/lib/push";
+import {
+  earliestDeliveryDateYmd,
+  parseDateOnlyYmd,
+  validateDeliveryDateYmd,
+} from "@/lib/delivery-date";
 import { nextQuoteNumber } from "@/lib/quotes";
 import { formatPrice } from "@/lib/utils";
 import { buildQuoteWhatsAppMessage, whatsappUrl } from "@/lib/whatsapp";
 
 const bodySchema = z.object({
   notes: z.string().optional(),
+  /** `YYYY-MM-DD` requested delivery / fulfillment date (Argentina calendar). */
+  deliveryDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
   customerId: z.string().min(1).optional(),
   items: z
     .array(
@@ -74,6 +84,23 @@ export async function POST(req: NextRequest) {
   const listPrices = discountListId
     ? await getPriceListUnitPricesByProductId(discountListId)
     : null;
+
+  // Same SKU may appear twice only with different measure (kg vs units).
+  const seenMeasureKeys = new Set<string>();
+  for (const item of parsed.data.items) {
+    const orderByUnit = item.orderByUnit === true;
+    const key = `${item.productId}:${orderByUnit ? "u" : "k"}`;
+    if (seenMeasureKeys.has(key)) {
+      return NextResponse.json(
+        {
+          error:
+            "Líneas duplicadas: el mismo producto y medida no pueden repetirse",
+        },
+        { status: 400 },
+      );
+    }
+    seenMeasureKeys.add(key);
+  }
 
   const lines: Array<{
     productId: string;
@@ -137,6 +164,17 @@ export async function POST(req: NextRequest) {
   const total = lines.reduce((acc, l) => acc.plus(l.lineTotal), new Decimal(0));
   const number = await nextQuoteNumber();
 
+  let deliveryDate: Date;
+  if (parsed.data.deliveryDate) {
+    const validated = validateDeliveryDateYmd(parsed.data.deliveryDate);
+    if (!validated.ok) {
+      return NextResponse.json({ error: validated.error }, { status: 400 });
+    }
+    deliveryDate = validated.date;
+  } else {
+    deliveryDate = parseDateOnlyYmd(earliestDeliveryDateYmd())!;
+  }
+
   const quote = await db.quote.create({
     data: {
       number,
@@ -145,6 +183,7 @@ export async function POST(req: NextRequest) {
       subtotal: total,
       total,
       notes: parsed.data.notes?.trim() || null,
+      deliveryDate,
       items: {
         create: lines.map((l) => ({
           productId: l.productId,
@@ -184,6 +223,7 @@ export async function POST(req: NextRequest) {
     customerName: customer.name,
     totalLabel: formatPrice(quote.total),
     notes: quote.notes,
+    deliveryDate: quote.deliveryDate,
     remitoUrl,
   });
   const notifyWhatsappUrl = whatsappUrl(notifyDigits, message);

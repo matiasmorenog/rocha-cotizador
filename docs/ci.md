@@ -10,6 +10,7 @@ Corre en PR/push a `development` y `main`:
 2. `npx prisma generate` (con `DATABASE_URL` dummy; schema includes `rhel-openssl-3.0.x` for Vercel)
 3. `npm run typecheck`
 4. `npm run lint`
+5. `npm run ci:check-admin-chrome` — exige `.admin-desktop-sidebar` en `globals.css` y falla si `admin-nav` usa `lg:block` (regresión Tailwind singleton)
 
 Node 24.
 
@@ -21,7 +22,9 @@ Solo en **push a `main`**, y **solo si** `lint-and-typecheck` pasó:
 2. **Pre-deploy schema sync** — `scripts/check-schema-sync.sh` (`prisma migrate diff` DB → `schema.prisma`). Falla el job si Neon `main` está detrás del código (drift).
 3. `vercel build --prod`
 4. `vercel deploy --prebuilt --prod`
-5. **Post-deploy health** — `GET https://rocha-cotizador.vercel.app/api/health` debe devolver 200 `{ ok: true }` (503/`schema_drift` si faltan columnas/tablas).
+5. **Post-deploy smoke** — `npm run ci:post-deploy-smoke`:
+   - `GET /api/health` → 200 `{ ok: true }` (503/`schema_drift` si faltan columnas/tablas)
+   - `GET /` (homepage) → 200
 
 `vercel.json` desactiva auto-deploy de Vercel en `main` → no hay carrera paralela.
 Previews (`development` / feature branches) siguen con el Git integration de Vercel.

@@ -19,7 +19,7 @@ async function requireAdmin() {
  * GET /api/admin/quotes/export?from=&to=
  *
  * `from` / `to`: `YYYY-MM-DDTHH:mm` interpreted as America/Argentina/Buenos_Aires
- * wall time, or any ISO-8601 string. Default: yesterday 16:00 → today 16:00 (AR).
+ * wall time, or any ISO-8601 string. Default: yesterday 16:00 → now (AR).
  * Filter: createdAt >= from AND createdAt < to (half-open).
  * Returns a multi-remito PDF (`cotizaciones.pdf`).
  */

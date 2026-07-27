@@ -10,6 +10,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import {
+  earliestDeliveryDateYmd,
+  ORDER_CUTOFF_HOUR_AR,
+} from "@/lib/delivery-date";
+import {
   quoteLineMeasureLabel,
   quoteLineQtyAriaLabel,
 } from "@/lib/order-measure";
@@ -54,6 +58,8 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
   const [qty, setLocalQty] = useState("1");
   const [orderByUnit, setLocalOrderByUnit] = useState(false);
   const [notes, setNotes] = useState("");
+  const [minDeliveryDate] = useState(() => earliestDeliveryDateYmd());
+  const [deliveryDate, setDeliveryDate] = useState(() => earliestDeliveryDateYmd());
   const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -200,6 +206,12 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
       setError("Agregá al menos un producto");
       return;
     }
+    if (!deliveryDate || deliveryDate < minDeliveryDate) {
+      setError(
+        `La fecha de entrega no puede ser anterior a ${minDeliveryDate}`,
+      );
+      return;
+    }
     setSubmitting(true);
     setError(null);
     const trimmedNotes = notes.trim();
@@ -212,6 +224,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
           qty: l.qty,
           orderByUnit: l.orderByUnit,
         })),
+        deliveryDate,
         ...(trimmedNotes ? { notes: trimmedNotes } : {}),
         ...(customerId ? { customerId } : {}),
       }),
@@ -225,6 +238,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
     const data = await res.json();
     clear();
     setNotes("");
+    setDeliveryDate(earliestDeliveryDateYmd());
     // Prefer remito + ?whatsapp=1 so a blocked popup still leaves a clear CTA.
     if (typeof data.whatsappUrl === "string" && data.whatsappUrl) {
       window.open(data.whatsappUrl, "_blank", "noopener,noreferrer");
@@ -427,7 +441,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
               ) : (
                 lines.map((l) => (
                   <tr
-                    key={l.productId}
+                    key={l.id}
                     className={`border-t border-neutral-100 ${
                       l.orderByUnit ? "bg-amber-50/40" : ""
                     }`}
@@ -448,7 +462,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                         min={0.001}
                         step="any"
                         value={l.qty}
-                        onChange={(e) => setQty(l.productId, Number(e.target.value))}
+                        onChange={(e) => setQty(l.id, Number(e.target.value))}
                         aria-label={quoteLineQtyAriaLabel(
                           l.orderByUnit,
                           l.allowsUnitOrder,
@@ -460,7 +474,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                         <select
                           value={l.orderByUnit ? "unit" : "kg"}
                           onChange={(e) =>
-                            setOrderByUnit(l.productId, e.target.value === "unit")
+                            setOrderByUnit(l.id, e.target.value === "unit")
                           }
                           aria-label="Medida"
                           className="flex h-8 w-[7.5rem] rounded-md border border-neutral-300 bg-white pl-2 pr-8 text-xs focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
@@ -486,7 +500,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                         variant="secondary"
                         size="sm"
                         className="px-2 hover:border-red-400 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => remove(l.productId)}
+                        onClick={() => remove(l.id)}
                         aria-label="Quitar"
                         title="Quitar"
                       >
@@ -505,6 +519,23 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
             Total {formatPrice(draftTotal)}
           </p>
         </div>
+      </div>
+
+      <div className="space-y-1">
+        <Label htmlFor="quote-delivery-date">Fecha de entrega</Label>
+        <Input
+          id="quote-delivery-date"
+          type="date"
+          value={deliveryDate}
+          min={minDeliveryDate}
+          onChange={(e) => setDeliveryDate(e.target.value)}
+          className="max-w-xs"
+        />
+        <p className="text-xs text-neutral-500">
+          Pedidos antes de las {ORDER_CUTOFF_HOUR_AR}:00 (AR) se preparan para el
+          día siguiente; después del corte, el mínimo es pasado mañana. Podés
+          elegir una fecha más adelante.
+        </p>
       </div>
 
       <div className="space-y-1">
@@ -528,6 +559,7 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
           onClick={() => {
             clear();
             setNotes("");
+            setDeliveryDate(earliestDeliveryDateYmd());
           }}
           disabled={!lines.length && !notes.trim()}
         >

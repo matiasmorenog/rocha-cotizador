@@ -8,6 +8,9 @@
 
 export const ARGENTINA_TZ = "America/Argentina/Buenos_Aires";
 
+/** Order / export batch closing hour (Argentina wall time). */
+export const ORDER_CUTOFF_HOUR_AR = 16;
+
 /** Argentina offset used when parsing naive local datetimes. */
 const ARGENTINA_OFFSET = "-03:00";
 
@@ -58,8 +61,8 @@ export function formatArgentinaDateTime(date: Date): string {
 }
 
 /**
- * Default export window: yesterday 16:00 → today 16:00 (Argentina).
- * Half-open interval: [from, to).
+ * Default quotes list/export window: yesterday 16:00 → now (Argentina).
+ * Half-open interval: [from, to). Includes post-cutoff quotes when now > 16:00.
  */
 export function defaultQuotesExportRange(now = new Date()): {
   from: Date;
@@ -69,14 +72,57 @@ export function defaultQuotesExportRange(now = new Date()): {
 } {
   const localNow = toArgentinaDatetimeLocal(now);
   const [datePart] = localNow.split("T");
-  const toLocal = `${datePart}T16:00`;
-  const to = parseArgentinaDateTime(toLocal)!;
+  const todayCutoffLocal = `${datePart}T${String(ORDER_CUTOFF_HOUR_AR).padStart(2, "0")}:00`;
+  const todayCutoff = parseArgentinaDateTime(todayCutoffLocal)!;
 
   // Yesterday same 16:00 (Argentina has no DST — 24h subtract is safe)
-  const from = new Date(to.getTime() - 24 * 60 * 60 * 1000);
+  const from = new Date(todayCutoff.getTime() - 24 * 60 * 60 * 1000);
   const fromLocal = toArgentinaDatetimeLocal(from);
+  const toLocal = localNow;
 
-  return { from, to, fromLocal, toLocal };
+  return { from, to: now, fromLocal, toLocal };
+}
+
+/**
+ * Split quotes relative to the closing cutoff on the calendar day of `toLocal`.
+ * If `to` is before that day's 16:00, all rows stay in `main` (no late group).
+ */
+export function splitQuotesByDayCutoff<T extends { createdAt: string | Date }>(
+  quotes: T[],
+  toLocal: string,
+): { main: T[]; afterCutoff: T[]; cutoffLocal: string | null } {
+  const [datePart, timePart = "00:00"] = toLocal.split("T");
+  if (!datePart) {
+    return { main: quotes, afterCutoff: [], cutoffLocal: null };
+  }
+
+  const [hhRaw, mmRaw] = timePart.split(":");
+  const hour = Number(hhRaw);
+  const minute = Number(mmRaw ?? "0");
+  const cutoffLocal = `${datePart}T${String(ORDER_CUTOFF_HOUR_AR).padStart(2, "0")}:00`;
+
+  if (!Number.isFinite(hour) || hour < ORDER_CUTOFF_HOUR_AR) {
+    return { main: quotes, afterCutoff: [], cutoffLocal: null };
+  }
+  if (hour === ORDER_CUTOFF_HOUR_AR && (!Number.isFinite(minute) || minute === 0)) {
+    return { main: quotes, afterCutoff: [], cutoffLocal: null };
+  }
+
+  const cutoff = parseArgentinaDateTime(cutoffLocal);
+  if (!cutoff) {
+    return { main: quotes, afterCutoff: [], cutoffLocal: null };
+  }
+
+  const cutoffMs = cutoff.getTime();
+  const main: T[] = [];
+  const afterCutoff: T[] = [];
+  for (const q of quotes) {
+    const created =
+      q.createdAt instanceof Date ? q.createdAt : new Date(q.createdAt);
+    if (created.getTime() >= cutoffMs) afterCutoff.push(q);
+    else main.push(q);
+  }
+  return { main, afterCutoff, cutoffLocal };
 }
 
 /** Resolve from/to params; fall back to default range. Invalid → null for that side uses default. */
