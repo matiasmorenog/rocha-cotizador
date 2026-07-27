@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { db } from "@/lib/db";
+import { pushNotificationBrandAssets } from "@/lib/push-notification-brand";
 
 export type NewQuotePushPayload = {
   id: string;
@@ -44,7 +45,20 @@ export type PushPayload = {
   body: string;
   url: string;
   tag?: string;
+  icon?: string;
+  badge?: string;
 };
+
+function pushSiteOrigin(): string {
+  return process.env.AUTH_URL?.replace(/\/$/, "") ?? "";
+}
+
+function withBrandAssets(
+  payload: Omit<PushPayload, "icon" | "badge">,
+): PushPayload {
+  const { icon, badge } = pushNotificationBrandAssets(pushSiteOrigin());
+  return { ...payload, icon, badge };
+}
 
 type StoredSub = {
   endpoint: string;
@@ -73,7 +87,7 @@ async function sendToSubscriptions(
   }
 
   // JSON string body — web-push encrypts and sets Content-Encoding: aes128gcm.
-  const body = JSON.stringify(payload);
+  const body = JSON.stringify(withBrandAssets(payload));
   console.info(
     "[push] notifying",
     subscriptions.length,

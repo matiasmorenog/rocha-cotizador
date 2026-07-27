@@ -1,10 +1,25 @@
 /* Rocha Cotizador — admin Web Push service worker */
-/* v7 — louder-friendly OS options + stable showNotification */
+/* v8 — brand icon/badge on all OS notifications */
 
 const PUSH_CHANNEL = "rocha-admin-push";
 const FALLBACK_TITLE = "Nueva cotización";
 const FALLBACK_URL = "/admin/cotizaciones";
-const ICON = "/brand/rocha-logo.png";
+const ICON_PATH = "/brand/rocha-logo.png";
+
+function brandIconUrl() {
+  return new URL(ICON_PATH, self.location.origin).href;
+}
+
+function resolveBrandAssetUrl(value) {
+  if (typeof value === "string" && value.trim()) {
+    try {
+      return new URL(value, self.location.origin).href;
+    } catch {
+      return brandIconUrl();
+    }
+  }
+  return brandIconUrl();
+}
 
 self.addEventListener("install", (event) => {
   console.log("[push-sw] install");
@@ -42,6 +57,8 @@ function parsePushData(event) {
             ? parsed.url
             : FALLBACK_URL,
         tag: typeof parsed.tag === "string" ? parsed.tag : undefined,
+        icon: typeof parsed.icon === "string" ? parsed.icon : undefined,
+        badge: typeof parsed.badge === "string" ? parsed.badge : undefined,
       };
     }
   } catch {
@@ -73,6 +90,8 @@ function parsePushData(event) {
             ? parsed.url
             : FALLBACK_URL,
         tag: typeof parsed.tag === "string" ? parsed.tag : undefined,
+        icon: typeof parsed.icon === "string" ? parsed.icon : undefined,
+        badge: typeof parsed.badge === "string" ? parsed.badge : undefined,
       };
     }
   } catch (err) {
@@ -125,12 +144,14 @@ async function handlePush(event) {
   }
 
   const title = data.title || FALLBACK_TITLE;
+  const icon = resolveBrandAssetUrl(data.icon);
+  const badge = resolveBrandAssetUrl(data.badge ?? data.icon);
   const options = {
     body: data.body || "",
     data: { url: data.url || FALLBACK_URL },
     tag: data.tag || `rocha-push-${Date.now()}`,
-    icon: ICON,
-    badge: ICON,
+    icon,
+    badge,
     renotify: true,
     // false = more reliable banners on macOS/Windows when tab focused
     requireInteraction: false,
@@ -149,7 +170,8 @@ async function handlePush(event) {
       await self.registration.showNotification(FALLBACK_TITLE, {
         body: "Abrí el admin para ver la cotización.",
         data: { url: FALLBACK_URL },
-        icon: ICON,
+        icon: brandIconUrl(),
+        badge: brandIconUrl(),
         tag: `rocha-push-fallback-${Date.now()}`,
         silent: false,
       });

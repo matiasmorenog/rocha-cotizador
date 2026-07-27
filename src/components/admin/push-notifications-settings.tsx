@@ -8,6 +8,7 @@ import {
   resetServiceWorker,
   dispatchAdminInAppToast,
 } from "@/lib/push-sw-client";
+import { pushNotificationBrandAssets } from "@/lib/push-notification-brand";
 
 type Status =
   | "loading"
@@ -440,10 +441,14 @@ export function PushNotificationsSettings() {
             typeof n.tag === "string" && n.tag.startsWith("rocha-test"),
         );
         if (!hasOs && Notification.permission === "granted") {
+          const { icon, badge } = pushNotificationBrandAssets(
+            window.location.origin,
+          );
           await reg.showNotification("Notificación de prueba", {
             body: "Notificación del sistema de Rocha Cotizador.",
             tag: `rocha-test-local-${Date.now()}`,
-            icon: "/brand/rocha-logo.png",
+            icon,
+            badge,
             silent: false,
             data: { url: "/admin/configuracion" },
           });
