@@ -4,14 +4,14 @@
  * Cutoff 16:00 AR wall time:
  * - before 16:00 → earliest delivery = tomorrow
  * - at/after 16:00 → earliest delivery = day after tomorrow
- *   (same batch boundary as admin export window: yesterday 16:00 → today 16:00)
+ *   (same batch boundary as admin list window: yesterday 16:00 → now)
  *
  * Customers may pick any date >= earliest (e.g. Monday → Friday).
  */
 
-import { ARGENTINA_TZ } from "@/lib/argentina-time";
+import { ARGENTINA_TZ, ORDER_CUTOFF_HOUR_AR } from "@/lib/argentina-time";
 
-export const ORDER_CUTOFF_HOUR_AR = 16;
+export { ORDER_CUTOFF_HOUR_AR };
 
 const YMD_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 

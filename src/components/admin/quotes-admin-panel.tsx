@@ -6,7 +6,11 @@ import { Badge } from "@/components/ui/badge";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { ARGENTINA_TZ } from "@/lib/argentina-time";
+import {
+  ARGENTINA_TZ,
+  ORDER_CUTOFF_HOUR_AR,
+  splitQuotesByDayCutoff,
+} from "@/lib/argentina-time";
 import { formatDeliveryDateLabel } from "@/lib/delivery-date";
 import { quoteStatusLabel } from "@/lib/quote-status";
 import { formatPrice } from "@/lib/utils";
@@ -21,6 +25,82 @@ export type QuoteListRow = {
   deliveryDate: string | null;
   customer: { code: string; name: string };
 };
+
+function afterCutoffSummary(count: number): string {
+  const hora = `${ORDER_CUTOFF_HOUR_AR}:00`;
+  if (count === 1) {
+    return `1 cotización ingresada después del cierre (${hora})`;
+  }
+  return `${count} cotizaciones ingresadas después del cierre (${hora})`;
+}
+
+function QuotesTable({
+  rows,
+  emptyLabel,
+}: {
+  rows: QuoteListRow[];
+  emptyLabel: string;
+}) {
+  return (
+    <DataTableScroll>
+      <table className="w-full min-w-[42rem] text-sm">
+        <thead className="bg-neutral-50 text-left text-neutral-600">
+          <tr>
+            <th className="px-3 py-2">Número</th>
+            <th className="px-3 py-2">Cliente</th>
+            <th className="px-3 py-2">Pedido</th>
+            <th className="px-3 py-2">Entrega</th>
+            <th className="px-3 py-2">Estado</th>
+            <th className="px-3 py-2">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((qrow) => (
+            <tr key={qrow.id} className="border-t border-neutral-100">
+              <td className="px-3 py-2">
+                <Link
+                  href={`/remitos/${qrow.id}`}
+                  className="font-medium text-[var(--brand-primary)] hover:underline"
+                >
+                  {qrow.number}
+                </Link>
+              </td>
+              <td className="px-3 py-2">
+                {qrow.customer.code} — {qrow.customer.name}
+              </td>
+              <td className="px-3 py-2">
+                {new Date(qrow.createdAt).toLocaleString("es-AR", {
+                  timeZone: ARGENTINA_TZ,
+                })}
+              </td>
+              <td className="px-3 py-2 text-neutral-700">
+                {formatDeliveryDateLabel(qrow.deliveryDate)}
+              </td>
+              <td className="px-3 py-2">
+                <Badge variant="success">
+                  {quoteStatusLabel(qrow.status)}
+                </Badge>
+              </td>
+              <td className="px-3 py-2 font-medium">
+                {formatPrice(qrow.total)}
+              </td>
+            </tr>
+          ))}
+          {rows.length === 0 ? (
+            <tr>
+              <td
+                colSpan={6}
+                className="px-3 py-8 text-center text-neutral-500"
+              >
+                {emptyLabel}
+              </td>
+            </tr>
+          ) : null}
+        </tbody>
+      </table>
+    </DataTableScroll>
+  );
+}
 
 export function QuotesAdminPanel({
   initialQuotes,
@@ -49,6 +129,11 @@ export function QuotesAdminPanel({
         q.customer.name.toLowerCase().includes(needle),
     );
   }, [quotes, query]);
+
+  const { main, afterCutoff } = useMemo(
+    () => splitQuotesByDayCutoff(filtered, to),
+    [filtered, to],
+  );
 
   function buildParams() {
     const params = new URLSearchParams();
@@ -85,16 +170,21 @@ export function QuotesAdminPanel({
     window.setTimeout(() => setDownloading(false), 2500);
   }
 
+  const emptyMain = query.trim()
+    ? "Sin cotizaciones para esa búsqueda"
+    : "Sin cotizaciones en este rango";
+
   return (
     <div className="space-y-6">
       <div className="rounded-lg border border-neutral-200 bg-white p-4">
         <form onSubmit={onFilter} className="space-y-4">
           <div className="space-y-1">
             <p className="text-sm font-medium text-neutral-900">
-              Exportar cotizaciones
+              Filtrar cotizaciones
             </p>
             <p className="text-xs text-neutral-500">
-              Por defecto: ayer 16:00 → hoy 16:00.
+              Por defecto: ayer {ORDER_CUTOFF_HOUR_AR}:00 → ahora (hora
+              Argentina). Las ingresadas después del cierre del día van aparte.
             </p>
           </div>
 
@@ -162,65 +252,33 @@ export function QuotesAdminPanel({
         aria-label="Buscar cotizaciones"
       />
 
-      <DataTableScroll>
-        <table className="w-full min-w-[42rem] text-sm">
-          <thead className="bg-neutral-50 text-left text-neutral-600">
-            <tr>
-              <th className="px-3 py-2">Número</th>
-              <th className="px-3 py-2">Cliente</th>
-              <th className="px-3 py-2">Pedido</th>
-              <th className="px-3 py-2">Entrega</th>
-              <th className="px-3 py-2">Estado</th>
-              <th className="px-3 py-2">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((qrow) => (
-              <tr key={qrow.id} className="border-t border-neutral-100">
-                <td className="px-3 py-2">
-                  <Link
-                    href={`/remitos/${qrow.id}`}
-                    className="font-medium text-[var(--brand-primary)] hover:underline"
-                  >
-                    {qrow.number}
-                  </Link>
-                </td>
-                <td className="px-3 py-2">
-                  {qrow.customer.code} — {qrow.customer.name}
-                </td>
-                <td className="px-3 py-2">
-                  {new Date(qrow.createdAt).toLocaleString("es-AR", {
-                    timeZone: ARGENTINA_TZ,
-                  })}
-                </td>
-                <td className="px-3 py-2 text-neutral-700">
-                  {formatDeliveryDateLabel(qrow.deliveryDate)}
-                </td>
-                <td className="px-3 py-2">
-                  <Badge variant="success">
-                    {quoteStatusLabel(qrow.status)}
-                  </Badge>
-                </td>
-                <td className="px-3 py-2 font-medium">
-                  {formatPrice(qrow.total)}
-                </td>
-              </tr>
-            ))}
-            {filtered.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="px-3 py-8 text-center text-neutral-500"
-                >
-                  {query.trim()
-                    ? "Sin cotizaciones para esa búsqueda"
-                    : "Sin cotizaciones en este rango"}
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </DataTableScroll>
+      <QuotesTable rows={main} emptyLabel={emptyMain} />
+
+      {afterCutoff.length > 0 ? (
+        <details className="group rounded-lg border border-amber-200/80 bg-amber-50/40 open:bg-amber-50/60">
+          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-amber-950 marker:content-none [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center justify-between gap-3">
+              <span>{afterCutoffSummary(afterCutoff.length)}</span>
+              <span className="shrink-0 text-xs font-normal text-amber-800/80 group-open:hidden">
+                Ver
+              </span>
+              <span className="hidden shrink-0 text-xs font-normal text-amber-800/80 group-open:inline">
+                Ocultar
+              </span>
+            </span>
+          </summary>
+          <div className="border-t border-amber-200/70 px-2 pb-2 pt-1 sm:px-3">
+            <p className="mb-2 px-1 text-xs text-amber-900/80">
+              Entran en el próximo ciclo de preparación (cierre{" "}
+              {ORDER_CUTOFF_HOUR_AR}:00).
+            </p>
+            <QuotesTable
+              rows={afterCutoff}
+              emptyLabel="Sin cotizaciones después del cierre"
+            />
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }
