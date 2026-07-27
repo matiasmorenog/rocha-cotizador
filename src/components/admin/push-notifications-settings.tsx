@@ -315,7 +315,7 @@ export function PushNotificationsSettings() {
   }
 
   /**
-   * Primary: inbox test → banner in-app = success (camino seguro).
+   * Primary: inbox test → toast in-app = success (camino seguro).
    * Optional: Web Push if subscribed — reported separately, never fails Probar.
    */
   async function testNotification() {
@@ -327,7 +327,7 @@ export function PushNotificationsSettings() {
     const steps: StepResult[] = [];
 
     try {
-      // 1) Safe path — inbox + banner
+      // 1) Safe path — inbox + toast
       const inboxRes = await fetch("/api/admin/push/inbox/test", {
         method: "POST",
         credentials: "same-origin",
@@ -368,7 +368,7 @@ export function PushNotificationsSettings() {
       steps.push({
         label: "1) Avisos en la app (camino seguro)",
         ok: true,
-        detail: "Banner in-app mostrado — éxito (no hace falta toast del OS)",
+        detail: "Toast in-app mostrado — éxito (no hace falta toast del OS)",
       });
 
       // 2) Optional OS / Web Push
@@ -419,7 +419,7 @@ export function PushNotificationsSettings() {
       const report: ProbarReport = {
         ok: true,
         steps,
-        note: "Éxito = banner verde arriba. No hace falta ver el toast de Windows/macOS.",
+        note: "Éxito = toast abajo a la derecha. No hace falta ver el toast de Windows/macOS.",
       };
       setProbar(report);
       setMessage(report.note);
@@ -464,8 +464,9 @@ export function PushNotificationsSettings() {
         <p className="font-semibold">Avisos en la app (siempre)</p>
         <p className="mt-1 text-emerald-900/90">
           Con cualquier página <span className="font-medium">/admin</span>{" "}
-          abierta, aparece un banner grande arriba. No depende de Windows ni
-          macOS. Este es el <span className="font-medium">camino seguro</span>.
+          abierta, aparece un toast abajo a la derecha. No depende de Windows
+          ni macOS. Este es el{" "}
+          <span className="font-medium">camino seguro</span>.
         </p>
         <div className="mt-3">
           <Button
@@ -497,7 +498,7 @@ export function PushNotificationsSettings() {
         >
           <p className="text-base font-bold sm:text-lg">
             {probar.ok
-              ? "Resultado: OK (banner in-app)"
+              ? "Resultado: OK (toast in-app)"
               : "Resultado: FALLÓ"}
           </p>
           <ul className="mt-3 space-y-2 text-sm">

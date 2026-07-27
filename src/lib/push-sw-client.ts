@@ -2,7 +2,7 @@
 
 export const PUSH_BROADCAST_CHANNEL = "rocha-admin-push";
 
-/** CustomEvent name — page can force global in-app banner without OS toast. */
+/** CustomEvent name — page can force global in-app toast without OS toast. */
 export const ADMIN_INAPP_TOAST_EVENT = "rocha-admin-inapp-toast";
 
 export type AdminInAppToastDetail = {
@@ -12,7 +12,7 @@ export type AdminInAppToastDetail = {
   tone?: "info" | "success" | "error";
 };
 
-/** Show the fixed admin banner even if macOS/Chrome hides OS notifications. */
+/** Show an admin corner toast even if macOS/Chrome hides OS notifications. */
 export function dispatchAdminInAppToast(detail: AdminInAppToastDetail): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(

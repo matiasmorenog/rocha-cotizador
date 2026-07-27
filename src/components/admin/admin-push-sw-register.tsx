@@ -7,14 +7,10 @@ import {
   ADMIN_INAPP_TOAST_EVENT,
   type AdminInAppToastDetail,
 } from "@/lib/push-sw-client";
-
-type Banner = {
-  title: string;
-  body: string;
-  url: string;
-  tone: "info" | "success" | "error";
-  source: "inbox" | "push" | "test";
-};
+import {
+  AdminNotificationToasts,
+  type AdminToastItem,
+} from "@/components/admin/admin-notification-toasts";
 
 type InboxItem = {
   id: string;
@@ -25,6 +21,8 @@ type InboxItem = {
 };
 
 const POLL_MS = 8_000;
+const TOAST_TTL_MS = 6_000;
+const MAX_TOASTS = 4;
 const SEEN_KEY = "rocha-admin-inbox-seen";
 
 function loadSeenIds(): Set<string> {
@@ -51,23 +49,48 @@ function saveSeenIds(ids: Set<string>) {
 /**
  * Safe path: poll AdminInbox while any `/admin` tab is open.
  * Optional: SW BroadcastChannel when Web Push arrives in this browser.
- * Never depends on macOS/Windows OS toast visibility.
+ * Renders compact toasts — never depends on OS toast visibility.
  */
 export function AdminPushSwRegister() {
-  const [banner, setBanner] = useState<Banner | null>(null);
+  const [toasts, setToasts] = useState<AdminToastItem[]>([]);
   const sinceRef = useRef<string>(new Date().toISOString());
   const seenRef = useRef<Set<string>>(new Set());
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
+
+  function dismiss(id: string) {
+    const timer = timersRef.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timersRef.current.delete(id);
+    }
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  function pushToast(next: Omit<AdminToastItem, "id"> & { id?: string }) {
+    const id =
+      next.id ??
+      `toast-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    console.log("[push] in-app toast", { id, ...next });
+    setToasts((prev) => {
+      const withoutDup = prev.filter((t) => t.id !== id);
+      return [...withoutDup, { ...next, id }].slice(-MAX_TOASTS);
+    });
+    const existing = timersRef.current.get(id);
+    if (existing) clearTimeout(existing);
+    timersRef.current.set(
+      id,
+      setTimeout(() => dismiss(id), TOAST_TTL_MS),
+    );
+  }
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    const toastTimers = timersRef.current;
     seenRef.current = loadSeenIds();
     sinceRef.current = new Date().toISOString();
-
-    function show(next: Banner) {
-      console.log("[push] in-app banner", next);
-      setBanner(next);
-    }
 
     // Best-effort SW (optional Web Push enhancement).
     if ("serviceWorker" in navigator) {
@@ -85,7 +108,7 @@ export function AdminPushSwRegister() {
       const body = typeof msg.body === "string" ? msg.body : "";
       const url =
         typeof msg.url === "string" ? msg.url : "/admin/cotizaciones";
-      show({ title, body, url, tone: "info", source: "push" });
+      pushToast({ title, body, url, tone: "info", source: "push" });
     }
 
     const onSwMessage = (event: MessageEvent) => {
@@ -104,7 +127,7 @@ export function AdminPushSwRegister() {
     function onCustomToast(event: Event) {
       const detail = (event as CustomEvent<AdminInAppToastDetail>).detail;
       if (!detail?.title) return;
-      show({
+      pushToast({
         title: detail.title,
         body: detail.body ?? "",
         url: detail.url ?? "/admin/configuracion",
@@ -129,12 +152,7 @@ export function AdminPushSwRegister() {
           items?: InboxItem[];
           serverNow?: string;
         } | null;
-        if (!data?.items?.length) {
-          if (typeof data?.serverNow === "string") {
-            // Keep cursor moving even with empty polls (clock skew safety).
-          }
-          return;
-        }
+        if (!data?.items?.length) return;
 
         const fresh = data.items.filter((item) => !seenRef.current.has(item.id));
         for (const item of data.items) {
@@ -145,12 +163,12 @@ export function AdminPushSwRegister() {
         }
         saveSeenIds(seenRef.current);
 
-        if (fresh.length > 0) {
-          const latest = fresh[fresh.length - 1]!;
-          show({
-            title: latest.title,
-            body: latest.body,
-            url: latest.url || "/admin/cotizaciones",
+        for (const item of fresh) {
+          pushToast({
+            id: `inbox-${item.id}`,
+            title: item.title,
+            body: item.body,
+            url: item.url || "/admin/cotizaciones",
             tone: "info",
             source: "inbox",
           });
@@ -177,72 +195,18 @@ export function AdminPushSwRegister() {
     return () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
+      for (const t of toastTimers.values()) clearTimeout(t);
+      toastTimers.clear();
       document.removeEventListener("visibilitychange", onVisible);
       navigator.serviceWorker?.removeEventListener("message", onSwMessage);
       channel?.close();
       window.removeEventListener(ADMIN_INAPP_TOAST_EVENT, onCustomToast);
     };
+    // pushToast/dismiss close over stable refs; mount-once listeners.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (!banner) return null;
-
-  const toneClass =
-    banner.tone === "error"
-      ? "border-red-500 bg-red-600 text-white"
-      : banner.tone === "success"
-        ? "border-emerald-500 bg-emerald-600 text-white"
-        : "border-amber-400 bg-amber-500 text-neutral-950";
-
-  const mutedClass =
-    banner.tone === "info" ? "text-neutral-900/80" : "text-white/90";
-
-  const sourceLabel =
-    banner.source === "inbox"
-      ? "Camino seguro (avisos en la app)"
-      : banner.source === "push"
-        ? "Web Push (mismo navegador)"
-        : "Prueba in-app";
-
   return (
-    <div
-      role="alert"
-      aria-live="assertive"
-      className={`fixed inset-x-0 top-0 z-[100] border-b-4 px-4 py-4 shadow-xl sm:px-6 ${toneClass}`}
-    >
-      <div className="mx-auto flex max-w-3xl flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs font-bold uppercase tracking-wide opacity-90">
-            {sourceLabel} — no depende del toast del sistema
-          </p>
-          <p className="mt-1 text-lg font-bold leading-tight sm:text-xl">
-            {banner.title}
-          </p>
-          {banner.body ? (
-            <p className={`mt-1 text-sm sm:text-base ${mutedClass}`}>
-              {banner.body}
-            </p>
-          ) : null}
-          <p className={`mt-2 text-xs ${mutedClass}`}>
-            Con el admin abierto, este banner aparece aunque Windows/macOS
-            bloquee las notificaciones del navegador.
-          </p>
-        </div>
-        <div className="flex shrink-0 gap-2">
-          <a
-            href={banner.url}
-            className="rounded-md bg-white/95 px-3 py-2 text-sm font-semibold text-neutral-900"
-          >
-            Abrir
-          </a>
-          <button
-            type="button"
-            className="rounded-md bg-black/20 px-3 py-2 text-sm font-medium"
-            onClick={() => setBanner(null)}
-          >
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
+    <AdminNotificationToasts toasts={toasts} onDismiss={dismiss} />
   );
 }
