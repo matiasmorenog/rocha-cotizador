@@ -7,7 +7,7 @@ export type QuoteDraftLine = {
   productId: string;
   code: string;
   name: string;
-  /** List/catalog unit price (kg). Ignored for totals when orderByUnit. */
+  /** List/catalog unit price. Ignored for totals when orderByUnit (dual-mode units). */
   unitPrice: number;
   qty: number;
   /** Qty is unit count; effective price/line total = 0 until weighed. */

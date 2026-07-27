@@ -266,6 +266,7 @@ export function SkeletonRemitoDetailPage() {
   );
 }
 
+/** Customer `/cuenta/configuracion` — single password card. */
 export function SkeletonAccountPage() {
   return (
     <SkeletonRegion
@@ -289,6 +290,129 @@ export function SkeletonAccountPage() {
         </div>
         <Skeleton className="h-10 w-full rounded-md" />
       </div>
+    </SkeletonRegion>
+  );
+}
+
+/**
+ * Admin `/admin/configuracion` — two cards:
+ * Notificaciones (WhatsApp, in-app, sistema), Mi cuenta (email, contraseña).
+ */
+export function SkeletonAdminConfigPage() {
+  return (
+    <SkeletonRegion
+      label="Cargando configuración"
+      className="mx-auto max-w-lg space-y-6"
+    >
+      <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-72" />
+
+      {/* Notificaciones */}
+      <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+        <Skeleton className="mb-3 h-3 w-32" />
+        <div className="space-y-4">
+          {/* WhatsApp */}
+          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-3 w-full" />
+            <div className="mt-3 space-y-4">
+              <div className="space-y-1">
+                <Skeleton className="h-4 w-52" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-10 w-14 shrink-0 rounded-md" />
+                  <Skeleton className="h-10 min-w-0 flex-1 rounded-md" />
+                </div>
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+              <Skeleton className="h-10 w-24 rounded-md" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-64" />
+          </div>
+          {/* In-app */}
+          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
+            <Skeleton className="h-4 w-52" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-56" />
+            <Skeleton className="h-3 w-48" />
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Skeleton className="h-10 w-56 rounded-md" />
+              <Skeleton className="h-10 w-56 rounded-md" />
+            </div>
+          </div>
+          {/* Sistema */}
+          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
+            <Skeleton className="h-4 w-56" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-60" />
+            <Skeleton className="h-3 w-64" />
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <Skeleton className="h-3 w-28" />
+              <Skeleton className="h-8 w-64 rounded-md" />
+            </div>
+            <Skeleton className="h-4 w-64" />
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-48" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Skeleton className="h-10 w-56 rounded-md" />
+              <Skeleton className="h-10 w-64 rounded-md" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Mi cuenta */}
+      <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+        <Skeleton className="mb-1 h-3 w-24" />
+        <Skeleton className="mb-4 h-4 w-56" />
+        <div className="space-y-4">
+          {/* Cambiar email */}
+          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-3 w-full" />
+            <div className="mt-3 space-y-4">
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+          </div>
+          {/* Cambiar contraseña */}
+          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-3 w-full" />
+            <div className="mt-3 space-y-4">
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-36" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <div className="space-y-1.5">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-10 w-full rounded-md" />
+              </div>
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+          </div>
+        </div>
+      </section>
     </SkeletonRegion>
   );
 }

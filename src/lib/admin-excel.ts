@@ -14,7 +14,7 @@
  *   código | nombre | rubro | precioBase | <nombre de cada PriceList>… |
  *   permitePedidoUnidad | activo
  *   - `precioBase` = Product.basePrice (precio base del producto).
- *   - `permitePedidoUnidad`: sí/no — order by unit count (price TBD after weigh) or kg.
+ *   - `permitePedidoUnidad`: sí/no — kg o unidades (precio al pesar en unidades); no = cantidad fija.
  *   - Extra columns match PriceList.name (case-insensitive). Empty cell clears that list price.
  *
  * Quotes range export is PDF (`/api/admin/quotes/export`) — see `quotes-export-pdf.ts`.

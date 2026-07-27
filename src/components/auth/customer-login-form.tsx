@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,22 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
 import { safeCallbackUrl } from "@/lib/callback-url";
+import {
+  readLastCustomerCode,
+  saveLastCustomerCode,
+  subscribeToLastLoginStorage,
+} from "@/lib/last-login";
 
 export function CustomerLoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = safeCallbackUrl(searchParams.get("callbackUrl"), "/cotizar");
-  const [code, setCode] = useState("");
+  const rememberedCode = useSyncExternalStore(
+    subscribeToLastLoginStorage,
+    readLastCustomerCode,
+    () => "",
+  );
+  const [codeDraft, setCodeDraft] = useState<string | null>(null);
+  const code = codeDraft ?? rememberedCode;
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,7 +43,8 @@ export function CustomerLoginForm() {
       setLoading(false);
       return;
     }
-    window.location.href = callbackUrl;
+    saveLastCustomerCode(code);
+    window.location.assign(callbackUrl);
   }
 
   return (
@@ -44,8 +56,11 @@ export function CustomerLoginForm() {
           inputMode="numeric"
           maxLength={3}
           placeholder="001"
+          autoComplete="username"
           value={code}
-          onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 3))}
+          onChange={(e) =>
+            setCodeDraft(e.target.value.replace(/\D/g, "").slice(0, 3))
+          }
           required
         />
       </div>

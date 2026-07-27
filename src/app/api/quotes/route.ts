@@ -10,6 +10,7 @@ import {
   effectiveDiscountPriceListId,
   getPriceListUnitPricesByProductId,
 } from "@/lib/price-list-resolve";
+import { notifyAdminsNewQuote } from "@/lib/push";
 import { nextQuoteNumber } from "@/lib/quotes";
 import { formatPrice } from "@/lib/utils";
 import { buildQuoteWhatsAppMessage, whatsappUrl } from "@/lib/whatsapp";
@@ -160,6 +161,16 @@ export async function POST(req: NextRequest) {
   });
 
   invalidateAfterQuoteCreate();
+
+  // Customer-created quotes only — admin self-create must not notify.
+  // Await (never throws) so local turbopack / Next after() cannot drop the FCM send.
+  if (session.user.role === "CUSTOMER") {
+    await notifyAdminsNewQuote({
+      id: quote.id,
+      number: quote.number,
+      customerName: customer.name,
+    });
+  }
 
   const origin =
     req.nextUrl.origin ||

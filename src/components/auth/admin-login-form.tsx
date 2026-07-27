@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,31 +9,52 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
 import { safeCallbackUrl } from "@/lib/callback-url";
+import {
+  readLastAdminEmail,
+  saveLastAdminEmail,
+  subscribeToLastLoginStorage,
+} from "@/lib/last-login";
 
 export function AdminLoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = safeCallbackUrl(searchParams.get("callbackUrl"), "/admin");
-  const [email, setEmail] = useState("");
+  const rememberedEmail = useSyncExternalStore(
+    subscribeToLastLoginStorage,
+    readLastAdminEmail,
+    () => "",
+  );
+  const [emailDraft, setEmailDraft] = useState<string | null>(null);
+  const email = emailDraft ?? rememberedEmail;
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    // Prefer FormData so browser password-manager autofill is not lost when
+    // React controlled state never received onChange (common after remember-login).
+    const fd = new FormData(e.currentTarget);
+    const submittedEmail = String(fd.get("email") ?? email).trim();
+    const submittedPassword = String(fd.get("password") ?? password);
     const result = await signIn("admin", {
-      email,
-      password,
+      email: submittedEmail,
+      password: submittedPassword,
       redirect: false,
     });
     if (result?.error) {
-      setError("Email o contraseña incorrectos");
+      setError(
+        result.error === "Configuration"
+          ? "Error de configuración del servidor de acceso. Si persiste, avisá a soporte."
+          : "Email o contraseña incorrectos",
+      );
       setLoading(false);
       return;
     }
+    saveLastAdminEmail(submittedEmail);
     // Keep "Ingresando…" and hard-nav so callback loads with session (no Router Cache).
-    window.location.href = callbackUrl;
+    window.location.assign(callbackUrl);
   }
 
   return (
@@ -42,9 +63,11 @@ export function AdminLoginForm() {
         <Label htmlFor="email">Email</Label>
         <Input
           id="email"
+          name="email"
           type="email"
+          autoComplete="username"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => setEmailDraft(e.target.value)}
           required
         />
       </div>
@@ -52,6 +75,8 @@ export function AdminLoginForm() {
         <Label htmlFor="password">Contraseña</Label>
         <PasswordInput
           id="password"
+          name="password"
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required

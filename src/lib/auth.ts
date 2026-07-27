@@ -45,21 +45,52 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = String(credentials?.password ?? "");
         if (!email || !password) return null;
 
-        const user = await db.user.findUnique({ where: { email } });
-        if (!user?.passwordHash || user.role !== "ADMIN") return null;
+        try {
+          // Explicit select — omit newer columns so schema drift (e.g. missing
+          // inAppNotificationsEnabled on Neon main) cannot throw and surface as
+          // Auth.js "Configuration" (UI shows as wrong email/password).
+          const user = await db.user.findUnique({
+            where: { email },
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              passwordHash: true,
+              role: true,
+            },
+          });
+          if (!user?.passwordHash || user.role !== "ADMIN") return null;
 
-        const valid = await bcrypt.compare(password, user.passwordHash);
-        if (!valid) return null;
+          const valid = await bcrypt.compare(password, user.passwordHash);
+          if (!valid) return null;
 
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: "ADMIN" as const,
-          customerId: null,
-          customerCode: null,
-          mustChangePassword: false,
-        };
+          let inAppNotificationsEnabled = true;
+          try {
+            const pref = await db.user.findUnique({
+              where: { id: user.id },
+              select: { inAppNotificationsEnabled: true },
+            });
+            if (typeof pref?.inAppNotificationsEnabled === "boolean") {
+              inAppNotificationsEnabled = pref.inAppNotificationsEnabled;
+            }
+          } catch {
+            // Column/client drift — keep default true; login must still succeed.
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: "ADMIN" as const,
+            customerId: null,
+            customerCode: null,
+            mustChangePassword: false,
+            inAppNotificationsEnabled,
+          };
+        } catch (err) {
+          console.error("[auth] admin authorize failed", err);
+          return null;
+        }
       },
     }),
     Credentials({
@@ -93,22 +124,42 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.role = user.role;
         token.customerId = user.customerId ?? null;
         token.customerCode = user.customerCode ?? null;
         token.mustChangePassword = user.mustChangePassword ?? false;
+        token.inAppNotificationsEnabled =
+          user.inAppNotificationsEnabled ?? true;
         token.sub = user.id;
         token.email = user.email;
         token.name = user.name;
       }
-      if (trigger === "update" && token.customerId) {
-        const customer = await db.customer.findUnique({
-          where: { id: String(token.customerId) },
-          select: { mustChangePassword: true },
-        });
-        token.mustChangePassword = customer?.mustChangePassword ?? false;
+      if (trigger === "update") {
+        if (token.customerId) {
+          const customer = await db.customer.findUnique({
+            where: { id: String(token.customerId) },
+            select: { mustChangePassword: true },
+          });
+          token.mustChangePassword = customer?.mustChangePassword ?? false;
+        }
+        // After PATCH: client passes value — refresh JWT without another DB read.
+        if (
+          session &&
+          typeof (session as { inAppNotificationsEnabled?: unknown })
+            .inAppNotificationsEnabled === "boolean"
+        ) {
+          token.inAppNotificationsEnabled = (
+            session as { inAppNotificationsEnabled: boolean }
+          ).inAppNotificationsEnabled;
+        }
+        if (
+          session &&
+          typeof (session as { email?: unknown }).email === "string"
+        ) {
+          token.email = (session as { email: string }).email;
+        }
       }
       return token;
     },
@@ -124,6 +175,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           customerCode:
             typeof token.customerCode === "string" ? token.customerCode : null,
           mustChangePassword: Boolean(token.mustChangePassword),
+          // Missing on old JWTs → default true (matches DB default).
+          inAppNotificationsEnabled: token.inAppNotificationsEnabled !== false,
           email: typeof token.email === "string" ? token.email : null,
           name: typeof token.name === "string" ? token.name : null,
         },

@@ -120,7 +120,7 @@ export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
           checked={allowsUnitOrder}
           onChange={(e) => setAllowsUnitOrder(e.target.checked)}
         />
-        Permite pedido por unidades (precio al pesar)
+        Permite pedido por unidades o kg (precio al pesar en unidades)
       </label>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
