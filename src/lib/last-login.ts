@@ -29,7 +29,7 @@ export function saveLastCustomerCode(code: string): void {
 
 export function readLastAdminEmail(): string {
   try {
-    const value = localStorage.getItem(LAST_ADMIN_EMAIL_KEY)?.trim() ?? "";
+    const value = localStorage.getItem(LAST_ADMIN_EMAIL_KEY)?.trim().toLowerCase() ?? "";
     return value.includes("@") ? value : "";
   } catch {
     return "";
@@ -37,7 +37,7 @@ export function readLastAdminEmail(): string {
 }
 
 export function saveLastAdminEmail(email: string): void {
-  const normalized = email.trim();
+  const normalized = email.trim().toLowerCase();
   if (!normalized.includes("@")) return;
   try {
     localStorage.setItem(LAST_ADMIN_EMAIL_KEY, normalized);

@@ -29,21 +29,30 @@ export function AdminLoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setLoading(true);
+    // Prefer FormData so browser password-manager autofill is not lost when
+    // React controlled state never received onChange (common after remember-login).
+    const fd = new FormData(e.currentTarget);
+    const submittedEmail = String(fd.get("email") ?? email).trim();
+    const submittedPassword = String(fd.get("password") ?? password);
     const result = await signIn("admin", {
-      email,
-      password,
+      email: submittedEmail,
+      password: submittedPassword,
       redirect: false,
     });
     if (result?.error) {
-      setError("Email o contraseña incorrectos");
+      setError(
+        result.error === "Configuration"
+          ? "Error de configuración del servidor de acceso. Si persiste, avisá a soporte."
+          : "Email o contraseña incorrectos",
+      );
       setLoading(false);
       return;
     }
-    saveLastAdminEmail(email);
+    saveLastAdminEmail(submittedEmail);
     // Keep "Ingresando…" and hard-nav so callback (e.g. remito) loads with session.
     window.location.assign(callbackUrl);
   }
@@ -54,6 +63,7 @@ export function AdminLoginForm() {
         <Label htmlFor="email">Email</Label>
         <Input
           id="email"
+          name="email"
           type="email"
           autoComplete="username"
           value={email}
@@ -65,6 +75,7 @@ export function AdminLoginForm() {
         <Label htmlFor="password">Contraseña</Label>
         <PasswordInput
           id="password"
+          name="password"
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
