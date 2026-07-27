@@ -1,5 +1,6 @@
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { requireAdminSession } from "@/lib/session";
+import { PushNotificationsSettings } from "@/components/admin/push-notifications-settings";
 import { WhatsAppSettingsForm } from "@/components/admin/whatsapp-settings-form";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 
@@ -17,6 +18,13 @@ export default async function AdminConfigPage() {
           Ajustes generales del cotizador y de tu cuenta.
         </p>
       </div>
+
+      <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          Avisos del navegador
+        </h2>
+        <PushNotificationsSettings />
+      </section>
 
       <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
