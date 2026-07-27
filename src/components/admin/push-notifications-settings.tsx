@@ -9,6 +9,10 @@ import {
   dispatchAdminInAppToast,
 } from "@/lib/push-sw-client";
 import { pushNotificationBrandAssets } from "@/lib/push-notification-brand";
+import {
+  isAdminInAppNotificationsEnabled,
+  setAdminInAppNotificationsEnabled,
+} from "@/lib/admin-inapp-notifications-pref";
 
 type Status =
   | "loading"
@@ -19,7 +23,7 @@ type Status =
   | "unsubscribed"
   | "error";
 
-type OsGuide = "windows" | "macos";
+type OsGuide = "windows" | "macos" | "android" | "ios";
 
 type TestApiResult = {
   ok: boolean;
@@ -30,16 +34,11 @@ type TestApiResult = {
   status: number;
 };
 
-type StepResult = {
-  label: string;
-  ok: boolean;
-  detail: string;
-};
-
-type ProbarReport = {
-  ok: boolean;
-  steps: StepResult[];
-  note: string;
+const OS_GUIDE_LABEL: Record<OsGuide, string> = {
+  windows: "Cómo permitir notificaciones en Windows",
+  macos: "Cómo permitir notificaciones en macOS",
+  android: "Cómo permitir notificaciones en Android",
+  ios: "Cómo permitir notificaciones en iOS",
 };
 
 function urlBase64ToUint8Array(base64String: string): BufferSource {
@@ -162,28 +161,68 @@ function OsSystemGuide({ os }: { os: OsGuide }) {
     );
   }
 
+  if (os === "macos") {
+    return (
+      <ul className="mt-2 list-disc space-y-1.5 pl-5 text-neutral-700">
+        <li>
+          <span className="font-medium">Ajustes macOS</span> → Notificaciones →
+          Google Chrome → <span className="font-medium">Permitir</span> (no
+          “Entregar en silencio” / Deliver Quietly).
+        </li>
+        <li>
+          Desactivá <span className="font-medium">Focus / No molestar</span> al
+          probar. En Chrome: desmarcá{" "}
+          <span className="font-medium">“Use Focus filters”</span> si aparece.
+        </li>
+        <li>
+          Chrome → candado del sitio → Notificaciones →{" "}
+          <span className="font-medium">Permitir</span>.
+        </li>
+        <li>
+          Pegá en la barra:{" "}
+          <span className="break-all font-mono text-xs">
+            chrome://settings/content/notifications
+          </span>
+          .
+        </li>
+      </ul>
+    );
+  }
+
+  if (os === "android") {
+    return (
+      <ul className="mt-2 list-disc space-y-1.5 pl-5 text-neutral-700">
+        <li>
+          En <span className="font-medium">Chrome</span>: candado del sitio →
+          Notificaciones → <span className="font-medium">Permitir</span>.
+        </li>
+        <li>
+          En Android: Ajustes → Apps →{" "}
+          <span className="font-medium">Chrome</span> → Notificaciones →
+          activá notificaciones (y el canal del sitio si aparece).
+        </li>
+        <li>
+          Desactivá <span className="font-medium">No molestar</span> al probar.
+        </li>
+      </ul>
+    );
+  }
+
   return (
     <ul className="mt-2 list-disc space-y-1.5 pl-5 text-neutral-700">
       <li>
-        <span className="font-medium">Ajustes macOS</span> → Notificaciones →
-        Google Chrome → <span className="font-medium">Permitir</span> (no
-        “Entregar en silencio” / Deliver Quietly).
+        En iPhone/iPad, Web Push solo funciona si abrís la app desde la{" "}
+        <span className="font-medium">pantalla de inicio</span> (PWA), no desde
+        una pestaña normal de Safari. Requiere iOS 16.4 o superior.
       </li>
       <li>
-        Desactivá <span className="font-medium">Focus / No molestar</span> al
-        probar. En Chrome: desmarcá{" "}
-        <span className="font-medium">“Use Focus filters”</span> si aparece.
+        Safari → botón Compartir →{" "}
+        <span className="font-medium">Agregar a pantalla de inicio</span> →
+        abrí Rocha Cotizador desde el ícono.
       </li>
       <li>
-        Chrome → candado del sitio → Notificaciones →{" "}
-        <span className="font-medium">Permitir</span>.
-      </li>
-      <li>
-        Pegá en la barra:{" "}
-        <span className="break-all font-mono text-xs">
-          chrome://settings/content/notifications
-        </span>
-        .
+        Dentro de la PWA: Activar notificaciones del sistema y aceptá el
+        permiso cuando iOS lo pida.
       </li>
     </ul>
   );
@@ -192,16 +231,17 @@ function OsSystemGuide({ os }: { os: OsGuide }) {
 export function PushNotificationsSettings() {
   const [status, setStatus] = useState<Status>("loading");
   const [busy, setBusy] = useState(false);
+  const [busyInApp, setBusyInApp] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testingSystem, setTestingSystem] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [probar, setProbar] = useState<ProbarReport | null>(null);
-  const [probarSystem, setProbarSystem] = useState<{
-    ok: boolean;
-    note: string;
-  } | null>(null);
   const [osGuide, setOsGuide] = useState<OsGuide>("windows");
+  const [inAppEnabled, setInAppEnabled] = useState(() =>
+    typeof window === "undefined"
+      ? true
+      : isAdminInAppNotificationsEnabled(),
+  );
   const [perm, setPerm] = useState<NotificationPermission | "unknown">(
     "unknown",
   );
@@ -245,12 +285,30 @@ export function PushNotificationsSettings() {
     };
   }, []);
 
+  function enableInApp() {
+    setBusyInApp(true);
+    setError(null);
+    setMessage(null);
+    setAdminInAppNotificationsEnabled(true);
+    setInAppEnabled(true);
+    setMessage("Notificaciones en la app activadas.");
+    setBusyInApp(false);
+  }
+
+  function disableInApp() {
+    setBusyInApp(true);
+    setError(null);
+    setMessage(null);
+    setAdminInAppNotificationsEnabled(false);
+    setInAppEnabled(false);
+    setMessage("Notificaciones en la app desactivadas.");
+    setBusyInApp(false);
+  }
+
   async function enable() {
     setBusy(true);
     setError(null);
     setMessage(null);
-    setProbar(null);
-    setProbarSystem(null);
 
     try {
       if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
@@ -270,21 +328,21 @@ export function PushNotificationsSettings() {
       if (permission !== "granted") {
         setStatus(permission === "denied" ? "denied" : "unsubscribed");
         setError(
-          "Permiso de notificaciones del sistema denegado. Las notificaciones en la app siguen funcionando con el admin abierto.",
+          "Permiso de notificaciones del sistema denegado. Las notificaciones en la app siguen disponibles si están activadas.",
         );
         return;
       }
 
       await subscribeFresh(key.publicKey);
       setStatus("subscribed");
-      setMessage(
-        "Notificaciones del sistema activadas.",
-      );
+      setMessage("Notificaciones del sistema activadas.");
     } catch (err) {
       console.error(err);
       const detail =
         err instanceof Error && err.message ? ` (${err.message})` : "";
-      setError(`No se pudieron activar las notificaciones del sistema.${detail}`);
+      setError(
+        `No se pudieron activar las notificaciones del sistema.${detail}`,
+      );
       setStatus("error");
     } finally {
       setBusy(false);
@@ -295,8 +353,6 @@ export function PushNotificationsSettings() {
     setBusy(true);
     setError(null);
     setMessage(null);
-    setProbar(null);
-    setProbarSystem(null);
 
     try {
       const reg =
@@ -313,7 +369,7 @@ export function PushNotificationsSettings() {
       }
       setStatus("unsubscribed");
       setMessage(
-        "Notificaciones del sistema desactivadas. Las notificaciones en la app siguen activas.",
+        "Notificaciones del sistema desactivadas. Las notificaciones en la app siguen disponibles si están activadas.",
       );
     } catch {
       setError("No se pudieron desactivar las notificaciones del sistema.");
@@ -327,10 +383,15 @@ export function PushNotificationsSettings() {
     setTesting(true);
     setError(null);
     setMessage(null);
-    setProbar(null);
-    setProbarSystem(null);
 
     try {
+      if (!isAdminInAppNotificationsEnabled()) {
+        const note =
+          "Activá las notificaciones en la app antes de probarlas.";
+        setError(note);
+        return;
+      }
+
       const inboxRes = await fetch("/api/admin/push/inbox/test", {
         method: "POST",
         credentials: "same-origin",
@@ -341,11 +402,6 @@ export function PushNotificationsSettings() {
           typeof inboxData.error === "string"
             ? inboxData.error
             : "No se pudo enviar la notificación de prueba. Revisá la sesión o la red.";
-        setProbar({
-          ok: false,
-          steps: [{ label: "Notificación en la app", ok: false, detail: note }],
-          note,
-        });
         setError(note);
         dispatchAdminInAppToast({
           title: "Prueba fallida",
@@ -368,28 +424,10 @@ export function PushNotificationsSettings() {
         tone: "success",
         inboxId: item.id,
       });
-      const report: ProbarReport = {
-        ok: true,
-        steps: [
-          {
-            label: "Notificación en la app",
-            ok: true,
-            detail: "Notificación de prueba enviada",
-          },
-        ],
-        note: "Notificación de prueba enviada.",
-      };
-      setProbar(report);
-      setMessage(report.note);
     } catch (err) {
       console.error(err);
       const detail =
         err instanceof Error ? err.message : "Error al probar notificaciones.";
-      setProbar({
-        ok: false,
-        steps: [{ label: "Notificación en la app", ok: false, detail }],
-        note: detail,
-      });
       setError(detail);
       dispatchAdminInAppToast({
         title: "Prueba fallida",
@@ -406,14 +444,12 @@ export function PushNotificationsSettings() {
     setTestingSystem(true);
     setError(null);
     setMessage(null);
-    setProbarSystem(null);
 
     try {
       if (status !== "subscribed" || !("Notification" in window)) {
-        const note =
-          "Activá las notificaciones del sistema antes de probarlas.";
-        setProbarSystem({ ok: false, note });
-        setError(note);
+        setError(
+          "Activá las notificaciones del sistema antes de probarlas.",
+        );
         return;
       }
 
@@ -426,7 +462,6 @@ export function PushNotificationsSettings() {
         const note =
           "Sin suscripción en este navegador. Activá las notificaciones del sistema.";
         setStatus("unsubscribed");
-        setProbarSystem({ ok: false, note });
         setError(note);
         return;
       }
@@ -453,34 +488,28 @@ export function PushNotificationsSettings() {
             data: { url: "/admin/configuracion" },
           });
         }
-        const note = "Notificación del sistema enviada.";
-        setProbarSystem({ ok: true, note });
-        setMessage(note);
         return;
       }
 
       if (result.needResub) {
         setStatus("unsubscribed");
-        const note =
+        setError(
           result.error ??
-          "La suscripción expiró. Activá de nuevo las notificaciones del sistema.";
-        setProbarSystem({ ok: false, note });
-        setError(note);
+            "La suscripción expiró. Activá de nuevo las notificaciones del sistema.",
+        );
         return;
       }
 
-      const note =
-        result.error ?? "No se pudo enviar la notificación del sistema.";
-      setProbarSystem({ ok: false, note });
-      setError(note);
+      setError(
+        result.error ?? "No se pudo enviar la notificación del sistema.",
+      );
     } catch (err) {
       console.error(err);
-      const detail =
+      setError(
         err instanceof Error
           ? err.message
-          : "Error al probar notificaciones del sistema.";
-      setProbarSystem({ ok: false, note: detail });
-      setError(detail);
+          : "Error al probar notificaciones del sistema.",
+      );
     } finally {
       setTestingSystem(false);
     }
@@ -490,19 +519,22 @@ export function PushNotificationsSettings() {
     loading: "Comprobando…",
     unsupported: "Este navegador no soporta Web Push del sistema.",
     denied:
-      "Permiso del sistema bloqueado. Las notificaciones en la app siguen funcionando.",
-    "no-vapid": "Faltan claves VAPID en el servidor (solo afecta notificaciones OS).",
+      "Permiso del sistema bloqueado. Las notificaciones en la app siguen disponibles si están activadas.",
+    "no-vapid":
+      "Faltan claves VAPID en el servidor (solo afecta notificaciones OS).",
     subscribed: "Notificaciones del sistema activas en este navegador.",
     unsubscribed: "Notificaciones del sistema no activadas (opcional).",
     error: "Error al configurar notificaciones del sistema.",
   };
 
+  const osTabs: OsGuide[] = ["windows", "macos", "android", "ios"];
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-neutral-600">
         Cuando un <span className="font-medium">cliente</span> confirma una
-        cotización, el admin recibe una notificación. Cotizaciones creadas desde el
-        admin no disparan notificación.
+        cotización, el admin recibe una notificación. Cotizaciones creadas
+        desde el admin no disparan notificación.
       </p>
 
       {/* —— Notificaciones en la app —— */}
@@ -512,12 +544,59 @@ export function PushNotificationsSettings() {
           Con el admin abierto, las notificaciones aparecen como toast abajo a
           la derecha.
         </p>
-        <div className="mt-3">
+        <p className="mt-2 text-emerald-950">
+          Estado:{" "}
+          <span className="font-medium">
+            {inAppEnabled ? "Activadas en este navegador" : "Desactivadas"}
+          </span>
+        </p>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+          {inAppEnabled ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-center sm:w-auto sm:min-w-[17.5rem]"
+              disabled={busyInApp || testing || testingSystem || busy}
+              onClick={disableInApp}
+            >
+              {busyInApp ? (
+                <>
+                  <Spinner className="mr-2" />
+                  Desactivar notificaciones en la app
+                </>
+              ) : (
+                "Desactivar notificaciones en la app"
+              )}
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              className="w-full justify-center sm:w-auto sm:min-w-[17.5rem]"
+              disabled={busyInApp || testing || testingSystem || busy}
+              onClick={enableInApp}
+            >
+              {busyInApp ? (
+                <>
+                  <Spinner className="mr-2 text-white" />
+                  Activar notificaciones en la app
+                </>
+              ) : (
+                "Activar notificaciones en la app"
+              )}
+            </Button>
+          )}
           <Button
             type="button"
             className="w-full justify-center sm:w-auto sm:min-w-[17.5rem]"
-            disabled={testing || testingSystem || busy}
+            disabled={
+              testing || testingSystem || busy || busyInApp || !inAppEnabled
+            }
             onClick={testInAppNotification}
+            title={
+              !inAppEnabled
+                ? "Activá las notificaciones en la app primero"
+                : undefined
+            }
           >
             {testing ? (
               <>
@@ -529,42 +608,12 @@ export function PushNotificationsSettings() {
             )}
           </Button>
         </div>
-      </div>
-
-      {probar ? (
-        <div
-          role="alert"
-          aria-live="assertive"
-          className={`rounded-lg border-2 px-4 py-4 shadow-md ${
-            probar.ok
-              ? "border-emerald-600 bg-emerald-50 text-emerald-950"
-              : "border-red-600 bg-red-50 text-red-950"
-          }`}
-        >
-          <p className="text-base font-bold sm:text-lg">
-            {probar.ok
-              ? "Notificación de prueba enviada"
-              : "No se pudo enviar la notificación de prueba"}
+        {!inAppEnabled ? (
+          <p className="mt-2 text-xs text-emerald-900/80">
+            Para probar, activá las notificaciones en la app primero.
           </p>
-          <ul className="mt-3 space-y-2 text-sm">
-            {probar.steps.map((step) => (
-              <li
-                key={step.label}
-                className="flex gap-2 rounded-md bg-white/70 px-3 py-2"
-              >
-                <span className="font-bold" aria-hidden>
-                  {step.ok ? "✓" : "✗"}
-                </span>
-                <span>
-                  <span className="font-semibold">{step.label}</span>
-                  <span className="block text-neutral-700">{step.detail}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-sm font-medium">{probar.note}</p>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {/* —— Notificaciones del sistema (opcional) —— */}
       <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-800">
@@ -590,38 +639,33 @@ export function PushNotificationsSettings() {
           <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">
             Instrucciones OS:
           </span>
-          <div className="inline-flex rounded-md border border-neutral-300 bg-white p-0.5">
-            <button
-              type="button"
-              className={`rounded px-2.5 py-1 text-xs font-medium ${
-                osGuide === "windows"
-                  ? "bg-neutral-900 text-white"
-                  : "text-neutral-600 hover:bg-neutral-100"
-              }`}
-              onClick={() => setOsGuide("windows")}
-              aria-pressed={osGuide === "windows"}
-            >
-              Windows
-            </button>
-            <button
-              type="button"
-              className={`rounded px-2.5 py-1 text-xs font-medium ${
-                osGuide === "macos"
-                  ? "bg-neutral-900 text-white"
-                  : "text-neutral-600 hover:bg-neutral-100"
-              }`}
-              onClick={() => setOsGuide("macos")}
-              aria-pressed={osGuide === "macos"}
-            >
-              macOS
-            </button>
+          <div className="inline-flex flex-wrap rounded-md border border-neutral-300 bg-white p-0.5">
+            {osTabs.map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                className={`rounded px-2.5 py-1 text-xs font-medium ${
+                  osGuide === tab
+                    ? "bg-neutral-900 text-white"
+                    : "text-neutral-600 hover:bg-neutral-100"
+                }`}
+                onClick={() => setOsGuide(tab)}
+                aria-pressed={osGuide === tab}
+              >
+                {tab === "windows"
+                  ? "Windows"
+                  : tab === "macos"
+                    ? "macOS"
+                    : tab === "android"
+                      ? "Android"
+                      : "iOS"}
+              </button>
+            ))}
           </div>
         </div>
 
         <p className="mt-2 font-medium text-neutral-900">
-          {osGuide === "windows"
-            ? "Cómo permitir notificaciones en Windows"
-            : "Cómo permitir notificaciones en macOS"}
+          {OS_GUIDE_LABEL[osGuide]}
         </p>
         <OsSystemGuide os={osGuide} />
 
@@ -667,10 +711,7 @@ export function PushNotificationsSettings() {
             type="button"
             className="w-full justify-center sm:w-auto sm:min-w-[17.5rem]"
             disabled={
-              busy ||
-              testing ||
-              testingSystem ||
-              status !== "subscribed"
+              busy || testing || testingSystem || status !== "subscribed"
             }
             onClick={testSystemNotification}
             title={
@@ -697,23 +738,10 @@ export function PushNotificationsSettings() {
             primero.
           </p>
         ) : null}
-        {probarSystem ? (
-          <p
-            className={`mt-2 text-sm font-medium ${
-              probarSystem.ok ? "text-green-700" : "text-red-600"
-            }`}
-          >
-            {probarSystem.note}
-          </p>
-        ) : null}
       </div>
 
-      {error && !probar && !probarSystem ? (
-        <p className="text-sm text-red-600">{error}</p>
-      ) : null}
-      {message && !probar && !probarSystem ? (
-        <p className="text-sm text-green-700">{message}</p>
-      ) : null}
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {message ? <p className="text-sm text-green-700">{message}</p> : null}
     </div>
   );
 }

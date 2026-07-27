@@ -314,14 +314,18 @@ export function SkeletonAdminConfigPage() {
             <Skeleton className="h-3 w-full" />
             <Skeleton className="h-3 w-64" />
           </div>
-          {/* In-app + Probar */}
+          {/* In-app + toggle + Probar */}
           <div className="space-y-3 rounded-md border border-[var(--brand-latte)] bg-[var(--brand-primary-soft)]/80 px-3 py-3">
             <Skeleton className="h-4 w-52" />
             <Skeleton className="h-3 w-full" />
             <Skeleton className="h-3 w-56" />
-            <Skeleton className="mt-1 h-10 w-44 rounded-md" />
+            <Skeleton className="h-3 w-48" />
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Skeleton className="h-10 w-56 rounded-md" />
+              <Skeleton className="h-10 w-56 rounded-md" />
+            </div>
           </div>
-          {/* Sistema opcional + Windows/macOS */}
+          {/* Sistema opcional + Windows/macOS/Android/iOS */}
           <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
             <Skeleton className="h-4 w-56" />
             <Skeleton className="h-3 w-full" />
@@ -329,7 +333,7 @@ export function SkeletonAdminConfigPage() {
             <Skeleton className="h-3 w-64" />
             <div className="flex flex-wrap items-center gap-2 pt-1">
               <Skeleton className="h-3 w-28" />
-              <Skeleton className="h-8 w-36 rounded-md" />
+              <Skeleton className="h-8 w-64 rounded-md" />
             </div>
             <Skeleton className="h-4 w-64" />
             <div className="space-y-2">

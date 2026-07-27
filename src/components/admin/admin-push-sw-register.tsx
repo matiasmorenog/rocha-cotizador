@@ -12,6 +12,10 @@ import {
   type AdminToastItem,
 } from "@/components/admin/admin-notification-toasts";
 import { playAdminNotificationSound, unlockAdminNotificationSound } from "@/lib/admin-notification-sound";
+import {
+  ADMIN_INAPP_PREF_EVENT,
+  isAdminInAppNotificationsEnabled,
+} from "@/lib/admin-inapp-notifications-pref";
 
 type InboxItem = {
   id: string;
@@ -24,7 +28,8 @@ type InboxItem = {
 const POLL_MS = 8_000;
 const TOAST_TTL_MS = 6_000;
 const MAX_TOASTS = 4;
-const DEDUPE_MS = 8_000;
+/** Only for Web Push double-delivery (BroadcastChannel + postMessage). */
+const PUSH_DEDUPE_MS = 2_000;
 const SEEN_KEY = "rocha-admin-inbox-seen";
 
 function loadSeenIds(): Set<string> {
@@ -85,20 +90,27 @@ export function AdminPushSwRegister() {
   }
 
   function pushToast(next: Omit<AdminToastItem, "id"> & { id?: string }) {
+    if (!isAdminInAppNotificationsEnabled()) return;
+
     const id =
       next.id ??
       `toast-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const fp = fingerprint(next.title, next.body, next.url);
-    const now = Date.now();
-    for (const [key, at] of recentFpRef.current) {
-      if (now - at > DEDUPE_MS) recentFpRef.current.delete(key);
+
+    // Fingerprint dedupe only for OS push echo (same payload twice).
+    // Probar / inbox each get a unique id — stacking must work.
+    if (next.source === "push") {
+      const fp = fingerprint(next.title, next.body, next.url);
+      const now = Date.now();
+      for (const [key, at] of recentFpRef.current) {
+        if (now - at > PUSH_DEDUPE_MS) recentFpRef.current.delete(key);
+      }
+      const lastAt = recentFpRef.current.get(fp);
+      if (lastAt !== undefined && now - lastAt < PUSH_DEDUPE_MS) {
+        console.log("[push] toast deduped", { id, fp: next.title });
+        return;
+      }
+      recentFpRef.current.set(fp, now);
     }
-    const lastAt = recentFpRef.current.get(fp);
-    if (lastAt !== undefined && now - lastAt < DEDUPE_MS) {
-      console.log("[push] toast deduped", { id, fp: next.title });
-      return;
-    }
-    recentFpRef.current.set(fp, now);
 
     console.log("[push] in-app toast", { id, ...next });
     playAdminNotificationSound();
@@ -187,11 +199,21 @@ export function AdminPushSwRegister() {
     }
     window.addEventListener(ADMIN_INAPP_TOAST_EVENT, onCustomToast);
 
+    function onInAppPref() {
+      if (!isAdminInAppNotificationsEnabled()) {
+        setToasts([]);
+        for (const t of toastTimers.values()) clearTimeout(t);
+        toastTimers.clear();
+      }
+    }
+    window.addEventListener(ADMIN_INAPP_PREF_EVENT, onInAppPref);
+
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
 
     async function pollOnce() {
       if (cancelled || document.visibilityState === "hidden") return;
+      if (!isAdminInAppNotificationsEnabled()) return;
       try {
         const res = await fetch(
           `/api/admin/push/inbox?since=${encodeURIComponent(sinceRef.current)}`,
@@ -251,6 +273,7 @@ export function AdminPushSwRegister() {
       navigator.serviceWorker?.removeEventListener("message", onSwMessage);
       channel?.close();
       window.removeEventListener(ADMIN_INAPP_TOAST_EVENT, onCustomToast);
+      window.removeEventListener(ADMIN_INAPP_PREF_EVENT, onInAppPref);
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
     };
