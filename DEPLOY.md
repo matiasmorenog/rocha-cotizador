@@ -42,7 +42,7 @@ AUTH_URL=https://rocha-cotizador.vercel.app
 # Web Push (admin avisos de cotización nueva) — mismas keys en Preview + Production + local
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=   # npx web-push generate-vapid-keys
 VAPID_PRIVATE_KEY=              # nunca commitear
-VAPID_SUBJECT=mailto:admin@rocha.com
+VAPID_SUBJECT=https://rocha-cotizador.vercel.app
 ```
 
 En Vercel: **Production** → Neon `main` (pooled) + secrets prod. **Preview ≡ Development** → Neon `development` (pooled) + mismos `AUTH_*`. Local `.env` (gitignored): Neon `development` **direct** + `AUTH_URL=http://localhost:3000` + `SEED_TARGET=development`.
@@ -55,7 +55,7 @@ Cuando un **cliente** crea una cotización, el servidor manda Web Push a admins 
 2. Cargar en Vercel (**Production**, **Preview** y **Development**) y en `.env` local:
    - `NEXT_PUBLIC_VAPID_PUBLIC_KEY`
    - `VAPID_PRIVATE_KEY`
-   - `VAPID_SUBJECT` (ej. `mailto:admin@rocha.com`)
+   - `VAPID_SUBJECT` (URL del sitio, ej. `https://rocha-cotizador.vercel.app` — contacto VAPID, no envía mail)
 3. Schema: modelo `PushSubscription` — `npx prisma db push` en Neon **development**; **antes del release a prod** también contra Neon `main`.
 4. Admin activa en `/admin/configuracion` → “Activar avisos del navegador”.
 
