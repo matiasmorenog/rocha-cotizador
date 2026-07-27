@@ -139,6 +139,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             session as { inAppNotificationsEnabled: boolean }
           ).inAppNotificationsEnabled;
         }
+        if (
+          session &&
+          typeof (session as { email?: unknown }).email === "string"
+        ) {
+          token.email = (session as { email: string }).email;
+        }
       }
       return token;
     },
