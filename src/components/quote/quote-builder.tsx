@@ -73,18 +73,16 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
     }
     let cancelled = false;
     const requestId = ++searchRequestId.current;
-    // Prefer local catalog (after load). Debounce avoids spam while typing.
-    const handle = setTimeout(() => {
-      void searchAsyncRef.current(q).then((rows) => {
-        if (cancelled || requestId !== searchRequestId.current) return;
-        setResults(rows);
-        setHighlightIndex(rows.length > 0 ? 0 : -1);
-        setOpen(true);
-      });
-    }, 200);
+    // Local in-memory filter — no debounce (instant). Server fallback in
+    // searchAsync only runs if catalog empty after load (rare cold path).
+    void searchAsyncRef.current(q).then((rows) => {
+      if (cancelled || requestId !== searchRequestId.current) return;
+      setResults(rows);
+      setHighlightIndex(rows.length > 0 ? 0 : -1);
+      setOpen(true);
+    });
     return () => {
       cancelled = true;
-      clearTimeout(handle);
     };
   }, [query, catalog.ready]);
 
