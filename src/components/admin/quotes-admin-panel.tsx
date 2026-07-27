@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ import {
 } from "@/lib/argentina-time";
 import { formatDeliveryDateLabel } from "@/lib/delivery-date";
 import { quoteStatusLabel } from "@/lib/quote-status";
-import { formatPrice } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 
 export type QuoteListRow = {
   id: string;
@@ -34,71 +35,44 @@ function afterCutoffSummary(count: number): string {
   return `${count} cotizaciones ingresadas después del cierre (${hora})`;
 }
 
-function QuotesTable({
-  rows,
-  emptyLabel,
+function QuoteDataRow({
+  qrow,
+  muted,
 }: {
-  rows: QuoteListRow[];
-  emptyLabel: string;
+  qrow: QuoteListRow;
+  muted?: boolean;
 }) {
   return (
-    <DataTableScroll>
-      <table className="w-full min-w-[42rem] text-sm">
-        <thead className="bg-neutral-50 text-left text-neutral-600">
-          <tr>
-            <th className="px-3 py-2">Número</th>
-            <th className="px-3 py-2">Cliente</th>
-            <th className="px-3 py-2">Pedido</th>
-            <th className="px-3 py-2">Entrega</th>
-            <th className="px-3 py-2">Estado</th>
-            <th className="px-3 py-2">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((qrow) => (
-            <tr key={qrow.id} className="border-t border-neutral-100">
-              <td className="px-3 py-2">
-                <Link
-                  href={`/remitos/${qrow.id}`}
-                  className="font-medium text-[var(--brand-primary)] hover:underline"
-                >
-                  {qrow.number}
-                </Link>
-              </td>
-              <td className="px-3 py-2">
-                {qrow.customer.code} — {qrow.customer.name}
-              </td>
-              <td className="px-3 py-2">
-                {new Date(qrow.createdAt).toLocaleString("es-AR", {
-                  timeZone: ARGENTINA_TZ,
-                })}
-              </td>
-              <td className="px-3 py-2 text-neutral-700">
-                {formatDeliveryDateLabel(qrow.deliveryDate)}
-              </td>
-              <td className="px-3 py-2">
-                <Badge variant="success">
-                  {quoteStatusLabel(qrow.status)}
-                </Badge>
-              </td>
-              <td className="px-3 py-2 font-medium">
-                {formatPrice(qrow.total)}
-              </td>
-            </tr>
-          ))}
-          {rows.length === 0 ? (
-            <tr>
-              <td
-                colSpan={6}
-                className="px-3 py-8 text-center text-neutral-500"
-              >
-                {emptyLabel}
-              </td>
-            </tr>
-          ) : null}
-        </tbody>
-      </table>
-    </DataTableScroll>
+    <tr
+      className={cn(
+        "border-t border-neutral-100",
+        muted && "bg-amber-50/40",
+      )}
+    >
+      <td className="px-3 py-2">
+        <Link
+          href={`/remitos/${qrow.id}`}
+          className="font-medium text-[var(--brand-primary)] hover:underline"
+        >
+          {qrow.number}
+        </Link>
+      </td>
+      <td className="px-3 py-2">
+        {qrow.customer.code} — {qrow.customer.name}
+      </td>
+      <td className="px-3 py-2">
+        {new Date(qrow.createdAt).toLocaleString("es-AR", {
+          timeZone: ARGENTINA_TZ,
+        })}
+      </td>
+      <td className="px-3 py-2 text-neutral-700">
+        {formatDeliveryDateLabel(qrow.deliveryDate)}
+      </td>
+      <td className="px-3 py-2">
+        <Badge variant="success">{quoteStatusLabel(qrow.status)}</Badge>
+      </td>
+      <td className="px-3 py-2 font-medium">{formatPrice(qrow.total)}</td>
+    </tr>
   );
 }
 
@@ -118,6 +92,7 @@ export function QuotesAdminPanel({
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lateOpen, setLateOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -157,6 +132,7 @@ export function QuotesAdminPanel({
         return;
       }
       setQuotes(data.quotes ?? []);
+      setLateOpen(false);
     } catch {
       setError("No se pudo filtrar");
     } finally {
@@ -170,9 +146,10 @@ export function QuotesAdminPanel({
     window.setTimeout(() => setDownloading(false), 2500);
   }
 
-  const emptyMain = query.trim()
+  const emptyLabel = query.trim()
     ? "Sin cotizaciones para esa búsqueda"
     : "Sin cotizaciones en este rango";
+  const showEmpty = main.length === 0 && afterCutoff.length === 0;
 
   return (
     <div className="space-y-6">
@@ -184,7 +161,8 @@ export function QuotesAdminPanel({
             </p>
             <p className="text-xs text-neutral-500">
               Por defecto: ayer {ORDER_CUTOFF_HOUR_AR}:00 → ahora (hora
-              Argentina). Las ingresadas después del cierre del día van aparte.
+              Argentina). Las ingresadas después del cierre del día se listan
+              al final, bajo una fila expansible.
             </p>
           </div>
 
@@ -252,33 +230,70 @@ export function QuotesAdminPanel({
         aria-label="Buscar cotizaciones"
       />
 
-      <QuotesTable rows={main} emptyLabel={emptyMain} />
+      <DataTableScroll>
+        <table className="w-full min-w-[42rem] text-sm">
+          <thead className="bg-neutral-50 text-left text-neutral-600">
+            <tr>
+              <th className="px-3 py-2">Número</th>
+              <th className="px-3 py-2">Cliente</th>
+              <th className="px-3 py-2">Pedido</th>
+              <th className="px-3 py-2">Entrega</th>
+              <th className="px-3 py-2">Estado</th>
+              <th className="px-3 py-2">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {main.map((qrow) => (
+              <QuoteDataRow key={qrow.id} qrow={qrow} />
+            ))}
 
-      {afterCutoff.length > 0 ? (
-        <details className="group rounded-lg border border-amber-200/80 bg-amber-50/40 open:bg-amber-50/60">
-          <summary className="cursor-pointer list-none px-4 py-3 text-sm font-medium text-amber-950 marker:content-none [&::-webkit-details-marker]:hidden">
-            <span className="flex items-center justify-between gap-3">
-              <span>{afterCutoffSummary(afterCutoff.length)}</span>
-              <span className="shrink-0 text-xs font-normal text-amber-800/80 group-open:hidden">
-                Ver
-              </span>
-              <span className="hidden shrink-0 text-xs font-normal text-amber-800/80 group-open:inline">
-                Ocultar
-              </span>
-            </span>
-          </summary>
-          <div className="border-t border-amber-200/70 px-2 pb-2 pt-1 sm:px-3">
-            <p className="mb-2 px-1 text-xs text-amber-900/80">
-              Entran en el próximo ciclo de preparación (cierre{" "}
-              {ORDER_CUTOFF_HOUR_AR}:00).
-            </p>
-            <QuotesTable
-              rows={afterCutoff}
-              emptyLabel="Sin cotizaciones después del cierre"
-            />
-          </div>
-        </details>
-      ) : null}
+            {afterCutoff.length > 0 ? (
+              <tr className="border-t border-amber-200/80 bg-amber-50/50">
+                <td colSpan={6} className="px-3 py-0">
+                  <button
+                    type="button"
+                    onClick={() => setLateOpen((o) => !o)}
+                    aria-expanded={lateOpen}
+                    className="flex w-full items-center justify-between gap-3 py-2.5 text-left text-sm font-medium text-amber-950 hover:bg-amber-50/80"
+                  >
+                    <span>
+                      {afterCutoffSummary(afterCutoff.length)}
+                      <span className="mt-0.5 block text-xs font-normal text-amber-800/80">
+                        Próximo ciclo de preparación —{" "}
+                        {lateOpen ? "ocultar" : "mostrar"}
+                      </span>
+                    </span>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 shrink-0 text-amber-900/70 transition-transform",
+                        lateOpen && "rotate-180",
+                      )}
+                      aria-hidden
+                    />
+                  </button>
+                </td>
+              </tr>
+            ) : null}
+
+            {lateOpen
+              ? afterCutoff.map((qrow) => (
+                  <QuoteDataRow key={qrow.id} qrow={qrow} muted />
+                ))
+              : null}
+
+            {showEmpty ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-3 py-8 text-center text-neutral-500"
+                >
+                  {emptyLabel}
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </DataTableScroll>
     </div>
   );
 }
