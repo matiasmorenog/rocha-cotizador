@@ -53,7 +53,12 @@ export function invalidateAfterCustomerMutation() {
   invalidateAdminDashboardCache();
 }
 
-/** Quote create — dashboard “today” + recent list. */
+/** Quote create — dashboard counts may include quotesToday; keep tag warm after create. */
 export function invalidateAfterQuoteCreate() {
+  invalidateAdminDashboardCache();
+}
+
+/** Quote wipe / bulk delete — expire dashboard tags (counts). Lists read DB uncached. */
+export function invalidateAfterQuoteWipe() {
   invalidateAdminDashboardCache();
 }

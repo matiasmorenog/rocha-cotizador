@@ -32,8 +32,8 @@ export function AdminLoginForm() {
       setLoading(false);
       return;
     }
-    // Keep "Ingresando…" and hard-nav so callback (e.g. remito) loads with session.
-    window.location.assign(callbackUrl);
+    // Keep "Ingresando…" and hard-nav so callback loads with session (no Router Cache).
+    window.location.href = callbackUrl;
   }
 
   return (

@@ -2,6 +2,9 @@ import Link from "next/link";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
 import { formatPrice } from "@/lib/utils";
 
+/** Dynamic shell; quote rows inside are never Data-Cached (see admin-dashboard-cache). */
+export const dynamic = "force-dynamic";
+
 export default async function AdminDashboardPage() {
   const { customers, products, quotesToday, recent } = await getAdminDashboardData();
 

@@ -34,14 +34,21 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({
-    quotes: quotes.map((q) => ({
-      id: q.id,
-      number: q.number,
-      status: q.status,
-      total: Number(q.total),
-      createdAt: q.createdAt.toISOString(),
-      customer: q.customer,
-    })),
-  });
+  return NextResponse.json(
+    {
+      quotes: quotes.map((q) => ({
+        id: q.id,
+        number: q.number,
+        status: q.status,
+        total: Number(q.total),
+        createdAt: q.createdAt.toISOString(),
+        customer: q.customer,
+      })),
+    },
+    {
+      headers: {
+        "Cache-Control": "private, no-store, max-age=0",
+      },
+    },
+  );
 }

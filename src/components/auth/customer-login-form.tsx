@@ -32,7 +32,7 @@ export function CustomerLoginForm() {
       setLoading(false);
       return;
     }
-    window.location.assign(callbackUrl);
+    window.location.href = callbackUrl;
   }
 
   return (
