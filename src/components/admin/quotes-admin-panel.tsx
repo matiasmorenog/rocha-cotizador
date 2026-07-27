@@ -46,7 +46,7 @@ function QuoteDataRow({
     <tr
       className={cn(
         "border-t border-neutral-100",
-        muted && "bg-amber-50/40",
+        muted && "bg-[var(--brand-primary-soft)]/60",
       )}
     >
       <td className="px-3 py-2">
@@ -244,24 +244,24 @@ export function QuotesAdminPanel({
           </thead>
           <tbody>
             {afterCutoff.length > 0 ? (
-              <tr className="border-t border-amber-200/80 bg-amber-50/50">
+              <tr className="border-y-2 border-[var(--brand-latte)] bg-[var(--brand-primary-soft)] shadow-[inset_3px_0_0_0_var(--brand-primary)]">
                 <td colSpan={6} className="px-3 py-0">
                   <button
                     type="button"
                     onClick={() => setLateOpen((o) => !o)}
                     aria-expanded={lateOpen}
-                    className="flex w-full items-center justify-between gap-3 py-2.5 text-left text-sm font-medium text-amber-950 hover:bg-amber-50/80"
+                    className="flex w-full items-center justify-between gap-3 py-3 text-left text-sm font-medium text-neutral-900 hover:bg-[color-mix(in_srgb,var(--brand-latte)_28%,var(--brand-primary-soft))]"
                   >
                     <span>
                       {afterCutoffSummary(afterCutoff.length)}
-                      <span className="mt-0.5 block text-xs font-normal text-amber-800/80">
+                      <span className="mt-0.5 block text-xs font-normal text-neutral-600">
                         Próximo ciclo de preparación —{" "}
                         {lateOpen ? "ocultar" : "mostrar"}
                       </span>
                     </span>
                     <ChevronDown
                       className={cn(
-                        "h-4 w-4 shrink-0 text-amber-900/70 transition-transform",
+                        "h-4 w-4 shrink-0 text-[var(--brand-primary)]/70 transition-transform",
                         lateOpen && "rotate-180",
                       )}
                       aria-hidden
