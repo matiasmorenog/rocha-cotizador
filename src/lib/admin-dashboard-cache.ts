@@ -24,7 +24,8 @@ function dayKey(d = new Date()): string {
 /**
  * Dashboard counts + recent quotes.
  * Sequential queries inside $transaction — one Neon connection (connection_limit=1).
- * TTL 5 min; tag `admin-dashboard` expired on quote create / wipe / related mutations.
+ * TTL 1h (3600, same as catalog); freshness via `invalidateAfterQuoteCreate` /
+ * wipe → `invalidateAfterDbScript` (all tags via POST /api/revalidate).
  */
 const getCachedAdminDashboard = unstable_cache(
   async (day: string): Promise<AdminDashboardData> => {
@@ -59,7 +60,7 @@ const getCachedAdminDashboard = unstable_cache(
     });
   },
   ["admin-dashboard"],
-  { tags: [CACHE_TAGS.adminDashboard], revalidate: 300 },
+  { tags: [CACHE_TAGS.adminDashboard], revalidate: 3600 },
 );
 
 export function getAdminDashboardData(): Promise<AdminDashboardData> {

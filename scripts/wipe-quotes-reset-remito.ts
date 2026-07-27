@@ -11,6 +11,9 @@
  *
  * Optional (bust Vercel Data Cache / route cache after wipe):
  *   REVALIDATE_SECRET + AUTH_URL (or APP_URL) — POST /api/revalidate
+ *   That endpoint expires ALL shared Data Cache tags (products, price-lists,
+ *   customers, admin-dashboard) plus admin/remitos list paths — not only
+ *   admin-dashboard.
  *
  * Examples:
  *   CONFIRM_WIPE_QUOTES=1 TARGET=development npx tsx scripts/wipe-quotes-reset-remito.ts
@@ -67,7 +70,7 @@ async function revalidateAppCache() {
 
   if (!secret || !base) {
     console.warn(
-      "Skip app revalidate: set REVALIDATE_SECRET and AUTH_URL (or APP_URL) to bust Vercel cache after wipe.",
+      "Skip app revalidate: set REVALIDATE_SECRET and AUTH_URL (or APP_URL) so POST /api/revalidate expires ALL Data Cache tags after wipe.",
     );
     return;
   }

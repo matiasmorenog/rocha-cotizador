@@ -66,9 +66,13 @@ Dashboard admin serializa queries en `$transaction` (no `Promise.all` de 4 count
 | Tag | Qué cachea | Invalidar |
 |-----|------------|-----------|
 | `products` | Catálogo base activos (`basePrice`, sin `unitPrice`) | Admin producto create/update + import Excel |
-| `admin-dashboard` | Counts + últimas cotizaciones (TTL ~120s) | Quote create; también product/customer mutate |
+| `price-lists` | Precios por lista | Price list mutate; product import |
+| `customers` | Mapping customerId → priceListId | Customer mutate; price list delete |
+| `admin-dashboard` | Counts + últimas cotizaciones (TTL 1h) | Quote create/wipe; product/customer mutate |
 
-Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateAfterCustomerMutation`, `invalidateAfterQuoteCreate`).
+Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateAfterCustomerMutation`, `invalidateAfterQuoteCreate`, `invalidateAllDataCaches`, `invalidateAfterDbScript`).
+
+Ops / wipe / scripts out-of-band: `POST /api/revalidate` con `REVALIDATE_SECRET` + `AUTH_URL` → `invalidateAfterDbScript` (todas las tags + paths admin/remitos). Obligatorio tras cualquier mutación DB fuera de la app.
 
 Build command (Vercel): `npm run build` → `prisma generate && next build` (`postinstall` también corre `prisma generate`). `binaryTargets` in `schema.prisma` must include `rhel-openssl-3.0.x` so the client works on Vercel when CI generates on Debian.
 

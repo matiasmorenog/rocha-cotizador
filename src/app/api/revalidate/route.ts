@@ -1,11 +1,13 @@
-import { revalidatePath } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
-import { invalidateAfterQuoteWipe } from "@/lib/cache-tags";
+import { CACHE_TAGS, invalidateAfterDbScript } from "@/lib/cache-tags";
 
 /**
  * POST /api/revalidate
- * Secured hook for ops scripts (e.g. wipe-quotes) to bust Vercel Data Cache /
- * route caches after out-of-band DB mutations.
+ * Secured hook for ops / wipe / DB scripts to bust Vercel Data Cache after
+ * out-of-band DB mutations. Expires **every** CACHE_TAGS entry + list paths.
+ *
+ * Scripts: set REVALIDATE_SECRET + AUTH_URL (or APP_URL), then POST here.
+ * See `invalidateAfterDbScript` in `src/lib/cache-tags.ts`.
  *
  * Header: Authorization: Bearer $REVALIDATE_SECRET
  */
@@ -23,10 +25,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  invalidateAfterQuoteWipe();
-  revalidatePath("/admin");
-  revalidatePath("/admin/cotizaciones");
-  revalidatePath("/remitos");
+  invalidateAfterDbScript();
 
-  return NextResponse.json({ ok: true, revalidated: true });
+  return NextResponse.json({
+    ok: true,
+    revalidated: true,
+    tags: Object.values(CACHE_TAGS),
+  });
 }
