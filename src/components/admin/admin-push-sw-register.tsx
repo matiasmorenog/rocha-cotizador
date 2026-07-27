@@ -141,6 +141,9 @@ export function AdminPushSwRegister() {
       if (!raw || typeof raw !== "object") return;
       const msg = raw as Record<string, unknown>;
       if (msg.type !== "ROCHA_PUSH") return;
+      const tag = typeof msg.tag === "string" ? msg.tag : "";
+      // System Probar — OS toast only; avoid double UI with in-app toast.
+      if (tag.startsWith("rocha-test")) return;
       const title =
         typeof msg.title === "string" ? msg.title : "Nueva cotización";
       const body = typeof msg.body === "string" ? msg.body : "";

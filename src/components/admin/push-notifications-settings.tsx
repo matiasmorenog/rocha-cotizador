@@ -416,7 +416,10 @@ export function PushNotificationsSettings() {
         return;
       }
 
-      const reg = await ensureFreshServiceWorker();
+      // Prefer existing registration — avoid update() racing the push.
+      const reg =
+        (await navigator.serviceWorker.getRegistration("/")) ??
+        (await ensureFreshServiceWorker());
       const sub = await reg.pushManager.getSubscription();
       if (!sub) {
         const note =
@@ -429,6 +432,22 @@ export function PushNotificationsSettings() {
 
       const result = await postPushTest(sub.endpoint);
       if (result.ok) {
+        // If FCM delivered but OS UI suppressed, show one local OS toast.
+        await new Promise((r) => setTimeout(r, 1200));
+        const existing = await reg.getNotifications();
+        const hasOs = existing.some(
+          (n) =>
+            typeof n.tag === "string" && n.tag.startsWith("rocha-test"),
+        );
+        if (!hasOs && Notification.permission === "granted") {
+          await reg.showNotification("Notificación de prueba", {
+            body: "Notificación del sistema de Rocha Cotizador.",
+            tag: `rocha-test-local-${Date.now()}`,
+            icon: "/brand/rocha-logo.png",
+            silent: false,
+            data: { url: "/admin/configuracion" },
+          });
+        }
         const note = "Notificación del sistema enviada.";
         setProbarSystem({ ok: true, note });
         setMessage(note);

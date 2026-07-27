@@ -1,5 +1,5 @@
 /**
- * Subtle in-app notification chime (Web Audio — no asset / deps).
+ * In-app notification chime (Web Audio — no asset / deps).
  * Best-effort: browsers may block until a user gesture unlocked AudioContext.
  * OS Web Push uses the system default sound (`silent: false` in the SW);
  * custom sounds are not reliably supported there.
@@ -9,6 +9,8 @@ let audioCtx: AudioContext | null = null;
 let lastPlayAt = 0;
 
 const SOUND_DEDUPE_MS = 700;
+/** Peak gain per note (was 0.07 — barely audible at max Mac volume). */
+const PEAK_GAIN = 0.65;
 
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -21,7 +23,7 @@ function getCtx(): AudioContext | null {
   return audioCtx;
 }
 
-/** Soft two-note chime — bordo-friendly, short, low volume. */
+/** Two-note chime — audible but not harsh. */
 export function playAdminNotificationSound(): void {
   const now = Date.now();
   if (now - lastPlayAt < SOUND_DEDUPE_MS) return;
@@ -35,20 +37,31 @@ export function playAdminNotificationSound(): void {
       const t0 = ctx.currentTime;
       const notes = [
         { freq: 784, at: 0 }, // G5
-        { freq: 988, at: 0.09 }, // B5
+        { freq: 988, at: 0.11 }, // B5
       ];
       for (const note of notes) {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.type = "sine";
         osc.frequency.value = note.freq;
+        // Fast attack, hold briefly, smooth release (~0.35s each).
         gain.gain.setValueAtTime(0.0001, t0 + note.at);
-        gain.gain.exponentialRampToValueAtTime(0.07, t0 + note.at + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + note.at + 0.22);
+        gain.gain.exponentialRampToValueAtTime(
+          PEAK_GAIN,
+          t0 + note.at + 0.015,
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          PEAK_GAIN * 0.55,
+          t0 + note.at + 0.12,
+        );
+        gain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          t0 + note.at + 0.38,
+        );
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.start(t0 + note.at);
-        osc.stop(t0 + note.at + 0.25);
+        osc.stop(t0 + note.at + 0.42);
       }
     };
 

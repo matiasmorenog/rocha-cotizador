@@ -1,8 +1,10 @@
 /* Rocha Cotizador — admin Web Push service worker */
+/* v7 — louder-friendly OS options + stable showNotification */
 
 const PUSH_CHANNEL = "rocha-admin-push";
 const FALLBACK_TITLE = "Nueva cotización";
 const FALLBACK_URL = "/admin/cotizaciones";
+const ICON = "/brand/rocha-logo.png";
 
 self.addEventListener("install", (event) => {
   console.log("[push-sw] install");
@@ -25,6 +27,27 @@ function parsePushData(event) {
     return defaults;
   }
 
+  // Prefer json(); fall back to text() once if needed.
+  try {
+    const parsed = event.data.json();
+    if (parsed && typeof parsed === "object") {
+      return {
+        title:
+          typeof parsed.title === "string" && parsed.title.trim()
+            ? parsed.title
+            : FALLBACK_TITLE,
+        body: typeof parsed.body === "string" ? parsed.body : "",
+        url:
+          typeof parsed.url === "string" && parsed.url.trim()
+            ? parsed.url
+            : FALLBACK_URL,
+        tag: typeof parsed.tag === "string" ? parsed.tag : undefined,
+      };
+    }
+  } catch {
+    // continue to text
+  }
+
   let text = "";
   try {
     text = event.data.text();
@@ -34,10 +57,7 @@ function parsePushData(event) {
   }
 
   console.log("[push-sw] raw payload text:", text);
-
-  if (!text || !text.trim()) {
-    return defaults;
-  }
+  if (!text || !text.trim()) return defaults;
 
   try {
     const parsed = JSON.parse(text);
@@ -109,24 +129,29 @@ async function handlePush(event) {
     body: data.body || "",
     data: { url: data.url || FALLBACK_URL },
     tag: data.tag || `rocha-push-${Date.now()}`,
+    icon: ICON,
+    badge: ICON,
     renotify: true,
-    requireInteraction: true,
+    // false = more reliable banners on macOS/Windows when tab focused
+    requireInteraction: false,
     silent: false,
   };
 
   console.log("[push-sw] showing notification", { title, ...options });
 
+  // OS toast FIRST — never skip for open clients.
   try {
     await self.registration.showNotification(title, options);
     console.log("[push-sw] showNotification done");
   } catch (err) {
     console.error("[push-sw] showNotification failed", err);
-    // Last resort: try again with minimal options
     try {
       await self.registration.showNotification(FALLBACK_TITLE, {
         body: "Abrí el admin para ver la cotización.",
         data: { url: FALLBACK_URL },
+        icon: ICON,
         tag: `rocha-push-fallback-${Date.now()}`,
+        silent: false,
       });
     } catch (err2) {
       console.error("[push-sw] fallback showNotification also failed", err2);
@@ -146,7 +171,6 @@ async function handlePush(event) {
 }
 
 self.addEventListener("push", (event) => {
-  // CRITICAL: always waitUntil the full showNotification path.
   event.waitUntil(handlePush(event));
 });
 

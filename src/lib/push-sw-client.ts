@@ -32,9 +32,8 @@ function scriptUrl(reg: ServiceWorkerRegistration): string {
 }
 
 /**
- * Register `/sw.js` (or update if already controlling).
- * Unregisters *other* SW scripts only — never drops an existing `/sw.js`
- * registration (that would wipe the PushSubscription).
+ * Register `/sw.js` if missing. Avoid update() on every call (races push).
+ * One update per browser tab session so clients pick up SW fixes (v7+).
  */
 export async function ensureFreshServiceWorker(): Promise<ServiceWorkerRegistration> {
   const regs = await navigator.serviceWorker.getRegistrations();
@@ -53,8 +52,17 @@ export async function ensureFreshServiceWorker(): Promise<ServiceWorkerRegistrat
 
   const existing = await navigator.serviceWorker.getRegistration("/");
   if (existing && scriptUrl(existing).endsWith("/sw.js")) {
-    await existing.update().catch(() => undefined);
     await navigator.serviceWorker.ready;
+    try {
+      const bumpKey = "rocha-sw-bump-v7";
+      if (!sessionStorage.getItem(bumpKey)) {
+        sessionStorage.setItem(bumpKey, "1");
+        await existing.update().catch(() => undefined);
+        await navigator.serviceWorker.ready;
+      }
+    } catch {
+      // sessionStorage may be blocked
+    }
     return existing;
   }
 
@@ -63,7 +71,6 @@ export async function ensureFreshServiceWorker(): Promise<ServiceWorkerRegistrat
     updateViaCache: "none",
   });
   await navigator.serviceWorker.ready;
-  await reg.update().catch(() => undefined);
   return reg;
 }
 
@@ -88,6 +95,5 @@ export async function resetServiceWorker(): Promise<ServiceWorkerRegistration> {
     updateViaCache: "none",
   });
   await navigator.serviceWorker.ready;
-  await reg.update().catch(() => undefined);
   return reg;
 }
