@@ -1,5 +1,6 @@
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { requireAdminSession } from "@/lib/session";
+import { PushNotificationsSettings } from "@/components/admin/push-notifications-settings";
 import { WhatsAppSettingsForm } from "@/components/admin/whatsapp-settings-form";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 
@@ -20,7 +21,14 @@ export default async function AdminConfigPage() {
 
       <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-          Avisos / WhatsApp
+          Notificaciones (app + sistema)
+        </h2>
+        <PushNotificationsSettings />
+      </section>
+
+      <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          Notificaciones / WhatsApp
         </h2>
         <WhatsAppSettingsForm initialPhone={whatsappNotifyPhone} />
       </section>

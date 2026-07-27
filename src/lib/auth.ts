@@ -51,6 +51,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
 
+        // Prefer column from findUnique; raw fallback if PrismaClient is stale
+        // after schema push (field missing on in-memory client).
+        let inAppNotificationsEnabled = user.inAppNotificationsEnabled;
+        if (typeof inAppNotificationsEnabled !== "boolean") {
+          const rows = await db.$queryRaw<
+            Array<{ inAppNotificationsEnabled: boolean }>
+          >`
+            SELECT "inAppNotificationsEnabled"
+            FROM "User"
+            WHERE id = ${user.id}
+          `;
+          inAppNotificationsEnabled =
+            rows[0]?.inAppNotificationsEnabled ?? true;
+        }
+
         return {
           id: user.id,
           email: user.email,
@@ -59,6 +74,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           customerId: null,
           customerCode: null,
           mustChangePassword: false,
+          inAppNotificationsEnabled,
         };
       },
     }),
@@ -93,22 +109,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.role = user.role;
         token.customerId = user.customerId ?? null;
         token.customerCode = user.customerCode ?? null;
         token.mustChangePassword = user.mustChangePassword ?? false;
+        token.inAppNotificationsEnabled =
+          user.inAppNotificationsEnabled ?? true;
         token.sub = user.id;
         token.email = user.email;
         token.name = user.name;
       }
-      if (trigger === "update" && token.customerId) {
-        const customer = await db.customer.findUnique({
-          where: { id: String(token.customerId) },
-          select: { mustChangePassword: true },
-        });
-        token.mustChangePassword = customer?.mustChangePassword ?? false;
+      if (trigger === "update") {
+        if (token.customerId) {
+          const customer = await db.customer.findUnique({
+            where: { id: String(token.customerId) },
+            select: { mustChangePassword: true },
+          });
+          token.mustChangePassword = customer?.mustChangePassword ?? false;
+        }
+        // After PATCH: client passes value — refresh JWT without another DB read.
+        if (
+          session &&
+          typeof (session as { inAppNotificationsEnabled?: unknown })
+            .inAppNotificationsEnabled === "boolean"
+        ) {
+          token.inAppNotificationsEnabled = (
+            session as { inAppNotificationsEnabled: boolean }
+          ).inAppNotificationsEnabled;
+        }
       }
       return token;
     },
@@ -124,6 +154,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           customerCode:
             typeof token.customerCode === "string" ? token.customerCode : null,
           mustChangePassword: Boolean(token.mustChangePassword),
+          // Missing on old JWTs → default true (matches DB default).
+          inAppNotificationsEnabled: token.inAppNotificationsEnabled !== false,
           email: typeof token.email === "string" ? token.email : null,
           name: typeof token.name === "string" ? token.name : null,
         },
