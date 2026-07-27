@@ -23,8 +23,12 @@ function urlBase64ToUint8Array(base64String: string): BufferSource {
 }
 
 async function ensureServiceWorker(): Promise<ServiceWorkerRegistration> {
-  const reg = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+  const reg = await navigator.serviceWorker.register("/sw.js", {
+    scope: "/",
+    updateViaCache: "none",
+  });
   await navigator.serviceWorker.ready;
+  await reg.update().catch(() => undefined);
   return reg;
 }
 
@@ -99,18 +103,35 @@ export function PushNotificationsSettings() {
       }
 
       const reg = await ensureServiceWorker();
-
-      let sub = await reg.pushManager.getSubscription();
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(
-            keyData.publicKey as string,
-          ),
-        });
+      // Always resubscribe so keys match current VAPID public key.
+      const existing = await reg.pushManager.getSubscription();
+      if (existing) {
+        try {
+          await fetch("/api/admin/push/subscribe", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: existing.endpoint }),
+          });
+        } catch {
+          // continue — local unsubscribe still needed
+        }
+        await existing.unsubscribe().catch(() => undefined);
       }
 
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(
+          keyData.publicKey as string,
+        ),
+      });
+
       const json = sub.toJSON();
+      if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+        setError("El navegador no devolvió una suscripción válida.");
+        setStatus("error");
+        return;
+      }
+
       const res = await fetch("/api/admin/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -123,6 +144,7 @@ export function PushNotificationsSettings() {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(data.error ?? "No se pudo guardar la suscripción");
+        setStatus("error");
         return;
       }
 
@@ -130,7 +152,11 @@ export function PushNotificationsSettings() {
       setMessage("Avisos del navegador activados.");
     } catch (err) {
       console.error(err);
-      setError("No se pudieron activar las notificaciones.");
+      const detail =
+        err instanceof Error && err.message
+          ? ` (${err.message})`
+          : "";
+      setError(`No se pudieron activar las notificaciones.${detail}`);
       setStatus("error");
     } finally {
       setBusy(false);

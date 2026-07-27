@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse, after } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Decimal } from "@prisma/client/runtime/library";
 import { auth } from "@/lib/auth";
@@ -163,14 +163,13 @@ export async function POST(req: NextRequest) {
   invalidateAfterQuoteCreate();
 
   // Customer-created quotes only — admin self-create must not notify.
+  // Await (never throws) so local turbopack / Next after() cannot drop the FCM send.
   if (session.user.role === "CUSTOMER") {
-    after(() =>
-      notifyAdminsNewQuote({
-        id: quote.id,
-        number: quote.number,
-        customerName: customer.name,
-      }),
-    );
+    await notifyAdminsNewQuote({
+      id: quote.id,
+      number: quote.number,
+      customerName: customer.name,
+    });
   }
 
   const origin =

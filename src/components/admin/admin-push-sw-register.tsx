@@ -13,9 +13,12 @@ export function AdminPushSwRegister() {
       return;
     }
 
-    void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch((err) => {
-      console.warn("[push] service worker register failed", err);
-    });
+    void navigator.serviceWorker
+      .register("/sw.js", { scope: "/", updateViaCache: "none" })
+      .then((reg) => reg.update().catch(() => undefined))
+      .catch((err) => {
+        console.warn("[push] service worker register failed", err);
+      });
   }, []);
 
   return null;

@@ -41,7 +41,7 @@ export function getVapidPublicKey(): string | null {
 
 /**
  * Notify all ADMIN users with a stored PushSubscription.
- * Never throws — schedule with next/server `after()` from quote create.
+ * Never throws — callers may await safely from quote create.
  */
 export async function notifyAdminsNewQuote(
   quote: NewQuotePushPayload,
@@ -79,30 +79,58 @@ export async function notifyAdminsNewQuote(
       quote.number,
     );
 
-    await Promise.all(
+    const results = await Promise.all(
       subscriptions.map(async (sub) => {
+        const host = (() => {
+          try {
+            return new URL(sub.endpoint).host;
+          } catch {
+            return "invalid-endpoint";
+          }
+        })();
         try {
-          await webpush.sendNotification(
+          const res = await webpush.sendNotification(
             {
               endpoint: sub.endpoint,
               keys: { p256dh: sub.p256dh, auth: sub.auth },
             },
             payload,
+            { TTL: 60 * 60, urgency: "high" },
           );
+          console.info(
+            "[push] send ok",
+            host,
+            "status",
+            res.statusCode,
+            "quote",
+            quote.number,
+          );
+          return true;
         } catch (err: unknown) {
           const statusCode =
             err && typeof err === "object" && "statusCode" in err
               ? Number((err as { statusCode: unknown }).statusCode)
               : null;
           if (statusCode === 404 || statusCode === 410) {
+            console.warn("[push] stale subscription removed", host, statusCode);
             await db.pushSubscription
               .delete({ where: { endpoint: sub.endpoint } })
               .catch(() => undefined);
-            return;
+            return false;
           }
-          console.error("[push] send failed", sub.endpoint.slice(0, 48), err);
+          console.error("[push] send failed", host, err);
+          return false;
         }
       }),
+    );
+
+    console.info(
+      "[push] done quote",
+      quote.number,
+      "ok",
+      results.filter(Boolean).length,
+      "/",
+      results.length,
     );
   } catch (err) {
     console.error("[push] notifyAdminsNewQuote failed", err);

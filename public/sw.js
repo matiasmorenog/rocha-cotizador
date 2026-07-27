@@ -12,22 +12,33 @@ self.addEventListener("push", (event) => {
   let data = { title: "Rocha Cotizador", body: "", url: "/admin/cotizaciones" };
   try {
     if (event.data) {
-      data = { ...data, ...event.data.json() };
+      const parsed = event.data.json();
+      if (parsed && typeof parsed === "object") {
+        data = { ...data, ...parsed };
+      }
     }
   } catch {
-    // keep defaults
+    try {
+      if (event.data) {
+        data.body = event.data.text();
+      }
+    } catch {
+      // keep defaults
+    }
   }
 
   event.waitUntil(
-    self.registration.showNotification(data.title || "Rocha Cotizador", {
-      body: data.body || "",
-      data: { url: data.url || "/admin/cotizaciones" },
-      icon: "/favicon.ico",
-      badge: "/favicon.ico",
-      tag: "rocha-new-quote",
-      renotify: true,
-      requireInteraction: true,
-    }),
+    self.registration
+      .showNotification(data.title || "Rocha Cotizador", {
+        body: data.body || "",
+        data: { url: data.url || "/admin/cotizaciones" },
+        tag: "rocha-new-quote",
+        renotify: true,
+        requireInteraction: true,
+      })
+      .catch((err) => {
+        console.error("[push] showNotification failed", err);
+      }),
   );
 });
 
