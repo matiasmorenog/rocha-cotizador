@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useState, useSyncExternalStore } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,22 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
 import { safeCallbackUrl } from "@/lib/callback-url";
+import {
+  readLastAdminEmail,
+  saveLastAdminEmail,
+  subscribeToLastLoginStorage,
+} from "@/lib/last-login";
 
 export function AdminLoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = safeCallbackUrl(searchParams.get("callbackUrl"), "/admin");
-  const [email, setEmail] = useState("");
+  const rememberedEmail = useSyncExternalStore(
+    subscribeToLastLoginStorage,
+    readLastAdminEmail,
+    () => "",
+  );
+  const [emailDraft, setEmailDraft] = useState<string | null>(null);
+  const email = emailDraft ?? rememberedEmail;
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,6 +43,7 @@ export function AdminLoginForm() {
       setLoading(false);
       return;
     }
+    saveLastAdminEmail(email);
     // Keep "Ingresando…" and hard-nav so callback (e.g. remito) loads with session.
     window.location.assign(callbackUrl);
   }
@@ -43,8 +55,9 @@ export function AdminLoginForm() {
         <Input
           id="email"
           type="email"
+          autoComplete="username"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => setEmailDraft(e.target.value)}
           required
         />
       </div>
@@ -52,6 +65,7 @@ export function AdminLoginForm() {
         <Label htmlFor="password">Contraseña</Label>
         <PasswordInput
           id="password"
+          autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required

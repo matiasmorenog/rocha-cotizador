@@ -9,6 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
+import {
+  quoteLineMeasureLabel,
+  quoteLineQtyAriaLabel,
+} from "@/lib/order-measure";
 import { cn, formatPrice } from "@/lib/utils";
 import {
   effectiveLineTotal,
@@ -73,18 +77,16 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
     }
     let cancelled = false;
     const requestId = ++searchRequestId.current;
-    // Prefer local catalog (after load). Debounce avoids spam while typing.
-    const handle = setTimeout(() => {
-      void searchAsyncRef.current(q).then((rows) => {
-        if (cancelled || requestId !== searchRequestId.current) return;
-        setResults(rows);
-        setHighlightIndex(rows.length > 0 ? 0 : -1);
-        setOpen(true);
-      });
-    }, 200);
+    // Local in-memory filter — no debounce (instant). Server fallback in
+    // searchAsync only runs if catalog empty after load (rare cold path).
+    void searchAsyncRef.current(q).then((rows) => {
+      if (cancelled || requestId !== searchRequestId.current) return;
+      setResults(rows);
+      setHighlightIndex(rows.length > 0 ? 0 : -1);
+      setOpen(true);
+    });
     return () => {
       cancelled = true;
-      clearTimeout(handle);
     };
   }, [query, catalog.ready]);
 
@@ -447,9 +449,10 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                         step="any"
                         value={l.qty}
                         onChange={(e) => setQty(l.productId, Number(e.target.value))}
-                        aria-label={
-                          l.orderByUnit ? "Cantidad en unidades" : "Cantidad en kg"
-                        }
+                        aria-label={quoteLineQtyAriaLabel(
+                          l.orderByUnit,
+                          l.allowsUnitOrder,
+                        )}
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -466,7 +469,9 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
                           <option value="unit">Unidades</option>
                         </select>
                       ) : (
-                        <span className="text-neutral-500">kg</span>
+                        <span className="text-neutral-500">
+                          {quoteLineMeasureLabel(l.orderByUnit, l.allowsUnitOrder)}
+                        </span>
                       )}
                     </td>
                     <td className="px-3 py-2">

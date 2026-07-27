@@ -49,6 +49,36 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "asc" },
   });
 
-  const buffer = await buildQuotesExportPdf({ quotes, from, to });
+  const productIds = [
+    ...new Set(
+      quotes.flatMap((q) =>
+        q.items
+          .map((item) => item.productId)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ),
+  ];
+  const products =
+    productIds.length > 0
+      ? await db.product.findMany({
+          where: { id: { in: productIds } },
+          select: { id: true, allowsUnitOrder: true },
+        })
+      : [];
+  const allowsUnitOrderByProductId = new Map(
+    products.map((p) => [p.id, p.allowsUnitOrder]),
+  );
+
+  const quotesForPdf = quotes.map((quote) => ({
+    ...quote,
+    items: quote.items.map((item) => ({
+      ...item,
+      allowsUnitOrder: item.productId
+        ? (allowsUnitOrderByProductId.get(item.productId) ?? false)
+        : false,
+    })),
+  }));
+
+  const buffer = await buildQuotesExportPdf({ quotes: quotesForPdf, from, to });
   return pdfResponse(buffer, "cotizaciones.pdf");
 }

@@ -11,8 +11,12 @@ import {
   ProductAdminForm,
   type PriceListOption,
 } from "@/components/admin/product-admin-form";
-import { Badge } from "@/components/ui/badge";
+import {
+  productOrderModeBadge,
+  productOrderModeDescription,
+} from "@/lib/order-measure";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
@@ -207,11 +211,7 @@ function ProductEditRow({
       <td className="px-3 py-2">
         <label
           className="inline-flex cursor-pointer items-center gap-2"
-          title={
-            allowsUnitOrder
-              ? "Pedido por unidades o kg"
-              : "Solo por kg"
-          }
+          title={productOrderModeDescription(allowsUnitOrder)}
         >
           <Switch
             form={formId}
@@ -277,7 +277,7 @@ function ProductViewRow({
       </td>
       <td className="px-3 py-2">
         <Badge variant={product.allowsUnitOrder ? "success" : "default"}>
-          {product.allowsUnitOrder ? "Unidad/Kg" : "Solo kg"}
+          {productOrderModeBadge(product.allowsUnitOrder)}
         </Badge>
       </td>
       <td className="px-3 py-2 text-right">
