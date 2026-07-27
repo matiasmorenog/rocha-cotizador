@@ -466,6 +466,23 @@ export function PushNotificationsSettings() {
         return;
       }
 
+      // Close prior Probar OS toasts. Otherwise getNotifications() still
+      // finds the first rocha-test* and skips local fallback on 2nd click
+      // when FCM is silent / suppressed.
+      try {
+        const prior = await reg.getNotifications();
+        await Promise.all(
+          prior
+            .filter(
+              (n) =>
+                typeof n.tag === "string" && n.tag.startsWith("rocha-test"),
+            )
+            .map((n) => n.close()),
+        );
+      } catch {
+        // ignore
+      }
+
       const result = await postPushTest(sub.endpoint);
       if (result.ok) {
         // If FCM delivered but OS UI suppressed, show one local OS toast.
@@ -482,6 +499,7 @@ export function PushNotificationsSettings() {
           await reg.showNotification("Notificación de prueba", {
             body: "Notificación del sistema de Rocha Cotizador.",
             tag: `rocha-test-local-${Date.now()}`,
+            renotify: true,
             icon,
             badge,
             silent: false,
