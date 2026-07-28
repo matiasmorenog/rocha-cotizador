@@ -13,6 +13,7 @@ import {
 } from "@/lib/whatsapp";
 import { BrandLogo } from "@/components/brand-logo";
 import { PrintButton } from "@/components/quote/print-button";
+import { RemitoWeighPriceEditor } from "@/components/quote/remito-weigh-price-editor";
 import { WhatsAppNotifyButton } from "@/components/quote/whatsapp-notify-button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import {
@@ -104,6 +105,10 @@ export default async function RemitoDetailPage({
   );
   const showWhatsappCta = whatsapp === "1" && Boolean(notifyWhatsappUrl);
   const deliveryLabel = formatDeliveryDateLabel(quote.deliveryDate);
+  const isAdmin = session.user.role === "ADMIN";
+  const pendingWeighCount = quote.items.filter(
+    (item) => item.orderByUnit || Number(item.unitPrice) === 0,
+  ).length;
 
   return (
     <div className="space-y-4">
@@ -116,6 +121,13 @@ export default async function RemitoDetailPage({
           <p className="text-sm text-neutral-700">
             Entrega: {deliveryLabel}
           </p>
+          {isAdmin && pendingWeighCount > 0 ? (
+            <p className="mt-1 text-sm text-amber-800">
+              {pendingWeighCount === 1
+                ? "1 línea pendiente de precio tras pesaje"
+                : `${pendingWeighCount} líneas pendientes de precio tras pesaje`}
+            </p>
+          ) : null}
         </div>
         <div className="flex gap-2">
           <Link
@@ -173,10 +185,19 @@ export default async function RemitoDetailPage({
                 const allowsUnitOrder = item.productId
                   ? (allowsUnitOrderByProductId.get(item.productId) ?? false)
                   : false;
+                const needsWeighPrice =
+                  item.orderByUnit || Number(item.unitPrice) === 0;
                 return (
-                <tr key={item.id} className="border-b border-neutral-100">
+                <tr
+                  key={item.id}
+                  className={
+                    needsWeighPrice
+                      ? "border-b border-amber-100 bg-amber-50/30"
+                      : "border-b border-neutral-100"
+                  }
+                >
                   <td className="py-2 pr-2 font-mono text-xs">{item.productCode}</td>
-                  <td className="py-2 pr-2">
+                  <td className="py-2 pr-2 align-top">
                     {formatQty(item.qty)}{" "}
                     <span className="text-neutral-500">
                       {quoteLineMeasureLabel(item.orderByUnit, allowsUnitOrder)}
@@ -184,16 +205,25 @@ export default async function RemitoDetailPage({
                   </td>
                   <td className="py-2 pr-2">
                     <div>{item.productName}</div>
-                    {item.orderByUnit ? (
+                    {item.orderByUnit || Number(item.unitPrice) === 0 ? (
                       <p className="mt-0.5 text-xs text-amber-800">
                         {UNIT_ORDER_PRICE_WARNING}
                       </p>
                     ) : null}
+                    {isAdmin && needsWeighPrice ? (
+                      <RemitoWeighPriceEditor
+                        quoteId={quote.id}
+                        itemId={item.id}
+                        initialQty={Number(item.qty)}
+                        initialUnitPrice={Number(item.unitPrice)}
+                        orderedByUnit={item.orderByUnit}
+                      />
+                    ) : null}
                   </td>
-                  <td className="py-2 pr-2 text-right">
+                  <td className="py-2 pr-2 text-right align-top">
                     {formatPrice(item.unitPrice)}
                   </td>
-                  <td className="py-2 text-right font-medium">
+                  <td className="py-2 text-right align-top font-medium">
                     {formatPrice(item.lineTotal)}
                   </td>
                 </tr>

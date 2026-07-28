@@ -87,3 +87,12 @@ export function invalidateAfterQuoteCreate() {
 export function invalidateAfterQuoteWipe() {
   invalidateAfterQuoteCreate();
 }
+
+/** Admin confirms weigh price on a remito line — refresh detail + lists. */
+export function invalidateAfterQuoteItemPriceUpdate(quoteId: string) {
+  invalidateAdminDashboardCache();
+  revalidatePath("/admin");
+  revalidatePath("/admin/cotizaciones");
+  revalidatePath("/remitos");
+  revalidatePath(`/remitos/${quoteId}`);
+}
