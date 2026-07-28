@@ -25,6 +25,7 @@ Solo en **push a `main`**, y **solo si** `lint-and-typecheck` pasó:
 5. **Post-deploy smoke** — `npm run ci:post-deploy-smoke`:
    - `GET /api/health` → 200 `{ ok: true }` (503/`schema_drift` si faltan columnas/tablas)
    - `GET /` (homepage) → 200
+6. **Post-deploy cache revalidate** — `vercel cache purge --type data` + `vercel cache invalidate` de **todas** las tags en `src/lib/cache-tags.ts` (`products`, `price-lists`, `customers`, `admin-dashboard`). Obliga Data Cache fresca tras cada release.
 
 `vercel.json` desactiva auto-deploy de Vercel en `main` → no hay carrera paralela.
 Previews (`development` / feature branches) siguen con el Git integration de Vercel.

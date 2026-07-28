@@ -113,3 +113,10 @@ jobs:
         run: |
           chmod +x scripts/post-deploy-smoke.sh
           npm run ci:post-deploy-smoke
+
+      # Bust Next.js Data Cache after every prod deploy (tags in src/lib/cache-tags.ts).
+      - name: Post-deploy cache revalidate
+        run: |
+          set -euo pipefail
+          vercel cache purge --type data --yes --token=${{ secrets.VERCEL_TOKEN }}
+          vercel cache invalidate --tag products,price-lists,customers,admin-dashboard --yes --token=${{ secrets.VERCEL_TOKEN }}
