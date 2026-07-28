@@ -173,11 +173,11 @@ export default async function RemitoDetailPage({
           <table className="w-full min-w-[28rem] text-sm">
             <thead>
               <tr className="border-b border-neutral-300 text-left text-neutral-600">
-                <th className="py-2 pr-2 font-medium">Cód.</th>
+                <th className="py-2 pl-2 pr-2 font-medium">Cód.</th>
                 <th className="py-2 pr-2 font-medium">Cant.</th>
                 <th className="py-2 pr-2 font-medium">Artículo</th>
                 <th className="py-2 pr-2 text-right font-medium">Precio</th>
-                <th className="py-2 text-right font-medium">Importe</th>
+                <th className="py-2 pr-2 text-right font-medium">Importe</th>
               </tr>
             </thead>
             <tbody>
@@ -196,7 +196,7 @@ export default async function RemitoDetailPage({
                       : "border-b border-neutral-100"
                   }
                 >
-                  <td className="py-2 pr-2 font-mono text-xs">{item.productCode}</td>
+                  <td className="py-2 pl-2 pr-2 font-mono text-xs">{item.productCode}</td>
                   <td className="py-2 pr-2 align-top">
                     {formatQty(item.qty)}{" "}
                     <span className="text-neutral-500">
@@ -223,7 +223,7 @@ export default async function RemitoDetailPage({
                   <td className="py-2 pr-2 text-right align-top">
                     {formatPrice(item.unitPrice)}
                   </td>
-                  <td className="py-2 text-right align-top font-medium">
+                  <td className="py-2 pr-2 text-right align-top font-medium">
                     {formatPrice(item.lineTotal)}
                   </td>
                 </tr>
