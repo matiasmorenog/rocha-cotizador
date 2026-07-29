@@ -27,6 +27,8 @@ export type PickedCustomer = {
 
 type CustomerPickerProps = {
   value: PickedCustomer | null;
+  /** Admin “Cambiar cliente”: play chip exit before parent clears value. */
+  exiting?: boolean;
   onChange: (customer: PickedCustomer | null) => void;
 };
 
@@ -50,7 +52,11 @@ function filterCustomers(catalog: SearchHit[], q: string, take = 30): SearchHit[
   });
 }
 
-export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
+export function CustomerPicker({
+  value,
+  exiting = false,
+  onChange,
+}: CustomerPickerProps) {
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState<SearchHit[]>([]);
   const [catalogReady, setCatalogReady] = useState(false);
@@ -280,7 +286,13 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
 
   if (value) {
     return (
-      <div className="quote-customer-selected flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4">
+      <div
+        className={cn(
+          "quote-customer-selected flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4",
+          exiting && "quote-customer-exit pointer-events-none",
+        )}
+        aria-hidden={exiting || undefined}
+      >
         <div>
           <p className="text-sm font-medium text-neutral-900">
             {value.code} — {value.name}
@@ -293,6 +305,7 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
           type="button"
           variant="outline"
           size="sm"
+          disabled={exiting}
           onClick={() => onChange(null)}
         >
           Cambiar cliente

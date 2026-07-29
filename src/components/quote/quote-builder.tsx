@@ -35,9 +35,14 @@ import { useSmoothDraftTableHeight } from "@/components/quote/use-smooth-draft-t
 type QuoteBuilderProps = {
   /** When set (admin flow), prices and submit use this customer. */
   customerId?: string;
+  /** Admin “Cambiar cliente”: fade panels out before unmount. */
+  exiting?: boolean;
 };
 
-export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
+export function QuoteBuilder({
+  customerId,
+  exiting = false,
+}: QuoteBuilderProps = {}) {
   const router = useRouter();
   const lines = useQuoteDraftStore((s) => s.lines);
   const addOrUpdate = useQuoteDraftStore((s) => s.addOrUpdate);
@@ -163,7 +168,14 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
   }
 
   return (
-    <div className={cn("space-y-6", customerId && "quote-customer-reveal")}>
+    <div
+      className={cn(
+        "space-y-6",
+        customerId && "quote-customer-reveal",
+        customerId && exiting && "quote-customer-reveal-exit pointer-events-none",
+      )}
+      aria-hidden={exiting || undefined}
+    >
       <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
         <div
           className={cn(

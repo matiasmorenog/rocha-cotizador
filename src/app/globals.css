@@ -237,6 +237,17 @@ select:not([multiple]):disabled {
   }
 }
 
+@keyframes quote-panel-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+}
+
 .quote-draft-row-enter {
   animation: quote-draft-row-enter 0.2s ease-out both;
 }
@@ -316,12 +327,17 @@ select:not([multiple]):disabled {
   Same motion language as draft rows (fade + slight slide, short stagger).
 */
 /*
-  fill-mode backwards only — do not leave transform/opacity after the run.
+  Enter: fill-mode backwards only — do not leave transform/opacity after the run.
   `both`/`forwards` + translateY(0) keeps a stacking context and traps
   absolute dropdowns under later siblings (draft table paints over options).
+  Exit: simultaneous ~200ms (no reverse stagger); `forwards` OK — about to unmount.
 */
 .quote-customer-selected {
   animation: quote-panel-enter 0.2s ease-out backwards;
+}
+
+.quote-customer-selected.quote-customer-exit {
+  animation: quote-panel-exit 0.2s ease-in forwards;
 }
 
 .quote-customer-reveal > * {
@@ -348,6 +364,11 @@ select:not([multiple]):disabled {
 }
 .quote-customer-reveal > *:nth-child(n + 7) {
   animation-delay: 200ms;
+}
+
+.quote-customer-reveal.quote-customer-reveal-exit > * {
+  animation: quote-panel-exit 0.2s ease-in forwards;
+  animation-delay: 0ms;
 }
 
 /*
@@ -413,7 +434,9 @@ select:not([multiple]):disabled {
   .quote-draft-row-exit-soft,
   .quote-draft-row-exit .quote-draft-row-cell-shell,
   .quote-customer-selected,
-  .quote-customer-reveal > * {
+  .quote-customer-selected.quote-customer-exit,
+  .quote-customer-reveal > *,
+  .quote-customer-reveal.quote-customer-reveal-exit > * {
     animation: none;
   }
 
