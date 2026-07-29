@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ProductBase } from "@/lib/product-base";
+import {
+  indexCatalogProducts,
+  type CatalogProduct,
+  type ProductBase,
+} from "@/lib/product-base";
 import {
   clearCachedCatalog,
   filterCatalog,
@@ -27,7 +31,7 @@ type UseProductCatalogOptions = {
 };
 
 type CatalogState = {
-  products: ProductBase[];
+  products: CatalogProduct[];
   version: string | null;
   unitPrices: Record<string, number>;
   ready: boolean;
@@ -36,7 +40,7 @@ type CatalogState = {
 };
 
 type CatalogSnapshot = {
-  products: ProductBase[];
+  products: CatalogProduct[];
   unitPrices: Record<string, number>;
   ready: boolean;
 };
@@ -46,24 +50,31 @@ function customerKey(customerId?: string): string {
 }
 
 function mapSearchRows(
-  products: ProductBase[],
+  products: CatalogProduct[],
   unitPrices: Record<string, number>,
   q: string,
   take: number,
 ): CatalogSearchProduct[] {
-  return filterCatalog(products, q, take).map((p) => ({
-    id: p.id,
-    code: p.code,
-    name: p.name,
-    rubro: p.rubro,
-    unitPrice: unitPriceFromMap(p.code, p.basePrice, unitPrices),
-    allowsUnitOrder: Boolean(p.allowsUnitOrder),
-  }));
+  // Filter first; only hydrate unitPrice/DTO for the visible take.
+  const matched = filterCatalog(products, q, take);
+  const out: CatalogSearchProduct[] = new Array(matched.length);
+  for (let i = 0; i < matched.length; i++) {
+    const p = matched[i]!;
+    out[i] = {
+      id: p.id,
+      code: p.code,
+      name: p.name,
+      rubro: p.rubro,
+      unitPrice: unitPriceFromMap(p.code, p.basePrice, unitPrices),
+      allowsUnitOrder: Boolean(p.allowsUnitOrder),
+    };
+  }
+  return out;
 }
 
 /** Sync filter from live catalog arrays (prefer this over `search()` for render). */
 export function mapCatalogSearch(
-  products: ProductBase[],
+  products: CatalogProduct[],
   unitPrices: Record<string, number>,
   q: string,
   take = 30,
@@ -97,6 +108,10 @@ async function fetchCatalogJson(params: URLSearchParams) {
     products?: ProductBase[];
   };
   return { res, data };
+}
+
+function hydrateProducts(products: ProductBase[]): CatalogProduct[] {
+  return indexCatalogProducts(products);
 }
 
 export function useProductCatalog(
@@ -246,7 +261,7 @@ export function useProductCatalog(
         writeCachedUnitPrices(key, version, nextPrices);
 
         setState({
-          products,
+          products: hydrateProducts(products),
           version,
           unitPrices: nextPrices,
           ready: true,

@@ -2,11 +2,13 @@
 
 import {
   memo,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   type KeyboardEvent,
+  type MouseEvent,
   type RefObject,
 } from "react";
 import { Input } from "@/components/ui/input";
@@ -29,6 +31,52 @@ type ProductPickerProps = {
   /** Focus the search field after adding a line, etc. */
   inputRef?: RefObject<HTMLInputElement | null>;
 };
+
+type ProductOptionProps = {
+  product: CatalogSearchProduct;
+  index: number;
+  active: boolean;
+};
+
+/** Price formatted only for visible options (not during catalog filter). */
+const ProductOption = memo(
+  function ProductOption({ product, index, active }: ProductOptionProps) {
+    return (
+      <li role="presentation">
+        <button
+          type="button"
+          id={`product-option-${index}`}
+          role="option"
+          aria-selected={active}
+          data-product-option={index}
+          data-product-id={product.id}
+          className={cn(
+            "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm",
+            active ? "bg-[var(--brand-primary-soft)]" : "hover:bg-neutral-50",
+          )}
+        >
+          <span className="font-medium text-neutral-900">
+            {product.code} — {product.name}
+          </span>
+          <span className="text-xs text-neutral-500">
+            {product.rubro ? `${product.rubro} · ` : ""}
+            {formatPrice(product.unitPrice)}
+            {product.allowsUnitOrder ? " · kg o unidades" : ""}
+          </span>
+        </button>
+      </li>
+    );
+  },
+  (prev, next) =>
+    prev.index === next.index &&
+    prev.active === next.active &&
+    prev.product.id === next.product.id &&
+    prev.product.code === next.product.code &&
+    prev.product.name === next.product.name &&
+    prev.product.rubro === next.product.rubro &&
+    prev.product.unitPrice === next.product.unitPrice &&
+    prev.product.allowsUnitOrder === next.product.allowsUnitOrder,
+);
 
 function ProductPickerInner({
   customerId,
@@ -88,29 +136,33 @@ function ProductPickerInner({
     searchAsyncRef.current = searchAsync;
   }, [searchAsync]);
 
+  // Only scroll when highlight moves — not on every new results array identity.
   useEffect(() => {
     if (!listOpen || activeHighlight < 0) return;
     const el = listRef.current?.querySelector<HTMLElement>(
       `[data-product-option="${activeHighlight}"]`,
     );
     el?.scrollIntoView({ block: "nearest" });
-  }, [activeHighlight, listOpen, results]);
+  }, [activeHighlight, listOpen]);
 
   useEffect(() => {
-    function onClick(e: MouseEvent) {
+    function onDocDown(e: globalThis.MouseEvent) {
       if (!boxRef.current?.contains(e.target as Node)) setListDismissed(true);
     }
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    document.addEventListener("mousedown", onDocDown);
+    return () => document.removeEventListener("mousedown", onDocDown);
   }, []);
 
-  function pickProduct(p: CatalogSearchProduct) {
-    onChange(p);
-    setQuery("");
-    setColdResults(null);
-    setHighlightIndex(-1);
-    setListDismissed(true);
-  }
+  const pickProduct = useCallback(
+    (p: CatalogSearchProduct) => {
+      onChange(p);
+      setQuery("");
+      setColdResults(null);
+      setHighlightIndex(-1);
+      setListDismissed(true);
+    },
+    [onChange],
+  );
 
   function onQueryChange(next: string) {
     if (value) onChange(null);
@@ -137,6 +189,26 @@ function ProductPickerInner({
       setColdResults(rows);
       setHighlightIndex(rows.length > 0 ? 0 : -1);
     });
+  }
+
+  function onListMouseOver(e: MouseEvent<HTMLUListElement>) {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>(
+      "[data-product-option]",
+    );
+    if (!btn || !listRef.current?.contains(btn)) return;
+    const index = Number(btn.dataset.productOption);
+    if (!Number.isFinite(index)) return;
+    setHighlightIndex((cur) => (cur === index ? cur : index));
+  }
+
+  function onListClick(e: MouseEvent<HTMLUListElement>) {
+    const btn = (e.target as HTMLElement).closest<HTMLElement>(
+      "[data-product-option]",
+    );
+    if (!btn || !listRef.current?.contains(btn)) return;
+    const index = Number(btn.dataset.productOption);
+    const pick = results[index];
+    if (pick) pickProduct(pick);
   }
 
   function onSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -226,34 +298,16 @@ function ProductPickerInner({
           id="product-search-listbox"
           role="listbox"
           className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
+          onMouseOver={onListMouseOver}
+          onClick={onListClick}
         >
           {results.map((p, index) => (
-            <li key={p.id} role="presentation">
-              <button
-                type="button"
-                id={`product-option-${index}`}
-                role="option"
-                aria-selected={index === activeHighlight}
-                data-product-option={index}
-                className={cn(
-                  "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm",
-                  index === activeHighlight
-                    ? "bg-[var(--brand-primary-soft)]"
-                    : "hover:bg-neutral-50",
-                )}
-                onMouseEnter={() => setHighlightIndex(index)}
-                onClick={() => pickProduct(p)}
-              >
-                <span className="font-medium text-neutral-900">
-                  {p.code} — {p.name}
-                </span>
-                <span className="text-xs text-neutral-500">
-                  {p.rubro ? `${p.rubro} · ` : ""}
-                  {formatPrice(p.unitPrice)}
-                  {p.allowsUnitOrder ? " · kg o unidades" : ""}
-                </span>
-              </button>
-            </li>
+            <ProductOption
+              key={p.id}
+              product={p}
+              index={index}
+              active={index === activeHighlight}
+            />
           ))}
         </ul>
       ) : null}
