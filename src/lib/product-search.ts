@@ -1,17 +1,27 @@
+import { foldSearchText, looksLikeCodeQuery } from "@/lib/search-fold";
+
+export { looksLikeCodeQuery } from "@/lib/search-fold";
+
 /**
- * Client catalog search index — char trigrams over codeLower + nameLower.
+ * Client catalog search index — char trigrams over folded codeLower + nameLower.
  *
- * Semantics match legacy linear filter: case-insensitive substring on code OR name
- * (no accent folding). Trigrams prune candidates; `includes` verifies.
+ * Semantics: case- and accent-insensitive substring on code OR name (`ñ` kept
+ * distinct — see `foldSearchText`). Trigrams prune candidates; `includes` verifies.
+ *
+ * Code-first: when the needle looks like a SKU (digits / compact alnum with a
+ * digit), hits rank as code prefix → code substring → name substring so typed
+ * codes float above name noise. Name/word queries keep flat catalog order.
  *
  * Complexity (n = catalog size, L ≈ avg code+name length, c = candidates):
  * - Build: O(n · L)
- * - Query (needle length < 3): O(n) scan with early-exit at `take` (trigrams can't prove substring)
- * - Query (needle length >= 3): O(c) after posting intersect, typically << n; early-exit at `take`
+ * - Query (needle length < 3): O(n) scan; code-first can early-exit when prefix tier fills `take`
+ * - Query (needle length >= 3): O(c) after posting intersect; rank then slice `take`
  */
 
 export type SearchableProduct = {
+  /** Folded search key (lowercase + accents stripped; ñ kept). */
   codeLower: string;
+  /** Folded search key (lowercase + accents stripped; ñ kept). */
   nameLower: string;
 };
 
@@ -58,12 +68,54 @@ export function buildProductSearchIndex<T extends SearchableProduct>(
   return { items, posting };
 }
 
-/** Legacy O(n) scan + early-exit — used for short needles and tests. */
+/**
+ * Code-first buckets (catalog order within each tier).
+ * Early-exit only when prefix tier alone fills `take`.
+ */
+function collectCodeFirst<T extends SearchableProduct>(
+  items: readonly T[],
+  needle: string,
+  take: number,
+): T[] {
+  const prefix: T[] = [];
+  const codeSub: T[] = [];
+  const nameOnly: T[] = [];
+
+  for (const p of items) {
+    if (p.codeLower.startsWith(needle)) {
+      prefix.push(p);
+      if (prefix.length >= take) break;
+      continue;
+    }
+    if (p.codeLower.includes(needle)) {
+      codeSub.push(p);
+      continue;
+    }
+    if (p.nameLower.includes(needle)) {
+      nameOnly.push(p);
+    }
+  }
+
+  const out: T[] = [];
+  for (const bucket of [prefix, codeSub, nameOnly]) {
+    for (const p of bucket) {
+      out.push(p);
+      if (out.length >= take) return out;
+    }
+  }
+  return out;
+}
+
+/** Flat O(n) scan + early-exit — word queries and short needles without code-first. */
 export function searchProductsLinear<T extends SearchableProduct>(
   items: readonly T[],
   needle: string,
   take: number,
 ): T[] {
+  if (looksLikeCodeQuery(needle)) {
+    return collectCodeFirst(items, needle, take);
+  }
+
   const out: T[] = [];
   for (const p of items) {
     if (p.codeLower.includes(needle) || p.nameLower.includes(needle)) {
@@ -110,15 +162,15 @@ function intersectSortedLists(
 }
 
 /**
- * Substring search preserving catalog order, capped at `take`.
- * Needle is trimmed + lowercased (same as previous filterCatalog).
+ * Substring search preserving catalog order (or code-first tiers), capped at `take`.
+ * Needle is trimmed + folded (same fold as indexed codeLower/nameLower).
  */
 export function searchProductIndex<T extends SearchableProduct>(
   index: ProductSearchIndex<T>,
   q: string,
   take = 30,
 ): T[] {
-  const needle = q.trim().toLowerCase();
+  const needle = foldSearchText(q.trim());
   if (!needle || take <= 0 || index.items.length === 0) return [];
 
   // Trigrams of length-1/2 needles don't imply substring; scan with early-exit.
@@ -136,6 +188,14 @@ export function searchProductIndex<T extends SearchableProduct>(
 
   lists.sort((a, b) => a.length - b.length);
   const candidates = intersectSortedLists(lists);
+
+  if (looksLikeCodeQuery(needle)) {
+    const candidateItems: T[] = new Array(candidates.length);
+    for (let i = 0; i < candidates.length; i++) {
+      candidateItems[i] = index.items[candidates[i]!]!;
+    }
+    return collectCodeFirst(candidateItems, needle, take);
+  }
 
   const out: T[] = [];
   for (const idx of candidates) {

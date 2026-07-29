@@ -7,6 +7,7 @@ import {
   searchProductIndex,
   type ProductSearchIndex,
 } from "@/lib/product-search";
+import { filterFoldedSearch } from "@/lib/search-fold";
 
 /** Bump key when cache shape/semantics change — clears poisoned empty catalogs. */
 const CATALOG_KEY = "rocha:product-catalog:v4";
@@ -171,25 +172,11 @@ export function filterCatalog(
     return searchProductIndex(searchIndex, q, take);
   }
 
-  const needle = q.trim().toLowerCase();
-  if (!needle) return [];
-
-  const matched: ProductBase[] = [];
-  for (const p of products) {
-    const code =
-      "codeLower" in p && typeof p.codeLower === "string"
-        ? p.codeLower
-        : String(p.code ?? "").toLowerCase();
-    const name =
-      "nameLower" in p && typeof p.nameLower === "string"
-        ? p.nameLower
-        : String(p.name ?? "").toLowerCase();
-    if (code.includes(needle) || name.includes(needle)) {
-      matched.push(p);
-      if (matched.length >= take) break;
-    }
-  }
-  return matched;
+  return filterFoldedSearch(products, q, {
+    primary: [(p) => p.code],
+    secondary: [(p) => p.name],
+    take,
+  });
 }
 
 export function unitPriceFromMap(

@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { filterFoldedSearch } from "@/lib/search-fold";
 
 export type PickedCustomer = {
   id: string;
@@ -39,19 +40,11 @@ function activeHits(raw: SearchHit[] | undefined): SearchHit[] {
 }
 
 function filterCustomers(catalog: SearchHit[], q: string, take = 30): SearchHit[] {
-  const needle = q.trim().toLowerCase();
-  if (!needle) return [];
-  const out: SearchHit[] = [];
-  for (const c of catalog) {
-    if (
-      c.code.toLowerCase().includes(needle) ||
-      c.name.toLowerCase().includes(needle)
-    ) {
-      out.push(c);
-      if (out.length >= take) break;
-    }
-  }
-  return out;
+  return filterFoldedSearch(catalog, q, {
+    primary: [(c) => c.code],
+    secondary: [(c) => c.name],
+    take,
+  });
 }
 
 export function CustomerPicker({ value, onChange }: CustomerPickerProps) {

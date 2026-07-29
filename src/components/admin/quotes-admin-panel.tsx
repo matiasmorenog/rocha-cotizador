@@ -15,6 +15,7 @@ import {
 import { formatDeliveryDateLabel } from "@/lib/delivery-date";
 import { quoteStatusLabel } from "@/lib/quote-status";
 import { cn, formatPrice } from "@/lib/utils";
+import { filterFoldedSearch } from "@/lib/search-fold";
 
 export type QuoteListRow = {
   id: string;
@@ -94,16 +95,15 @@ export function QuotesAdminPanel({
   const [error, setError] = useState<string | null>(null);
   const [lateOpen, setLateOpen] = useState(false);
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return quotes;
-    return quotes.filter(
-      (q) =>
-        q.number.toLowerCase().includes(needle) ||
-        q.customer.code.toLowerCase().includes(needle) ||
-        q.customer.name.toLowerCase().includes(needle),
-    );
-  }, [quotes, query]);
+  const filtered = useMemo(
+    () =>
+      filterFoldedSearch(quotes, query, {
+        primary: [(q) => q.number, (q) => q.customer.code],
+        secondary: [(q) => q.customer.name],
+        emptyReturnsAll: true,
+      }),
+    [quotes, query],
+  );
 
   const { main, afterCutoff } = useMemo(
     () => splitQuotesByDayCutoff(filtered, to),

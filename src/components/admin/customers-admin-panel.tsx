@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { whatsappUrl } from "@/lib/whatsapp";
+import { filterFoldedSearch } from "@/lib/search-fold";
 
 export type CustomerListRow = {
   id: string;
@@ -46,15 +47,15 @@ export function CustomersAdminPanel({
     initialEditId ?? null,
   );
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return customers;
-    return customers.filter(
-      (c) =>
-        c.code.toLowerCase().includes(needle) ||
-        c.name.toLowerCase().includes(needle),
-    );
-  }, [customers, query]);
+  const filtered = useMemo(
+    () =>
+      filterFoldedSearch(customers, query, {
+        primary: [(c) => c.code],
+        secondary: [(c) => c.name],
+        emptyReturnsAll: true,
+      }),
+    [customers, query],
+  );
 
   const editing = editingId
     ? customers.find((c) => c.id === editingId)

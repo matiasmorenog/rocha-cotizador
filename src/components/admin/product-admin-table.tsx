@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { cn, formatPrice } from "@/lib/utils";
+import { filterFoldedSearch } from "@/lib/search-fold";
 
 export type ProductTableRow = {
   id: string;
@@ -310,16 +311,15 @@ export function ProductAdminTable({
   const activeLists = priceLists.filter((l) => l.active);
   const isBusy = editingId !== null;
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return products;
-    return products.filter(
-      (p) =>
-        p.code.toLowerCase().includes(needle) ||
-        p.name.toLowerCase().includes(needle) ||
-        (p.rubro ?? "").toLowerCase().includes(needle),
-    );
-  }, [products, query]);
+  const filtered = useMemo(
+    () =>
+      filterFoldedSearch(products, query, {
+        primary: [(p) => p.code],
+        secondary: [(p) => p.name, (p) => p.rubro],
+        emptyReturnsAll: true,
+      }),
+    [products, query],
+  );
 
   return (
     <div className="space-y-3">

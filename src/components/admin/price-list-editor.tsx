@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { formatPrice } from "@/lib/utils";
+import { filterFoldedSearch } from "@/lib/search-fold";
 
 type ItemRow = {
   productId: string;
@@ -55,15 +56,15 @@ export function PriceListEditor({
   const [savingPrices, setSavingPrices] = useState(false);
   const [filling, setFilling] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = filter.trim().toLowerCase();
-    if (!q) return priceList.items;
-    return priceList.items.filter(
-      (i) =>
-        i.product.code.toLowerCase().includes(q) ||
-        i.product.name.toLowerCase().includes(q),
-    );
-  }, [filter, priceList.items]);
+  const filtered = useMemo(
+    () =>
+      filterFoldedSearch(priceList.items, filter, {
+        primary: [(i) => i.product.code],
+        secondary: [(i) => i.product.name],
+        emptyReturnsAll: true,
+      }),
+    [filter, priceList.items],
+  );
 
   async function saveMeta(e: FormEvent) {
     e.preventDefault();
