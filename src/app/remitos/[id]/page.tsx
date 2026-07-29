@@ -217,7 +217,7 @@ export default async function RemitoDetailPage({
                   key={item.id}
                   className={
                     needsWeighPrice
-                      ? "border-b border-amber-100 bg-amber-50/30"
+                      ? "border-b border-amber-200 bg-amber-50"
                       : "border-b border-neutral-100"
                   }
                 >

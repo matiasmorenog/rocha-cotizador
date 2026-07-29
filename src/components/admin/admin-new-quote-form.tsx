@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { QuoteBuilder } from "@/components/quote/quote-builder";
 import {
   CustomerPicker,
@@ -9,6 +10,8 @@ import {
 import { useQuoteDraftStore } from "@/stores/quote-draft-store";
 
 export function AdminNewQuoteForm() {
+  const searchParams = useSearchParams();
+  const focusCustomer = searchParams.get("focus") === "customer";
   const [customer, setCustomer] = useState<PickedCustomer | null>(null);
   const clearDraft = useQuoteDraftStore((s) => s.clear);
 
@@ -19,7 +22,11 @@ export function AdminNewQuoteForm() {
 
   return (
     <div className="space-y-6">
-      <CustomerPicker value={customer} onChange={handleCustomerChange} />
+      <CustomerPicker
+        value={customer}
+        onChange={handleCustomerChange}
+        autoFocusSearch={focusCustomer}
+      />
       {customer ? (
         <QuoteBuilder key={customer.id} customerId={customer.id} />
       ) : (

@@ -27,6 +27,10 @@ import {
   useProductCatalog,
   type CatalogSearchProduct,
 } from "@/hooks/use-product-catalog";
+import {
+  ConfirmQuoteSplitButton,
+  type ConfirmQuoteAction,
+} from "@/components/quote/confirm-quote-split-button";
 
 type QuoteBuilderProps = {
   /** When set (admin flow), prices and submit use this customer. */
@@ -199,7 +203,7 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
     queueMicrotask(() => searchInputRef.current?.focus());
   }
 
-  async function submitQuote() {
+  async function submitQuote(action: ConfirmQuoteAction) {
     if (lines.length === 0) {
       setError("Agregá al menos un producto");
       return;
@@ -237,9 +241,23 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
     clear();
     setNotes("");
     setDeliveryDate(earliestDeliveryDateYmd());
-    // Prefer remito + ?whatsapp=1 so a blocked popup still leaves a clear CTA.
+
     if (typeof data.whatsappUrl === "string" && data.whatsappUrl) {
       window.open(data.whatsappUrl, "_blank", "noopener,noreferrer");
+    }
+
+    if (action === "new") {
+      // Admin: customer selector + focus search. Customer: fresh cotizar.
+      router.push(
+        customerId
+          ? "/admin/cotizaciones/nueva?focus=customer"
+          : "/cotizar",
+      );
+      return;
+    }
+
+    // Prefer remito + ?whatsapp=1 so a blocked popup still leaves a clear CTA.
+    if (typeof data.whatsappUrl === "string" && data.whatsappUrl) {
       router.push(`/remitos/${data.id}?whatsapp=1`);
       return;
     }
@@ -555,16 +573,11 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
         >
           Vaciar
         </Button>
-        <Button type="button" onClick={submitQuote} disabled={submitting || !lines.length}>
-          {submitting ? (
-            <>
-              <Spinner className="mr-2 text-white" />
-              Enviando…
-            </>
-          ) : (
-            "Confirmar cotización"
-          )}
-        </Button>
+        <ConfirmQuoteSplitButton
+          submitting={submitting}
+          disabled={!lines.length}
+          onConfirm={(action) => void submitQuote(action)}
+        />
       </div>
     </div>
   );

@@ -18,6 +18,8 @@ export type PickedCustomer = {
 type CustomerPickerProps = {
   value: PickedCustomer | null;
   onChange: (customer: PickedCustomer | null) => void;
+  /** Focus search on mount (e.g. after “Confirmar y crear nuevo remito”). */
+  autoFocusSearch?: boolean;
 };
 
 type SearchHit = {
@@ -28,7 +30,11 @@ type SearchHit = {
   active: boolean;
 };
 
-export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
+export function CustomerPicker({
+  value,
+  onChange,
+  autoFocusSearch = false,
+}: CustomerPickerProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchHit[]>([]);
   const [open, setOpen] = useState(false);
@@ -36,6 +42,12 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const boxRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!autoFocusSearch || value) return;
+    queueMicrotask(() => searchInputRef.current?.focus());
+  }, [autoFocusSearch, value]);
 
   useEffect(() => {
     const q = query.trim();
@@ -164,6 +176,7 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
       <Label htmlFor="customer-search">Cliente</Label>
       <div className="relative">
         <Input
+          ref={searchInputRef}
           id="customer-search"
           role="combobox"
           aria-expanded={open && results.length > 0}
