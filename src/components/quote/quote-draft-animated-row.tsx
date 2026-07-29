@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useRef,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { cn } from "@/lib/utils";
 import { QUOTE_DRAFT_ROW_MOTION_MS } from "@/components/quote/use-animated-draft-lines";
 
@@ -11,6 +19,27 @@ type QuoteDraftAnimatedRowProps = {
   className?: string;
   children: ReactNode;
 };
+
+type CellProps = {
+  className?: string;
+  children?: ReactNode;
+};
+
+function wrapCell(child: ReactNode): ReactNode {
+  if (!isValidElement<CellProps>(child)) return child;
+
+  const el = child as ReactElement<CellProps>;
+  return cloneElement(el, {
+    className: cn(el.props.className, "quote-draft-row-td"),
+    children: (
+      <div className="quote-draft-row-cell-shell">
+        <div className="quote-draft-row-cell-clip">
+          <div className="quote-draft-row-cell-pad">{el.props.children}</div>
+        </div>
+      </div>
+    ),
+  });
+}
 
 export function QuoteDraftAnimatedRow({
   exiting,
@@ -58,7 +87,7 @@ export function QuoteDraftAnimatedRow({
       }}
       aria-hidden={exiting || undefined}
     >
-      {children}
+      {Children.map(children, wrapCell)}
     </tr>
   );
 }

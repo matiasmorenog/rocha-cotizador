@@ -427,7 +427,10 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
             <tbody>
               {animatedRows.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-neutral-500">
+                  <td
+                    colSpan={7}
+                    className="px-3 py-8 text-center text-neutral-500"
+                  >
                     Sin productos. Buscá y agregá líneas.
                   </td>
                 </tr>
@@ -480,7 +483,10 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
                         </select>
                       ) : (
                         <span className="text-neutral-500">
-                          {quoteLineMeasureLabel(l.orderByUnit, l.allowsUnitOrder)}
+                          {quoteLineMeasureLabel(
+                            l.orderByUnit,
+                            l.allowsUnitOrder,
+                          )}
                         </span>
                       )}
                     </td>

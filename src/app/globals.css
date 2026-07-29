@@ -194,7 +194,7 @@ select:not([multiple]):disabled {
   animation: admin-toast-enter 0.28s ease-out both;
 }
 
-/* Draft quote table rows — enter/exit (quote-builder) */
+/* Draft quote table rows — enter/exit + cell height (quote-builder) */
 @keyframes quote-draft-row-enter {
   from {
     opacity: 0;
@@ -217,12 +217,58 @@ select:not([multiple]):disabled {
   }
 }
 
+@keyframes quote-draft-cell-open {
+  from {
+    grid-template-rows: 0fr;
+  }
+  to {
+    grid-template-rows: 1fr;
+  }
+}
+
+@keyframes quote-draft-cell-close {
+  from {
+    grid-template-rows: 1fr;
+  }
+  to {
+    grid-template-rows: 0fr;
+  }
+}
+
 .quote-draft-row-enter {
-  animation: quote-draft-row-enter 0.18s ease-out both;
+  animation: quote-draft-row-enter 0.2s ease-out both;
 }
 
 .quote-draft-row-exit {
-  animation: quote-draft-row-exit 0.18s ease-in both;
+  animation: quote-draft-row-exit 0.2s ease-in both;
+}
+
+/* Move padding into inner pad so grid can collapse cell height. */
+.quote-draft-row-td {
+  padding: 0 !important;
+  vertical-align: top;
+}
+
+.quote-draft-row-cell-shell {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.quote-draft-row-cell-clip {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.quote-draft-row-cell-pad {
+  padding: 0.5rem 0.75rem; /* py-2 px-3 */
+}
+
+.quote-draft-row-enter .quote-draft-row-cell-shell {
+  animation: quote-draft-cell-open 0.2s ease-out both;
+}
+
+.quote-draft-row-exit .quote-draft-row-cell-shell {
+  animation: quote-draft-cell-close 0.2s ease-in both;
 }
 
 /*
@@ -284,8 +330,14 @@ select:not([multiple]):disabled {
   }
 
   .quote-draft-row-enter,
-  .quote-draft-row-exit {
+  .quote-draft-row-exit,
+  .quote-draft-row-enter .quote-draft-row-cell-shell,
+  .quote-draft-row-exit .quote-draft-row-cell-shell {
     animation: none;
+  }
+
+  .quote-draft-row-cell-shell {
+    grid-template-rows: 1fr;
   }
 }
 
@@ -307,5 +359,20 @@ select:not([multiple]):disabled {
   }
   .rocha-skeleton {
     animation: none !important;
+  }
+
+  .quote-draft-row-enter,
+  .quote-draft-row-exit,
+  .quote-draft-row-enter .quote-draft-row-cell-shell,
+  .quote-draft-row-exit .quote-draft-row-cell-shell {
+    animation: none !important;
+  }
+
+  .quote-draft-row-cell-shell {
+    grid-template-rows: 1fr !important;
+  }
+
+  .quote-draft-row-cell-clip {
+    overflow: visible;
   }
 }

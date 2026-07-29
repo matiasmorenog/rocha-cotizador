@@ -6,8 +6,8 @@ import {
   type QuoteDraftLine,
 } from "@/stores/quote-draft-store";
 
-/** Keep in sync with `.quote-draft-row-exit` duration in globals.css */
-export const QUOTE_DRAFT_ROW_MOTION_MS = 180;
+/** Keep in sync with `.quote-draft-row-*` duration in globals.css */
+export const QUOTE_DRAFT_ROW_MOTION_MS = 200;
 
 export type AnimatedDraftRow = {
   line: QuoteDraftLine;
