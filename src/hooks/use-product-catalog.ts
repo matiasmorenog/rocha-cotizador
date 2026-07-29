@@ -8,13 +8,18 @@ import {
 } from "@/lib/product-base";
 import {
   clearCachedCatalog,
-  filterCatalog,
   readCachedCatalog,
   readCachedUnitPrices,
   unitPriceFromMap,
   writeCachedCatalog,
   writeCachedUnitPrices,
 } from "@/lib/client-catalog-cache";
+import {
+  buildProductSearchIndex,
+  EMPTY_PRODUCT_SEARCH_INDEX,
+  searchProductIndex,
+  type ProductSearchIndex,
+} from "@/lib/product-search";
 
 export type CatalogSearchProduct = {
   id: string;
@@ -32,6 +37,7 @@ type UseProductCatalogOptions = {
 
 type CatalogState = {
   products: CatalogProduct[];
+  searchIndex: ProductSearchIndex<CatalogProduct>;
   version: string | null;
   unitPrices: Record<string, number>;
   ready: boolean;
@@ -41,6 +47,7 @@ type CatalogState = {
 
 type CatalogSnapshot = {
   products: CatalogProduct[];
+  searchIndex: ProductSearchIndex<CatalogProduct>;
   unitPrices: Record<string, number>;
   ready: boolean;
 };
@@ -49,14 +56,28 @@ function customerKey(customerId?: string): string {
   return customerId?.trim() || "self";
 }
 
+function hydrateCatalog(products: ProductBase[]): {
+  products: CatalogProduct[];
+  searchIndex: ProductSearchIndex<CatalogProduct>;
+} {
+  const indexed = indexCatalogProducts(products);
+  return {
+    products: indexed,
+    searchIndex: buildProductSearchIndex(indexed),
+  };
+}
+
+function emptySearchIndex(): ProductSearchIndex<CatalogProduct> {
+  return EMPTY_PRODUCT_SEARCH_INDEX as ProductSearchIndex<CatalogProduct>;
+}
+
 function mapSearchRows(
-  products: CatalogProduct[],
+  searchIndex: ProductSearchIndex<CatalogProduct>,
   unitPrices: Record<string, number>,
   q: string,
   take: number,
 ): CatalogSearchProduct[] {
-  // Filter first; only hydrate unitPrice/DTO for the visible take.
-  const matched = filterCatalog(products, q, take);
+  const matched = searchProductIndex(searchIndex, q, take);
   const out: CatalogSearchProduct[] = new Array(matched.length);
   for (let i = 0; i < matched.length; i++) {
     const p = matched[i]!;
@@ -72,14 +93,14 @@ function mapSearchRows(
   return out;
 }
 
-/** Sync filter from live catalog arrays (prefer this over `search()` for render). */
+/** Sync filter from live catalog index (prefer this over `search()` for render). */
 export function mapCatalogSearch(
-  products: CatalogProduct[],
+  searchIndex: ProductSearchIndex<CatalogProduct>,
   unitPrices: Record<string, number>,
   q: string,
   take = 30,
 ): CatalogSearchProduct[] {
-  return mapSearchRows(products, unitPrices, q, take);
+  return mapSearchRows(searchIndex, unitPrices, q, take);
 }
 
 function initialState(opts: UseProductCatalogOptions): CatalogState {
@@ -87,12 +108,18 @@ function initialState(opts: UseProductCatalogOptions): CatalogState {
   const key = customerKey(opts.customerId);
   const cachedPrices =
     typeof window !== "undefined" ? readCachedUnitPrices(key) : null;
+  const products = cached?.products ?? [];
+  const searchIndex =
+    products.length > 0
+      ? buildProductSearchIndex(products)
+      : emptySearchIndex();
 
   return {
-    products: cached?.products ?? [],
+    products,
+    searchIndex,
     version: cached?.version ?? null,
     unitPrices: cachedPrices?.unitPrices ?? {},
-    ready: (cached?.products.length ?? 0) > 0,
+    ready: products.length > 0,
     loading: true,
     error: null,
   };
@@ -110,10 +137,6 @@ async function fetchCatalogJson(params: URLSearchParams) {
   return { res, data };
 }
 
-function hydrateProducts(products: ProductBase[]): CatalogProduct[] {
-  return indexCatalogProducts(products);
-}
-
 export function useProductCatalog(
   opts: UseProductCatalogOptions = {},
 ): CatalogState & {
@@ -123,12 +146,14 @@ export function useProductCatalog(
   const [state, setState] = useState<CatalogState>(() => initialState(opts));
   const snapshotRef = useRef<CatalogSnapshot>({
     products: state.products,
+    searchIndex: state.searchIndex,
     unitPrices: state.unitPrices,
     ready: state.ready,
   });
   // Keep search()/searchAsync in sync with the latest paint (no post-effect lag).
   snapshotRef.current = {
     products: state.products,
+    searchIndex: state.searchIndex,
     unitPrices: state.unitPrices,
     ready: state.ready,
   };
@@ -179,8 +204,10 @@ export function useProductCatalog(
         if (data.unchanged && cached && cached.products.length > 0) {
           const version = data.version ?? cached.version;
           writeCachedUnitPrices(key, version, unitPrices);
+          const { products, searchIndex } = hydrateCatalog(cached.products);
           setState({
-            products: cached.products,
+            products,
+            searchIndex,
             version,
             unitPrices,
             ready: true,
@@ -242,6 +269,7 @@ export function useProductCatalog(
             clearCachedCatalog();
             return {
               products: [],
+              searchIndex: emptySearchIndex(),
               version: data.version ?? null,
               unitPrices: nextPrices,
               ready: false,
@@ -260,8 +288,10 @@ export function useProductCatalog(
         });
         writeCachedUnitPrices(key, version, nextPrices);
 
+        const hydrated = hydrateCatalog(products);
         setState({
-          products: hydrateProducts(products),
+          products: hydrated.products,
+          searchIndex: hydrated.searchIndex,
           version,
           unitPrices: nextPrices,
           ready: true,
@@ -291,7 +321,7 @@ export function useProductCatalog(
 
   const search = useCallback((q: string, take = 30): CatalogSearchProduct[] => {
     const snap = snapshotRef.current;
-    return mapSearchRows(snap.products, snap.unitPrices, q, take);
+    return mapSearchRows(snap.searchIndex, snap.unitPrices, q, take);
   }, []);
 
   const searchAsync = useCallback(
@@ -299,7 +329,7 @@ export function useProductCatalog(
       // Instant path: already have catalog in memory / sessionStorage.
       const snap = snapshotRef.current;
       if (snap.products.length > 0) {
-        return mapSearchRows(snap.products, snap.unitPrices, q, take);
+        return mapSearchRows(snap.searchIndex, snap.unitPrices, q, take);
       }
 
       // Cold start: wait for first catalog load, then filter locally.
@@ -309,7 +339,7 @@ export function useProductCatalog(
 
       const after = snapshotRef.current;
       if (after.products.length > 0) {
-        return mapSearchRows(after.products, after.unitPrices, q, take);
+        return mapSearchRows(after.searchIndex, after.unitPrices, q, take);
       }
 
       // Last resort only if catalog still empty after load.

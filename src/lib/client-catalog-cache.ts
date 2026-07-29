@@ -3,6 +3,10 @@ import {
   type CatalogProduct,
   type ProductBase,
 } from "@/lib/product-base";
+import {
+  searchProductIndex,
+  type ProductSearchIndex,
+} from "@/lib/product-search";
 
 /** Bump key when cache shape/semantics change — clears poisoned empty catalogs. */
 const CATALOG_KEY = "rocha:product-catalog:v4";
@@ -153,11 +157,20 @@ export function writeCachedUnitPrices(
   }
 }
 
+/**
+ * Filter catalog by substring on code/name.
+ * Prefer `searchIndex` (trigrams) when available; otherwise linear early-exit.
+ */
 export function filterCatalog(
   products: Array<ProductBase | CatalogProduct>,
   q: string,
   take = 30,
+  searchIndex?: ProductSearchIndex<CatalogProduct> | null,
 ): ProductBase[] {
+  if (searchIndex && searchIndex.items.length > 0) {
+    return searchProductIndex(searchIndex, q, take);
+  }
+
   const needle = q.trim().toLowerCase();
   if (!needle) return [];
 

@@ -108,11 +108,11 @@ function ProductPickerInner({
       return [] as CatalogSearchProduct[];
     }
     return mapCatalogSearch(
-      catalog.products,
+      catalog.searchIndex,
       catalog.unitPrices,
       trimmedQuery,
     );
-  }, [value, trimmedQuery, catalog.products, catalog.unitPrices]);
+  }, [value, trimmedQuery, catalog.products.length, catalog.searchIndex, catalog.unitPrices]);
 
   const results = useMemo(
     () => (catalog.products.length > 0 ? warmResults : (coldResults ?? [])),
