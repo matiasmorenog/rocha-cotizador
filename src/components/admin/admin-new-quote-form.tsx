@@ -21,11 +21,7 @@ export function AdminNewQuoteForm() {
     <div className="space-y-6">
       <CustomerPicker value={customer} onChange={handleCustomerChange} />
       {customer ? (
-        <QuoteBuilder
-          key={customer.id}
-          customerId={customer.id}
-          priceListName={customer.priceListName}
-        />
+        <QuoteBuilder key={customer.id} customerId={customer.id} />
       ) : (
         <p className="text-sm text-neutral-500">
           Elegí un cliente para armar la cotización con sus precios.
