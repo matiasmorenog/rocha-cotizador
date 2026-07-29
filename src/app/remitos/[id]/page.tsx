@@ -18,7 +18,7 @@ import {
 } from "@/lib/whatsapp";
 import { BrandLogo } from "@/components/brand-logo";
 import { PrintButton } from "@/components/quote/print-button";
-import { RemitoWeighPriceEditor } from "@/components/quote/remito-weigh-price-editor";
+import { RemitoLineAdminControls } from "@/components/quote/remito-line-admin-controls";
 import { WhatsAppNotifyButton } from "@/components/quote/whatsapp-notify-button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import {
@@ -133,6 +133,7 @@ export default async function RemitoDetailPage({
   const pendingWeighCount = quote.items.filter(
     (item) => item.orderByUnit || Number(item.unitPrice) === 0,
   ).length;
+  const canDeleteLine = quote.items.length > 1;
 
   return (
     <div className="space-y-4">
@@ -234,12 +235,18 @@ export default async function RemitoDetailPage({
                         {UNIT_ORDER_PRICE_WARNING}
                       </p>
                     ) : null}
-                    {isAdmin && needsWeighPrice ? (
-                      <RemitoWeighPriceEditor
+                    {isAdmin ? (
+                      <RemitoLineAdminControls
                         quoteId={quote.id}
                         itemId={item.id}
                         initialQty={Number(item.qty)}
                         initialUnitPrice={Number(item.unitPrice)}
+                        measureLabel={quoteLineMeasureLabel(
+                          item.orderByUnit,
+                          allowsUnitOrder,
+                        )}
+                        canDelete={canDeleteLine}
+                        needsWeighPrice={needsWeighPrice}
                         suggestedKgPrice={
                           item.productId
                             ? (kgPriceByProductId.get(item.productId) ?? 0)
