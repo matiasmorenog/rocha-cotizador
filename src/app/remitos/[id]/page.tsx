@@ -4,6 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
+import {
+  effectiveDiscountPriceListId,
+  getPriceListUnitPricesByProductId,
+} from "@/lib/price-list-resolve";
+import { unitPriceForProduct } from "@/lib/pricing";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import { quoteLineMeasureLabel } from "@/lib/order-measure";
 import { formatPrice, formatQty } from "@/lib/utils";
@@ -13,6 +18,7 @@ import {
 } from "@/lib/whatsapp";
 import { BrandLogo } from "@/components/brand-logo";
 import { PrintButton } from "@/components/quote/print-button";
+import { RemitoLineAdminControls } from "@/components/quote/remito-line-admin-controls";
 import { WhatsAppNotifyButton } from "@/components/quote/whatsapp-notify-button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import {
@@ -53,6 +59,7 @@ export default async function RemitoDetailPage({
           phone: true,
           email: true,
           deliveryHours: true,
+          priceListId: true,
         },
       },
       items: { orderBy: { productCode: "asc" } },
@@ -67,12 +74,30 @@ export default async function RemitoDetailPage({
     productIds.length > 0
       ? await db.product.findMany({
           where: { id: { in: productIds } },
-          select: { id: true, allowsUnitOrder: true },
+          select: { id: true, allowsUnitOrder: true, basePrice: true },
         })
       : [];
   const allowsUnitOrderByProductId = new Map(
     products.map((p) => [p.id, p.allowsUnitOrder]),
   );
+
+  // Same $/kg as ordering by kg (customer list override → basePrice).
+  const discountListId = await effectiveDiscountPriceListId(
+    quote.customer.priceListId,
+  );
+  const listOverrides =
+    discountListId != null
+      ? await getPriceListUnitPricesByProductId(discountListId)
+      : null;
+  const kgPriceByProductId = new Map<string, number>();
+  for (const p of products) {
+    kgPriceByProductId.set(
+      p.id,
+      Number(
+        unitPriceForProduct(p.basePrice, listOverrides?.get(p.id) ?? null),
+      ),
+    );
+  }
 
   if (
     session.user.role === "CUSTOMER" &&
@@ -104,6 +129,11 @@ export default async function RemitoDetailPage({
   );
   const showWhatsappCta = whatsapp === "1" && Boolean(notifyWhatsappUrl);
   const deliveryLabel = formatDeliveryDateLabel(quote.deliveryDate);
+  const isAdmin = session.user.role === "ADMIN";
+  const pendingWeighCount = quote.items.filter(
+    (item) => item.orderByUnit || Number(item.unitPrice) === 0,
+  ).length;
+  const canDeleteLine = quote.items.length > 1;
 
   return (
     <div className="space-y-4">
@@ -116,6 +146,13 @@ export default async function RemitoDetailPage({
           <p className="text-sm text-neutral-700">
             Entrega: {deliveryLabel}
           </p>
+          {isAdmin && pendingWeighCount > 0 ? (
+            <p className="mt-1 text-sm text-amber-800">
+              {pendingWeighCount === 1
+                ? "1 línea pendiente de precio tras pesaje"
+                : `${pendingWeighCount} líneas pendientes de precio tras pesaje`}
+            </p>
+          ) : null}
         </div>
         <div className="flex gap-2">
           <Link
@@ -161,11 +198,11 @@ export default async function RemitoDetailPage({
           <table className="w-full min-w-[28rem] text-sm">
             <thead>
               <tr className="border-b border-neutral-300 text-left text-neutral-600">
-                <th className="py-2 pr-2 font-medium">Cód.</th>
+                <th className="py-2 pl-2 pr-2 font-medium">Cód.</th>
                 <th className="py-2 pr-2 font-medium">Cant.</th>
                 <th className="py-2 pr-2 font-medium">Artículo</th>
                 <th className="py-2 pr-2 text-right font-medium">Precio</th>
-                <th className="py-2 text-right font-medium">Importe</th>
+                <th className="py-2 pr-2 text-right font-medium">Importe</th>
               </tr>
             </thead>
             <tbody>
@@ -173,10 +210,19 @@ export default async function RemitoDetailPage({
                 const allowsUnitOrder = item.productId
                   ? (allowsUnitOrderByProductId.get(item.productId) ?? false)
                   : false;
+                const needsWeighPrice =
+                  item.orderByUnit || Number(item.unitPrice) === 0;
                 return (
-                <tr key={item.id} className="border-b border-neutral-100">
-                  <td className="py-2 pr-2 font-mono text-xs">{item.productCode}</td>
-                  <td className="py-2 pr-2">
+                <tr
+                  key={item.id}
+                  className={
+                    needsWeighPrice
+                      ? "border-b border-amber-100 bg-amber-50/30"
+                      : "border-b border-neutral-100"
+                  }
+                >
+                  <td className="py-2 pl-2 pr-2 font-mono text-xs">{item.productCode}</td>
+                  <td className="py-2 pr-2 align-top">
                     {formatQty(item.qty)}{" "}
                     <span className="text-neutral-500">
                       {quoteLineMeasureLabel(item.orderByUnit, allowsUnitOrder)}
@@ -184,16 +230,36 @@ export default async function RemitoDetailPage({
                   </td>
                   <td className="py-2 pr-2">
                     <div>{item.productName}</div>
-                    {item.orderByUnit ? (
+                    {item.orderByUnit || Number(item.unitPrice) === 0 ? (
                       <p className="mt-0.5 text-xs text-amber-800">
                         {UNIT_ORDER_PRICE_WARNING}
                       </p>
                     ) : null}
+                    {isAdmin ? (
+                      <RemitoLineAdminControls
+                        quoteId={quote.id}
+                        itemId={item.id}
+                        initialQty={Number(item.qty)}
+                        initialUnitPrice={Number(item.unitPrice)}
+                        measureLabel={quoteLineMeasureLabel(
+                          item.orderByUnit,
+                          allowsUnitOrder,
+                        )}
+                        canDelete={canDeleteLine}
+                        needsWeighPrice={needsWeighPrice}
+                        suggestedKgPrice={
+                          item.productId
+                            ? (kgPriceByProductId.get(item.productId) ?? 0)
+                            : 0
+                        }
+                        orderedByUnit={item.orderByUnit}
+                      />
+                    ) : null}
                   </td>
-                  <td className="py-2 pr-2 text-right">
+                  <td className="py-2 pr-2 text-right align-top">
                     {formatPrice(item.unitPrice)}
                   </td>
-                  <td className="py-2 text-right font-medium">
+                  <td className="py-2 pr-2 text-right align-top font-medium">
                     {formatPrice(item.lineTotal)}
                   </td>
                 </tr>
