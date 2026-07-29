@@ -28,6 +28,7 @@ import {
   type CatalogSearchProduct,
 } from "@/hooks/use-product-catalog";
 import { QuoteDraftAnimatedRow } from "@/components/quote/quote-draft-animated-row";
+import { QuoteDraftEmptyRow } from "@/components/quote/quote-draft-empty-row";
 import { useAnimatedDraftLines } from "@/components/quote/use-animated-draft-lines";
 
 type QuoteBuilderProps = {
@@ -44,13 +45,15 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
   const remove = useQuoteDraftStore((s) => s.remove);
   const clear = useQuoteDraftStore((s) => s.clear);
   const draftTotal = useQuoteDraftStore((s) => s.total());
-  const { rows: animatedRows, completeExit } = useAnimatedDraftLines(lines);
+  const { rows: animatedRows, emptyPhase, completeExit, completeEmptyExit } =
+    useAnimatedDraftLines(lines);
 
   const catalog = useProductCatalog({ customerId });
-  const { searchAsync } = catalog;
+  const { search, searchAsync } = catalog;
   // Keep latest searchAsync in a ref so catalog load (new callback identity)
   // does not cancel an in-flight search — that left the 2nd product lookup empty.
   const searchAsyncRef = useRef(searchAsync);
+  const searchRef = useRef(search);
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CatalogSearchProduct[]>([]);
@@ -68,6 +71,7 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const searchRequestId = useRef(0);
+  const queryRef = useRef(query);
 
   const catalogLoading = catalog.loading && !catalog.ready;
   const selectedAllowsUnit = selected?.allowsUnitOrder === true;
@@ -75,27 +79,24 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
 
   useEffect(() => {
     searchAsyncRef.current = searchAsync;
-  }, [searchAsync]);
+    searchRef.current = search;
+  }, [searchAsync, search]);
 
   useEffect(() => {
-    const q = query.trim();
-    if (q.length < 1) {
-      return;
-    }
-    let cancelled = false;
-    const requestId = ++searchRequestId.current;
-    // Local in-memory filter — no debounce (instant). Server fallback in
-    // searchAsync only runs if catalog empty after load (rare cold path).
-    void searchAsyncRef.current(q).then((rows) => {
-      if (cancelled || requestId !== searchRequestId.current) return;
-      setResults(rows);
-      setHighlightIndex(rows.length > 0 ? 0 : -1);
-      setOpen(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [query, catalog.ready]);
+    queryRef.current = query;
+  }, [query]);
+
+  // Cold start only: catalog became ready while the user already typed.
+  useEffect(() => {
+    if (!catalog.ready) return;
+    if (selected) return;
+    const q = queryRef.current.trim();
+    if (q.length < 1) return;
+    const rows = searchRef.current(q);
+    setResults(rows);
+    setHighlightIndex(rows.length > 0 ? 0 : -1);
+    setOpen(true);
+  }, [catalog.ready, selected]);
 
   useEffect(() => {
     if (!open || highlightIndex < 0) return;
@@ -129,11 +130,32 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
     setSelected(null);
     setLocalOrderByUnit(false);
     setQuery(value);
-    setHighlightIndex(-1);
-    if (value.trim().length < 1) {
+    const q = value.trim();
+    if (q.length < 1) {
+      searchRequestId.current += 1;
       setResults([]);
+      setHighlightIndex(-1);
       setOpen(false);
+      return;
     }
+
+    // Sync in-memory filter — same event tick as typing (no useEffect lag).
+    const snap = searchRef.current(q);
+    if (snap.length > 0 || catalog.ready) {
+      setResults(snap);
+      setHighlightIndex(snap.length > 0 ? 0 : -1);
+      setOpen(true);
+      return;
+    }
+
+    // Cold path: catalog still empty — await first load / server fallback.
+    const requestId = ++searchRequestId.current;
+    void searchAsyncRef.current(q).then((rows) => {
+      if (requestId !== searchRequestId.current) return;
+      setResults(rows);
+      setHighlightIndex(rows.length > 0 ? 0 : -1);
+      setOpen(true);
+    });
   }
 
   function onSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
@@ -425,93 +447,88 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
               </tr>
             </thead>
             <tbody>
-              {animatedRows.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={7}
-                    className="px-3 py-8 text-center text-neutral-500"
-                  >
-                    Sin productos. Buscá y agregá líneas.
+              {emptyPhase !== "hidden" ? (
+                <QuoteDraftEmptyRow
+                  exiting={emptyPhase === "exiting"}
+                  onExitComplete={completeEmptyExit}
+                />
+              ) : null}
+              {animatedRows.map(({ line: l, exiting, animateEnter }) => (
+                <QuoteDraftAnimatedRow
+                  key={l.id}
+                  exiting={exiting}
+                  animateEnter={animateEnter}
+                  onExitComplete={() => completeExit(l.id)}
+                  className={`border-t border-neutral-100 ${
+                    l.orderByUnit ? "bg-amber-50/40" : ""
+                  }`}
+                >
+                  <td className="px-3 py-2 font-mono text-xs">{l.code}</td>
+                  <td className="px-3 py-2">
+                    <div>{l.name}</div>
+                    {l.orderByUnit ? (
+                      <p className="mt-0.5 text-xs text-amber-800">
+                        {UNIT_ORDER_PRICE_WARNING}
+                      </p>
+                    ) : null}
                   </td>
-                </tr>
-              ) : (
-                animatedRows.map(({ line: l, exiting, animateEnter }) => (
-                  <QuoteDraftAnimatedRow
-                    key={l.id}
-                    exiting={exiting}
-                    animateEnter={animateEnter}
-                    onExitComplete={() => completeExit(l.id)}
-                    className={`border-t border-neutral-100 ${
-                      l.orderByUnit ? "bg-amber-50/40" : ""
-                    }`}
-                  >
-                    <td className="px-3 py-2 font-mono text-xs">{l.code}</td>
-                    <td className="px-3 py-2">
-                      <div>{l.name}</div>
-                      {l.orderByUnit ? (
-                        <p className="mt-0.5 text-xs text-amber-800">
-                          {UNIT_ORDER_PRICE_WARNING}
-                        </p>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Input
-                        className="h-8 w-24"
-                        type="number"
-                        min={0.001}
-                        step="any"
-                        value={l.qty}
-                        onChange={(e) => setQty(l.id, Number(e.target.value))}
-                        aria-label={quoteLineQtyAriaLabel(
+                  <td className="px-3 py-2">
+                    <Input
+                      className="h-8 w-24"
+                      type="number"
+                      min={0.001}
+                      step="any"
+                      value={l.qty}
+                      onChange={(e) => setQty(l.id, Number(e.target.value))}
+                      aria-label={quoteLineQtyAriaLabel(
+                        l.orderByUnit,
+                        l.allowsUnitOrder,
+                      )}
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    {l.allowsUnitOrder ? (
+                      <select
+                        value={l.orderByUnit ? "unit" : "kg"}
+                        onChange={(e) =>
+                          setOrderByUnit(l.id, e.target.value === "unit")
+                        }
+                        aria-label="Medida"
+                        className="flex h-8 w-[7.5rem] rounded-md border border-neutral-300 bg-white pl-2 pr-8 text-xs focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
+                      >
+                        <option value="kg">Kg</option>
+                        <option value="unit">Unidades</option>
+                      </select>
+                    ) : (
+                      <span className="text-neutral-500">
+                        {quoteLineMeasureLabel(
                           l.orderByUnit,
                           l.allowsUnitOrder,
                         )}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      {l.allowsUnitOrder ? (
-                        <select
-                          value={l.orderByUnit ? "unit" : "kg"}
-                          onChange={(e) =>
-                            setOrderByUnit(l.id, e.target.value === "unit")
-                          }
-                          aria-label="Medida"
-                          className="flex h-8 w-[7.5rem] rounded-md border border-neutral-300 bg-white pl-2 pr-8 text-xs focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
-                        >
-                          <option value="kg">Kg</option>
-                          <option value="unit">Unidades</option>
-                        </select>
-                      ) : (
-                        <span className="text-neutral-500">
-                          {quoteLineMeasureLabel(
-                            l.orderByUnit,
-                            l.allowsUnitOrder,
-                          )}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {formatPrice(effectiveUnitPrice(l))}
-                    </td>
-                    <td className="px-3 py-2 font-medium">
-                      {formatPrice(effectiveLineTotal(l))}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="px-2 hover:border-red-400 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => remove(l.id)}
-                        aria-label="Quitar"
-                        title="Quitar"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden />
-                      </Button>
-                    </td>
-                  </QuoteDraftAnimatedRow>
-                ))
-              )}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {formatPrice(effectiveUnitPrice(l))}
+                  </td>
+                  <td className="px-3 py-2 font-medium">
+                    {formatPrice(effectiveLineTotal(l))}
+                  </td>
+                  <td className="px-3 py-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="px-2 hover:border-red-400 hover:bg-red-50 hover:text-red-700"
+                      onClick={() => remove(l.id)}
+                      aria-label="Quitar"
+                      title="Quitar"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                    </Button>
+                  </td>
+                </QuoteDraftAnimatedRow>
+              ))}
             </tbody>
           </table>
         </DataTableScroll>

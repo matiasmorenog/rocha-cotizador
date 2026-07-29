@@ -15,18 +15,33 @@ export type AnimatedDraftRow = {
   animateEnter: boolean;
 };
 
+export type EmptyPhase = "shown" | "exiting" | "hidden";
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 /**
  * Keeps removed draft lines in the list long enough to play exit motion.
  * Skips enter animation for the post-hydration snapshot (persisted draft).
+ * Empty placeholder exits in parallel with the first product enter (no zero-height gap).
  */
 export function useAnimatedDraftLines(
   lines: QuoteDraftLine[],
 ): {
   rows: AnimatedDraftRow[];
+  emptyPhase: EmptyPhase;
   completeExit: (lineId: string) => void;
+  completeEmptyExit: () => void;
 } {
   const [rows, setRows] = useState<AnimatedDraftRow[]>(() =>
     lines.map((line) => ({ line, exiting: false, animateEnter: false })),
+  );
+  const [emptyPhase, setEmptyPhase] = useState<EmptyPhase>(() =>
+    lines.length === 0 ? "shown" : "hidden",
   );
   const enterEnabledRef = useRef(false);
 
@@ -44,6 +59,7 @@ export function useAnimatedDraftLines(
             animateEnter: false,
           })),
         );
+        setEmptyPhase(latest.length === 0 ? "shown" : "hidden");
         enterEnabledRef.current = true;
       });
     };
@@ -69,8 +85,11 @@ export function useAnimatedDraftLines(
       setRows(
         lines.map((line) => ({ line, exiting: false, animateEnter: false })),
       );
+      setEmptyPhase(lines.length === 0 ? "shown" : "hidden");
       return;
     }
+
+    const reduced = prefersReducedMotion();
 
     setRows((prev) => {
       const nextById = new Map(lines.map((l) => [l.id, l]));
@@ -107,13 +126,36 @@ export function useAnimatedDraftLines(
 
       return result;
     });
+
+    setEmptyPhase((prev) => {
+      if (lines.length > 0) {
+        if (prev === "shown") {
+          return reduced ? "hidden" : "exiting";
+        }
+        return prev === "exiting" ? "exiting" : "hidden";
+      }
+      return prev;
+    });
   }, [lines]);
 
   const completeExit = useCallback((lineId: string) => {
-    setRows((prev) =>
-      prev.filter((row) => !(row.line.id === lineId && row.exiting)),
-    );
+    setRows((prev) => {
+      const next = prev.filter(
+        (row) => !(row.line.id === lineId && row.exiting),
+      );
+      if (
+        next.length === 0 &&
+        useQuoteDraftStore.getState().lines.length === 0
+      ) {
+        setEmptyPhase("shown");
+      }
+      return next;
+    });
   }, []);
 
-  return { rows, completeExit };
+  const completeEmptyExit = useCallback(() => {
+    setEmptyPhase("hidden");
+  }, []);
+
+  return { rows, emptyPhase, completeExit, completeEmptyExit };
 }
