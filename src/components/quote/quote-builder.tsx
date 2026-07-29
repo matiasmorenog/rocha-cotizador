@@ -6,7 +6,6 @@ import { AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import {
@@ -41,11 +40,17 @@ type QuoteBuilderProps = {
   customerId?: string;
   /** Admin “Cambiar cliente”: fade panels out before unmount. */
   exiting?: boolean;
+  /**
+   * Admin: after “Confirmar y crear nuevo remito”, clear customer chip and
+   * focus the customer search (same page — no soft-nav state leak).
+   */
+  onConfirmCreateNew?: () => void;
 };
 
 export function QuoteBuilder({
   customerId,
   exiting = false,
+  onConfirmCreateNew,
 }: QuoteBuilderProps = {}) {
   const router = useRouter();
   const lines = useQuoteDraftStore((s) => s.lines);
@@ -168,7 +173,11 @@ export function QuoteBuilder({
     }
 
     if (action === "new") {
-      // Admin: customer selector + focus search. Customer: fresh cotizar.
+      if (onConfirmCreateNew) {
+        onConfirmCreateNew();
+        return;
+      }
+      // Customer self-serve: fresh cotizar. Admin without callback: focus query.
       router.push(
         customerId
           ? "/admin/cotizaciones/nueva?focus=customer"

@@ -61,6 +61,7 @@ export function CustomerPicker({
   exiting = false,
   onChange,
   autoFocusSearch = false,
+  focusToken = 0,
 }: CustomerPickerProps) {
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState<SearchHit[]>([]);
@@ -82,7 +83,7 @@ export function CustomerPicker({
   useEffect(() => {
     if (!autoFocusSearch || value) return;
     queueMicrotask(() => searchInputRef.current?.focus());
-  }, [autoFocusSearch, value]);
+  }, [autoFocusSearch, value, focusToken]);
 
   // Prefetch for warm in-memory filter (same idea as product catalog).
   useEffect(() => {
