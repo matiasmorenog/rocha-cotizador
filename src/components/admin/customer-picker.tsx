@@ -267,7 +267,7 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
 
   if (value) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4">
+      <div className="quote-customer-selected flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4">
         <div>
           <p className="text-sm font-medium text-neutral-900">
             {value.code} — {value.name}

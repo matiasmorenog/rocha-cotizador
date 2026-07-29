@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,7 @@ import {
 import { QuoteDraftAnimatedRow } from "@/components/quote/quote-draft-animated-row";
 import { QuoteDraftEmptyRow } from "@/components/quote/quote-draft-empty-row";
 import { useAnimatedDraftLines } from "@/components/quote/use-animated-draft-lines";
+import { useSmoothDraftTableHeight } from "@/components/quote/use-smooth-draft-table-height";
 
 type QuoteBuilderProps = {
   /** When set (admin flow), prices and submit use this customer. */
@@ -52,6 +53,20 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
     completeEmptyExit,
     completeEnter,
   } = useAnimatedDraftLines(lines);
+
+  const tableHeightLockRef = useRef<HTMLDivElement>(null);
+  const draftTableStructureKey = useMemo(
+    () =>
+      `${emptyPhase}|${animatedRows
+        .map((r) => `${r.line.id}:${r.exiting ? "x" : r.animateEnter ? "e" : "s"}`)
+        .join(",")}`,
+    [animatedRows, emptyPhase],
+  );
+  useSmoothDraftTableHeight(
+    tableHeightLockRef,
+    draftTableStructureKey,
+    emptyPhase,
+  );
 
   const [selected, setSelected] = useState<CatalogSearchProduct | null>(null);
   const [qty, setLocalQty] = useState("1");
@@ -148,7 +163,7 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={cn("space-y-6", customerId && "quote-customer-reveal")}>
       <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
         <div
           className={cn(
@@ -231,20 +246,30 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
       ) : null}
 
       <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-        <DataTableScroll className="rounded-none border-0">
-          <table className="w-full min-w-[40rem] text-sm">
-            <thead className="bg-neutral-50 text-left text-neutral-600">
-              <tr>
-                <th className="px-3 py-2 font-medium">Código</th>
-                <th className="px-3 py-2 font-medium">Producto</th>
-                <th className="px-3 py-2 font-medium">Cant.</th>
-                <th className="px-3 py-2 font-medium">Medida</th>
-                <th className="px-3 py-2 font-medium">Precio</th>
-                <th className="px-3 py-2 font-medium">Importe</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
+        <div ref={tableHeightLockRef}>
+          <DataTableScroll className="rounded-none border-0">
+            <table className="quote-draft-table w-full min-w-[40rem] text-sm">
+              <colgroup>
+                <col className="quote-draft-col-code" />
+                <col className="quote-draft-col-product" />
+                <col className="quote-draft-col-qty" />
+                <col className="quote-draft-col-measure" />
+                <col className="quote-draft-col-price" />
+                <col className="quote-draft-col-amount" />
+                <col className="quote-draft-col-actions" />
+              </colgroup>
+              <thead className="bg-neutral-50 text-left text-neutral-600">
+                <tr>
+                  <th className="px-3 py-2 font-medium">Código</th>
+                  <th className="px-3 py-2 font-medium">Producto</th>
+                  <th className="px-3 py-2 font-medium">Cant.</th>
+                  <th className="px-3 py-2 font-medium">Medida</th>
+                  <th className="px-3 py-2 font-medium">Precio</th>
+                  <th className="px-3 py-2 font-medium">Importe</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
               {emptyPhase !== "hidden" ? (
                 <QuoteDraftEmptyRow
                   exiting={emptyPhase === "exiting"}
@@ -328,9 +353,10 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
                   </td>
                 </QuoteDraftAnimatedRow>
               ))}
-            </tbody>
-          </table>
-        </DataTableScroll>
+              </tbody>
+            </table>
+          </DataTableScroll>
+        </div>
         <div className="flex items-center justify-between border-t border-neutral-200 bg-neutral-50 px-4 py-3">
           <p className="text-sm text-neutral-600">{lines.length} ítem(s)</p>
           <p className="text-lg font-semibold text-neutral-900">

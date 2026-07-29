@@ -226,6 +226,17 @@ select:not([multiple]):disabled {
   }
 }
 
+@keyframes quote-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .quote-draft-row-enter {
   animation: quote-draft-row-enter 0.2s ease-out both;
 }
@@ -234,7 +245,7 @@ select:not([multiple]):disabled {
   animation: quote-draft-row-exit 0.2s ease-in both;
 }
 
-/* Move padding into inner pad so grid can collapse cell height. */
+/* Move padding into inner pad so grid can collapse cell height on exit. */
 .quote-draft-row-td {
   padding: 0 !important;
   vertical-align: top;
@@ -255,11 +266,78 @@ select:not([multiple]):disabled {
 }
 
 /*
-  Enter: opacity/slide only — row mounts at natural height so the table grows
-  with the row (never 0fr-first). Exit still collapses height after fade/slide.
+  Enter: opacity/slide at natural height; table shell FLIP-eases height
+  (see useSmoothDraftTableHeight). Exit: fade/slide + cell 0fr collapse.
 */
 .quote-draft-row-exit .quote-draft-row-cell-shell {
   animation: quote-draft-cell-close 0.2s ease-in both;
+}
+
+/* Stable column tracks — avoid auto-layout snap when empty ↔ product rows. */
+.quote-draft-table {
+  table-layout: fixed;
+}
+
+.quote-draft-table col.quote-draft-col-code {
+  width: 5.5rem;
+}
+
+.quote-draft-table col.quote-draft-col-product {
+  width: auto;
+}
+
+.quote-draft-table col.quote-draft-col-qty {
+  width: 7rem;
+}
+
+.quote-draft-table col.quote-draft-col-measure {
+  width: 8.5rem;
+}
+
+.quote-draft-table col.quote-draft-col-price {
+  width: 6.5rem;
+}
+
+.quote-draft-table col.quote-draft-col-amount {
+  width: 6.5rem;
+}
+
+.quote-draft-table col.quote-draft-col-actions {
+  width: 3.25rem;
+}
+
+/*
+  Admin new-quote: customer selected → summary + QuoteBuilder panels.
+  Same motion language as draft rows (fade + slight slide, short stagger).
+*/
+.quote-customer-selected {
+  animation: quote-panel-enter 0.2s ease-out both;
+}
+
+.quote-customer-reveal > * {
+  animation: quote-panel-enter 0.2s ease-out both;
+}
+
+.quote-customer-reveal > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.quote-customer-reveal > *:nth-child(2) {
+  animation-delay: 35ms;
+}
+.quote-customer-reveal > *:nth-child(3) {
+  animation-delay: 70ms;
+}
+.quote-customer-reveal > *:nth-child(4) {
+  animation-delay: 105ms;
+}
+.quote-customer-reveal > *:nth-child(5) {
+  animation-delay: 140ms;
+}
+.quote-customer-reveal > *:nth-child(6) {
+  animation-delay: 175ms;
+}
+.quote-customer-reveal > *:nth-child(n + 7) {
+  animation-delay: 200ms;
 }
 
 /*
@@ -322,7 +400,9 @@ select:not([multiple]):disabled {
 
   .quote-draft-row-enter,
   .quote-draft-row-exit,
-  .quote-draft-row-exit .quote-draft-row-cell-shell {
+  .quote-draft-row-exit .quote-draft-row-cell-shell,
+  .quote-customer-selected,
+  .quote-customer-reveal > * {
     animation: none;
   }
 
