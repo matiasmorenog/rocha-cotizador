@@ -115,6 +115,7 @@ export function RemitoWeighPriceEditor({
             className="h-8 font-mono text-sm"
             aria-label="Kg pesados"
             disabled={loading}
+            autoFocus
           />
         </label>
         <label className="block min-w-[5.5rem] flex-1 space-y-0.5">

@@ -30,6 +30,10 @@ type CustomerPickerProps = {
   /** Admin “Cambiar cliente”: play chip exit before parent clears value. */
   exiting?: boolean;
   onChange: (customer: PickedCustomer | null) => void;
+  /** Focus search when selector is shown (e.g. after “Confirmar y crear nuevo remito”). */
+  autoFocusSearch?: boolean;
+  /** Bump to re-run focus after each create-new cycle. */
+  focusToken?: number;
 };
 
 type SearchHit = {
@@ -56,6 +60,7 @@ export function CustomerPicker({
   value,
   exiting = false,
   onChange,
+  autoFocusSearch = false,
 }: CustomerPickerProps) {
   const [query, setQuery] = useState("");
   const [catalog, setCatalog] = useState<SearchHit[]>([]);
@@ -72,6 +77,12 @@ export function CustomerPicker({
   const listRef = useRef<HTMLUListElement>(null);
   const coldAbortRef = useRef<AbortController | null>(null);
   const coldRequestId = useRef(0);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!autoFocusSearch || value) return;
+    queueMicrotask(() => searchInputRef.current?.focus());
+  }, [autoFocusSearch, value]);
 
   // Prefetch for warm in-memory filter (same idea as product catalog).
   useEffect(() => {
@@ -322,6 +333,7 @@ export function CustomerPicker({
       <Label htmlFor="customer-search">Cliente</Label>
       <div className="relative" ref={anchorRef}>
         <Input
+          ref={searchInputRef}
           id="customer-search"
           role="combobox"
           aria-expanded={showList}

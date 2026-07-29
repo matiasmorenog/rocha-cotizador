@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -14,6 +15,9 @@ type Props = {
   initialQty: number;
   initialUnitPrice: number;
   measureLabel: string;
+  /**
+   * Remito must keep ≥1 line (API + UI). False when this is the only item.
+   */
   canDelete: boolean;
   needsWeighPrice: boolean;
   suggestedKgPrice: number;
@@ -22,6 +26,7 @@ type Props = {
 
 /**
  * Admin-only remito line controls: weigh confirm (pending $0), edit qty/price, delete.
+ * Weigh-pending lines open the kg/$ editor by default (no Editar click).
  */
 export function RemitoLineAdminControls({
   quoteId,
@@ -35,6 +40,7 @@ export function RemitoLineAdminControls({
   orderedByUnit,
 }: Props) {
   const router = useRouter();
+  // Non-weigh lines start collapsed; weigh lines use RemitoWeighPriceEditor instead.
   const [editing, setEditing] = useState(false);
   const [qty, setQty] = useState(String(initialQty));
   const [unitPrice, setUnitPrice] = useState(String(initialUnitPrice));
@@ -129,6 +135,9 @@ export function RemitoLineAdminControls({
   }
 
   const busy = loading || deleting;
+  const deleteTitle = canDelete
+    ? "Eliminar línea"
+    : "No se puede eliminar la única línea del remito";
 
   return (
     <div className="mt-2 space-y-2 print:hidden">
@@ -143,7 +152,26 @@ export function RemitoLineAdminControls({
         />
       ) : null}
 
-      {editing ? (
+      {needsWeighPrice ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            disabled={busy || !canDelete}
+            className="h-8 w-8 px-0"
+            aria-label={deleteTitle}
+            title={deleteTitle}
+            onClick={onDelete}
+          >
+            {deleting ? (
+              <Spinner className="h-4 w-4" />
+            ) : (
+              <Trash2 className="h-4 w-4" aria-hidden />
+            )}
+          </Button>
+        </div>
+      ) : editing ? (
         <form
           onSubmit={onSave}
           className="space-y-2 rounded-md border border-neutral-300 bg-neutral-50 p-2"
@@ -204,23 +232,28 @@ export function RemitoLineAdminControls({
             size="sm"
             variant="outline"
             disabled={busy}
+            className="h-8 w-8 px-0"
+            aria-label="Editar línea"
+            title="Editar línea"
             onClick={openEdit}
           >
-            Editar
+            <Pencil className="h-4 w-4" aria-hidden />
           </Button>
           <Button
             type="button"
             size="sm"
             variant="destructive"
             disabled={busy || !canDelete}
-            title={
-              canDelete
-                ? "Eliminar línea"
-                : "No se puede eliminar la única línea del remito"
-            }
+            className="h-8 w-8 px-0"
+            aria-label={deleteTitle}
+            title={deleteTitle}
             onClick={onDelete}
           >
-            {deleting ? <Spinner className="h-4 w-4" /> : "Eliminar"}
+            {deleting ? (
+              <Spinner className="h-4 w-4" />
+            ) : (
+              <Trash2 className="h-4 w-4" aria-hidden />
+            )}
           </Button>
         </div>
       )}

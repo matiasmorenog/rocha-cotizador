@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { AdminNewQuoteForm } from "@/components/admin/admin-new-quote-form";
 
 export default function AdminNuevaCotizacionPage() {
@@ -20,7 +21,9 @@ export default function AdminNuevaCotizacionPage() {
           Volver al listado
         </Link>
       </div>
-      <AdminNewQuoteForm />
+      <Suspense fallback={<p className="text-sm text-neutral-500">Cargando…</p>}>
+        <AdminNewQuoteForm />
+      </Suspense>
     </div>
   );
 }

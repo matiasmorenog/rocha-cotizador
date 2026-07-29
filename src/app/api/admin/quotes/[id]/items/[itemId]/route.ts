@@ -115,7 +115,8 @@ export async function PATCH(
 
 /**
  * DELETE /api/admin/quotes/[id]/items/[itemId]
- * Remove a remito line and recalc totals. Blocks if it is the only item.
+ * Remove a remito line and recalc totals.
+ * Business rule: refuse when it is the only remaining item (empty remito not allowed).
  */
 export async function DELETE(
   _req: NextRequest,
