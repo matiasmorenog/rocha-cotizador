@@ -21,21 +21,37 @@ export function AdminNewQuoteForm() {
   const [focusSearchToken, setFocusSearchToken] = useState(0);
   const clearDraft = useQuoteDraftStore((s) => s.clear);
   const exitGenRef = useRef(0);
+  /** When exit finishes, also bump focusSearchToken (confirm-create-new). */
+  const focusSearchAfterExitRef = useRef(false);
 
-  function clearCustomerAndFocusSearch() {
-    exitGenRef.current += 1;
+  function finishCustomerExit() {
     clearDraft();
-    setExiting(false);
     setCustomer(null);
-    setFocusSearchToken((n) => n + 1);
+    setExiting(false);
+    if (focusSearchAfterExitRef.current) {
+      focusSearchAfterExitRef.current = false;
+      setFocusSearchToken((n) => n + 1);
+    }
   }
 
-  // Soft nav to ?focus=customer (same page) — clear chip + focus search.
-  // Defer setState: avoid sync setState-in-effect lint; primary path uses callback.
+  /** Same fade/slide as “Cambiar cliente”; optional focus search after. */
+  function beginCustomerExit(options?: { focusSearch?: boolean }) {
+    if (!customer || exiting) return;
+    focusSearchAfterExitRef.current = options?.focusSearch === true;
+    setExiting(true);
+  }
+
+  // Soft nav to ?focus=customer (fallback when no onConfirmCreateNew) — clear + focus.
+  // Defer setState: avoid sync setState-in-effect lint; primary path uses exit animation.
   useEffect(() => {
     if (searchParams.get("focus") !== "customer") return;
     const t = window.setTimeout(() => {
-      clearCustomerAndFocusSearch();
+      exitGenRef.current += 1;
+      focusSearchAfterExitRef.current = false;
+      clearDraft();
+      setExiting(false);
+      setCustomer(null);
+      setFocusSearchToken((n) => n + 1);
       router.replace("/admin/cotizaciones/nueva", { scroll: false });
     }, 0);
     return () => window.clearTimeout(t);
@@ -45,35 +61,26 @@ export function AdminNewQuoteForm() {
   useEffect(() => {
     if (!exiting) return;
 
-    const finish = () => {
-      clearDraft();
-      setCustomer(null);
-      setExiting(false);
-    };
-
+    const gen = ++exitGenRef.current;
     const reduced =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduced) {
-      finish();
-      return;
-    }
-
-    const gen = ++exitGenRef.current;
+    const delay = reduced ? 0 : QUOTE_CUSTOMER_EXIT_MS + 40;
     const t = window.setTimeout(() => {
       if (gen !== exitGenRef.current) return;
-      finish();
-    }, QUOTE_CUSTOMER_EXIT_MS + 40);
+      finishCustomerExit();
+    }, delay);
     return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- finish closes over latest refs
   }, [exiting, clearDraft]);
 
   function handleCustomerChange(next: PickedCustomer | null) {
     if (next === null) {
-      if (!customer || exiting) return;
-      setExiting(true);
+      beginCustomerExit();
       return;
     }
     exitGenRef.current += 1;
+    focusSearchAfterExitRef.current = false;
     clearDraft();
     setExiting(false);
     setCustomer(next);
@@ -93,7 +100,7 @@ export function AdminNewQuoteForm() {
           key={customer.id}
           customerId={customer.id}
           exiting={exiting}
-          onConfirmCreateNew={clearCustomerAndFocusSearch}
+          onConfirmCreateNew={() => beginCustomerExit({ focusSearch: true })}
         />
       ) : (
         <p className="text-sm text-neutral-500">

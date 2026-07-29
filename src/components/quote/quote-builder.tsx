@@ -41,8 +41,8 @@ type QuoteBuilderProps = {
   /** Admin “Cambiar cliente”: fade panels out before unmount. */
   exiting?: boolean;
   /**
-   * Admin: after “Confirmar y crear nuevo remito”, clear customer chip and
-   * focus the customer search (same page — no soft-nav state leak).
+   * Admin: after “Confirmar y crear nuevo remito”, parent runs the same
+   * panel exit as “Cambiar cliente”, then clears customer + focuses search.
    */
   onConfirmCreateNew?: () => void;
 };
@@ -169,19 +169,22 @@ export function QuoteBuilder({
       return;
     }
     const data = await res.json();
-    clear();
-    setNotes("");
-    setDeliveryDate(earliestDeliveryDateYmd());
 
     if (typeof data.whatsappUrl === "string" && data.whatsappUrl) {
       window.open(data.whatsappUrl, "_blank", "noopener,noreferrer");
     }
 
+    // Admin confirm-new: keep panels mounted for exit animation; parent clears.
+    if (action === "new" && onConfirmCreateNew) {
+      onConfirmCreateNew();
+      return;
+    }
+
+    clear();
+    setNotes("");
+    setDeliveryDate(earliestDeliveryDateYmd());
+
     if (action === "new") {
-      if (onConfirmCreateNew) {
-        onConfirmCreateNew();
-        return;
-      }
       // Customer self-serve: fresh cotizar. Admin without callback: focus query.
       router.push(
         customerId
