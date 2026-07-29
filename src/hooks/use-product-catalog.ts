@@ -61,6 +61,16 @@ function mapSearchRows(
   }));
 }
 
+/** Sync filter from live catalog arrays (prefer this over `search()` for render). */
+export function mapCatalogSearch(
+  products: ProductBase[],
+  unitPrices: Record<string, number>,
+  q: string,
+  take = 30,
+): CatalogSearchProduct[] {
+  return mapSearchRows(products, unitPrices, q, take);
+}
+
 function initialState(opts: UseProductCatalogOptions): CatalogState {
   const cached = typeof window !== "undefined" ? readCachedCatalog() : null;
   const key = customerKey(opts.customerId);
@@ -101,15 +111,13 @@ export function useProductCatalog(
     unitPrices: state.unitPrices,
     ready: state.ready,
   });
+  // Keep search()/searchAsync in sync with the latest paint (no post-effect lag).
+  snapshotRef.current = {
+    products: state.products,
+    unitPrices: state.unitPrices,
+    ready: state.ready,
+  };
   const loadPromiseRef = useRef<Promise<void> | null>(null);
-
-  useEffect(() => {
-    snapshotRef.current = {
-      products: state.products,
-      unitPrices: state.unitPrices,
-      ready: state.ready,
-    };
-  }, [state.products, state.unitPrices, state.ready]);
 
   useEffect(() => {
     let cancelled = false;

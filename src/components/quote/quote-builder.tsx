@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
   useQuoteDraftStore,
 } from "@/stores/quote-draft-store";
 import {
+  mapCatalogSearch,
   useProductCatalog,
   type CatalogSearchProduct,
 } from "@/hooks/use-product-catalog";
@@ -49,14 +50,14 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
     useAnimatedDraftLines(lines);
 
   const catalog = useProductCatalog({ customerId });
-  const { search, searchAsync } = catalog;
-  // Keep latest searchAsync in a ref so catalog load (new callback identity)
-  // does not cancel an in-flight search — that left the 2nd product lookup empty.
+  const { searchAsync } = catalog;
   const searchAsyncRef = useRef(searchAsync);
-  const searchRef = useRef(search);
 
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<CatalogSearchProduct[]>([]);
+  /** Cold-start override while catalog products still empty. */
+  const [coldResults, setColdResults] = useState<CatalogSearchProduct[] | null>(
+    null,
+  );
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const [selected, setSelected] = useState<CatalogSearchProduct | null>(null);
   const [qty, setLocalQty] = useState("1");
@@ -64,51 +65,70 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
   const [notes, setNotes] = useState("");
   const [minDeliveryDate] = useState(() => earliestDeliveryDateYmd());
   const [deliveryDate, setDeliveryDate] = useState(() => earliestDeliveryDateYmd());
-  const [open, setOpen] = useState(false);
+  /** User closed the list (Escape / outside click); typing reopens. */
+  const [listDismissed, setListDismissed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const searchRequestId = useRef(0);
-  const queryRef = useRef(query);
 
   const catalogLoading = catalog.loading && !catalog.ready;
   const selectedAllowsUnit = selected?.allowsUnitOrder === true;
   const hasUnitOrderLines = lines.some((l) => l.orderByUnit);
+  const trimmedQuery = query.trim();
+
+  // Warm path: derive in render from live catalog — same paint as the new query.
+  const warmResults = useMemo(() => {
+    if (selected || trimmedQuery.length < 1 || catalog.products.length === 0) {
+      return [] as CatalogSearchProduct[];
+    }
+    return mapCatalogSearch(
+      catalog.products,
+      catalog.unitPrices,
+      trimmedQuery,
+    );
+  }, [
+    selected,
+    trimmedQuery,
+    catalog.products,
+    catalog.unitPrices,
+  ]);
+
+  const results = useMemo(
+    () => (catalog.products.length > 0 ? warmResults : (coldResults ?? [])),
+    [catalog.products.length, warmResults, coldResults],
+  );
+
+  const listOpen =
+    !selected &&
+    !listDismissed &&
+    trimmedQuery.length > 0 &&
+    (results.length > 0 ||
+      (!catalogLoading && catalog.products.length > 0) ||
+      coldResults !== null);
+
+  const activeHighlight =
+    results.length === 0
+      ? -1
+      : Math.min(Math.max(highlightIndex, 0), results.length - 1);
 
   useEffect(() => {
     searchAsyncRef.current = searchAsync;
-    searchRef.current = search;
-  }, [searchAsync, search]);
+  }, [searchAsync]);
 
   useEffect(() => {
-    queryRef.current = query;
-  }, [query]);
-
-  // Cold start only: catalog became ready while the user already typed.
-  useEffect(() => {
-    if (!catalog.ready) return;
-    if (selected) return;
-    const q = queryRef.current.trim();
-    if (q.length < 1) return;
-    const rows = searchRef.current(q);
-    setResults(rows);
-    setHighlightIndex(rows.length > 0 ? 0 : -1);
-    setOpen(true);
-  }, [catalog.ready, selected]);
-
-  useEffect(() => {
-    if (!open || highlightIndex < 0) return;
+    if (!listOpen || activeHighlight < 0) return;
     const el = listRef.current?.querySelector<HTMLElement>(
-      `[data-product-option="${highlightIndex}"]`,
+      `[data-product-option="${activeHighlight}"]`,
     );
     el?.scrollIntoView({ block: "nearest" });
-  }, [highlightIndex, open, results]);
+  }, [activeHighlight, listOpen, results]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
-      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!boxRef.current?.contains(e.target as Node)) setListDismissed(true);
     }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
@@ -118,9 +138,9 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
     setSelected(p);
     setLocalOrderByUnit(false);
     setQuery("");
-    setResults([]);
+    setColdResults(null);
     setHighlightIndex(-1);
-    setOpen(false);
+    setListDismissed(true);
     queueMicrotask(() => {
       document.getElementById("qty")?.focus();
     });
@@ -129,32 +149,29 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
   function onQueryChange(value: string) {
     setSelected(null);
     setLocalOrderByUnit(false);
+    setListDismissed(false);
     setQuery(value);
     const q = value.trim();
     if (q.length < 1) {
       searchRequestId.current += 1;
-      setResults([]);
+      setColdResults(null);
       setHighlightIndex(-1);
-      setOpen(false);
       return;
     }
 
-    // Sync in-memory filter — same event tick as typing (no useEffect lag).
-    const snap = searchRef.current(q);
-    if (snap.length > 0 || catalog.ready) {
-      setResults(snap);
-      setHighlightIndex(snap.length > 0 ? 0 : -1);
-      setOpen(true);
+    // Warm: list derived in render. Point highlight at first match immediately.
+    setHighlightIndex(0);
+
+    if (catalog.products.length > 0) {
+      setColdResults(null);
       return;
     }
 
-    // Cold path: catalog still empty — await first load / server fallback.
     const requestId = ++searchRequestId.current;
     void searchAsyncRef.current(q).then((rows) => {
       if (requestId !== searchRequestId.current) return;
-      setResults(rows);
+      setColdResults(rows);
       setHighlightIndex(rows.length > 0 ? 0 : -1);
-      setOpen(true);
     });
   }
 
@@ -162,32 +179,36 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
     if (selected) return;
 
     if (e.key === "Escape") {
-      if (open) {
+      if (listOpen) {
         e.preventDefault();
-        setOpen(false);
+        setListDismissed(true);
         setHighlightIndex(-1);
       }
       return;
     }
 
-    if (!open || results.length === 0) return;
+    if (!listOpen || results.length === 0) return;
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlightIndex((i) => (i < 0 ? 0 : (i + 1) % results.length));
+      setHighlightIndex((i) => {
+        const cur = i < 0 ? 0 : i;
+        return (cur + 1) % results.length;
+      });
       return;
     }
     if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlightIndex((i) =>
-        i < 0 ? results.length - 1 : (i - 1 + results.length) % results.length,
-      );
+      setHighlightIndex((i) => {
+        const cur = i < 0 ? 0 : i;
+        return (cur - 1 + results.length) % results.length;
+      });
       return;
     }
     if (e.key === "Enter") {
       const pick =
-        highlightIndex >= 0 && highlightIndex < results.length
-          ? results[highlightIndex]
+        activeHighlight >= 0 && activeHighlight < results.length
+          ? results[activeHighlight]
           : results[0];
       if (pick) {
         e.preventDefault();
@@ -217,9 +238,9 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
     setQuery("");
     setLocalQty("1");
     setLocalOrderByUnit(false);
-    setResults([]);
+    setColdResults(null);
     setHighlightIndex(-1);
-    setOpen(false);
+    setListDismissed(true);
     setError(null);
     queueMicrotask(() => searchInputRef.current?.focus());
   }
@@ -289,12 +310,12 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
                 ref={searchInputRef}
                 id="product-search"
                 role="combobox"
-                aria-expanded={open && results.length > 0}
+                aria-expanded={listOpen && results.length > 0}
                 aria-controls="product-search-listbox"
                 aria-autocomplete="list"
                 aria-activedescendant={
-                  open && highlightIndex >= 0
-                    ? `product-option-${highlightIndex}`
+                  listOpen && activeHighlight >= 0
+                    ? `product-option-${activeHighlight}`
                     : undefined
                 }
                 placeholder={
@@ -307,7 +328,9 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
                 value={selected ? `${selected.code} — ${selected.name}` : query}
                 onChange={(e) => onQueryChange(e.target.value)}
                 onKeyDown={onSearchKeyDown}
-                onFocus={() => results.length > 0 && setOpen(true)}
+                onFocus={() => {
+                  if (trimmedQuery.length > 0) setListDismissed(false);
+                }}
                 autoComplete="off"
                 disabled={catalogLoading}
                 className={catalogLoading && !selected ? "pr-10" : undefined}
@@ -318,7 +341,7 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
                 </span>
               ) : null}
             </div>
-            {open && results.length > 0 ? (
+            {listOpen && results.length > 0 ? (
               <ul
                 ref={listRef}
                 id="product-search-listbox"
@@ -331,11 +354,11 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
                       type="button"
                       id={`product-option-${index}`}
                       role="option"
-                      aria-selected={index === highlightIndex}
+                      aria-selected={index === activeHighlight}
                       data-product-option={index}
                       className={cn(
                         "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm",
-                        index === highlightIndex
+                        index === activeHighlight
                           ? "bg-[var(--brand-primary-soft)]"
                           : "hover:bg-neutral-50",
                       )}
@@ -355,7 +378,10 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
                 ))}
               </ul>
             ) : null}
-            {open && query.trim().length > 0 && results.length === 0 && !catalogLoading ? (
+            {listOpen &&
+            trimmedQuery.length > 0 &&
+            results.length === 0 &&
+            !catalogLoading ? (
               <p className="absolute z-50 mt-1 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-500 shadow-lg">
                 Sin productos
               </p>
