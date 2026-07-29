@@ -11,10 +11,25 @@ type Props = {
   quoteId: string;
   itemId: string;
   initialQty: number;
+  /** Stored remito line price (0 while pending weigh). */
   initialUnitPrice: number;
+  /**
+   * Catalog $/kg for this customer (list override → base) — same as kg order.
+   * Prefills Precio $/kg when line still at $0.
+   */
+  suggestedKgPrice: number;
   /** Unit-count line: do not prefill qty (admin enters kg after weigh). */
   orderedByUnit: boolean;
 };
+
+function defaultPriceInput(
+  initialUnitPrice: number,
+  suggestedKgPrice: number,
+): string {
+  if (initialUnitPrice > 0) return String(initialUnitPrice);
+  if (suggestedKgPrice > 0) return String(suggestedKgPrice);
+  return "";
+}
 
 /**
  * Admin-only: confirm $/kg (+ optional kg) on unit-order remito lines at $0.
@@ -24,14 +39,15 @@ export function RemitoWeighPriceEditor({
   itemId,
   initialQty,
   initialUnitPrice,
+  suggestedKgPrice,
   orderedByUnit,
 }: Props) {
   const router = useRouter();
   const [qty, setQty] = useState(
     orderedByUnit && initialUnitPrice === 0 ? "" : String(initialQty),
   );
-  const [unitPrice, setUnitPrice] = useState(
-    initialUnitPrice > 0 ? String(initialUnitPrice) : "",
+  const [unitPrice, setUnitPrice] = useState(() =>
+    defaultPriceInput(initialUnitPrice, suggestedKgPrice),
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -107,7 +123,7 @@ export function RemitoWeighPriceEditor({
             value={unitPrice}
             onChange={(e) => setUnitPrice(e.target.value)}
             inputMode="decimal"
-            placeholder="0.00"
+            placeholder={suggestedKgPrice > 0 ? undefined : "0.00"}
             className="h-8 font-mono text-sm"
             aria-label="Precio por kg"
             disabled={loading}

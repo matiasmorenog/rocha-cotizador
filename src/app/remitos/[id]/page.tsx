@@ -4,6 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
+import {
+  effectiveDiscountPriceListId,
+  getPriceListUnitPricesByProductId,
+} from "@/lib/price-list-resolve";
+import { unitPriceForProduct } from "@/lib/pricing";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import { quoteLineMeasureLabel } from "@/lib/order-measure";
 import { formatPrice, formatQty } from "@/lib/utils";
@@ -54,6 +59,7 @@ export default async function RemitoDetailPage({
           phone: true,
           email: true,
           deliveryHours: true,
+          priceListId: true,
         },
       },
       items: { orderBy: { productCode: "asc" } },
@@ -68,12 +74,30 @@ export default async function RemitoDetailPage({
     productIds.length > 0
       ? await db.product.findMany({
           where: { id: { in: productIds } },
-          select: { id: true, allowsUnitOrder: true },
+          select: { id: true, allowsUnitOrder: true, basePrice: true },
         })
       : [];
   const allowsUnitOrderByProductId = new Map(
     products.map((p) => [p.id, p.allowsUnitOrder]),
   );
+
+  // Same $/kg as ordering by kg (customer list override → basePrice).
+  const discountListId = await effectiveDiscountPriceListId(
+    quote.customer.priceListId,
+  );
+  const listOverrides =
+    discountListId != null
+      ? await getPriceListUnitPricesByProductId(discountListId)
+      : null;
+  const kgPriceByProductId = new Map<string, number>();
+  for (const p of products) {
+    kgPriceByProductId.set(
+      p.id,
+      Number(
+        unitPriceForProduct(p.basePrice, listOverrides?.get(p.id) ?? null),
+      ),
+    );
+  }
 
   if (
     session.user.role === "CUSTOMER" &&
@@ -216,6 +240,11 @@ export default async function RemitoDetailPage({
                         itemId={item.id}
                         initialQty={Number(item.qty)}
                         initialUnitPrice={Number(item.unitPrice)}
+                        suggestedKgPrice={
+                          item.productId
+                            ? (kgPriceByProductId.get(item.productId) ?? 0)
+                            : 0
+                        }
                         orderedByUnit={item.orderByUnit}
                       />
                     ) : null}
