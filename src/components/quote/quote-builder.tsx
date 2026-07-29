@@ -83,6 +83,7 @@ export function QuoteBuilder({
   );
 
   const [selected, setSelected] = useState<CatalogSearchProduct | null>(null);
+  const [catalogReady, setCatalogReady] = useState(false);
   const [qty, setLocalQty] = useState("1");
   const [orderByUnit, setLocalOrderByUnit] = useState(false);
   const [notes, setNotes] = useState("");
@@ -103,6 +104,10 @@ export function QuoteBuilder({
         document.getElementById("qty")?.focus();
       });
     }
+  }, []);
+
+  const onCatalogReadyChange = useCallback((ready: boolean) => {
+    setCatalogReady(ready);
   }, []);
 
   function addLine() {
@@ -216,6 +221,7 @@ export function QuoteBuilder({
             customerId={customerId}
             value={selected}
             onChange={onProductChange}
+            onCatalogReadyChange={onCatalogReadyChange}
             inputRef={searchInputRef}
           />
           <div className="flex flex-wrap items-end gap-2">
@@ -267,7 +273,11 @@ export function QuoteBuilder({
             ) : null}
           </div>
           <div className="flex items-end">
-            <Button type="button" onClick={addLine} disabled={!selected}>
+            <Button
+              type="button"
+              onClick={addLine}
+              disabled={!selected || !catalogReady}
+            >
               Agregar
             </Button>
           </div>

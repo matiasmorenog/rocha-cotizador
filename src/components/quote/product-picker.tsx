@@ -34,6 +34,8 @@ type ProductPickerProps = {
   onChange: (product: CatalogSearchProduct | null) => void;
   /** Focus the search field after adding a line, etc. */
   inputRef?: RefObject<HTMLInputElement | null>;
+  /** Gate “Agregar” until the in-memory catalog is ready. */
+  onCatalogReadyChange?: (ready: boolean) => void;
 };
 
 type ProductOptionProps = {
@@ -87,10 +89,12 @@ function ProductPickerInner({
   value,
   onChange,
   inputRef,
+  onCatalogReadyChange,
 }: ProductPickerProps) {
   const catalog = useProductCatalog({ customerId });
   const { searchAsync } = catalog;
   const searchAsyncRef = useRef(searchAsync);
+  const onReadyRef = useRef(onCatalogReadyChange);
   const isClient = useIsClient();
 
   const [query, setQuery] = useState("");
@@ -117,7 +121,9 @@ function ProductPickerInner({
     trimmedQuery.length > 0 &&
     catalog.products.length > 0 &&
     deferredQuery !== query;
-  const searchBusy = filterPending || coldInFlight;
+  // Ignore cold-flight once warm catalog hydrates — warmResults filter query.
+  const coldSearchBusy = coldInFlight && catalog.products.length === 0;
+  const searchBusy = filterPending || coldSearchBusy;
   const showInputSpinner = (catalogLoading || searchBusy) && !value;
 
   const warmResults = useMemo(() => {
@@ -171,6 +177,14 @@ function ProductPickerInner({
   useEffect(() => {
     searchAsyncRef.current = searchAsync;
   }, [searchAsync]);
+
+  useEffect(() => {
+    onReadyRef.current = onCatalogReadyChange;
+  }, [onCatalogReadyChange]);
+
+  useEffect(() => {
+    onReadyRef.current?.(catalog.ready);
+  }, [catalog.ready]);
 
   // Only scroll when highlight moves — not on every new results array identity.
   useEffect(() => {
@@ -331,10 +345,9 @@ function ProductPickerInner({
             if (trimmedQuery.length > 0) setListDismissed(false);
           }}
           autoComplete="off"
-          disabled={catalogLoading}
           className={cn(
             showInputSpinner && "pr-10",
-            catalogLoading && "disabled:cursor-wait",
+            catalogLoading && "cursor-wait",
           )}
         />
         {showInputSpinner ? (
@@ -343,7 +356,7 @@ function ProductPickerInner({
               label={
                 catalogLoading
                   ? "Cargando catálogo"
-                  : coldInFlight
+                  : coldSearchBusy
                     ? "Buscando productos"
                     : "Filtrando productos"
               }
