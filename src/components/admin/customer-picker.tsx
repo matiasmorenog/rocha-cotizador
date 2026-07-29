@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -28,54 +34,131 @@ type SearchHit = {
   active: boolean;
 };
 
+function activeHits(raw: SearchHit[] | undefined): SearchHit[] {
+  return (raw ?? []).filter((c) => c.active);
+}
+
+function filterCustomers(catalog: SearchHit[], q: string, take = 30): SearchHit[] {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return [];
+  const out: SearchHit[] = [];
+  for (const c of catalog) {
+    if (
+      c.code.toLowerCase().includes(needle) ||
+      c.name.toLowerCase().includes(needle)
+    ) {
+      out.push(c);
+      if (out.length >= take) break;
+    }
+  }
+  return out;
+}
+
 export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchHit[]>([]);
-  const [open, setOpen] = useState(false);
+  const [catalog, setCatalog] = useState<SearchHit[]>([]);
+  const [catalogReady, setCatalogReady] = useState(false);
+  /** Network fallback while preload empty, or local miss beyond first page. */
+  const [coldResults, setColdResults] = useState<SearchHit[] | null>(null);
   const [searching, setSearching] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
+  const [listDismissed, setListDismissed] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  const coldAbortRef = useRef<AbortController | null>(null);
+  const coldRequestId = useRef(0);
 
+  // Prefetch for warm in-memory filter (same idea as product catalog).
   useEffect(() => {
-    const q = query.trim();
-    if (q.length < 1) {
-      return;
+    const ac = new AbortController();
+    void (async () => {
+      try {
+        const res = await fetch("/api/admin/customers", { signal: ac.signal });
+        if (!res.ok) return;
+        const data = (await res.json()) as { customers?: SearchHit[] };
+        setCatalog(activeHits(data.customers));
+      } catch {
+        // aborted or network — cold path still works
+      } finally {
+        if (!ac.signal.aborted) setCatalogReady(true);
+      }
+    })();
+    return () => ac.abort();
+  }, []);
+
+  const trimmedQuery = query.trim();
+
+  const warmResults = useMemo(() => {
+    if (trimmedQuery.length < 1 || catalog.length === 0) {
+      return [] as SearchHit[];
     }
-    let cancelled = false;
-    const handle = setTimeout(async () => {
+    return filterCustomers(catalog, trimmedQuery);
+  }, [catalog, trimmedQuery]);
+
+  const results = useMemo(() => {
+    if (warmResults.length > 0) return warmResults;
+    if (coldResults !== null) return coldResults;
+    return warmResults;
+  }, [warmResults, coldResults]);
+
+  const listOpen =
+    !listDismissed &&
+    trimmedQuery.length > 0 &&
+    (results.length > 0 ||
+      (!searching && (catalogReady || coldResults !== null)));
+
+  const activeHighlight =
+    results.length === 0
+      ? -1
+      : Math.min(Math.max(highlightIndex, 0), results.length - 1);
+
+  // Local miss after warm catalog ready → server q (customers beyond preload page).
+  useEffect(() => {
+    if (!catalogReady || catalog.length === 0) return;
+    if (trimmedQuery.length < 1) return;
+    if (warmResults.length > 0) return;
+
+    const ac = new AbortController();
+    coldAbortRef.current?.abort();
+    coldAbortRef.current = ac;
+    const requestId = ++coldRequestId.current;
+
+    void (async () => {
       setSearching(true);
-      const res = await fetch(
-        `/api/admin/customers?q=${encodeURIComponent(q)}`,
-      );
-      if (cancelled) return;
-      setSearching(false);
-      if (!res.ok) return;
-      const data = await res.json();
-      const hits =
-        (data.customers as SearchHit[] | undefined)?.filter((c) => c.active) ??
-        [];
-      setResults(hits);
-      setHighlightIndex(hits.length > 0 ? 0 : -1);
-      setOpen(true);
-    }, 200);
-    return () => {
-      cancelled = true;
-      clearTimeout(handle);
-    };
-  }, [query]);
+      try {
+        const res = await fetch(
+          `/api/admin/customers?q=${encodeURIComponent(trimmedQuery)}`,
+          { signal: ac.signal },
+        );
+        if (!res.ok || requestId !== coldRequestId.current) return;
+        const data = (await res.json()) as { customers?: SearchHit[] };
+        setColdResults(activeHits(data.customers));
+        setHighlightIndex(0);
+      } catch {
+        if (!ac.signal.aborted && requestId === coldRequestId.current) {
+          setColdResults([]);
+        }
+      } finally {
+        if (!ac.signal.aborted && requestId === coldRequestId.current) {
+          setSearching(false);
+        }
+      }
+    })();
+
+    return () => ac.abort();
+  }, [catalogReady, catalog.length, trimmedQuery, warmResults.length]);
 
   useEffect(() => {
-    if (!open || highlightIndex < 0) return;
+    if (!listOpen || activeHighlight < 0) return;
     const el = listRef.current?.querySelector<HTMLElement>(
-      `[data-customer-option="${highlightIndex}"]`,
+      `[data-customer-option="${activeHighlight}"]`,
     );
     el?.scrollIntoView({ block: "nearest" });
-  }, [highlightIndex, open, results]);
+  }, [activeHighlight, listOpen, results]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
-      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!boxRef.current?.contains(e.target as Node)) setListDismissed(true);
     }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
@@ -90,49 +173,97 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
       active: c.active,
     });
     setQuery("");
-    setResults([]);
+    setColdResults(null);
     setHighlightIndex(-1);
-    setOpen(false);
+    setListDismissed(true);
+  }
+
+  function runColdSearch(q: string) {
+    coldAbortRef.current?.abort();
+    const ac = new AbortController();
+    coldAbortRef.current = ac;
+    const requestId = ++coldRequestId.current;
+    setSearching(true);
+    void (async () => {
+      try {
+        const res = await fetch(
+          `/api/admin/customers?q=${encodeURIComponent(q)}`,
+          { signal: ac.signal },
+        );
+        if (!res.ok || requestId !== coldRequestId.current) return;
+        const data = (await res.json()) as { customers?: SearchHit[] };
+        const hits = activeHits(data.customers);
+        setColdResults(hits);
+        setHighlightIndex(hits.length > 0 ? 0 : -1);
+      } catch {
+        if (!ac.signal.aborted && requestId === coldRequestId.current) {
+          setColdResults([]);
+        }
+      } finally {
+        if (!ac.signal.aborted && requestId === coldRequestId.current) {
+          setSearching(false);
+        }
+      }
+    })();
   }
 
   function onQueryChange(next: string) {
+    setListDismissed(false);
     setQuery(next);
-    setHighlightIndex(-1);
-    if (next.trim().length < 1) {
-      setResults([]);
-      setOpen(false);
+    const q = next.trim();
+    if (q.length < 1) {
+      coldAbortRef.current?.abort();
+      coldRequestId.current += 1;
+      setColdResults(null);
+      setHighlightIndex(-1);
       setSearching(false);
+      return;
     }
+
+    setHighlightIndex(0);
+
+    // Warm: list derived in render. Clear stale cold; network only if preload empty.
+    if (catalog.length > 0) {
+      setColdResults(null);
+      setSearching(false);
+      return;
+    }
+
+    runColdSearch(q);
   }
 
   function onSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Escape") {
-      if (open) {
+      if (listOpen) {
         e.preventDefault();
-        setOpen(false);
+        setListDismissed(true);
         setHighlightIndex(-1);
       }
       return;
     }
 
-    if (!open || results.length === 0) return;
+    if (!listOpen || results.length === 0) return;
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
-      setHighlightIndex((i) => (i < 0 ? 0 : (i + 1) % results.length));
+      setHighlightIndex((i) => {
+        const cur = i < 0 ? 0 : i;
+        return (cur + 1) % results.length;
+      });
       return;
     }
     if (e.key === "ArrowUp") {
       e.preventDefault();
-      setHighlightIndex((i) =>
-        i < 0 ? results.length - 1 : (i - 1 + results.length) % results.length,
-      );
+      setHighlightIndex((i) => {
+        const cur = i < 0 ? 0 : i;
+        return (cur - 1 + results.length) % results.length;
+      });
       return;
     }
     if (e.key === "Enter") {
       const pick =
-        highlightIndex >= 0 && highlightIndex < results.length
-          ? results[highlightIndex]
+        activeHighlight >= 0 && activeHighlight < results.length
+          ? results[activeHighlight]
           : results[0];
       if (pick) {
         e.preventDefault();
@@ -152,7 +283,12 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
             Lista: {value.priceListName ?? "Precio base"}
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => onChange(null)}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => onChange(null)}
+        >
           Cambiar cliente
         </Button>
       </div>
@@ -160,25 +296,34 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
   }
 
   return (
-    <div className="relative rounded-lg border border-neutral-200 bg-white p-4" ref={boxRef}>
+    <div
+      className="relative rounded-lg border border-neutral-200 bg-white p-4"
+      ref={boxRef}
+    >
       <Label htmlFor="customer-search">Cliente</Label>
       <div className="relative">
         <Input
           id="customer-search"
           role="combobox"
-          aria-expanded={open && results.length > 0}
+          aria-expanded={listOpen && results.length > 0}
           aria-controls="customer-search-listbox"
           aria-autocomplete="list"
           aria-activedescendant={
-            open && highlightIndex >= 0
-              ? `customer-option-${highlightIndex}`
+            listOpen && activeHighlight >= 0
+              ? `customer-option-${activeHighlight}`
               : undefined
           }
-          placeholder="Buscar por código o nombre…"
+          placeholder={
+            catalogReady || catalog.length > 0
+              ? "Buscar por código o nombre…"
+              : "Cargando clientes…"
+          }
           value={query}
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={onSearchKeyDown}
-          onFocus={() => results.length > 0 && setOpen(true)}
+          onFocus={() => {
+            if (trimmedQuery.length > 0) setListDismissed(false);
+          }}
           autoComplete="off"
           className={searching ? "pr-10" : undefined}
         />
@@ -188,7 +333,7 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
           </span>
         ) : null}
       </div>
-      {open && results.length > 0 ? (
+      {listOpen && results.length > 0 ? (
         <ul
           ref={listRef}
           id="customer-search-listbox"
@@ -201,11 +346,11 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
                 type="button"
                 id={`customer-option-${index}`}
                 role="option"
-                aria-selected={index === highlightIndex}
+                aria-selected={index === activeHighlight}
                 data-customer-option={index}
                 className={cn(
                   "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm",
-                  index === highlightIndex
+                  index === activeHighlight
                     ? "bg-[var(--brand-primary-soft)]"
                     : "hover:bg-neutral-50",
                 )}
@@ -223,7 +368,10 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
           ))}
         </ul>
       ) : null}
-      {open && !searching && query.trim().length > 0 && results.length === 0 ? (
+      {listOpen &&
+      !searching &&
+      trimmedQuery.length > 0 &&
+      results.length === 0 ? (
         <p className="mt-2 text-sm text-neutral-500">Sin clientes activos</p>
       ) : null}
     </div>
