@@ -31,11 +31,9 @@ import {
 type QuoteBuilderProps = {
   /** When set (admin flow), prices and submit use this customer. */
   customerId?: string;
-  /** Admin label for assigned price list. */
-  priceListName?: string | null;
 };
 
-export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = {}) {
+export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
   const router = useRouter();
   const lines = useQuoteDraftStore((s) => s.lines);
   const addOrUpdate = useQuoteDraftStore((s) => s.addOrUpdate);
@@ -250,14 +248,6 @@ export function QuoteBuilder({ customerId, priceListName }: QuoteBuilderProps = 
 
   return (
     <div className="space-y-6">
-      {priceListName ? (
-        <p className="text-sm text-neutral-600">
-          Lista de precios: {priceListName}
-        </p>
-      ) : customerId ? (
-        <p className="text-sm text-neutral-600">Lista de precios: Precio base</p>
-      ) : null}
-
       <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
         <div
           className={cn(
