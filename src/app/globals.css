@@ -194,6 +194,37 @@ select:not([multiple]):disabled {
   animation: admin-toast-enter 0.28s ease-out both;
 }
 
+/* Draft quote table rows — enter/exit (quote-builder) */
+@keyframes quote-draft-row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes quote-draft-row-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+}
+
+.quote-draft-row-enter {
+  animation: quote-draft-row-enter 0.18s ease-out both;
+}
+
+.quote-draft-row-exit {
+  animation: quote-draft-row-exit 0.18s ease-in both;
+}
+
 /*
   Admin shell breakpoints — plain CSS so visibility never depends on a single
   Tailwind `hidden` + `lg:block` utility pair (if that variant is missing from
@@ -249,6 +280,11 @@ select:not([multiple]):disabled {
   }
 
   .admin-toast-enter {
+    animation: none;
+  }
+
+  .quote-draft-row-enter,
+  .quote-draft-row-exit {
     animation: none;
   }
 }

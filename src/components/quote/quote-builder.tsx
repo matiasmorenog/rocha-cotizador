@@ -27,6 +27,8 @@ import {
   useProductCatalog,
   type CatalogSearchProduct,
 } from "@/hooks/use-product-catalog";
+import { QuoteDraftAnimatedRow } from "@/components/quote/quote-draft-animated-row";
+import { useAnimatedDraftLines } from "@/components/quote/use-animated-draft-lines";
 
 type QuoteBuilderProps = {
   /** When set (admin flow), prices and submit use this customer. */
@@ -42,6 +44,7 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
   const remove = useQuoteDraftStore((s) => s.remove);
   const clear = useQuoteDraftStore((s) => s.clear);
   const draftTotal = useQuoteDraftStore((s) => s.total());
+  const { rows: animatedRows, completeExit } = useAnimatedDraftLines(lines);
 
   const catalog = useProductCatalog({ customerId });
   const { searchAsync } = catalog;
@@ -422,16 +425,19 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
               </tr>
             </thead>
             <tbody>
-              {lines.length === 0 ? (
+              {animatedRows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-3 py-8 text-center text-neutral-500">
                     Sin productos. Buscá y agregá líneas.
                   </td>
                 </tr>
               ) : (
-                lines.map((l) => (
-                  <tr
+                animatedRows.map(({ line: l, exiting, animateEnter }) => (
+                  <QuoteDraftAnimatedRow
                     key={l.id}
+                    exiting={exiting}
+                    animateEnter={animateEnter}
+                    onExitComplete={() => completeExit(l.id)}
                     className={`border-t border-neutral-100 ${
                       l.orderByUnit ? "bg-amber-50/40" : ""
                     }`}
@@ -497,7 +503,7 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
                         <Trash2 className="h-4 w-4" aria-hidden />
                       </Button>
                     </td>
-                  </tr>
+                  </QuoteDraftAnimatedRow>
                 ))
               )}
             </tbody>
