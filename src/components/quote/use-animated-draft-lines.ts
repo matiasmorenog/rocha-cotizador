@@ -13,6 +13,8 @@ export type AnimatedDraftRow = {
   line: QuoteDraftLine;
   exiting: boolean;
   animateEnter: boolean;
+  /** Last row → empty: fade only, no 0fr cell-close (avoids height valley). */
+  softExit: boolean;
 };
 
 export type EmptyPhase = "shown" | "exiting" | "hidden";
@@ -30,7 +32,7 @@ function prefersReducedMotion(): boolean {
  *
  * Empty → first product: hide empty immediately (no parallel 0fr collapse).
  * Enter uses opacity/slide only at natural height — table never dips to zero
- * then grows. Last-line delete still collapses, then empty reappears.
+ * then grows. Last-line delete: soft exit (no cell-close), then empty + FLIP.
  */
 export function useAnimatedDraftLines(
   lines: QuoteDraftLine[],
@@ -42,7 +44,12 @@ export function useAnimatedDraftLines(
   completeEnter: (lineId: string) => void;
 } {
   const [rows, setRows] = useState<AnimatedDraftRow[]>(() =>
-    lines.map((line) => ({ line, exiting: false, animateEnter: false })),
+    lines.map((line) => ({
+      line,
+      exiting: false,
+      animateEnter: false,
+      softExit: false,
+    })),
   );
   const [emptyPhase, setEmptyPhase] = useState<EmptyPhase>(() =>
     lines.length === 0 ? "shown" : "hidden",
@@ -61,6 +68,7 @@ export function useAnimatedDraftLines(
             line,
             exiting: false,
             animateEnter: false,
+            softExit: false,
           })),
         );
         setEmptyPhase(latest.length === 0 ? "shown" : "hidden");
@@ -87,11 +95,18 @@ export function useAnimatedDraftLines(
   useEffect(() => {
     if (!enterEnabledRef.current) {
       setRows(
-        lines.map((line) => ({ line, exiting: false, animateEnter: false })),
+        lines.map((line) => ({
+          line,
+          exiting: false,
+          animateEnter: false,
+          softExit: false,
+        })),
       );
       setEmptyPhase(lines.length === 0 ? "shown" : "hidden");
       return;
     }
+
+    const toEmpty = lines.length === 0;
 
     setRows((prev) => {
       const nextById = new Map(lines.map((l) => [l.id, l]));
@@ -106,16 +121,21 @@ export function useAnimatedDraftLines(
             exiting: false,
             // Keep enter flag until completeEnter clears it (height lock release).
             animateEnter: row.animateEnter,
+            softExit: false,
           });
           present.add(row.line.id);
         } else if (row.exiting) {
-          result.push(row);
+          result.push({
+            ...row,
+            softExit: row.softExit || toEmpty,
+          });
           present.add(row.line.id);
         } else {
           result.push({
             line: row.line,
             exiting: true,
             animateEnter: false,
+            softExit: toEmpty,
           });
           present.add(row.line.id);
         }
@@ -127,6 +147,7 @@ export function useAnimatedDraftLines(
             line,
             exiting: false,
             animateEnter: !prefersReducedMotion(),
+            softExit: false,
           });
         }
       }

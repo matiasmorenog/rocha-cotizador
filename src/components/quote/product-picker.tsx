@@ -3,6 +3,7 @@
 import {
   memo,
   useCallback,
+  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -11,10 +12,13 @@ import {
   type MouseEvent,
   type RefObject,
 } from "react";
+import { createPortal } from "react-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { cn, formatPrice } from "@/lib/utils";
+import { useAnchoredFloatingStyle } from "@/hooks/use-anchored-floating-style";
+import { useIsClient } from "@/hooks/use-is-client";
 import {
   mapCatalogSearch,
   useProductCatalog,
@@ -87,14 +91,19 @@ function ProductPickerInner({
   const catalog = useProductCatalog({ customerId });
   const { searchAsync } = catalog;
   const searchAsyncRef = useRef(searchAsync);
+  const isClient = useIsClient();
 
   const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
   const [coldResults, setColdResults] = useState<CatalogSearchProduct[] | null>(
     null,
   );
+  const [coldInFlight, setColdInFlight] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const [listDismissed, setListDismissed] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const floatingRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const localInputRef = useRef<HTMLInputElement>(null);
   const searchRequestId = useRef(0);
@@ -102,17 +111,31 @@ function ProductPickerInner({
   const inputElRef = inputRef ?? localInputRef;
   const catalogLoading = catalog.loading && !catalog.ready;
   const trimmedQuery = query.trim();
+  const deferredTrimmed = deferredQuery.trim();
+  const filterPending =
+    !value &&
+    trimmedQuery.length > 0 &&
+    catalog.products.length > 0 &&
+    deferredQuery !== query;
+  const searchBusy = filterPending || coldInFlight;
+  const showInputSpinner = (catalogLoading || searchBusy) && !value;
 
   const warmResults = useMemo(() => {
-    if (value || trimmedQuery.length < 1 || catalog.products.length === 0) {
+    if (value || deferredTrimmed.length < 1 || catalog.products.length === 0) {
       return [] as CatalogSearchProduct[];
     }
     return mapCatalogSearch(
       catalog.searchIndex,
       catalog.unitPrices,
-      trimmedQuery,
+      deferredTrimmed,
     );
-  }, [value, trimmedQuery, catalog.products.length, catalog.searchIndex, catalog.unitPrices]);
+  }, [
+    value,
+    deferredTrimmed,
+    catalog.products.length,
+    catalog.searchIndex,
+    catalog.unitPrices,
+  ]);
 
   const results = useMemo(
     () => (catalog.products.length > 0 ? warmResults : (coldResults ?? [])),
@@ -124,8 +147,21 @@ function ProductPickerInner({
     !listDismissed &&
     trimmedQuery.length > 0 &&
     (results.length > 0 ||
+      searchBusy ||
       (!catalogLoading && catalog.products.length > 0) ||
       coldResults !== null);
+
+  const showList = listOpen && results.length > 0;
+  const showSearching = listOpen && searchBusy && results.length === 0;
+  const showEmpty =
+    listOpen &&
+    deferredTrimmed.length > 0 &&
+    results.length === 0 &&
+    !catalogLoading &&
+    !searchBusy;
+  const showError = Boolean(catalog.error && !catalog.ready);
+  const floatingOpen = showList || showSearching || showEmpty || showError;
+  const floatingStyle = useAnchoredFloatingStyle(anchorRef, floatingOpen);
 
   const activeHighlight =
     results.length === 0
@@ -138,16 +174,20 @@ function ProductPickerInner({
 
   // Only scroll when highlight moves — not on every new results array identity.
   useEffect(() => {
-    if (!listOpen || activeHighlight < 0) return;
+    if (!showList || activeHighlight < 0) return;
     const el = listRef.current?.querySelector<HTMLElement>(
       `[data-product-option="${activeHighlight}"]`,
     );
     el?.scrollIntoView({ block: "nearest" });
-  }, [activeHighlight, listOpen]);
+  }, [activeHighlight, showList]);
 
   useEffect(() => {
     function onDocDown(e: globalThis.MouseEvent) {
-      if (!boxRef.current?.contains(e.target as Node)) setListDismissed(true);
+      const t = e.target as Node;
+      if (boxRef.current?.contains(t) || floatingRef.current?.contains(t)) {
+        return;
+      }
+      setListDismissed(true);
     }
     document.addEventListener("mousedown", onDocDown);
     return () => document.removeEventListener("mousedown", onDocDown);
@@ -158,6 +198,7 @@ function ProductPickerInner({
       onChange(p);
       setQuery("");
       setColdResults(null);
+      setColdInFlight(false);
       setHighlightIndex(-1);
       setListDismissed(true);
     },
@@ -172,6 +213,7 @@ function ProductPickerInner({
     if (q.length < 1) {
       searchRequestId.current += 1;
       setColdResults(null);
+      setColdInFlight(false);
       setHighlightIndex(-1);
       return;
     }
@@ -180,13 +222,16 @@ function ProductPickerInner({
 
     if (catalog.products.length > 0) {
       setColdResults(null);
+      setColdInFlight(false);
       return;
     }
 
     const requestId = ++searchRequestId.current;
+    setColdInFlight(true);
     void searchAsyncRef.current(q).then((rows) => {
       if (requestId !== searchRequestId.current) return;
       setColdResults(rows);
+      setColdInFlight(false);
       setHighlightIndex(rows.length > 0 ? 0 : -1);
     });
   }
@@ -253,19 +298,22 @@ function ProductPickerInner({
     }
   }
 
+  const listVisible = showList;
+
   return (
     <div className="relative" ref={boxRef}>
       <Label htmlFor="product-search">Producto</Label>
-      <div className="relative">
+      <div className="relative" ref={anchorRef}>
         <Input
           ref={inputElRef}
           id="product-search"
           role="combobox"
-          aria-expanded={listOpen && results.length > 0}
+          aria-expanded={listVisible || showSearching}
           aria-controls="product-search-listbox"
           aria-autocomplete="list"
+          aria-busy={searchBusy || catalogLoading || undefined}
           aria-activedescendant={
-            listOpen && activeHighlight >= 0
+            listVisible && activeHighlight >= 0
               ? `product-option-${activeHighlight}`
               : undefined
           }
@@ -284,46 +332,78 @@ function ProductPickerInner({
           }}
           autoComplete="off"
           disabled={catalogLoading}
-          className={catalogLoading && !value ? "pr-10" : undefined}
+          className={cn(
+            showInputSpinner && "pr-10",
+            catalogLoading && "disabled:cursor-wait",
+          )}
         />
-        {catalogLoading && !value ? (
+        {showInputSpinner ? (
           <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-            <Spinner label="Cargando catálogo" />
+            <Spinner
+              label={
+                catalogLoading
+                  ? "Cargando catálogo"
+                  : coldInFlight
+                    ? "Buscando productos"
+                    : "Filtrando productos"
+              }
+            />
           </span>
         ) : null}
       </div>
-      {listOpen && results.length > 0 ? (
-        <ul
-          ref={listRef}
-          id="product-search-listbox"
-          role="listbox"
-          className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
-          onMouseOver={onListMouseOver}
-          onClick={onListClick}
-        >
-          {results.map((p, index) => (
-            <ProductOption
-              key={p.id}
-              product={p}
-              index={index}
-              active={index === activeHighlight}
-            />
-          ))}
-        </ul>
-      ) : null}
-      {listOpen &&
-      trimmedQuery.length > 0 &&
-      results.length === 0 &&
-      !catalogLoading ? (
-        <p className="absolute z-50 mt-1 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-500 shadow-lg">
-          Sin productos
-        </p>
-      ) : null}
-      {catalog.error && !catalog.ready ? (
-        <p className="absolute z-50 mt-1 w-full rounded-md border border-red-200 bg-white px-3 py-2 text-sm text-red-600 shadow-lg">
-          {catalog.error}
-        </p>
-      ) : null}
+      {isClient && floatingOpen && floatingStyle
+        ? createPortal(
+            <div ref={floatingRef} style={floatingStyle}>
+              {listVisible ? (
+                <ul
+                  ref={listRef}
+                  id="product-search-listbox"
+                  role="listbox"
+                  className="max-h-64 overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
+                  onMouseOver={onListMouseOver}
+                  onClick={onListClick}
+                >
+                  {filterPending ? (
+                    <li
+                      role="presentation"
+                      className="border-b border-neutral-100 px-3 py-1.5 text-xs text-neutral-500"
+                    >
+                      Buscando…
+                    </li>
+                  ) : null}
+                  {results.map((p, index) => (
+                    <ProductOption
+                      key={p.id}
+                      product={p}
+                      index={index}
+                      active={index === activeHighlight}
+                    />
+                  ))}
+                </ul>
+              ) : null}
+              {showSearching ? (
+                <p
+                  id="product-search-listbox"
+                  role="status"
+                  className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-500 shadow-lg"
+                >
+                  Buscando…
+                </p>
+              ) : null}
+              {showEmpty ? (
+                <p className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-500 shadow-lg">
+                  Sin productos
+                </p>
+              ) : null}
+              {showError ? (
+                <p className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm text-red-600 shadow-lg">
+                  {catalog.error}
+                </p>
+              ) : null}
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

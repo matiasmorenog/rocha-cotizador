@@ -14,6 +14,8 @@ import { QUOTE_DRAFT_ROW_MOTION_MS } from "@/components/quote/use-animated-draft
 
 type QuoteDraftAnimatedRowProps = {
   exiting: boolean;
+  /** Fade/slide only — skip 0fr cell-close (last row → empty). */
+  softExit?: boolean;
   animateEnter: boolean;
   onExitComplete: () => void;
   onEnterComplete?: () => void;
@@ -44,6 +46,7 @@ function wrapCell(child: ReactNode): ReactNode {
 
 export function QuoteDraftAnimatedRow({
   exiting,
+  softExit = false,
   animateEnter,
   onExitComplete,
   onEnterComplete,
@@ -109,7 +112,7 @@ export function QuoteDraftAnimatedRow({
       className={cn(
         className,
         animateEnter && "quote-draft-row-enter",
-        exiting && "quote-draft-row-exit",
+        exiting && (softExit ? "quote-draft-row-exit-soft" : "quote-draft-row-exit"),
         exiting && "pointer-events-none",
       )}
       onAnimationEnd={(e) => {

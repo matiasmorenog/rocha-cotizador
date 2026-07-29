@@ -245,6 +245,11 @@ select:not([multiple]):disabled {
   animation: quote-draft-row-exit 0.2s ease-in both;
 }
 
+/* Last product → empty: fade/slide only — keep row height until empty mounts. */
+.quote-draft-row-exit-soft {
+  animation: quote-draft-row-exit 0.2s ease-in both;
+}
+
 /* Move padding into inner pad so grid can collapse cell height on exit. */
 .quote-draft-row-td {
   padding: 0 !important;
@@ -310,12 +315,17 @@ select:not([multiple]):disabled {
   Admin new-quote: customer selected → summary + QuoteBuilder panels.
   Same motion language as draft rows (fade + slight slide, short stagger).
 */
+/*
+  fill-mode backwards only — do not leave transform/opacity after the run.
+  `both`/`forwards` + translateY(0) keeps a stacking context and traps
+  absolute dropdowns under later siblings (draft table paints over options).
+*/
 .quote-customer-selected {
-  animation: quote-panel-enter 0.2s ease-out both;
+  animation: quote-panel-enter 0.2s ease-out backwards;
 }
 
 .quote-customer-reveal > * {
-  animation: quote-panel-enter 0.2s ease-out both;
+  animation: quote-panel-enter 0.2s ease-out backwards;
 }
 
 .quote-customer-reveal > *:nth-child(1) {
@@ -400,6 +410,7 @@ select:not([multiple]):disabled {
 
   .quote-draft-row-enter,
   .quote-draft-row-exit,
+  .quote-draft-row-exit-soft,
   .quote-draft-row-exit .quote-draft-row-cell-shell,
   .quote-customer-selected,
   .quote-customer-reveal > * {
@@ -433,6 +444,7 @@ select:not([multiple]):disabled {
 
   .quote-draft-row-enter,
   .quote-draft-row-exit,
+  .quote-draft-row-exit-soft,
   .quote-draft-row-exit .quote-draft-row-cell-shell {
     animation: none !important;
   }

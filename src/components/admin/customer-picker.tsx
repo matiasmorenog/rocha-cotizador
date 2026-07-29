@@ -7,12 +7,15 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
+import { createPortal } from "react-dom";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { filterFoldedSearch } from "@/lib/search-fold";
+import { useAnchoredFloatingStyle } from "@/hooks/use-anchored-floating-style";
+import { useIsClient } from "@/hooks/use-is-client";
 
 export type PickedCustomer = {
   id: string;
@@ -56,7 +59,10 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
   const [searching, setSearching] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
   const [listDismissed, setListDismissed] = useState(false);
+  const isClient = useIsClient();
   const boxRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const floatingRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const coldAbortRef = useRef<AbortController | null>(null);
   const coldRequestId = useRef(0);
@@ -100,6 +106,9 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
     (results.length > 0 ||
       (!searching && (catalogReady || coldResults !== null)));
 
+  const showList = listOpen && results.length > 0;
+  const floatingStyle = useAnchoredFloatingStyle(anchorRef, showList);
+
   const activeHighlight =
     results.length === 0
       ? -1
@@ -142,16 +151,20 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
   }, [catalogReady, catalog.length, trimmedQuery, warmResults.length]);
 
   useEffect(() => {
-    if (!listOpen || activeHighlight < 0) return;
+    if (!showList || activeHighlight < 0) return;
     const el = listRef.current?.querySelector<HTMLElement>(
       `[data-customer-option="${activeHighlight}"]`,
     );
     el?.scrollIntoView({ block: "nearest" });
-  }, [activeHighlight, listOpen, results]);
+  }, [activeHighlight, showList, results]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
-      if (!boxRef.current?.contains(e.target as Node)) setListDismissed(true);
+      const t = e.target as Node;
+      if (boxRef.current?.contains(t) || floatingRef.current?.contains(t)) {
+        return;
+      }
+      setListDismissed(true);
     }
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
@@ -294,15 +307,15 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
       ref={boxRef}
     >
       <Label htmlFor="customer-search">Cliente</Label>
-      <div className="relative">
+      <div className="relative" ref={anchorRef}>
         <Input
           id="customer-search"
           role="combobox"
-          aria-expanded={listOpen && results.length > 0}
+          aria-expanded={showList}
           aria-controls="customer-search-listbox"
           aria-autocomplete="list"
           aria-activedescendant={
-            listOpen && activeHighlight >= 0
+            showList && activeHighlight >= 0
               ? `customer-option-${activeHighlight}`
               : undefined
           }
@@ -326,41 +339,46 @@ export function CustomerPicker({ value, onChange }: CustomerPickerProps) {
           </span>
         ) : null}
       </div>
-      {listOpen && results.length > 0 ? (
-        <ul
-          ref={listRef}
-          id="customer-search-listbox"
-          role="listbox"
-          className="absolute left-4 right-4 z-20 mt-1 max-h-64 overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
-        >
-          {results.map((c, index) => (
-            <li key={c.id} role="presentation">
-              <button
-                type="button"
-                id={`customer-option-${index}`}
-                role="option"
-                aria-selected={index === activeHighlight}
-                data-customer-option={index}
-                className={cn(
-                  "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm",
-                  index === activeHighlight
-                    ? "bg-[var(--brand-primary-soft)]"
-                    : "hover:bg-neutral-50",
-                )}
-                onMouseEnter={() => setHighlightIndex(index)}
-                onClick={() => pickCustomer(c)}
+      {isClient && showList && floatingStyle
+        ? createPortal(
+            <div ref={floatingRef} style={floatingStyle}>
+              <ul
+                ref={listRef}
+                id="customer-search-listbox"
+                role="listbox"
+                className="max-h-64 overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
               >
-                <span className="font-medium text-neutral-900">
-                  {c.code} — {c.name}
-                </span>
-                <span className="text-xs text-neutral-500">
-                  Lista: {c.priceList?.name ?? "Precio base"}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+                {results.map((c, index) => (
+                  <li key={c.id} role="presentation">
+                    <button
+                      type="button"
+                      id={`customer-option-${index}`}
+                      role="option"
+                      aria-selected={index === activeHighlight}
+                      data-customer-option={index}
+                      className={cn(
+                        "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm",
+                        index === activeHighlight
+                          ? "bg-[var(--brand-primary-soft)]"
+                          : "hover:bg-neutral-50",
+                      )}
+                      onMouseEnter={() => setHighlightIndex(index)}
+                      onClick={() => pickCustomer(c)}
+                    >
+                      <span className="font-medium text-neutral-900">
+                        {c.code} — {c.name}
+                      </span>
+                      <span className="text-xs text-neutral-500">
+                        Lista: {c.priceList?.name ?? "Precio base"}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>,
+            document.body,
+          )
+        : null}
       {listOpen &&
       !searching &&
       trimmedQuery.length > 0 &&

@@ -276,10 +276,11 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
                   onExitComplete={completeEmptyExit}
                 />
               ) : null}
-              {animatedRows.map(({ line: l, exiting, animateEnter }) => (
+              {animatedRows.map(({ line: l, exiting, animateEnter, softExit }) => (
                 <QuoteDraftAnimatedRow
                   key={l.id}
                   exiting={exiting}
+                  softExit={softExit}
                   animateEnter={animateEnter}
                   onExitComplete={() => completeExit(l.id)}
                   onEnterComplete={() => completeEnter(l.id)}

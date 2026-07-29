@@ -16,7 +16,7 @@ function prefersReducedMotion(): boolean {
 /**
  * FLIP height on the draft table shell when row structure changes.
  * - Grows when adding rows (parallel with fade/slide enter).
- * - Eases empty → first product even when height shrinks.
+ * - Eases empty ↔ first product (shrink or grow) without a height valley.
  * - Skips shrink after CSS cell-close exit (avoids re-expand flash).
  */
 export function useSmoothDraftTableHeight(
@@ -37,6 +37,8 @@ export function useSmoothDraftTableHeight(
     const keyChanged = prevKeyRef.current !== structureKey;
     const emptyJustHidden =
       prevEmptyRef.current !== "hidden" && emptyPhase === "hidden";
+    const emptyJustShown =
+      prevEmptyRef.current === "hidden" && emptyPhase === "shown";
 
     prevKeyRef.current = structureKey;
     prevEmptyRef.current = emptyPhase;
@@ -50,7 +52,7 @@ export function useSmoothDraftTableHeight(
       prev != null &&
       !prefersReducedMotion() &&
       prev !== next &&
-      (next > prev || emptyJustHidden);
+      (next > prev || emptyJustHidden || emptyJustShown);
 
     if (!shouldAnimate) {
       prevHeightRef.current = next;
