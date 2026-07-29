@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,10 +24,9 @@ import {
   useQuoteDraftStore,
 } from "@/stores/quote-draft-store";
 import {
-  mapCatalogSearch,
-  useProductCatalog,
+  ProductPicker,
   type CatalogSearchProduct,
-} from "@/hooks/use-product-catalog";
+} from "@/components/quote/product-picker";
 import { QuoteDraftAnimatedRow } from "@/components/quote/quote-draft-animated-row";
 import { QuoteDraftEmptyRow } from "@/components/quote/quote-draft-empty-row";
 import { useAnimatedDraftLines } from "@/components/quote/use-animated-draft-lines";
@@ -49,173 +48,28 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
   const { rows: animatedRows, emptyPhase, completeExit, completeEmptyExit } =
     useAnimatedDraftLines(lines);
 
-  const catalog = useProductCatalog({ customerId });
-  const { searchAsync } = catalog;
-  const searchAsyncRef = useRef(searchAsync);
-
-  const [query, setQuery] = useState("");
-  /** Cold-start override while catalog products still empty. */
-  const [coldResults, setColdResults] = useState<CatalogSearchProduct[] | null>(
-    null,
-  );
-  const [highlightIndex, setHighlightIndex] = useState(-1);
   const [selected, setSelected] = useState<CatalogSearchProduct | null>(null);
   const [qty, setLocalQty] = useState("1");
   const [orderByUnit, setLocalOrderByUnit] = useState(false);
   const [notes, setNotes] = useState("");
   const [minDeliveryDate] = useState(() => earliestDeliveryDateYmd());
   const [deliveryDate, setDeliveryDate] = useState(() => earliestDeliveryDateYmd());
-  /** User closed the list (Escape / outside click); typing reopens. */
-  const [listDismissed, setListDismissed] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const boxRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
-  const searchRequestId = useRef(0);
 
-  const catalogLoading = catalog.loading && !catalog.ready;
   const selectedAllowsUnit = selected?.allowsUnitOrder === true;
   const hasUnitOrderLines = lines.some((l) => l.orderByUnit);
-  const trimmedQuery = query.trim();
 
-  // Warm path: derive in render from live catalog — same paint as the new query.
-  const warmResults = useMemo(() => {
-    if (selected || trimmedQuery.length < 1 || catalog.products.length === 0) {
-      return [] as CatalogSearchProduct[];
-    }
-    return mapCatalogSearch(
-      catalog.products,
-      catalog.unitPrices,
-      trimmedQuery,
-    );
-  }, [
-    selected,
-    trimmedQuery,
-    catalog.products,
-    catalog.unitPrices,
-  ]);
-
-  const results = useMemo(
-    () => (catalog.products.length > 0 ? warmResults : (coldResults ?? [])),
-    [catalog.products.length, warmResults, coldResults],
-  );
-
-  const listOpen =
-    !selected &&
-    !listDismissed &&
-    trimmedQuery.length > 0 &&
-    (results.length > 0 ||
-      (!catalogLoading && catalog.products.length > 0) ||
-      coldResults !== null);
-
-  const activeHighlight =
-    results.length === 0
-      ? -1
-      : Math.min(Math.max(highlightIndex, 0), results.length - 1);
-
-  useEffect(() => {
-    searchAsyncRef.current = searchAsync;
-  }, [searchAsync]);
-
-  useEffect(() => {
-    if (!listOpen || activeHighlight < 0) return;
-    const el = listRef.current?.querySelector<HTMLElement>(
-      `[data-product-option="${activeHighlight}"]`,
-    );
-    el?.scrollIntoView({ block: "nearest" });
-  }, [activeHighlight, listOpen, results]);
-
-  useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (!boxRef.current?.contains(e.target as Node)) setListDismissed(true);
-    }
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, []);
-
-  function pickProduct(p: CatalogSearchProduct) {
+  const onProductChange = useCallback((p: CatalogSearchProduct | null) => {
     setSelected(p);
     setLocalOrderByUnit(false);
-    setQuery("");
-    setColdResults(null);
-    setHighlightIndex(-1);
-    setListDismissed(true);
-    queueMicrotask(() => {
-      document.getElementById("qty")?.focus();
-    });
-  }
-
-  function onQueryChange(value: string) {
-    setSelected(null);
-    setLocalOrderByUnit(false);
-    setListDismissed(false);
-    setQuery(value);
-    const q = value.trim();
-    if (q.length < 1) {
-      searchRequestId.current += 1;
-      setColdResults(null);
-      setHighlightIndex(-1);
-      return;
-    }
-
-    // Warm: list derived in render. Point highlight at first match immediately.
-    setHighlightIndex(0);
-
-    if (catalog.products.length > 0) {
-      setColdResults(null);
-      return;
-    }
-
-    const requestId = ++searchRequestId.current;
-    void searchAsyncRef.current(q).then((rows) => {
-      if (requestId !== searchRequestId.current) return;
-      setColdResults(rows);
-      setHighlightIndex(rows.length > 0 ? 0 : -1);
-    });
-  }
-
-  function onSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (selected) return;
-
-    if (e.key === "Escape") {
-      if (listOpen) {
-        e.preventDefault();
-        setListDismissed(true);
-        setHighlightIndex(-1);
-      }
-      return;
-    }
-
-    if (!listOpen || results.length === 0) return;
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setHighlightIndex((i) => {
-        const cur = i < 0 ? 0 : i;
-        return (cur + 1) % results.length;
+    if (p) {
+      queueMicrotask(() => {
+        document.getElementById("qty")?.focus();
       });
-      return;
     }
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHighlightIndex((i) => {
-        const cur = i < 0 ? 0 : i;
-        return (cur - 1 + results.length) % results.length;
-      });
-      return;
-    }
-    if (e.key === "Enter") {
-      const pick =
-        activeHighlight >= 0 && activeHighlight < results.length
-          ? results[activeHighlight]
-          : results[0];
-      if (pick) {
-        e.preventDefault();
-        pickProduct(pick);
-      }
-    }
-  }
+  }, []);
 
   function addLine() {
     if (!selected) return;
@@ -235,12 +89,8 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
       allowsUnitOrder: selected.allowsUnitOrder,
     });
     setSelected(null);
-    setQuery("");
     setLocalQty("1");
     setLocalOrderByUnit(false);
-    setColdResults(null);
-    setHighlightIndex(-1);
-    setListDismissed(true);
     setError(null);
     queueMicrotask(() => searchInputRef.current?.focus());
   }
@@ -303,95 +153,12 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
               : "md:grid-cols-[1fr_120px_auto]",
           )}
         >
-          <div className="relative" ref={boxRef}>
-            <Label htmlFor="product-search">Producto</Label>
-            <div className="relative">
-              <Input
-                ref={searchInputRef}
-                id="product-search"
-                role="combobox"
-                aria-expanded={listOpen && results.length > 0}
-                aria-controls="product-search-listbox"
-                aria-autocomplete="list"
-                aria-activedescendant={
-                  listOpen && activeHighlight >= 0
-                    ? `product-option-${activeHighlight}`
-                    : undefined
-                }
-                placeholder={
-                  catalog.ready
-                    ? "Buscar por nombre o código…"
-                    : catalog.loading
-                      ? "Cargando catálogo…"
-                      : "Buscar por nombre o código…"
-                }
-                value={selected ? `${selected.code} — ${selected.name}` : query}
-                onChange={(e) => onQueryChange(e.target.value)}
-                onKeyDown={onSearchKeyDown}
-                onFocus={() => {
-                  if (trimmedQuery.length > 0) setListDismissed(false);
-                }}
-                autoComplete="off"
-                disabled={catalogLoading}
-                className={catalogLoading && !selected ? "pr-10" : undefined}
-              />
-              {catalogLoading && !selected ? (
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-                  <Spinner label="Cargando catálogo" />
-                </span>
-              ) : null}
-            </div>
-            {listOpen && results.length > 0 ? (
-              <ul
-                ref={listRef}
-                id="product-search-listbox"
-                role="listbox"
-                className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
-              >
-                {results.map((p, index) => (
-                  <li key={p.id} role="presentation">
-                    <button
-                      type="button"
-                      id={`product-option-${index}`}
-                      role="option"
-                      aria-selected={index === activeHighlight}
-                      data-product-option={index}
-                      className={cn(
-                        "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm",
-                        index === activeHighlight
-                          ? "bg-[var(--brand-primary-soft)]"
-                          : "hover:bg-neutral-50",
-                      )}
-                      onMouseEnter={() => setHighlightIndex(index)}
-                      onClick={() => pickProduct(p)}
-                    >
-                      <span className="font-medium text-neutral-900">
-                        {p.code} — {p.name}
-                      </span>
-                      <span className="text-xs text-neutral-500">
-                        {p.rubro ? `${p.rubro} · ` : ""}
-                        {formatPrice(p.unitPrice)}
-                        {p.allowsUnitOrder ? " · kg o unidades" : ""}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {listOpen &&
-            trimmedQuery.length > 0 &&
-            results.length === 0 &&
-            !catalogLoading ? (
-              <p className="absolute z-50 mt-1 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-500 shadow-lg">
-                Sin productos
-              </p>
-            ) : null}
-            {catalog.error && !catalog.ready ? (
-              <p className="absolute z-50 mt-1 w-full rounded-md border border-red-200 bg-white px-3 py-2 text-sm text-red-600 shadow-lg">
-                {catalog.error}
-              </p>
-            ) : null}
-          </div>
+          <ProductPicker
+            customerId={customerId}
+            value={selected}
+            onChange={onProductChange}
+            inputRef={searchInputRef}
+          />
           <div className="flex flex-wrap items-end gap-2">
             <div className="w-[120px] min-w-[6rem] flex-1 sm:flex-none">
               <Label htmlFor="qty">Cantidad</Label>
