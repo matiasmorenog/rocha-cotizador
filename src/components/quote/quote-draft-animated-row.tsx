@@ -16,6 +16,7 @@ type QuoteDraftAnimatedRowProps = {
   exiting: boolean;
   animateEnter: boolean;
   onExitComplete: () => void;
+  onEnterComplete?: () => void;
   className?: string;
   children: ReactNode;
 };
@@ -45,14 +46,21 @@ export function QuoteDraftAnimatedRow({
   exiting,
   animateEnter,
   onExitComplete,
+  onEnterComplete,
   className,
   children,
 }: QuoteDraftAnimatedRowProps) {
   const onExitCompleteRef = useRef(onExitComplete);
+  const onEnterCompleteRef = useRef(onEnterComplete);
+  const enterDoneRef = useRef(false);
 
   useEffect(() => {
     onExitCompleteRef.current = onExitComplete;
   }, [onExitComplete]);
+
+  useEffect(() => {
+    onEnterCompleteRef.current = onEnterComplete;
+  }, [onEnterComplete]);
 
   useEffect(() => {
     if (!exiting) return;
@@ -72,6 +80,30 @@ export function QuoteDraftAnimatedRow({
     return () => window.clearTimeout(t);
   }, [exiting]);
 
+  useEffect(() => {
+    if (!animateEnter) {
+      enterDoneRef.current = false;
+      return;
+    }
+
+    enterDoneRef.current = false;
+
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduced) {
+      onEnterCompleteRef.current?.();
+      return;
+    }
+
+    const t = window.setTimeout(() => {
+      if (enterDoneRef.current) return;
+      enterDoneRef.current = true;
+      onEnterCompleteRef.current?.();
+    }, QUOTE_DRAFT_ROW_MOTION_MS + 40);
+    return () => window.clearTimeout(t);
+  }, [animateEnter]);
+
   return (
     <tr
       className={cn(
@@ -81,9 +113,15 @@ export function QuoteDraftAnimatedRow({
         exiting && "pointer-events-none",
       )}
       onAnimationEnd={(e) => {
-        if (!exiting) return;
         if (e.target !== e.currentTarget) return;
-        onExitCompleteRef.current();
+        if (exiting) {
+          onExitCompleteRef.current();
+          return;
+        }
+        if (animateEnter && !enterDoneRef.current) {
+          enterDoneRef.current = true;
+          onEnterCompleteRef.current?.();
+        }
       }}
       aria-hidden={exiting || undefined}
     >

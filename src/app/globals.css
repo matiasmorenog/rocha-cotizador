@@ -217,15 +217,6 @@ select:not([multiple]):disabled {
   }
 }
 
-@keyframes quote-draft-cell-open {
-  from {
-    grid-template-rows: 0fr;
-  }
-  to {
-    grid-template-rows: 1fr;
-  }
-}
-
 @keyframes quote-draft-cell-close {
   from {
     grid-template-rows: 1fr;
@@ -263,10 +254,10 @@ select:not([multiple]):disabled {
   padding: 0.5rem 0.75rem; /* py-2 px-3 */
 }
 
-.quote-draft-row-enter .quote-draft-row-cell-shell {
-  animation: quote-draft-cell-open 0.2s ease-out both;
-}
-
+/*
+  Enter: opacity/slide only — row mounts at natural height so the table grows
+  with the row (never 0fr-first). Exit still collapses height after fade/slide.
+*/
 .quote-draft-row-exit .quote-draft-row-cell-shell {
   animation: quote-draft-cell-close 0.2s ease-in both;
 }
@@ -331,7 +322,6 @@ select:not([multiple]):disabled {
 
   .quote-draft-row-enter,
   .quote-draft-row-exit,
-  .quote-draft-row-enter .quote-draft-row-cell-shell,
   .quote-draft-row-exit .quote-draft-row-cell-shell {
     animation: none;
   }
@@ -363,7 +353,6 @@ select:not([multiple]):disabled {
 
   .quote-draft-row-enter,
   .quote-draft-row-exit,
-  .quote-draft-row-enter .quote-draft-row-cell-shell,
   .quote-draft-row-exit .quote-draft-row-cell-shell {
     animation: none !important;
   }

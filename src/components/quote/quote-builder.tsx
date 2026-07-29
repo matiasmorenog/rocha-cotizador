@@ -45,8 +45,13 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
   const remove = useQuoteDraftStore((s) => s.remove);
   const clear = useQuoteDraftStore((s) => s.clear);
   const draftTotal = useQuoteDraftStore((s) => s.total());
-  const { rows: animatedRows, emptyPhase, completeExit, completeEmptyExit } =
-    useAnimatedDraftLines(lines);
+  const {
+    rows: animatedRows,
+    emptyPhase,
+    completeExit,
+    completeEmptyExit,
+    completeEnter,
+  } = useAnimatedDraftLines(lines);
 
   const [selected, setSelected] = useState<CatalogSearchProduct | null>(null);
   const [qty, setLocalQty] = useState("1");
@@ -252,6 +257,7 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
                   exiting={exiting}
                   animateEnter={animateEnter}
                   onExitComplete={() => completeExit(l.id)}
+                  onEnterComplete={() => completeEnter(l.id)}
                   className={`border-t border-neutral-100 ${
                     l.orderByUnit ? "bg-amber-50/40" : ""
                   }`}

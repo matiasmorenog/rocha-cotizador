@@ -27,7 +27,10 @@ function prefersReducedMotion(): boolean {
 /**
  * Keeps removed draft lines in the list long enough to play exit motion.
  * Skips enter animation for the post-hydration snapshot (persisted draft).
- * Empty placeholder exits in parallel with the first product enter (no zero-height gap).
+ *
+ * Empty → first product: hide empty immediately (no parallel 0fr collapse).
+ * Enter uses opacity/slide only at natural height — table never dips to zero
+ * then grows. Last-line delete still collapses, then empty reappears.
  */
 export function useAnimatedDraftLines(
   lines: QuoteDraftLine[],
@@ -36,6 +39,7 @@ export function useAnimatedDraftLines(
   emptyPhase: EmptyPhase;
   completeExit: (lineId: string) => void;
   completeEmptyExit: () => void;
+  completeEnter: (lineId: string) => void;
 } {
   const [rows, setRows] = useState<AnimatedDraftRow[]>(() =>
     lines.map((line) => ({ line, exiting: false, animateEnter: false })),
@@ -89,8 +93,6 @@ export function useAnimatedDraftLines(
       return;
     }
 
-    const reduced = prefersReducedMotion();
-
     setRows((prev) => {
       const nextById = new Map(lines.map((l) => [l.id, l]));
       const result: AnimatedDraftRow[] = [];
@@ -102,7 +104,8 @@ export function useAnimatedDraftLines(
           result.push({
             line: updated,
             exiting: false,
-            animateEnter: false,
+            // Keep enter flag until completeEnter clears it (height lock release).
+            animateEnter: row.animateEnter,
           });
           present.add(row.line.id);
         } else if (row.exiting) {
@@ -120,22 +123,20 @@ export function useAnimatedDraftLines(
 
       for (const line of lines) {
         if (!present.has(line.id)) {
-          result.push({ line, exiting: false, animateEnter: true });
+          result.push({
+            line,
+            exiting: false,
+            animateEnter: !prefersReducedMotion(),
+          });
         }
       }
 
       return result;
     });
 
-    setEmptyPhase((prev) => {
-      if (lines.length > 0) {
-        if (prev === "shown") {
-          return reduced ? "hidden" : "exiting";
-        }
-        return prev === "exiting" ? "exiting" : "hidden";
-      }
-      return prev;
-    });
+    // Instant hide when products exist. Parallel empty 0fr exit + enter-from-0fr
+    // was the shrink-then-grow flash; enter now mounts at natural height.
+    setEmptyPhase((prev) => (lines.length > 0 ? "hidden" : prev));
   }, [lines]);
 
   const completeExit = useCallback((lineId: string) => {
@@ -157,5 +158,21 @@ export function useAnimatedDraftLines(
     setEmptyPhase("hidden");
   }, []);
 
-  return { rows, emptyPhase, completeExit, completeEmptyExit };
+  const completeEnter = useCallback((lineId: string) => {
+    setRows((prev) =>
+      prev.map((row) =>
+        row.line.id === lineId && row.animateEnter
+          ? { ...row, animateEnter: false }
+          : row,
+      ),
+    );
+  }, []);
+
+  return {
+    rows,
+    emptyPhase,
+    completeExit,
+    completeEmptyExit,
+    completeEnter,
+  };
 }
