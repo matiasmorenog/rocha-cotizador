@@ -14,7 +14,7 @@ export async function AppHeader() {
 
   return (
     <>
-      <header className="relative z-10 bg-[var(--brand-primary-soft)]/80 print:hidden">
+      <header className="relative z-10 border-b border-[var(--brand-latte)]/60 bg-[var(--brand-primary-soft)]/80 print:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
             {isAdmin ? <AdminMenuButton /> : null}
@@ -77,7 +77,9 @@ export async function AppHeader() {
             </nav>
           ) : null}
         </div>
-        <HeaderProgressLine />
+        <div className="absolute inset-x-0 bottom-0 translate-y-1/2">
+          <HeaderProgressLine />
+        </div>
       </header>
       {isCustomer ? <PinChangeHint show={mustChangePassword} /> : null}
     </>
