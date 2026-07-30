@@ -386,6 +386,19 @@ select:not([multiple]):disabled {
 }
 
 /*
+  Product/customer picker listbox (portaled): same fade/slide ~200ms as
+  quote-panel-enter/exit. Enter: backwards only. Exit: forwards — keep-mount
+  then unmount (see useExitPresence).
+*/
+.quote-picker-float-enter {
+  animation: quote-panel-enter 0.2s ease-out backwards;
+}
+
+.quote-picker-float-exit {
+  animation: quote-panel-exit 0.2s ease-in forwards;
+}
+
+/*
   Admin shell breakpoints — plain CSS so visibility never depends on a single
   Tailwind `hidden` + `lg:block` utility pair (if that variant is missing from
   the prod CSS chunk, the sidebar stays display:none forever).
@@ -465,7 +478,9 @@ select:not([multiple]):disabled {
   .quote-customer-reveal > *,
   .quote-customer-reveal.quote-customer-reveal-exit > *,
   .quote-route-enter,
-  .quote-route-exit {
+  .quote-route-exit,
+  .quote-picker-float-enter,
+  .quote-picker-float-exit {
     animation: none;
   }
 

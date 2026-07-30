@@ -15,6 +15,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { filterFoldedSearch } from "@/lib/search-fold";
 import { useAnchoredFloatingStyle } from "@/hooks/use-anchored-floating-style";
+import {
+  useExitPresence,
+  QUOTE_PICKER_FLOAT_MS,
+} from "@/hooks/use-exit-presence";
 import { useIsClient } from "@/hooks/use-is-client";
 import {
   PICKER_REVEAL_INITIAL,
@@ -141,12 +145,32 @@ export function CustomerPicker({
       (!searching && (catalogReady || coldResults !== null)));
 
   const showList = listOpen && results.length > 0;
-  const floatingStyle = useAnchoredFloatingStyle(anchorRef, showList);
+  const {
+    present: floatPresent,
+    exiting: floatExiting,
+    animKey: floatAnimKey,
+  } = useExitPresence(showList, QUOTE_PICKER_FLOAT_MS);
+  const floatingStyle = useAnchoredFloatingStyle(anchorRef, floatPresent);
 
   const activeHighlight =
     results.length === 0
       ? -1
       : Math.min(Math.max(highlightIndex, 0), results.length - 1);
+
+  // Freeze listbox payload while exit plays.
+  const liveFloatView = useMemo(
+    () => ({
+      visibleResults,
+      hasMoreResults,
+      activeHighlight,
+    }),
+    [visibleResults, hasMoreResults, activeHighlight],
+  );
+  const [frozenFloatView, setFrozenFloatView] = useState(liveFloatView);
+  if (showList && frozenFloatView !== liveFloatView) {
+    setFrozenFloatView(liveFloatView);
+  }
+  const floatView = showList ? liveFloatView : frozenFloatView;
 
   // Local miss after warm catalog ready → server q (customers beyond preload page).
   useEffect(() => {
@@ -386,9 +410,19 @@ export function CustomerPicker({
           </span>
         ) : null}
       </div>
-      {isClient && showList && floatingStyle
+      {isClient && floatPresent && floatingStyle
         ? createPortal(
-            <div ref={floatingRef} style={floatingStyle}>
+            <div
+              key={floatAnimKey}
+              ref={floatingRef}
+              style={floatingStyle}
+              className={cn(
+                floatExiting
+                  ? "quote-picker-float-exit pointer-events-none"
+                  : "quote-picker-float-enter",
+              )}
+              aria-hidden={floatExiting || undefined}
+            >
               <ul
                 ref={listRef}
                 id="customer-search-listbox"
@@ -396,17 +430,17 @@ export function CustomerPicker({
                 className="max-h-64 overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
                 onScroll={onListScroll}
               >
-                {visibleResults.map((c, index) => (
+                {floatView.visibleResults.map((c, index) => (
                   <li key={c.id} role="presentation">
                     <button
                       type="button"
                       id={`customer-option-${index}`}
                       role="option"
-                      aria-selected={index === activeHighlight}
+                      aria-selected={index === floatView.activeHighlight}
                       data-customer-option={index}
                       className={cn(
                         "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm",
-                        index === activeHighlight
+                        index === floatView.activeHighlight
                           ? "bg-[var(--brand-primary-soft)]"
                           : "hover:bg-neutral-50",
                       )}
@@ -422,7 +456,7 @@ export function CustomerPicker({
                     </button>
                   </li>
                 ))}
-                {hasMoreResults ? (
+                {floatView.hasMoreResults ? (
                   <li
                     role="presentation"
                     className="px-3 py-1.5 text-center text-xs text-neutral-400"

@@ -18,6 +18,10 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { cn, formatPrice } from "@/lib/utils";
 import { useAnchoredFloatingStyle } from "@/hooks/use-anchored-floating-style";
+import {
+  useExitPresence,
+  QUOTE_PICKER_FLOAT_MS,
+} from "@/hooks/use-exit-presence";
 import { useIsClient } from "@/hooks/use-is-client";
 import {
   mapCatalogSearch,
@@ -183,12 +187,50 @@ function ProductPickerInner({
     !searchBusy;
   const showError = Boolean(catalog.error && !catalogUsable);
   const floatingOpen = showList || showSearching || showEmpty || showError;
-  const floatingStyle = useAnchoredFloatingStyle(anchorRef, floatingOpen);
+  const {
+    present: floatPresent,
+    exiting: floatExiting,
+    animKey: floatAnimKey,
+  } = useExitPresence(floatingOpen, QUOTE_PICKER_FLOAT_MS);
+  const floatingStyle = useAnchoredFloatingStyle(anchorRef, floatPresent);
 
   const activeHighlight =
     results.length === 0
       ? -1
       : Math.min(Math.max(highlightIndex, 0), results.length - 1);
+
+  // Freeze portal payload while exit plays (open flags already false).
+  const liveFloatView = useMemo(
+    () => ({
+      showList,
+      showSearching,
+      showEmpty,
+      showError,
+      filterPending,
+      visibleResults,
+      hasMoreResults,
+      activeHighlight,
+      results,
+      error: catalog.error as string | null,
+    }),
+    [
+      showList,
+      showSearching,
+      showEmpty,
+      showError,
+      filterPending,
+      visibleResults,
+      hasMoreResults,
+      activeHighlight,
+      results,
+      catalog.error,
+    ],
+  );
+  const [frozenFloatView, setFrozenFloatView] = useState(liveFloatView);
+  if (floatingOpen && frozenFloatView !== liveFloatView) {
+    setFrozenFloatView(liveFloatView);
+  }
+  const floatView = floatingOpen ? liveFloatView : frozenFloatView;
 
   useEffect(() => {
     searchAsyncRef.current = searchAsync;
@@ -325,8 +367,6 @@ function ProductPickerInner({
     }
   }
 
-  const listVisible = showList;
-
   return (
     <div className="relative" ref={boxRef}>
       <Label htmlFor="product-search">Producto</Label>
@@ -335,12 +375,12 @@ function ProductPickerInner({
           ref={inputElRef}
           id="product-search"
           role="combobox"
-          aria-expanded={listVisible || showSearching}
+          aria-expanded={floatingOpen}
           aria-controls="product-search-listbox"
           aria-autocomplete="list"
           aria-busy={searchBusy || catalogLoading || undefined}
           aria-activedescendant={
-            listVisible && activeHighlight >= 0
+            showList && activeHighlight >= 0
               ? `product-option-${activeHighlight}`
               : undefined
           }
@@ -377,10 +417,20 @@ function ProductPickerInner({
           </span>
         ) : null}
       </div>
-      {isClient && floatingOpen && floatingStyle
+      {isClient && floatPresent && floatingStyle
         ? createPortal(
-            <div ref={floatingRef} style={floatingStyle}>
-              {listVisible ? (
+            <div
+              key={floatAnimKey}
+              ref={floatingRef}
+              style={floatingStyle}
+              className={cn(
+                floatExiting
+                  ? "quote-picker-float-exit pointer-events-none"
+                  : "quote-picker-float-enter",
+              )}
+              aria-hidden={floatExiting || undefined}
+            >
+              {floatView.showList ? (
                 <ul
                   ref={listRef}
                   id="product-search-listbox"
@@ -390,7 +440,7 @@ function ProductPickerInner({
                   onClick={onListClick}
                   onScroll={onListScroll}
                 >
-                  {filterPending ? (
+                  {floatView.filterPending ? (
                     <li
                       role="presentation"
                       className="border-b border-neutral-100 px-3 py-1.5 text-xs text-neutral-500"
@@ -398,15 +448,15 @@ function ProductPickerInner({
                       Buscando…
                     </li>
                   ) : null}
-                  {visibleResults.map((p, index) => (
+                  {floatView.visibleResults.map((p, index) => (
                     <ProductOption
                       key={p.id}
                       product={p}
                       index={index}
-                      active={index === activeHighlight}
+                      active={index === floatView.activeHighlight}
                     />
                   ))}
-                  {hasMoreResults ? (
+                  {floatView.hasMoreResults ? (
                     <li
                       role="presentation"
                       className="px-3 py-1.5 text-center text-xs text-neutral-400"
@@ -416,7 +466,7 @@ function ProductPickerInner({
                   ) : null}
                 </ul>
               ) : null}
-              {showSearching ? (
+              {floatView.showSearching ? (
                 <p
                   id="product-search-listbox"
                   role="status"
@@ -425,14 +475,14 @@ function ProductPickerInner({
                   Buscando…
                 </p>
               ) : null}
-              {showEmpty ? (
+              {floatView.showEmpty ? (
                 <p className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-500 shadow-lg">
                   Sin productos
                 </p>
               ) : null}
-              {showError ? (
+              {floatView.showError ? (
                 <p className="rounded-md border border-red-200 bg-white px-3 py-2 text-sm text-red-600 shadow-lg">
-                  {catalog.error}
+                  {floatView.error}
                 </p>
               ) : null}
             </div>,
