@@ -6,7 +6,7 @@ type SkeletonProps = {
   className?: string;
 };
 
-/** Shimmer block — adapted from nexus AdminSkeleton / StorefrontSkeleton. */
+/** Shimmer bone — neutral grey via `.rocha-skeleton` (visible on white + cream). */
 export function Skeleton({ className }: SkeletonProps) {
   return <div className={cn("rocha-skeleton rounded-md", className)} aria-hidden />;
 }

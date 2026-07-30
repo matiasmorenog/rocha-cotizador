@@ -159,7 +159,7 @@ select:not([multiple]):disabled {
   opacity: 0.5;
 }
 
-/* Skeleton shimmer — adapted from nexus admin/storefront-skeleton */
+/* Skeleton shimmer — neutral grey bones (contrast on white cards + cream page) */
 @keyframes rocha-skeleton-shimmer {
   0% {
     background-position: 100% 0;
@@ -170,11 +170,12 @@ select:not([multiple]):disabled {
 }
 
 .rocha-skeleton {
+  /* Tailwind neutral-100 / neutral-200 — not brand cream (looks like holes on white) */
   background: linear-gradient(
     90deg,
-    var(--brand-primary-soft) 0%,
-    color-mix(in srgb, var(--brand-latte) 35%, var(--brand-primary-soft)) 45%,
-    var(--brand-primary-soft) 100%
+    #f5f5f5 0%,
+    #e5e5e5 45%,
+    #f5f5f5 100%
   );
   background-size: 200% 100%;
   animation: rocha-skeleton-shimmer 1.4s ease-in-out infinite;
@@ -623,7 +624,7 @@ select:not([multiple]):disabled {
 @media (prefers-reduced-motion: reduce) {
   .rocha-skeleton {
     animation: none;
-    background: var(--brand-primary-soft);
+    background: #e5e5e5;
   }
 
   .admin-toast-enter {
