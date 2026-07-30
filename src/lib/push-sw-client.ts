@@ -54,7 +54,7 @@ export async function ensureFreshServiceWorker(): Promise<ServiceWorkerRegistrat
   if (existing && scriptUrl(existing).endsWith("/sw.js")) {
     await navigator.serviceWorker.ready;
     try {
-      const bumpKey = "rocha-sw-bump-v8";
+      const bumpKey = "rocha-sw-bump-v9";
       if (!sessionStorage.getItem(bumpKey)) {
         sessionStorage.setItem(bumpKey, "1");
         await existing.update().catch(() => undefined);

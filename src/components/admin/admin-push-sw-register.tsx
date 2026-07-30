@@ -187,8 +187,22 @@ export function AdminPushSwRegister() {
       const body = typeof msg.body === "string" ? msg.body : "";
       const url =
         typeof msg.url === "string" ? msg.url : "/admin/cotizaciones";
+      const inboxId = typeof msg.id === "string" ? msg.id : null;
+      if (inboxId) {
+        // Same AdminInboxItem id as the 8s poll — reusing it as the toast id
+        // makes both delivery paths (push + poll) resolve to one chime, no
+        // matter which arrives first.
+        markInboxSeen(inboxId);
+      }
       // Same SW push arrives via BroadcastChannel AND clients.postMessage.
-      pushToast({ title, body, url, tone: "info", source: "push" });
+      pushToast({
+        id: inboxId ? `inbox-${inboxId}` : undefined,
+        title,
+        body,
+        url,
+        tone: "info",
+        source: "push",
+      });
     }
 
     const onSwMessage = (event: MessageEvent) => {
