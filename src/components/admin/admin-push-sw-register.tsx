@@ -75,6 +75,8 @@ export function AdminPushSwRegister() {
   );
   /** Recent fingerprints → timestamp; blocks double emit (Probar+poll, BC+postMessage). */
   const recentFpRef = useRef<Map<string, number>>(new Map());
+  /** Toast ids that already played their chime — sound fires once per id, never on re-delivery or dismiss. */
+  const playedSoundIdsRef = useRef<Set<string>>(new Set());
 
   // Keep poll/toast gates in sync with session without reading refs during render.
   useEffect(() => {
@@ -123,14 +125,17 @@ export function AdminPushSwRegister() {
       }
       const lastAt = recentFpRef.current.get(fp);
       if (lastAt !== undefined && now - lastAt < PUSH_DEDUPE_MS) {
-        console.log("[push] toast deduped", { id, fp: next.title });
         return;
       }
       recentFpRef.current.set(fp, now);
     }
 
-    console.log("[push] in-app toast", { id, ...next });
-    playAdminNotificationSound();
+    // One chime per toast id, ever — covers Probar+poll races and any
+    // later re-delivery with the same id. Never plays again on dismiss/exit.
+    if (!playedSoundIdsRef.current.has(id)) {
+      playedSoundIdsRef.current.add(id);
+      playAdminNotificationSound();
+    }
     setToasts((prev) => {
       const withoutDup = prev.filter((t) => t.id !== id);
       return [...withoutDup, { ...next, id }].slice(-MAX_TOASTS);
