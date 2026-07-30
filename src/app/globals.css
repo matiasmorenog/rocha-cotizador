@@ -507,9 +507,33 @@ select:not([multiple]):disabled {
   .print\:hidden {
     display: none !important;
   }
+  /*
+    Match on-screen remito card: keep border + amber weigh rows.
+    Browsers default to economy print (strip backgrounds); force exact colors.
+    Soft shadow rarely prints cleanly — drop it only.
+  */
   .print-remito {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
     box-shadow: none !important;
-    border: none !important;
+    background-color: #fff !important;
+  }
+  .print-remito img {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  /* Weigh-pending rows (view mode): amber fill + warning text */
+  .print-remito .bg-amber-50 {
+    background-color: #fffbeb !important;
+  }
+  .print-remito .text-amber-800 {
+    color: #92400e !important;
+  }
+  .print-remito .text-amber-950 {
+    color: #451a03 !important;
+  }
+  .print-remito .text-amber-900 {
+    color: #78350f !important;
   }
   .data-table-scroll {
     overflow: visible;
