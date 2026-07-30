@@ -88,10 +88,12 @@ body {
 
 /*
   Floating chevrons for horizontal table scroll (Windows trackpad-less
-  laptops have no easy shift-scroll gesture). Vertically centered on the
-  scroll container and inset from the left/right edges so they stay clear
-  of row action buttons in `<tbody>`; pointer-events only cover the small
-  circular button itself, never the row underneath.
+  laptops have no easy shift-scroll gesture). `top` is set inline (see
+  DataTableScroll's useMidViewportOffset) to track the middle of the
+  table's visible slice, not the full table height; inset from the
+  left/right edges so they stay clear of row action buttons in `<tbody>`.
+  pointer-events only cover the small circular button itself, never the
+  row underneath.
 */
 .data-table-scroll-btn {
   display: flex;
