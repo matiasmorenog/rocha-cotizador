@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminQuoteActivitySection } from "@/components/admin/admin-quote-activity-section";
+import { RecentQuotesList } from "@/components/admin/recent-quotes-list";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
 import { getAdminQuoteActivity, parseQuoteActivityPeriod } from "@/lib/admin-quote-activity";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
@@ -98,29 +99,7 @@ export default async function AdminDashboardPage({
             Ver todas
           </Link>
         </div>
-        <ul className="divide-y divide-neutral-100 text-sm">
-          {recent.map((q) => (
-            <li key={q.id} className="flex items-center justify-between px-4 py-3">
-              <div>
-                <Link href={`/remitos/${q.id}`} className="font-medium hover:underline">
-                  {q.number}
-                </Link>
-                <p className="text-neutral-500">
-                  {q.customer.code} — {q.customer.name}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="font-medium">{formatPrice(q.total)}</p>
-                <p className="text-xs text-neutral-500">
-                  {new Date(q.createdAt).toLocaleString("es-AR")}
-                </p>
-              </div>
-            </li>
-          ))}
-          {recent.length === 0 ? (
-            <li className="px-4 py-8 text-center text-neutral-500">Sin cotizaciones aún</li>
-          ) : null}
-        </ul>
+        <RecentQuotesList recent={recent} />
       </div>
     </div>
   );

@@ -2,13 +2,14 @@
 
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from "react";
 
-/** Props returned by `rowProps(id)` — spread onto a `<tr>`. */
-export type RowSelectionProps = {
+/** Props returned by `rowProps(id)` — spread onto a `<tr>` (or any other
+ * focusable row-like element, e.g. `<li>`, via the `El` type param). */
+export type RowSelectionProps<El extends HTMLElement = HTMLTableRowElement> = {
   "data-selected": "true" | undefined;
-  ref: (el: HTMLTableRowElement | null) => void;
+  ref: (el: El | null) => void;
   onClick: () => void;
   onFocus: () => void;
-  onKeyDown: (e: KeyboardEvent<HTMLTableRowElement>) => void;
+  onKeyDown: (e: KeyboardEvent<El>) => void;
 };
 
 const EDITABLE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
@@ -38,14 +39,14 @@ function isEditableTarget(target: EventTarget | null): boolean {
  *
  * Selection is UI-only and persists until another row is selected; it never
  * blocks the row's own links/buttons since it only adds handlers to the
- * `<tr>`, it doesn't intercept anything.
+ * row element itself, it doesn't intercept anything.
  */
-export function useSelectedRow(
+export function useSelectedRow<El extends HTMLElement = HTMLTableRowElement>(
   ids: string[] = [],
   initialId: string | null = null,
 ) {
   const [selectedId, setSelectedId] = useState<string | null>(initialId);
-  const rowNodesRef = useRef(new Map<string, HTMLTableRowElement>());
+  const rowNodesRef = useRef(new Map<string, El>());
 
   const focusRow = useCallback((id: string) => {
     const el = rowNodesRef.current.get(id);
@@ -56,7 +57,7 @@ export function useSelectedRow(
   }, []);
 
   const rowProps = useCallback(
-    (id: string): RowSelectionProps => ({
+    (id: string): RowSelectionProps<El> => ({
       "data-selected": selectedId === id ? "true" : undefined,
       ref: (el) => {
         if (el) rowNodesRef.current.set(id, el);
