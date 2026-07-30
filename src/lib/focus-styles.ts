@@ -6,6 +6,11 @@
  * Unbordered (nav, icon, text links): flush outline (offset 0).
  * Filled primary: brand ring + ring-offset (visible on white page bg).
  */
+
+/** Open/active look matching FOCUS_BRAND_BORDER without needing :focus-visible. */
+export const BRAND_BORDER_ACTIVE =
+  "border-[1.5px] border-[var(--brand-primary)]";
+
 export const FOCUS_BRAND_BORDER =
   "focus:outline-none focus-visible:outline-none focus-visible:border-[1.5px] focus-visible:border-[var(--brand-primary)]";
 
@@ -14,4 +19,4 @@ export const FOCUS_BRAND_OUTLINE =
 
 /** Filled brand CTAs — ring + offset halo; white inset fails on white page bg. */
 export const FOCUS_BRAND_PRIMARY =
-  "focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1";
+  "focus:outline-none focus-visible:outline-none focus-visible:ring-[1.5px] focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1";

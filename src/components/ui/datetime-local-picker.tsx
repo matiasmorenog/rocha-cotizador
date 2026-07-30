@@ -14,6 +14,7 @@ import {
   toArgentinaDatetimeLocal,
 } from "@/lib/argentina-time";
 import {
+  BRAND_BORDER_ACTIVE,
   FOCUS_BRAND_BORDER,
   FOCUS_BRAND_OUTLINE,
   FOCUS_BRAND_PRIMARY,
@@ -244,6 +245,7 @@ export function DatetimeLocalPicker({
         className={cn(
           "flex h-10 w-full items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 py-2 text-left text-sm",
           FOCUS_BRAND_BORDER,
+          open && BRAND_BORDER_ACTIVE,
           "disabled:cursor-not-allowed disabled:opacity-50",
           !value.trim() && "text-neutral-400",
         )}

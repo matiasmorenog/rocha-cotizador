@@ -9,7 +9,10 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
-import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
+import {
+  BRAND_BORDER_ACTIVE,
+  FOCUS_BRAND_BORDER,
+} from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 import { useAnchoredFloatingStyle } from "@/hooks/use-anchored-floating-style";
 import { useExitPresence } from "@/hooks/use-exit-presence";
@@ -141,6 +144,7 @@ export function MeasureSelect({
         className={cn(
           "flex w-full items-center gap-1 rounded-md border border-neutral-300 bg-white text-left text-neutral-900",
           FOCUS_BRAND_BORDER,
+          open && BRAND_BORDER_ACTIVE,
           size === "sm"
             ? "h-8 pl-2 pr-1.5 text-xs"
             : "h-10 pl-3 pr-2 text-sm",

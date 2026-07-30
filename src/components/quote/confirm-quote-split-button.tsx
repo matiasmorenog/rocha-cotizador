@@ -92,7 +92,7 @@ export function ConfirmQuoteSplitButton({
 
   return (
     <div ref={rootRef} className="relative inline-flex">
-      <div className="inline-flex overflow-hidden rounded-md shadow-sm">
+      <div className="inline-flex rounded-md shadow-sm">
         <button
           type="button"
           disabled={busy}
@@ -101,6 +101,7 @@ export function ConfirmQuoteSplitButton({
             "inline-flex h-10 cursor-pointer items-center justify-center bg-[var(--brand-primary)] px-4 text-sm font-medium text-white transition-colors",
             "hover:brightness-95 active:brightness-90",
             FOCUS_BRAND_PRIMARY,
+            "focus-visible:relative focus-visible:z-10",
             "disabled:cursor-not-allowed disabled:opacity-50",
             "rounded-l-md rounded-r-none",
           )}
@@ -126,6 +127,7 @@ export function ConfirmQuoteSplitButton({
             "inline-flex h-10 w-10 cursor-pointer items-center justify-center border-l border-white/25 bg-[var(--brand-primary)] text-white transition-colors",
             "hover:brightness-95 active:brightness-90",
             FOCUS_BRAND_PRIMARY,
+            "focus-visible:relative focus-visible:z-10",
             "disabled:cursor-not-allowed disabled:opacity-50",
             "rounded-r-md rounded-l-none",
           )}
