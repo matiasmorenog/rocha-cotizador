@@ -151,7 +151,7 @@ export function CustomersAdminPanel({
                 <th className="px-3 py-2">Código</th>
                 <th className="px-3 py-2">Nombre</th>
                 <th className="px-3 py-2">Dirección</th>
-                <th className="px-3 py-2">Teléfono</th>
+                <th className="px-3 py-2 whitespace-nowrap">Teléfono</th>
                 <th className="px-3 py-2">Lista</th>
                 <th className="px-3 py-2">Estado</th>
                 <th className="px-3 py-2" />
@@ -185,7 +185,7 @@ export function CustomersAdminPanel({
                         <td className="px-3 py-2 text-neutral-700">
                           {c.address ?? "—"}
                         </td>
-                        <td className="px-3 py-2 text-neutral-700">
+                        <td className="whitespace-nowrap px-3 py-2 text-neutral-700">
                           {c.phone && wa ? (
                             <a
                               href={wa}
