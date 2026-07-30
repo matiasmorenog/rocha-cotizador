@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
 import {
   useExitPresence,
@@ -97,8 +97,13 @@ function AdminSidebarPanel({
 function AdminMobileDrawer({ pathname }: { pathname: string }) {
   const open = useAdminNavStore((s) => s.open);
   const setOpen = useAdminNavStore((s) => s.setOpen);
+  /** Skip exit keep-mount so route skeleton isn't hidden under z-50 overlay. */
+  const [skipExit, setSkipExit] = useState(false);
+  if (open && skipExit) {
+    setSkipExit(false);
+  }
   const { present, exiting, animKey } = useExitPresence(
-    open,
+    open && !skipExit,
     QUOTE_PICKER_FLOAT_MS,
   );
 
@@ -117,9 +122,15 @@ function AdminMobileDrawer({ pathname }: { pathname: string }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, setOpen]);
 
+  /** Animated dismiss (X, backdrop, Escape). */
   const close = () => setOpen(false);
+  /** Nav: unmount instantly; Link still starts route transition same click. */
+  const closeForNavigate = () => {
+    setSkipExit(true);
+    setOpen(false);
+  };
 
-  if (!present) return null;
+  if (skipExit || !present) return null;
 
   return (
     <div className="admin-mobile-drawer-root fixed inset-0 z-50 print:hidden">
@@ -151,7 +162,7 @@ function AdminMobileDrawer({ pathname }: { pathname: string }) {
       >
         <AdminSidebarPanel
           pathname={pathname}
-          onNavigate={close}
+          onNavigate={closeForNavigate}
           showCloseButton
           onClose={close}
         />
