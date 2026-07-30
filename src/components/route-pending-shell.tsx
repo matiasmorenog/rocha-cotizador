@@ -8,6 +8,7 @@ import {
   SkeletonAdminDashboardPage,
   SkeletonAdminListPage,
   SkeletonAdminNewQuotePage,
+  SkeletonAdminPriceListsPage,
   SkeletonAdminQuotesPage,
   SkeletonListPage,
   SkeletonLoginPage,
@@ -56,6 +57,9 @@ function adminSkeletonFor(path: string) {
     return (
       <SkeletonAdminListPage label="Cargando productos" titleWidth="w-36" />
     );
+  }
+  if (path.startsWith("/admin/listas-precios")) {
+    return <SkeletonAdminPriceListsPage />;
   }
   if (path.startsWith("/admin/cotizaciones/nueva")) {
     return <SkeletonAdminNewQuotePage />;

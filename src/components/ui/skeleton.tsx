@@ -546,6 +546,37 @@ export function SkeletonAdminQuotesPage() {
   );
 }
 
+/** Listas de precios — title + 2-line description, create-list card, plain table (no search/Excel panel). */
+export function SkeletonAdminPriceListsPage() {
+  return (
+    <SkeletonRegion label="Cargando listas de precios" className="space-y-6">
+      <div>
+        <Skeleton className="h-8 w-44" />
+        <Skeleton className="mt-2 h-4 w-full max-w-2xl" />
+        <Skeleton className="mt-1 h-4 w-2/3 max-w-md" />
+      </div>
+      <div className="rounded-lg border border-neutral-200 bg-white p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+          <div className="min-w-0 flex-1 space-y-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-16" />
+            <div className="flex h-10 items-center gap-2.5">
+              <Skeleton className="h-6 w-11 rounded-full" />
+              <Skeleton className="h-4 w-40" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-20 shrink-0 rounded-md" />
+        </div>
+      </div>
+      {/* Nombre · Excel · Productos · Clientes · Estado · actions */}
+      <SkeletonTableRows rows={5} cols={6} />
+    </SkeletonRegion>
+  );
+}
+
 export function SkeletonAdminNewQuotePage() {
   return (
     <SkeletonRegion label="Cargando nueva cotización" className="space-y-6">
