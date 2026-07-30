@@ -14,6 +14,7 @@ import {
 } from "@/components/admin/admin-notification-toasts";
 import {
   playAdminNotificationSound,
+  stopAdminNotificationSound,
   unlockAdminNotificationSound,
 } from "@/lib/admin-notification-sound";
 
@@ -97,6 +98,9 @@ export function AdminPushSwRegister() {
       clearTimeout(timer);
       timersRef.current.delete(id);
     }
+    // Every dismiss path (X, body click, TTL timeout above) lands here —
+    // cut any still-ringing appear chime so closing a toast is never heard.
+    stopAdminNotificationSound();
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }
 

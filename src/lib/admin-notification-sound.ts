@@ -7,10 +7,14 @@
 
 let audioCtx: AudioContext | null = null;
 let lastPlayAt = 0;
+/** Nodes for the chime currently ringing — lets a dismiss cut it instantly. */
+let activeNodes: { osc: OscillatorNode; gain: GainNode }[] = [];
 
 const SOUND_DEDUPE_MS = 700;
 /** Peak gain per note (was 0.07 — barely audible at max Mac volume). */
 const PEAK_GAIN = 0.65;
+/** Fade when force-stopped mid-note — short enough to not be its own click/pop. */
+const STOP_FADE_S = 0.02;
 
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -45,6 +49,11 @@ export function playAdminNotificationSound(): void {
       return;
     }
 
+    // Previous chime's nodes stop themselves on schedule (onended below);
+    // drop stale refs so stopAdminNotificationSound() only ever targets
+    // *this* chime.
+    activeNodes = [];
+
     lastPlayAt = now;
     const t0 = ctx.currentTime;
     const notes = [
@@ -68,9 +77,40 @@ export function playAdminNotificationSound(): void {
       gain.connect(ctx.destination);
       osc.start(t0 + note.at);
       osc.stop(t0 + note.at + 0.42);
+      const entry = { osc, gain };
+      activeNodes.push(entry);
+      osc.onended = () => {
+        activeNodes = activeNodes.filter((n) => n !== entry);
+      };
     }
   } catch {
     // ignore autoplay / unsupported
+  }
+}
+
+/**
+ * Silence any chime that might still be ringing (max ~0.53s tail). Call this
+ * from every dismiss path (X click, body click, TTL auto-dismiss) — the
+ * chime only ever starts on toast *appear*, but a quick dismiss right after
+ * a toast shows up can otherwise catch the tail end of it, which sounds like
+ * the dismiss itself made noise. This makes closing a toast silent by
+ * construction instead of relying on chime-vs-TTL timing.
+ */
+export function stopAdminNotificationSound(): void {
+  if (activeNodes.length === 0) return;
+  const nodes = activeNodes;
+  activeNodes = [];
+  const ctx = audioCtx;
+  const now = ctx?.currentTime ?? 0;
+  for (const { osc, gain } of nodes) {
+    try {
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(gain.gain.value, now);
+      gain.gain.linearRampToValueAtTime(0.0001, now + STOP_FADE_S);
+      osc.stop(now + STOP_FADE_S);
+    } catch {
+      // already stopped / unsupported — ignore
+    }
   }
 }
 
