@@ -37,9 +37,10 @@ function scrollStepPx(viewportWidth: number): number {
  * border-radius clips thead.
  *
  * Floating chevrons render only while the table overflows and each one
- * hides once its edge is reached; they're pinned over the header row
- * (not centered on the full table height) so they never sit on top of
- * row actions in `<tbody>`.
+ * hides once its edge is reached; they're vertically centered on the
+ * scroll container (middle of the table, not pinned to the header) and
+ * inset from the left/right edges so they sit clear of row action
+ * buttons in `<tbody>`.
  */
 export function DataTableScroll({
   children,
@@ -111,11 +112,11 @@ export function DataTableScroll({
           aria-label="Desplazar tabla a la izquierda"
           onClick={() => scrollByStep(-1)}
           className={cn(
-            "data-table-scroll-btn absolute left-1.5 top-2 z-10",
+            "data-table-scroll-btn absolute top-1/2 left-2 z-10 -translate-y-1/2",
             FOCUS_BRAND_OUTLINE,
           )}
         >
-          <ChevronLeft className="size-4" aria-hidden />
+          <ChevronLeft className="size-5" aria-hidden />
         </button>
       ) : null}
       {canScrollRight ? (
@@ -124,11 +125,11 @@ export function DataTableScroll({
           aria-label="Desplazar tabla a la derecha"
           onClick={() => scrollByStep(1)}
           className={cn(
-            "data-table-scroll-btn absolute right-1.5 top-2 z-10",
+            "data-table-scroll-btn absolute top-1/2 right-2 z-10 -translate-y-1/2",
             FOCUS_BRAND_OUTLINE,
           )}
         >
-          <ChevronRight className="size-4" aria-hidden />
+          <ChevronRight className="size-5" aria-hidden />
         </button>
       ) : null}
     </div>

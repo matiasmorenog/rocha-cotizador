@@ -88,20 +88,21 @@ body {
 
 /*
   Floating chevrons for horizontal table scroll (Windows trackpad-less
-  laptops have no easy shift-scroll gesture). Pinned over the header, not
-  centered on the full table height, so they never sit on top of row
-  actions in `<tbody>`.
+  laptops have no easy shift-scroll gesture). Vertically centered on the
+  scroll container and inset from the left/right edges so they stay clear
+  of row action buttons in `<tbody>`; pointer-events only cover the small
+  circular button itself, never the row underneath.
 */
 .data-table-scroll-btn {
   display: flex;
-  height: 2rem;
-  width: 2rem;
+  height: 2.75rem;
+  width: 2.75rem;
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  border: 1px solid var(--brand-primary-soft);
-  background-color: rgba(255, 255, 255, 0.95);
-  color: #57534e;
+  border: 1px solid var(--brand-latte);
+  background-color: var(--brand-primary-soft);
+  color: var(--brand-primary);
   box-shadow:
     0 1px 3px rgba(0, 0, 0, 0.12),
     0 1px 2px rgba(0, 0, 0, 0.08);
@@ -113,7 +114,7 @@ body {
 
 .data-table-scroll-btn:hover {
   border-color: var(--brand-primary);
-  background-color: #fff;
+  background-color: var(--brand-latte);
   color: var(--brand-primary);
 }
 
