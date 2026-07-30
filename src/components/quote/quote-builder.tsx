@@ -34,6 +34,10 @@ import {
   ConfirmQuoteSplitButton,
   type ConfirmQuoteAction,
 } from "@/components/quote/confirm-quote-split-button";
+import {
+  useExitPresence,
+  QUOTE_PICKER_FLOAT_MS,
+} from "@/hooks/use-exit-presence";
 
 /** Keep in sync with `.quote-panel-enter` duration in globals.css */
 const QUOTE_PANEL_ENTER_MS = 200;
@@ -118,6 +122,16 @@ export function QuoteBuilder({
 
   const selectedAllowsUnit = selected?.allowsUnitOrder === true;
   const hasUnitOrderLines = lines.some((l) => l.orderByUnit);
+  const {
+    present: unitWarnPresent,
+    exiting: unitWarnExiting,
+    animKey: unitWarnAnimKey,
+  } = useExitPresence(orderByUnit && selectedAllowsUnit, QUOTE_PICKER_FLOAT_MS);
+  const {
+    present: unitBannerPresent,
+    exiting: unitBannerExiting,
+    animKey: unitBannerAnimKey,
+  } = useExitPresence(hasUnitOrderLines, QUOTE_PICKER_FLOAT_MS);
 
   const onProductChange = useCallback((p: CatalogSearchProduct | null) => {
     setSelected(p);
@@ -271,8 +285,16 @@ export function QuoteBuilder({
                     <option value="unit">Unidades</option>
                   </select>
                 </div>
-                {orderByUnit ? (
-                  <span className="group relative mb-2 ml-0.5 inline-flex shrink-0">
+                {unitWarnPresent ? (
+                  <span
+                    key={unitWarnAnimKey}
+                    className={cn(
+                      "group relative mb-2 ml-0.5 inline-flex shrink-0",
+                      unitWarnExiting
+                        ? "quote-unit-warn-exit pointer-events-none"
+                        : "quote-unit-warn-enter",
+                    )}
+                  >
                     <button
                       type="button"
                       className="inline-flex rounded text-amber-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-1"
@@ -301,13 +323,25 @@ export function QuoteBuilder({
         </div>
       </div>
 
-      {hasUnitOrderLines ? (
+      {unitBannerPresent ? (
         <div
-          className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
-          role="status"
+          key={unitBannerAnimKey}
+          className={cn(
+            "quote-unit-banner-shell",
+            unitBannerExiting
+              ? "quote-unit-banner-exit"
+              : "quote-unit-banner-enter",
+          )}
         >
-          {UNIT_ORDER_PRICE_WARNING}. Las líneas por unidades figuran con precio $0
-          hasta el pesaje.
+          <div className="quote-unit-banner-clip">
+            <div
+              className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+              role="status"
+            >
+              {UNIT_ORDER_PRICE_WARNING}. Las líneas por unidades figuran con
+              precio $0 hasta el pesaje.
+            </div>
+          </div>
         </div>
       ) : null}
 
@@ -350,11 +384,12 @@ export function QuoteBuilder({
                   animateEnter={animateEnter}
                   onExitComplete={() => completeExit(l.id)}
                   onEnterComplete={() => completeEnter(l.id)}
-                  className={
+                  className={cn(
+                    "transition-colors duration-200 motion-reduce:transition-none",
                     l.orderByUnit
                       ? "border-t border-amber-200 bg-amber-50"
-                      : "border-t border-neutral-100"
-                  }
+                      : "border-t border-neutral-100",
+                  )}
                 >
                   <td className="px-3 py-2 font-mono text-xs">{l.code}</td>
                   <td className="px-3 py-2">

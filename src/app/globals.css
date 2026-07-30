@@ -399,6 +399,80 @@ select:not([multiple]):disabled {
 }
 
 /*
+  Measure toggle (kg ↔ unidades) collateral: warning icon + unit-lines banner.
+  Same ~200ms language as quote-panel / draft cells. Height via 0fr↔1fr.
+*/
+@keyframes quote-unit-warn-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes quote-unit-warn-exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+.quote-unit-warn-enter {
+  animation: quote-unit-warn-enter 0.2s ease-out backwards;
+}
+
+.quote-unit-warn-exit {
+  animation: quote-unit-warn-exit 0.2s ease-in forwards;
+}
+
+@keyframes quote-unit-banner-open {
+  from {
+    opacity: 0;
+    grid-template-rows: 0fr;
+  }
+  to {
+    opacity: 1;
+    grid-template-rows: 1fr;
+  }
+}
+
+@keyframes quote-unit-banner-close {
+  from {
+    opacity: 1;
+    grid-template-rows: 1fr;
+  }
+  to {
+    opacity: 0;
+    grid-template-rows: 0fr;
+  }
+}
+
+.quote-unit-banner-shell {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.quote-unit-banner-clip {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.quote-unit-banner-enter {
+  animation: quote-unit-banner-open 0.2s ease-out both;
+}
+
+.quote-unit-banner-exit {
+  animation: quote-unit-banner-close 0.2s ease-in both;
+}
+
+/*
   Admin shell breakpoints — plain CSS so visibility never depends on a single
   Tailwind `hidden` + `lg:block` utility pair (if that variant is missing from
   the prod CSS chunk, the sidebar stays display:none forever).
@@ -480,8 +554,16 @@ select:not([multiple]):disabled {
   .quote-route-enter,
   .quote-route-exit,
   .quote-picker-float-enter,
-  .quote-picker-float-exit {
+  .quote-picker-float-exit,
+  .quote-unit-warn-enter,
+  .quote-unit-warn-exit,
+  .quote-unit-banner-enter,
+  .quote-unit-banner-exit {
     animation: none;
+  }
+
+  .quote-unit-banner-shell {
+    grid-template-rows: 1fr;
   }
 
   .quote-draft-row-cell-shell {
