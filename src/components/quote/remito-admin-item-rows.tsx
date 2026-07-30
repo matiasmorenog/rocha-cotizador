@@ -71,9 +71,7 @@ export function RemitoAdminItemRows({
   /** editMode gates panels — stale `editing` while view mode is harmless. */
   const showPanel = editMode && (needsWeighPrice || editing);
 
-  const rowClass = showAmber
-    ? "border-b border-amber-200 bg-amber-50"
-    : "border-b border-neutral-100";
+  const rowClass = `border-b border-neutral-100${showAmber ? " bg-amber-50" : ""}`;
 
   /** Match quote draft table: secondary + red hover on delete. */
   const iconBtnClass = "h-8 shrink-0 px-2";

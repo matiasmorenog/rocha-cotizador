@@ -260,11 +260,7 @@ export default async function RemitoDetailPage({
                   return (
                     <tr
                       key={item.id}
-                      className={
-                        showAmber
-                          ? "border-b border-amber-200 bg-amber-50"
-                          : "border-b border-neutral-100"
-                      }
+                      className={`border-b border-neutral-100${showAmber ? " bg-amber-50" : ""}`}
                     >
                       <td className="py-2 pl-2 pr-2 align-middle font-mono text-xs">
                         {item.productCode}
