@@ -6,7 +6,7 @@ type SkeletonProps = {
   className?: string;
 };
 
-/** Shimmer block — adapted from nexus AdminSkeleton / StorefrontSkeleton. */
+/** Shimmer bone — neutral grey via `.rocha-skeleton` (visible on white + cream). */
 export function Skeleton({ className }: SkeletonProps) {
   return <div className={cn("rocha-skeleton rounded-md", className)} aria-hidden />;
 }
@@ -430,10 +430,36 @@ export function SkeletonAdminDashboardPage() {
             key={i}
             className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
           >
-            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-3 w-40" />
             <Skeleton className="mt-2 h-9 w-16" />
+            <Skeleton className="mt-2 h-3 w-36" />
           </div>
         ))}
+      </div>
+      <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-52" />
+            <Skeleton className="h-4 w-72 max-w-full" />
+          </div>
+          <Skeleton className="h-9 w-36 rounded-lg" />
+        </div>
+        <div className="mb-6 flex flex-wrap gap-6">
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-7 w-14" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-7 w-28" />
+          </div>
+        </div>
+        <Skeleton className="h-44 w-full rounded-md sm:h-48" />
+        <div className="mt-3 flex justify-between gap-1">
+          {Array.from({ length: 7 }, (_, i) => (
+            <Skeleton key={i} className="h-3 w-6" />
+          ))}
+        </div>
       </div>
       <div className="rounded-lg border border-neutral-200 bg-white">
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
@@ -516,6 +542,37 @@ export function SkeletonAdminQuotesPage() {
       </div>
       <Skeleton className="h-10 w-full rounded-md" />
       <SkeletonTableRows rows={8} cols={5} />
+    </SkeletonRegion>
+  );
+}
+
+/** Listas de precios — title + 2-line description, create-list card, plain table (no search/Excel panel). */
+export function SkeletonAdminPriceListsPage() {
+  return (
+    <SkeletonRegion label="Cargando listas de precios" className="space-y-6">
+      <div>
+        <Skeleton className="h-8 w-44" />
+        <Skeleton className="mt-2 h-4 w-full max-w-2xl" />
+        <Skeleton className="mt-1 h-4 w-2/3 max-w-md" />
+      </div>
+      <div className="rounded-lg border border-neutral-200 bg-white p-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
+          <div className="min-w-0 flex-1 space-y-1">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-16" />
+            <div className="flex h-10 items-center gap-2.5">
+              <Skeleton className="h-6 w-11 rounded-full" />
+              <Skeleton className="h-4 w-40" />
+            </div>
+          </div>
+          <Skeleton className="h-10 w-20 shrink-0 rounded-md" />
+        </div>
+      </div>
+      {/* Nombre · Excel · Productos · Clientes · Estado · actions */}
+      <SkeletonTableRows rows={5} cols={6} />
     </SkeletonRegion>
   );
 }

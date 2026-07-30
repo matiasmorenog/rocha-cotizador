@@ -12,22 +12,26 @@ function toNumber(amount: number | string | { toNumber?: () => number; toString:
   return parseFloat(amount.toString());
 }
 
+const arsCurrency = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  minimumFractionDigits: 2,
+});
+
+const arsQty = new Intl.NumberFormat("es-AR", {
+  maximumFractionDigits: 3,
+});
+
 export function formatPrice(
   amount: number | string | { toNumber?: () => number; toString: () => string },
 ) {
-  return new Intl.NumberFormat("es-AR", {
-    style: "currency",
-    currency: "ARS",
-    minimumFractionDigits: 2,
-  }).format(toNumber(amount));
+  return arsCurrency.format(toNumber(amount));
 }
 
 export function formatQty(
   qty: number | string | { toNumber?: () => number; toString: () => string },
 ) {
-  return new Intl.NumberFormat("es-AR", {
-    maximumFractionDigits: 3,
-  }).format(toNumber(qty));
+  return arsQty.format(toNumber(qty));
 }
 
 export function padCustomerCode(code: string) {

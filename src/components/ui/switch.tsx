@@ -1,4 +1,5 @@
 import { InputHTMLAttributes, forwardRef } from "react";
+import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 export const Switch = forwardRef<
@@ -13,7 +14,7 @@ export const Switch = forwardRef<
       className={cn(
         "peer size-full cursor-pointer appearance-none rounded-full border border-neutral-300 bg-neutral-200 shadow-inner transition-colors",
         "checked:border-[var(--brand-primary)] checked:bg-[var(--brand-primary)]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1",
+        FOCUS_BRAND_PRIMARY,
         "enabled:hover:border-neutral-400",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className,

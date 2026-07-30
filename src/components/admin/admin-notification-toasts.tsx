@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
+import { cn } from "@/lib/utils";
+
 export type AdminToastTone = "info" | "success" | "error";
 
 export type AdminToastItem = {
@@ -22,12 +26,62 @@ const toneAccent: Record<AdminToastTone, string> = {
   error: "border-l-red-700",
 };
 
+/** Keep in sync with `.admin-toast-exit` duration in globals.css. */
+const TOAST_EXIT_MS = 280;
+
+type DisplayItem = { toast: AdminToastItem; exiting: boolean };
+
 /**
  * Compact toast stack (bottom-right). Brand: bordo / latte.
  * Click body opens url; X dismisses.
+ *
+ * Keeps toasts mounted for `TOAST_EXIT_MS` after they leave `toasts` so the
+ * exit animation can play instead of popping out of the DOM instantly.
  */
 export function AdminNotificationToasts({ toasts, onDismiss }: Props) {
-  if (toasts.length === 0) return null;
+  const [items, setItems] = useState<DisplayItem[]>(() =>
+    toasts.map((toast) => ({ toast, exiting: false })),
+  );
+  const exitTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
+
+  useEffect(() => {
+    const timers = exitTimersRef.current;
+    setItems((prev) => {
+      const kept = prev.map((item) => {
+        if (item.exiting) return item;
+        const fresh = toasts.find((t) => t.id === item.toast.id);
+        if (fresh) {
+          return fresh === item.toast ? item : { toast: fresh, exiting: false };
+        }
+
+        const id = item.toast.id;
+        const timer = setTimeout(() => {
+          setItems((cur) => cur.filter((x) => x.toast.id !== id));
+          timers.delete(id);
+        }, TOAST_EXIT_MS);
+        timers.set(id, timer);
+        return { toast: item.toast, exiting: true };
+      });
+      const knownIds = new Set(kept.map((item) => item.toast.id));
+      const added = toasts
+        .filter((t) => !knownIds.has(t.id))
+        .map((toast) => ({ toast, exiting: false }));
+      return [...kept, ...added];
+    });
+  }, [toasts]);
+
+  // Clear pending exit timers on unmount only.
+  useEffect(() => {
+    const timers = exitTimersRef.current;
+    return () => {
+      for (const timer of timers.values()) clearTimeout(timer);
+      timers.clear();
+    };
+  }, []);
+
+  if (items.length === 0) return null;
 
   return (
     <div
@@ -35,16 +89,20 @@ export function AdminNotificationToasts({ toasts, onDismiss }: Props) {
       aria-relevant="additions"
       className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-[min(100vw-2rem,22rem)] flex-col-reverse gap-2"
     >
-      {toasts.map((toast) => (
+      {items.map(({ toast, exiting }) => (
         <div
           key={toast.id}
           role="status"
-          className={`admin-toast-enter pointer-events-auto overflow-hidden rounded-lg border border-[var(--brand-latte)] border-l-4 bg-[#fffdf9] shadow-[0_8px_24px_rgba(44,36,31,0.12)] ${toneAccent[toast.tone]}`}
+          className={cn(
+            "pointer-events-auto overflow-hidden rounded-lg border border-[var(--brand-latte)] border-l-4 bg-[#fffdf9] shadow-[0_8px_24px_rgba(44,36,31,0.12)]",
+            exiting ? "admin-toast-exit" : "admin-toast-enter",
+            toneAccent[toast.tone],
+          )}
         >
           <div className="flex items-start gap-2 p-3">
             <a
               href={toast.url}
-              className="min-w-0 flex-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+              className={cn("min-w-0 flex-1 rounded-sm", FOCUS_BRAND_OUTLINE)}
               onClick={() => onDismiss(toast.id)}
             >
               <p className="text-sm font-semibold leading-snug text-[var(--brand-primary)]">

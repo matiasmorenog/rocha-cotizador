@@ -33,6 +33,7 @@ function defaultPriceInput(
 
 /**
  * Admin-only: confirm $/kg (+ optional kg) on unit-order remito lines at $0.
+ * Flat under the row (no nested card chrome) — row amber bg is enough.
  */
 export function RemitoWeighPriceEditor({
   quoteId,
@@ -97,10 +98,7 @@ export function RemitoWeighPriceEditor({
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="mt-2 space-y-2 rounded-md border border-amber-300 bg-amber-50/80 p-2 print:hidden"
-    >
+    <form onSubmit={onSubmit} className="space-y-2 print:hidden">
       <p className="text-xs font-medium text-amber-950">
         Confirmar precio tras pesaje
       </p>
@@ -115,6 +113,7 @@ export function RemitoWeighPriceEditor({
             className="h-8 font-mono text-sm"
             aria-label="Kg pesados"
             disabled={loading}
+            autoFocus
           />
         </label>
         <label className="block min-w-[5.5rem] flex-1 space-y-0.5">

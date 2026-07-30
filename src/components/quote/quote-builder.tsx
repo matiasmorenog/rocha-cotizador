@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import {
@@ -18,22 +17,50 @@ import {
   quoteLineQtyAriaLabel,
 } from "@/lib/order-measure";
 import { cn, formatPrice } from "@/lib/utils";
+import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import {
   effectiveLineTotal,
   effectiveUnitPrice,
   useQuoteDraftStore,
 } from "@/stores/quote-draft-store";
 import {
-  useProductCatalog,
+  ProductPicker,
   type CatalogSearchProduct,
-} from "@/hooks/use-product-catalog";
+} from "@/components/quote/product-picker";
+import { MeasureSelect } from "@/components/quote/measure-select";
+import { QuoteDraftAnimatedRow } from "@/components/quote/quote-draft-animated-row";
+import { QuoteDraftEmptyRow } from "@/components/quote/quote-draft-empty-row";
+import { useAnimatedDraftLines } from "@/components/quote/use-animated-draft-lines";
+import { useSmoothDraftTableHeight } from "@/components/quote/use-smooth-draft-table-height";
+import {
+  ConfirmQuoteSplitButton,
+  type ConfirmQuoteAction,
+} from "@/components/quote/confirm-quote-split-button";
+import {
+  useExitPresence,
+  QUOTE_PICKER_FLOAT_MS,
+} from "@/hooks/use-exit-presence";
+
+/** Keep in sync with `.quote-panel-enter` duration in globals.css */
+const QUOTE_PANEL_ENTER_MS = 200;
 
 type QuoteBuilderProps = {
   /** When set (admin flow), prices and submit use this customer. */
   customerId?: string;
+  /** Admin “Cambiar cliente”: fade panels out before unmount. */
+  exiting?: boolean;
+  /**
+   * Admin: after “Confirmar y crear nuevo remito”, parent runs the same
+   * panel exit as “Cambiar cliente”, then clears customer + focuses search.
+   */
+  onConfirmCreateNew?: () => void;
 };
 
-export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
+export function QuoteBuilder({
+  customerId,
+  exiting = false,
+  onConfirmCreateNew,
+}: QuoteBuilderProps = {}) {
   const router = useRouter();
   const lines = useQuoteDraftStore((s) => s.lines);
   const addOrUpdate = useQuoteDraftStore((s) => s.addOrUpdate);
@@ -42,134 +69,81 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
   const remove = useQuoteDraftStore((s) => s.remove);
   const clear = useQuoteDraftStore((s) => s.clear);
   const draftTotal = useQuoteDraftStore((s) => s.total());
+  const {
+    rows: animatedRows,
+    emptyPhase,
+    completeExit,
+    completeEmptyExit,
+    completeEnter,
+  } = useAnimatedDraftLines(lines);
 
-  const catalog = useProductCatalog({ customerId });
-  const { searchAsync } = catalog;
-  // Keep latest searchAsync in a ref so catalog load (new callback identity)
-  // does not cancel an in-flight search — that left the 2nd product lookup empty.
-  const searchAsyncRef = useRef(searchAsync);
+  const tableHeightLockRef = useRef<HTMLDivElement>(null);
+  const draftTableStructureKey = useMemo(
+    () =>
+      `${emptyPhase}|${animatedRows
+        .map((r) => `${r.line.id}:${r.exiting ? "x" : r.animateEnter ? "e" : "s"}`)
+        .join(",")}`,
+    [animatedRows, emptyPhase],
+  );
+  useSmoothDraftTableHeight(
+    tableHeightLockRef,
+    draftTableStructureKey,
+    emptyPhase,
+  );
 
-  const [query, setQuery] = useState("");
-  const [results, setResults] = useState<CatalogSearchProduct[]>([]);
-  const [highlightIndex, setHighlightIndex] = useState(-1);
   const [selected, setSelected] = useState<CatalogSearchProduct | null>(null);
   const [qty, setLocalQty] = useState("1");
   const [orderByUnit, setLocalOrderByUnit] = useState(false);
   const [notes, setNotes] = useState("");
   const [minDeliveryDate] = useState(() => earliestDeliveryDateYmd());
   const [deliveryDate, setDeliveryDate] = useState(() => earliestDeliveryDateYmd());
-  const [open, setOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const boxRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
-  const searchRequestId = useRef(0);
 
-  const catalogLoading = catalog.loading && !catalog.ready;
+  // Admin: after customer select + panel enter. Cotizar: product field is main entry.
+  // Skip while exiting so “Cambiar cliente” / confirm-new keep customer search focus.
+  useEffect(() => {
+    if (exiting) return;
+
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // First reveal child (product card) delay 0ms + enter 200ms; +40 like exit buffer.
+    const delay = customerId
+      ? reduced
+        ? 0
+        : QUOTE_PANEL_ENTER_MS + 40
+      : 0;
+
+    const t = window.setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, delay);
+    return () => window.clearTimeout(t);
+  }, [customerId, exiting]);
+
   const selectedAllowsUnit = selected?.allowsUnitOrder === true;
   const hasUnitOrderLines = lines.some((l) => l.orderByUnit);
+  const {
+    present: unitWarnPresent,
+    exiting: unitWarnExiting,
+    animKey: unitWarnAnimKey,
+  } = useExitPresence(orderByUnit && selectedAllowsUnit, QUOTE_PICKER_FLOAT_MS);
+  const {
+    present: unitBannerPresent,
+    exiting: unitBannerExiting,
+    animKey: unitBannerAnimKey,
+  } = useExitPresence(hasUnitOrderLines, QUOTE_PICKER_FLOAT_MS);
 
-  useEffect(() => {
-    searchAsyncRef.current = searchAsync;
-  }, [searchAsync]);
-
-  useEffect(() => {
-    const q = query.trim();
-    if (q.length < 1) {
-      return;
-    }
-    let cancelled = false;
-    const requestId = ++searchRequestId.current;
-    // Local in-memory filter — no debounce (instant). Server fallback in
-    // searchAsync only runs if catalog empty after load (rare cold path).
-    void searchAsyncRef.current(q).then((rows) => {
-      if (cancelled || requestId !== searchRequestId.current) return;
-      setResults(rows);
-      setHighlightIndex(rows.length > 0 ? 0 : -1);
-      setOpen(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [query, catalog.ready]);
-
-  useEffect(() => {
-    if (!open || highlightIndex < 0) return;
-    const el = listRef.current?.querySelector<HTMLElement>(
-      `[data-product-option="${highlightIndex}"]`,
-    );
-    el?.scrollIntoView({ block: "nearest" });
-  }, [highlightIndex, open, results]);
-
-  useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (!boxRef.current?.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, []);
-
-  function pickProduct(p: CatalogSearchProduct) {
+  const onProductChange = useCallback((p: CatalogSearchProduct | null) => {
     setSelected(p);
     setLocalOrderByUnit(false);
-    setQuery("");
-    setResults([]);
-    setHighlightIndex(-1);
-    setOpen(false);
-    queueMicrotask(() => {
-      document.getElementById("qty")?.focus();
-    });
-  }
-
-  function onQueryChange(value: string) {
-    setSelected(null);
-    setLocalOrderByUnit(false);
-    setQuery(value);
-    setHighlightIndex(-1);
-    if (value.trim().length < 1) {
-      setResults([]);
-      setOpen(false);
+    if (p) {
+      queueMicrotask(() => {
+        document.getElementById("qty")?.focus();
+      });
     }
-  }
-
-  function onSearchKeyDown(e: KeyboardEvent<HTMLInputElement>) {
-    if (selected) return;
-
-    if (e.key === "Escape") {
-      if (open) {
-        e.preventDefault();
-        setOpen(false);
-        setHighlightIndex(-1);
-      }
-      return;
-    }
-
-    if (!open || results.length === 0) return;
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setHighlightIndex((i) => (i < 0 ? 0 : (i + 1) % results.length));
-      return;
-    }
-    if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHighlightIndex((i) =>
-        i < 0 ? results.length - 1 : (i - 1 + results.length) % results.length,
-      );
-      return;
-    }
-    if (e.key === "Enter") {
-      const pick =
-        highlightIndex >= 0 && highlightIndex < results.length
-          ? results[highlightIndex]
-          : results[0];
-      if (pick) {
-        e.preventDefault();
-        pickProduct(pick);
-      }
-    }
-  }
+  }, []);
 
   function addLine() {
     if (!selected) return;
@@ -189,17 +163,13 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
       allowsUnitOrder: selected.allowsUnitOrder,
     });
     setSelected(null);
-    setQuery("");
     setLocalQty("1");
     setLocalOrderByUnit(false);
-    setResults([]);
-    setHighlightIndex(-1);
-    setOpen(false);
     setError(null);
     queueMicrotask(() => searchInputRef.current?.focus());
   }
 
-  async function submitQuote() {
+  async function submitQuote(action: ConfirmQuoteAction) {
     if (lines.length === 0) {
       setError("Agregá al menos un producto");
       return;
@@ -234,12 +204,33 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
       return;
     }
     const data = await res.json();
+
+    if (typeof data.whatsappUrl === "string" && data.whatsappUrl) {
+      window.open(data.whatsappUrl, "_blank", "noopener,noreferrer");
+    }
+
+    // Admin confirm-new: keep panels mounted for exit animation; parent clears.
+    if (action === "new" && onConfirmCreateNew) {
+      onConfirmCreateNew();
+      return;
+    }
+
     clear();
     setNotes("");
     setDeliveryDate(earliestDeliveryDateYmd());
+
+    if (action === "new") {
+      // Customer self-serve: fresh cotizar. Admin without callback: focus query.
+      router.push(
+        customerId
+          ? "/admin/cotizaciones/nueva?focus=customer"
+          : "/cotizar",
+      );
+      return;
+    }
+
     // Prefer remito + ?whatsapp=1 so a blocked popup still leaves a clear CTA.
     if (typeof data.whatsappUrl === "string" && data.whatsappUrl) {
-      window.open(data.whatsappUrl, "_blank", "noopener,noreferrer");
       router.push(`/remitos/${data.id}?whatsapp=1`);
       return;
     }
@@ -247,7 +238,14 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
   }
 
   return (
-    <div className="space-y-6">
+    <div
+      className={cn(
+        "space-y-6",
+        customerId && "quote-customer-reveal",
+        customerId && exiting && "quote-customer-reveal-exit pointer-events-none",
+      )}
+      aria-hidden={exiting || undefined}
+    >
       <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
         <div
           className={cn(
@@ -257,90 +255,12 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
               : "md:grid-cols-[1fr_120px_auto]",
           )}
         >
-          <div className="relative" ref={boxRef}>
-            <Label htmlFor="product-search">Producto</Label>
-            <div className="relative">
-              <Input
-                ref={searchInputRef}
-                id="product-search"
-                role="combobox"
-                aria-expanded={open && results.length > 0}
-                aria-controls="product-search-listbox"
-                aria-autocomplete="list"
-                aria-activedescendant={
-                  open && highlightIndex >= 0
-                    ? `product-option-${highlightIndex}`
-                    : undefined
-                }
-                placeholder={
-                  catalog.ready
-                    ? "Buscar por nombre o código…"
-                    : catalog.loading
-                      ? "Cargando catálogo…"
-                      : "Buscar por nombre o código…"
-                }
-                value={selected ? `${selected.code} — ${selected.name}` : query}
-                onChange={(e) => onQueryChange(e.target.value)}
-                onKeyDown={onSearchKeyDown}
-                onFocus={() => results.length > 0 && setOpen(true)}
-                autoComplete="off"
-                disabled={catalogLoading}
-                className={catalogLoading && !selected ? "pr-10" : undefined}
-              />
-              {catalogLoading && !selected ? (
-                <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2">
-                  <Spinner label="Cargando catálogo" />
-                </span>
-              ) : null}
-            </div>
-            {open && results.length > 0 ? (
-              <ul
-                ref={listRef}
-                id="product-search-listbox"
-                role="listbox"
-                className="absolute z-50 mt-1 max-h-64 w-full overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
-              >
-                {results.map((p, index) => (
-                  <li key={p.id} role="presentation">
-                    <button
-                      type="button"
-                      id={`product-option-${index}`}
-                      role="option"
-                      aria-selected={index === highlightIndex}
-                      data-product-option={index}
-                      className={cn(
-                        "flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm",
-                        index === highlightIndex
-                          ? "bg-[var(--brand-primary-soft)]"
-                          : "hover:bg-neutral-50",
-                      )}
-                      onMouseEnter={() => setHighlightIndex(index)}
-                      onClick={() => pickProduct(p)}
-                    >
-                      <span className="font-medium text-neutral-900">
-                        {p.code} — {p.name}
-                      </span>
-                      <span className="text-xs text-neutral-500">
-                        {p.rubro ? `${p.rubro} · ` : ""}
-                        {formatPrice(p.unitPrice)}
-                        {p.allowsUnitOrder ? " · kg o unidades" : ""}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {open && query.trim().length > 0 && results.length === 0 && !catalogLoading ? (
-              <p className="absolute z-50 mt-1 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-500 shadow-lg">
-                Sin productos
-              </p>
-            ) : null}
-            {catalog.error && !catalog.ready ? (
-              <p className="absolute z-50 mt-1 w-full rounded-md border border-red-200 bg-white px-3 py-2 text-sm text-red-600 shadow-lg">
-                {catalog.error}
-              </p>
-            ) : null}
-          </div>
+          <ProductPicker
+            customerId={customerId}
+            value={selected}
+            onChange={onProductChange}
+            inputRef={searchInputRef}
+          />
           <div className="flex flex-wrap items-end gap-2">
             <div className="w-[120px] min-w-[6rem] flex-1 sm:flex-none">
               <Label htmlFor="qty">Cantidad</Label>
@@ -355,23 +275,25 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
               <div className="flex min-w-[9rem] flex-1 items-end gap-3 sm:flex-none">
                 <div className="min-w-0 flex-1">
                   <Label htmlFor="order-mode">Medida</Label>
-                  <select
+                  <MeasureSelect
                     id="order-mode"
                     value={orderByUnit ? "unit" : "kg"}
-                    onChange={(e) =>
-                      setLocalOrderByUnit(e.target.value === "unit")
-                    }
-                    className="flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-9 text-sm focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
-                  >
-                    <option value="kg">Kg</option>
-                    <option value="unit">Unidades</option>
-                  </select>
+                    onChange={(v) => setLocalOrderByUnit(v === "unit")}
+                  />
                 </div>
-                {orderByUnit ? (
-                  <span className="group relative mb-2 ml-0.5 inline-flex shrink-0">
+                {unitWarnPresent ? (
+                  <span
+                    key={unitWarnAnimKey}
+                    className={cn(
+                      "group relative mb-2 ml-0.5 inline-flex shrink-0",
+                      unitWarnExiting
+                        ? "quote-unit-warn-exit pointer-events-none"
+                        : "quote-unit-warn-enter",
+                    )}
+                  >
                     <button
                       type="button"
-                      className="inline-flex rounded text-amber-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-1"
+                      className="inline-flex rounded text-amber-700 focus:outline-none focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-amber-600 focus-visible:outline-offset-0"
                       aria-describedby="unit-order-warning-tip"
                       aria-label={UNIT_ORDER_PRICE_WARNING}
                     >
@@ -397,112 +319,140 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
         </div>
       </div>
 
-      {hasUnitOrderLines ? (
+      {unitBannerPresent ? (
         <div
-          className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
-          role="status"
+          key={unitBannerAnimKey}
+          className={cn(
+            "quote-unit-banner-shell",
+            unitBannerExiting
+              ? "quote-unit-banner-exit"
+              : "quote-unit-banner-enter",
+          )}
         >
-          {UNIT_ORDER_PRICE_WARNING}. Las líneas por unidades figuran con precio $0
-          hasta el pesaje.
+          <div className="quote-unit-banner-clip">
+            <div
+              className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950"
+              role="status"
+            >
+              {UNIT_ORDER_PRICE_WARNING}. Las líneas por unidades figuran con
+              precio $0 hasta el pesaje.
+            </div>
+          </div>
         </div>
       ) : null}
 
       <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-        <DataTableScroll className="rounded-none border-0">
-          <table className="w-full min-w-[40rem] text-sm">
-            <thead className="bg-neutral-50 text-left text-neutral-600">
-              <tr>
-                <th className="px-3 py-2 font-medium">Código</th>
-                <th className="px-3 py-2 font-medium">Producto</th>
-                <th className="px-3 py-2 font-medium">Cant.</th>
-                <th className="px-3 py-2 font-medium">Medida</th>
-                <th className="px-3 py-2 font-medium">Precio</th>
-                <th className="px-3 py-2 font-medium">Importe</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {lines.length === 0 ? (
+        <div ref={tableHeightLockRef}>
+          <DataTableScroll className="rounded-none border-0">
+            <table className="quote-draft-table w-full min-w-[40rem] text-sm">
+              <colgroup>
+                <col className="quote-draft-col-code" />
+                <col className="quote-draft-col-product" />
+                <col className="quote-draft-col-qty" />
+                <col className="quote-draft-col-measure" />
+                <col className="quote-draft-col-price" />
+                <col className="quote-draft-col-amount" />
+                <col className="quote-draft-col-actions" />
+              </colgroup>
+              <thead className="bg-neutral-50 text-left text-neutral-600">
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-neutral-500">
-                    Sin productos. Buscá y agregá líneas.
-                  </td>
+                  <th className="px-3 py-2 font-medium">Código</th>
+                  <th className="px-3 py-2 font-medium">Producto</th>
+                  <th className="px-3 py-2 font-medium">Cant.</th>
+                  <th className="px-3 py-2 font-medium">Medida</th>
+                  <th className="px-3 py-2 font-medium">Precio</th>
+                  <th className="px-3 py-2 font-medium">Importe</th>
+                  <th className="px-3 py-2" />
                 </tr>
-              ) : (
-                lines.map((l) => (
-                  <tr
-                    key={l.id}
-                    className={`border-t border-neutral-100 ${
-                      l.orderByUnit ? "bg-amber-50/40" : ""
-                    }`}
-                  >
-                    <td className="px-3 py-2 font-mono text-xs">{l.code}</td>
-                    <td className="px-3 py-2">
-                      <div>{l.name}</div>
-                      {l.orderByUnit ? (
-                        <p className="mt-0.5 text-xs text-amber-800">
-                          {UNIT_ORDER_PRICE_WARNING}
-                        </p>
-                      ) : null}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Input
-                        className="h-8 w-24"
-                        type="number"
-                        min={0.001}
-                        step="any"
-                        value={l.qty}
-                        onChange={(e) => setQty(l.id, Number(e.target.value))}
-                        aria-label={quoteLineQtyAriaLabel(
+              </thead>
+              <tbody>
+              {emptyPhase !== "hidden" ? (
+                <QuoteDraftEmptyRow
+                  exiting={emptyPhase === "exiting"}
+                  onExitComplete={completeEmptyExit}
+                />
+              ) : null}
+              {animatedRows.map(({ line: l, exiting, animateEnter, softExit }) => (
+                <QuoteDraftAnimatedRow
+                  key={l.id}
+                  exiting={exiting}
+                  softExit={softExit}
+                  animateEnter={animateEnter}
+                  onExitComplete={() => completeExit(l.id)}
+                  onEnterComplete={() => completeEnter(l.id)}
+                  className={cn(
+                    "transition-colors duration-200 motion-reduce:transition-none",
+                    l.orderByUnit
+                      ? "border-t border-amber-200 bg-amber-50"
+                      : "border-t border-neutral-100",
+                  )}
+                >
+                  <td className="px-3 py-2 font-mono text-xs">{l.code}</td>
+                  <td className="px-3 py-2">
+                    <div>{l.name}</div>
+                    {l.orderByUnit ? (
+                      <p className="mt-0.5 text-xs text-amber-800">
+                        {UNIT_ORDER_PRICE_WARNING}
+                      </p>
+                    ) : null}
+                  </td>
+                  <td className="px-3 py-2">
+                    <Input
+                      className="h-8 w-24"
+                      type="number"
+                      min={0.001}
+                      step="any"
+                      value={l.qty}
+                      onChange={(e) => setQty(l.id, Number(e.target.value))}
+                      aria-label={quoteLineQtyAriaLabel(
+                        l.orderByUnit,
+                        l.allowsUnitOrder,
+                      )}
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    {l.allowsUnitOrder ? (
+                      <MeasureSelect
+                        size="sm"
+                        className="w-[7.5rem]"
+                        value={l.orderByUnit ? "unit" : "kg"}
+                        onChange={(v) => setOrderByUnit(l.id, v === "unit")}
+                        aria-label="Medida"
+                      />
+                    ) : (
+                      <span className="text-neutral-500">
+                        {quoteLineMeasureLabel(
                           l.orderByUnit,
                           l.allowsUnitOrder,
                         )}
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      {l.allowsUnitOrder ? (
-                        <select
-                          value={l.orderByUnit ? "unit" : "kg"}
-                          onChange={(e) =>
-                            setOrderByUnit(l.id, e.target.value === "unit")
-                          }
-                          aria-label="Medida"
-                          className="flex h-8 w-[7.5rem] rounded-md border border-neutral-300 bg-white pl-2 pr-8 text-xs focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
-                        >
-                          <option value="kg">Kg</option>
-                          <option value="unit">Unidades</option>
-                        </select>
-                      ) : (
-                        <span className="text-neutral-500">
-                          {quoteLineMeasureLabel(l.orderByUnit, l.allowsUnitOrder)}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {formatPrice(effectiveUnitPrice(l))}
-                    </td>
-                    <td className="px-3 py-2 font-medium">
-                      {formatPrice(effectiveLineTotal(l))}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        className="px-2 hover:border-red-400 hover:bg-red-50 hover:text-red-700"
-                        onClick={() => remove(l.id)}
-                        aria-label="Quitar"
-                        title="Quitar"
-                      >
-                        <Trash2 className="h-4 w-4" aria-hidden />
-                      </Button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </DataTableScroll>
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    {formatPrice(effectiveUnitPrice(l))}
+                  </td>
+                  <td className="px-3 py-2 font-medium">
+                    {formatPrice(effectiveLineTotal(l))}
+                  </td>
+                  <td className="px-3 py-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="px-2 hover:border-red-400 hover:bg-red-50 hover:text-red-700"
+                      onClick={() => remove(l.id)}
+                      aria-label="Quitar"
+                      title="Quitar"
+                    >
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                    </Button>
+                  </td>
+                </QuoteDraftAnimatedRow>
+              ))}
+              </tbody>
+            </table>
+          </DataTableScroll>
+        </div>
         <div className="flex items-center justify-between border-t border-neutral-200 bg-neutral-50 px-4 py-3">
           <p className="text-sm text-neutral-600">{lines.length} ítem(s)</p>
           <p className="text-lg font-semibold text-neutral-900">
@@ -536,7 +486,10 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Opcional — aclaraciones del pedido (horario, detalle, etc.)"
-          className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+          className={cn(
+            "flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:opacity-50",
+            FOCUS_BRAND_BORDER,
+          )}
         />
       </div>
 
@@ -555,16 +508,11 @@ export function QuoteBuilder({ customerId }: QuoteBuilderProps = {}) {
         >
           Vaciar
         </Button>
-        <Button type="button" onClick={submitQuote} disabled={submitting || !lines.length}>
-          {submitting ? (
-            <>
-              <Spinner className="mr-2 text-white" />
-              Enviando…
-            </>
-          ) : (
-            "Confirmar cotización"
-          )}
-        </Button>
+        <ConfirmQuoteSplitButton
+          submitting={submitting}
+          disabled={!lines.length}
+          onConfirm={(action) => void submitQuote(action)}
+        />
       </div>
     </div>
   );

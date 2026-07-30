@@ -1,13 +1,27 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Pencil, Plus } from "lucide-react";
+import {
+  AdminTableActions,
+  AdminTableIconAction,
+} from "@/components/admin/admin-table";
 import { CustomerAdminForm } from "@/components/admin/customer-admin-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { whatsappUrl } from "@/lib/whatsapp";
+import { filterFoldedSearch } from "@/lib/search-fold";
+import {
+  INCREMENTAL_REVEAL_INITIAL,
+  INCREMENTAL_REVEAL_STEP,
+  RevealMoreTableRow,
+  useIncrementalReveal,
+} from "@/hooks/use-incremental-reveal";
+import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
+import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
+import { useSelectedRow } from "@/hooks/use-selected-row";
 
 export type CustomerListRow = {
   id: string;
@@ -46,15 +60,33 @@ export function CustomersAdminPanel({
     initialEditId ?? null,
   );
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return customers;
-    return customers.filter(
-      (c) =>
-        c.code.toLowerCase().includes(needle) ||
-        c.name.toLowerCase().includes(needle),
-    );
-  }, [customers, query]);
+  const filtered = useMemo(
+    () =>
+      filterFoldedSearch(customers, query, {
+        primary: [(c) => c.code],
+        secondary: [(c) => c.name],
+        emptyReturnsAll: true,
+      }),
+    [customers, query],
+  );
+
+  const {
+    visible,
+    hasMore,
+    revealMore,
+    total,
+  } = useIncrementalReveal(filtered, {
+    initial: INCREMENTAL_REVEAL_INITIAL,
+    step: INCREMENTAL_REVEAL_STEP,
+    resetKey: query,
+  });
+
+  const tableHeightLockRef = useRef<HTMLDivElement>(null);
+  useSmoothListHeight(tableHeightLockRef, visible.length);
+
+  const tableRef = useRef<HTMLTableElement>(null);
+  useSmoothColumnWidths(tableRef, `${query}|${visible.length}`);
+  const { rowProps } = useSelectedRow(visible.map((c) => c.id));
 
   const editing = editingId
     ? customers.find((c) => c.id === editingId)
@@ -111,84 +143,98 @@ export function CustomersAdminPanel({
         />
       ) : null}
 
-      <DataTableScroll>
-        <table className="w-full min-w-[40rem] text-sm">
-          <thead className="bg-neutral-50 text-left text-neutral-600">
-            <tr>
-              <th className="px-3 py-2">Código</th>
-              <th className="px-3 py-2">Nombre</th>
-              <th className="px-3 py-2">Dirección</th>
-              <th className="px-3 py-2">Teléfono</th>
-              <th className="px-3 py-2">Lista</th>
-              <th className="px-3 py-2">Estado</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
+      <div ref={tableHeightLockRef}>
+        <DataTableScroll>
+          <table ref={tableRef} className="w-full min-w-[40rem] text-sm">
+            <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
-                <td
-                  colSpan={7}
-                  className="px-3 py-8 text-center text-neutral-500"
-                >
-                  {query.trim()
-                    ? "Sin clientes para esa búsqueda"
-                    : "Sin clientes"}
-                </td>
+                <th className="px-3 py-2">Código</th>
+                <th className="px-3 py-2">Nombre</th>
+                <th className="px-3 py-2">Dirección</th>
+                <th className="px-3 py-2 whitespace-nowrap">Teléfono</th>
+                <th className="px-3 py-2">Lista</th>
+                <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2" />
               </tr>
-            ) : (
-              filtered.map((c) => {
-                const wa = c.phone ? whatsappUrl(c.phone) : null;
-                return (
-                  <tr key={c.id} className="border-t border-neutral-100">
-                    <td className="px-3 py-2 font-mono">{c.code}</td>
-                    <td className="px-3 py-2">{c.name}</td>
-                    <td className="px-3 py-2 text-neutral-700">
-                      {c.address ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 text-neutral-700">
-                      {c.phone && wa ? (
-                        <a
-                          href={wa}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[var(--brand-primary)] underline hover:opacity-80"
-                        >
-                          {c.phone}
-                        </a>
-                      ) : (
-                        (c.phone ?? "—")
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {c.priceListName ?? "Precio base"}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Badge variant={c.active ? "success" : "danger"}>
-                        {c.active ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCreating(false);
-                          setEditingId(c.id);
-                        }}
-                        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
-                        aria-label="Editar"
-                        title="Editar"
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-3 py-8 text-center text-neutral-500"
+                  >
+                    {query.trim()
+                      ? "Sin clientes para esa búsqueda"
+                      : "Sin clientes"}
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  {visible.map((c) => {
+                    const wa = c.phone ? whatsappUrl(c.phone) : null;
+                    return (
+                      <tr
+                        key={c.id}
+                        {...rowProps(c.id)}
+                        tabIndex={0}
+                        className="admin-table-row border-t border-neutral-100"
                       >
-                        <Pencil className="h-4 w-4" aria-hidden />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </DataTableScroll>
+                        <td className="px-3 py-2 font-mono">{c.code}</td>
+                        <td className="px-3 py-2">{c.name}</td>
+                        <td className="px-3 py-2 text-neutral-700">
+                          {c.address ?? "—"}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2 text-neutral-700">
+                          {c.phone && wa ? (
+                            <a
+                              href={wa}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[var(--brand-primary)] underline hover:opacity-80"
+                            >
+                              {c.phone}
+                            </a>
+                          ) : (
+                            (c.phone ?? "—")
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {c.priceListName ?? "Precio base"}
+                        </td>
+                        <td className="px-3 py-2">
+                          <Badge variant={c.active ? "success" : "danger"}>
+                            {c.active ? "Activo" : "Inactivo"}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <AdminTableActions className="justify-end">
+                            <AdminTableIconAction
+                              label="Editar"
+                              icon={Pencil}
+                              onClick={() => {
+                                setCreating(false);
+                                setEditingId(c.id);
+                              }}
+                            />
+                          </AdminTableActions>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <RevealMoreTableRow
+                    colSpan={7}
+                    enabled={hasMore}
+                    onReveal={revealMore}
+                    shown={visible.length}
+                    total={total}
+                  />
+                </>
+              )}
+            </tbody>
+          </table>
+        </DataTableScroll>
+      </div>
     </div>
   );
 }

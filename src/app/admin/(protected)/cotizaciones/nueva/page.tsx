@@ -1,5 +1,6 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import { AdminNewQuoteForm } from "@/components/admin/admin-new-quote-form";
+import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-route-transition";
 
 export default function AdminNuevaCotizacionPage() {
   return (
@@ -13,14 +14,16 @@ export default function AdminNuevaCotizacionPage() {
             Armá una cotización en nombre de un cliente.
           </p>
         </div>
-        <Link
+        <CotizacionesTransitionLink
           href="/admin/cotizaciones"
           className="text-sm text-[var(--brand-primary)] hover:underline"
         >
           Volver al listado
-        </Link>
+        </CotizacionesTransitionLink>
       </div>
-      <AdminNewQuoteForm />
+      <Suspense fallback={<p className="text-sm text-neutral-500">Cargando…</p>}>
+        <AdminNewQuoteForm />
+      </Suspense>
     </div>
   );
 }

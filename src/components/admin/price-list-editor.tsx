@@ -9,6 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { formatPrice } from "@/lib/utils";
+import { filterFoldedSearch } from "@/lib/search-fold";
+import {
+  INCREMENTAL_REVEAL_INITIAL,
+  INCREMENTAL_REVEAL_STEP,
+  RevealMoreTableRow,
+  useIncrementalReveal,
+} from "@/hooks/use-incremental-reveal";
 
 type ItemRow = {
   productId: string;
@@ -55,15 +62,28 @@ export function PriceListEditor({
   const [savingPrices, setSavingPrices] = useState(false);
   const [filling, setFilling] = useState(false);
 
-  const filtered = useMemo(() => {
-    const q = filter.trim().toLowerCase();
-    if (!q) return priceList.items;
-    return priceList.items.filter(
-      (i) =>
-        i.product.code.toLowerCase().includes(q) ||
-        i.product.name.toLowerCase().includes(q),
-    );
-  }, [filter, priceList.items]);
+  const filtered = useMemo(
+    () =>
+      filterFoldedSearch(priceList.items, filter, {
+        primary: [(i) => i.product.code],
+        secondary: [(i) => i.product.name],
+        emptyReturnsAll: true,
+      }),
+    [filter, priceList.items],
+  );
+
+  const {
+    visible,
+    hasMore,
+    revealMore,
+    total,
+  } = useIncrementalReveal(filtered, {
+    initial: INCREMENTAL_REVEAL_INITIAL,
+    step: INCREMENTAL_REVEAL_STEP,
+    resetKey: filter,
+  });
+
+  const colSpan = isBase ? 3 : 4;
 
   async function saveMeta(e: FormEvent) {
     e.preventDefault();
@@ -261,11 +281,13 @@ export function PriceListEditor({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((i) => (
+              {visible.map((i) => (
                 <tr key={i.productId} className="border-t border-neutral-100">
                   <td className="px-3 py-2 font-mono">{i.product.code}</td>
                   <td className="px-3 py-2">
-                    {i.product.name}
+                    <span className="line-clamp-2 max-w-[18rem] break-words">
+                      {i.product.name}
+                    </span>
                     {!i.product.active ? (
                       <span className="ml-2 text-xs text-red-600">inactivo</span>
                     ) : null}
@@ -292,6 +314,13 @@ export function PriceListEditor({
                   </td>
                 </tr>
               ))}
+              <RevealMoreTableRow
+                colSpan={colSpan}
+                enabled={hasMore}
+                onReveal={revealMore}
+                shown={visible.length}
+                total={total}
+              />
             </tbody>
           </table>
         </DataTableScroll>

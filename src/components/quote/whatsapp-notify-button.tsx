@@ -20,13 +20,14 @@ export function WhatsAppNotifyButton({ whatsappUrl, autoOpen = false }: Props) {
   }, [autoOpen, whatsappUrl]);
 
   return (
-    <div className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4 print:hidden">
-      <p className="text-sm text-emerald-950">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4 print:hidden">
+      <p className="min-w-0 flex-1 text-sm text-emerald-950">
         Avisá el pedido por WhatsApp. Se abre en este dispositivo hacia el número
         del negocio.
       </p>
       <Button
         type="button"
+        className="shrink-0"
         onClick={() => window.open(whatsappUrl, "_blank", "noopener,noreferrer")}
       >
         <MessageCircle className="mr-2 h-4 w-4" aria-hidden />

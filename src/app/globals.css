@@ -15,14 +15,15 @@
     cursor: not-allowed;
   }
 
-  /* Brand focus: kill UA blue; keyboard-only via :focus-visible */
+  /* Brand focus: kill UA blue; keyboard-only via :focus-visible.
+     offset 0 — no grey halo gap. Bordered controls override via FOCUS_BRAND_BORDER. */
   :focus:not(:focus-visible) {
     outline: none;
   }
 
   :focus-visible {
     outline: 2px solid var(--brand-primary);
-    outline-offset: 2px;
+    outline-offset: 0;
   }
 }
 
@@ -85,9 +86,75 @@ body {
   border-top-right-radius: 0.5rem;
 }
 
+/*
+  Floating chevrons for horizontal table scroll (Windows trackpad-less
+  laptops have no easy shift-scroll gesture). `top` is set inline (see
+  DataTableScroll's useMidViewportOffset) to track the middle of the
+  table's visible slice, not the full table height; inset from the
+  left/right edges so they stay clear of row action buttons in `<tbody>`.
+  pointer-events only cover the small circular button itself, never the
+  row underneath.
+*/
+.data-table-scroll-btn {
+  display: flex;
+  height: 2.75rem;
+  width: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid var(--brand-latte);
+  background-color: var(--brand-primary-soft);
+  color: var(--brand-primary);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    0 1px 2px rgba(0, 0, 0, 0.08);
+  transition:
+    color 150ms ease-out,
+    border-color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+
+.data-table-scroll-btn:hover {
+  border-color: var(--brand-primary);
+  background-color: var(--brand-latte);
+  color: var(--brand-primary);
+}
+
+/*
+  Admin table rows: hover + persistent click/focus selection so scrolling a
+  wide table horizontally doesn't lose which row you were reading. The
+  background sits on the actual `<tr>`, which already spans the full
+  (possibly off-screen) row width — no sticky-column trickery needed since
+  these tables don't use sticky columns/headers.
+*/
+.admin-table-row {
+  transition: background-color 150ms ease-out;
+}
+
+/* Grayish — deliberately distinct from the brownish `--brand-primary-soft`
+   selected state below, so hover and selection read as two different things. */
+.admin-table-row:hover {
+  background-color: #f5f5f5;
+}
+
+.admin-table-row[data-selected="true"] {
+  background-color: var(--brand-primary-soft);
+}
+
+.admin-table-row[data-selected="true"]:hover {
+  filter: brightness(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-table-row {
+    transition: none;
+  }
+}
+
 /* Native date/time pickers: icon at field end + brand accent.
-   Note: OS/browser popup chrome (Chrome/Safari) cannot be fully themed red;
-   accent-color + input indicator are the reliable surface. */
+   Note: OS/browser popup chrome (Chrome/Safari) cannot be themed;
+   accent-color + input indicator are the reliable surface.
+   Admin quotes filter uses DatetimeLocalPicker (custom, brand-themed). */
 input[type="date"],
 input[type="datetime-local"],
 input[type="time"],
@@ -157,7 +224,7 @@ select:not([multiple]):disabled {
   opacity: 0.5;
 }
 
-/* Skeleton shimmer — adapted from nexus admin/storefront-skeleton */
+/* Skeleton shimmer — neutral grey bones (contrast on white cards + cream page) */
 @keyframes rocha-skeleton-shimmer {
   0% {
     background-position: 100% 0;
@@ -168,11 +235,12 @@ select:not([multiple]):disabled {
 }
 
 .rocha-skeleton {
+  /* Tailwind neutral-100 / neutral-200 — not brand cream (looks like holes on white) */
   background: linear-gradient(
     90deg,
-    var(--brand-primary-soft) 0%,
-    color-mix(in srgb, var(--brand-latte) 35%, var(--brand-primary-soft)) 45%,
-    var(--brand-primary-soft) 100%
+    #f5f5f5 0%,
+    #e5e5e5 45%,
+    #f5f5f5 100%
   );
   background-size: 200% 100%;
   animation: rocha-skeleton-shimmer 1.4s ease-in-out infinite;
@@ -192,6 +260,422 @@ select:not([multiple]):disabled {
 
 .admin-toast-enter {
   animation: admin-toast-enter 0.28s ease-out both;
+}
+
+@keyframes admin-toast-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.98);
+  }
+}
+
+.admin-toast-exit {
+  animation: admin-toast-exit 0.28s ease-in forwards;
+}
+
+/* Admin dashboard quote activity chart (ported from nexus SVG chart) */
+@keyframes admin-stat-land {
+  0% {
+    transform: translateY(2px);
+    filter: blur(0.4px);
+  }
+  100% {
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.admin-stat-landed {
+  animation: admin-stat-land 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes admin-chart-dot-in {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.admin-chart-dot-enter {
+  opacity: 0;
+  transform: scale(0);
+  animation: admin-chart-dot-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Draft quote table rows — enter/exit + cell height (quote-builder) */
+@keyframes quote-draft-row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes quote-draft-row-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-0.35rem);
+  }
+}
+
+@keyframes quote-draft-cell-close {
+  from {
+    grid-template-rows: 1fr;
+  }
+  to {
+    grid-template-rows: 0fr;
+  }
+}
+
+@keyframes quote-draft-cell-open {
+  from {
+    grid-template-rows: 0fr;
+  }
+  to {
+    grid-template-rows: 1fr;
+  }
+}
+
+@keyframes quote-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes quote-panel-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+}
+
+.quote-draft-row-enter {
+  animation: quote-draft-row-enter 0.2s ease-out both;
+}
+
+.quote-draft-row-exit {
+  animation: quote-draft-row-exit 0.2s ease-in both;
+}
+
+/* Last product → empty: fade/slide only — keep row height until empty mounts. */
+.quote-draft-row-exit-soft {
+  animation: quote-draft-row-exit 0.2s ease-in both;
+}
+
+/* Move padding into inner pad so grid can collapse cell height on exit. */
+.quote-draft-row-td {
+  padding: 0 !important;
+  vertical-align: top;
+}
+
+.quote-draft-row-cell-shell {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.quote-draft-row-cell-clip {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.quote-draft-row-cell-pad {
+  padding: 0.5rem 0.75rem; /* py-2 px-3 */
+}
+
+/*
+  Enter: opacity/slide at natural height; table shell FLIP-eases height
+  (see useSmoothDraftTableHeight). Exit: fade/slide + cell 0fr collapse.
+*/
+.quote-draft-row-exit .quote-draft-row-cell-shell {
+  animation: quote-draft-cell-close 0.2s ease-in both;
+}
+
+/* Stable column tracks — avoid auto-layout snap when empty ↔ product rows. */
+.quote-draft-table {
+  table-layout: fixed;
+}
+
+.quote-draft-table col.quote-draft-col-code {
+  width: 5.5rem;
+}
+
+.quote-draft-table col.quote-draft-col-product {
+  width: auto;
+}
+
+.quote-draft-table col.quote-draft-col-qty {
+  width: 7rem;
+}
+
+.quote-draft-table col.quote-draft-col-measure {
+  width: 8.5rem;
+}
+
+.quote-draft-table col.quote-draft-col-price {
+  width: 6.5rem;
+}
+
+.quote-draft-table col.quote-draft-col-amount {
+  width: 6.5rem;
+}
+
+.quote-draft-table col.quote-draft-col-actions {
+  width: 3.25rem;
+}
+
+/*
+  Admin new-quote: customer selected → summary + QuoteBuilder panels.
+  Same motion language as draft rows (fade + slight slide, short stagger).
+*/
+/*
+  Enter: fill-mode backwards only — do not leave transform/opacity after the run.
+  `both`/`forwards` + translateY(0) keeps a stacking context and traps
+  absolute dropdowns under later siblings (draft table paints over options).
+  Exit: simultaneous ~200ms (no reverse stagger); `forwards` OK — about to unmount.
+*/
+.quote-customer-selected {
+  animation: quote-panel-enter 0.2s ease-out backwards;
+}
+
+.quote-customer-selected.quote-customer-exit {
+  animation: quote-panel-exit 0.2s ease-in forwards;
+}
+
+.quote-customer-reveal > * {
+  animation: quote-panel-enter 0.2s ease-out backwards;
+}
+
+.quote-customer-reveal > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.quote-customer-reveal > *:nth-child(2) {
+  animation-delay: 35ms;
+}
+.quote-customer-reveal > *:nth-child(3) {
+  animation-delay: 70ms;
+}
+.quote-customer-reveal > *:nth-child(4) {
+  animation-delay: 105ms;
+}
+.quote-customer-reveal > *:nth-child(5) {
+  animation-delay: 140ms;
+}
+.quote-customer-reveal > *:nth-child(6) {
+  animation-delay: 175ms;
+}
+.quote-customer-reveal > *:nth-child(n + 7) {
+  animation-delay: 200ms;
+}
+
+.quote-customer-reveal.quote-customer-reveal-exit > * {
+  animation: quote-panel-exit 0.2s ease-in forwards;
+  animation-delay: 0ms;
+}
+
+/*
+  Admin cotizaciones list ↔ nueva: same fade/slide ~200ms as quote panels.
+  Enter: backwards only (avoid trapping absolute pickers). Exit: forwards OK —
+  soft-nav waits for the run then swaps the page.
+*/
+.quote-route-enter {
+  animation: quote-panel-enter 0.2s ease-out backwards;
+}
+
+.quote-route-exit {
+  animation: quote-panel-exit 0.2s ease-in forwards;
+}
+
+/*
+  Product/customer picker listbox (portaled): same fade/slide ~200ms as
+  quote-panel-enter/exit. Enter: backwards only. Exit: forwards — keep-mount
+  then unmount (see useExitPresence).
+*/
+.quote-picker-float-enter {
+  animation: quote-panel-enter 0.2s ease-out backwards;
+}
+
+.quote-picker-float-exit {
+  animation: quote-panel-exit 0.2s ease-in forwards;
+}
+
+/*
+  Measure toggle (kg ↔ unidades) collateral: warning icon + unit-lines banner.
+  Same ~200ms language as quote-panel / draft cells. Height via 0fr↔1fr.
+*/
+@keyframes quote-unit-warn-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes quote-unit-warn-exit {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.85);
+  }
+}
+
+.quote-unit-warn-enter {
+  animation: quote-unit-warn-enter 0.2s ease-out backwards;
+}
+
+.quote-unit-warn-exit {
+  animation: quote-unit-warn-exit 0.2s ease-in forwards;
+}
+
+@keyframes quote-unit-banner-open {
+  from {
+    opacity: 0;
+    grid-template-rows: 0fr;
+  }
+  to {
+    opacity: 1;
+    grid-template-rows: 1fr;
+  }
+}
+
+@keyframes quote-unit-banner-close {
+  from {
+    opacity: 1;
+    grid-template-rows: 1fr;
+  }
+  to {
+    opacity: 0;
+    grid-template-rows: 0fr;
+  }
+}
+
+.quote-unit-banner-shell {
+  display: grid;
+  grid-template-rows: 1fr;
+}
+
+.quote-unit-banner-clip {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.quote-unit-banner-enter {
+  animation: quote-unit-banner-open 0.2s ease-out both;
+}
+
+.quote-unit-banner-exit {
+  animation: quote-unit-banner-close 0.2s ease-in both;
+}
+
+/*
+  Admin cotizaciones: after-cutoff rows expand/collapse.
+  Fade + slight slide on <tr> (~200ms); height via cell 0fr↔1fr
+  (same shell as draft rows) so table grow/shrink eases with content.
+  Keep-mount via useExitPresence; reduced-motion → instant unmount.
+*/
+.admin-late-row-enter {
+  animation: quote-draft-row-enter 0.2s ease-out both;
+}
+
+.admin-late-row-exit {
+  animation: quote-draft-row-exit 0.2s ease-in both;
+}
+
+.admin-late-row-enter .quote-draft-row-cell-shell {
+  animation: quote-draft-cell-open 0.2s ease-out both;
+}
+
+.admin-late-row-exit .quote-draft-row-cell-shell {
+  animation: quote-draft-cell-close 0.2s ease-in both;
+}
+
+/*
+  Admin mobile drawer: backdrop fade + panel slide from left (~200ms).
+  Keep-mount on close until exit ends (useExitPresence).
+*/
+@keyframes admin-drawer-backdrop-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes admin-drawer-backdrop-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes admin-drawer-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes admin-drawer-panel-exit {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+.admin-drawer-backdrop-enter {
+  animation: admin-drawer-backdrop-enter 0.2s ease-out both;
+}
+
+.admin-drawer-backdrop-exit {
+  animation: admin-drawer-backdrop-exit 0.2s ease-in both;
+}
+
+.admin-drawer-panel-enter {
+  animation: admin-drawer-panel-enter 0.2s ease-out both;
+}
+
+.admin-drawer-panel-exit {
+  animation: admin-drawer-panel-exit 0.2s ease-in both;
 }
 
 /*
@@ -242,14 +726,70 @@ select:not([multiple]):disabled {
   }
 }
 
+.route-loading-fill {
+  transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.route-loading-fill-done {
+  transition: width 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .rocha-skeleton {
     animation: none;
-    background: var(--brand-primary-soft);
+    background: #e5e5e5;
   }
 
-  .admin-toast-enter {
+  .admin-toast-enter,
+  .admin-toast-exit,
+  .admin-stat-landed,
+  .admin-chart-dot-enter {
     animation: none;
+  }
+
+  .admin-chart-dot-enter {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  .route-loading-fill,
+  .route-loading-fill-done {
+    transition: none !important;
+  }
+
+  .quote-draft-row-enter,
+  .quote-draft-row-exit,
+  .quote-draft-row-exit-soft,
+  .quote-draft-row-exit .quote-draft-row-cell-shell,
+  .quote-customer-selected,
+  .quote-customer-selected.quote-customer-exit,
+  .quote-customer-reveal > *,
+  .quote-customer-reveal.quote-customer-reveal-exit > *,
+  .quote-route-enter,
+  .quote-route-exit,
+  .quote-picker-float-enter,
+  .quote-picker-float-exit,
+  .quote-unit-warn-enter,
+  .quote-unit-warn-exit,
+  .quote-unit-banner-enter,
+  .quote-unit-banner-exit,
+  .admin-late-row-enter,
+  .admin-late-row-exit,
+  .admin-late-row-enter .quote-draft-row-cell-shell,
+  .admin-late-row-exit .quote-draft-row-cell-shell,
+  .admin-drawer-backdrop-enter,
+  .admin-drawer-backdrop-exit,
+  .admin-drawer-panel-enter,
+  .admin-drawer-panel-exit {
+    animation: none;
+  }
+
+  .quote-unit-banner-shell {
+    grid-template-rows: 1fr;
+  }
+
+  .quote-draft-row-cell-shell {
+    grid-template-rows: 1fr;
   }
 }
 
@@ -262,14 +802,60 @@ select:not([multiple]):disabled {
   .print\:hidden {
     display: none !important;
   }
+  /*
+    Match on-screen remito card: keep border + amber weigh rows.
+    Browsers default to economy print (strip backgrounds); force exact colors.
+    Soft shadow rarely prints cleanly — drop it only.
+  */
   .print-remito {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
     box-shadow: none !important;
-    border: none !important;
+    background-color: #fff !important;
+  }
+  .print-remito img {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  /* Weigh-pending rows (view mode): amber fill + warning text */
+  .print-remito .bg-amber-50 {
+    background-color: #fffbeb !important;
+  }
+  .print-remito .text-amber-800 {
+    color: #92400e !important;
+  }
+  .print-remito .text-amber-950 {
+    color: #451a03 !important;
+  }
+  .print-remito .text-amber-900 {
+    color: #78350f !important;
   }
   .data-table-scroll {
     overflow: visible;
   }
+  .data-table-scroll-btn {
+    display: none !important;
+  }
   .rocha-skeleton {
     animation: none !important;
+  }
+
+  .quote-draft-row-enter,
+  .quote-draft-row-exit,
+  .quote-draft-row-exit-soft,
+  .quote-draft-row-exit .quote-draft-row-cell-shell,
+  .admin-late-row-enter,
+  .admin-late-row-exit,
+  .admin-late-row-enter .quote-draft-row-cell-shell,
+  .admin-late-row-exit .quote-draft-row-cell-shell {
+    animation: none !important;
+  }
+
+  .quote-draft-row-cell-shell {
+    grid-template-rows: 1fr !important;
+  }
+
+  .quote-draft-row-cell-clip {
+    overflow: visible;
   }
 }
