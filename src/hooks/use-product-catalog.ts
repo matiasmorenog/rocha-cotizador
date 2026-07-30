@@ -159,6 +159,11 @@ export function useProductCatalog(
   };
   const loadPromiseRef = useRef<Promise<void> | null>(null);
 
+  /** Sync snapshot before React re-renders so awaiters see fresh catalog. */
+  function commitSnapshot(next: CatalogSnapshot) {
+    snapshotRef.current = next;
+  }
+
   useEffect(() => {
     let cancelled = false;
     const key = customerKey(opts.customerId);
@@ -177,6 +182,12 @@ export function useProductCatalog(
         const prices = readCachedUnitPrices(key);
         const { products, searchIndex } = hydrateCatalog(cached.products);
         if (!cancelled) {
+          commitSnapshot({
+            products,
+            searchIndex,
+            unitPrices: prices?.unitPrices ?? snapshotRef.current.unitPrices,
+            ready: true,
+          });
           setState((s) => ({
             ...s,
             products,
@@ -230,6 +241,12 @@ export function useProductCatalog(
           const version = data.version ?? cached.version;
           writeCachedUnitPrices(key, version, unitPrices);
           const { products, searchIndex } = hydrateCatalog(cached.products);
+          commitSnapshot({
+            products,
+            searchIndex,
+            unitPrices,
+            ready: true,
+          });
           setState({
             products,
             searchIndex,
@@ -287,20 +304,31 @@ export function useProductCatalog(
 
         if (products.length === 0) {
           // Do not wipe a good in-memory catalog on a bad empty response.
-          setState((s) => {
-            if (s.products.length > 0) {
-              return { ...s, loading: false, ready: true, error: null };
-            }
-            clearCachedCatalog();
-            return {
-              products: [],
-              searchIndex: emptySearchIndex(),
-              version: data.version ?? null,
-              unitPrices: nextPrices,
-              ready: false,
+          if (snapshotRef.current.products.length > 0) {
+            setState((s) => ({
+              ...s,
               loading: false,
+              ready: true,
               error: null,
-            };
+            }));
+            return;
+          }
+          clearCachedCatalog();
+          const emptyIndex = emptySearchIndex();
+          commitSnapshot({
+            products: [],
+            searchIndex: emptyIndex,
+            unitPrices: nextPrices,
+            ready: false,
+          });
+          setState({
+            products: [],
+            searchIndex: emptyIndex,
+            version: data.version ?? null,
+            unitPrices: nextPrices,
+            ready: false,
+            loading: false,
+            error: null,
           });
           return;
         }
@@ -314,6 +342,12 @@ export function useProductCatalog(
         writeCachedUnitPrices(key, version, nextPrices);
 
         const hydrated = hydrateCatalog(products);
+        commitSnapshot({
+          products: hydrated.products,
+          searchIndex: hydrated.searchIndex,
+          unitPrices: nextPrices,
+          ready: true,
+        });
         setState({
           products: hydrated.products,
           searchIndex: hydrated.searchIndex,
@@ -334,6 +368,12 @@ export function useProductCatalog(
         ) {
           const prices = readCachedUnitPrices(key);
           const hydrated = hydrateCatalog(fallback.products);
+          commitSnapshot({
+            products: hydrated.products,
+            searchIndex: hydrated.searchIndex,
+            unitPrices: prices?.unitPrices ?? {},
+            ready: true,
+          });
           setState({
             products: hydrated.products,
             searchIndex: hydrated.searchIndex,

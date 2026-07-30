@@ -5,7 +5,6 @@ import {
   useCallback,
   useDeferredValue,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -35,8 +34,6 @@ type ProductPickerProps = {
   onChange: (product: CatalogSearchProduct | null) => void;
   /** Focus the search field after adding a line, etc. */
   inputRef?: RefObject<HTMLInputElement | null>;
-  /** Gate “Agregar” until the in-memory catalog is ready. */
-  onCatalogReadyChange?: (ready: boolean) => void;
 };
 
 type ProductOptionProps = {
@@ -90,12 +87,10 @@ function ProductPickerInner({
   value,
   onChange,
   inputRef,
-  onCatalogReadyChange,
 }: ProductPickerProps) {
   const catalog = useProductCatalog({ customerId });
   const { searchAsync } = catalog;
   const searchAsyncRef = useRef(searchAsync);
-  const onReadyRef = useRef(onCatalogReadyChange);
   const isClient = useIsClient();
 
   const [query, setQuery] = useState("");
@@ -181,12 +176,6 @@ function ProductPickerInner({
     searchAsyncRef.current = searchAsync;
   }, [searchAsync]);
 
-  // Layout: unlock Agregar before paint once products exist (avoid stuck gate).
-  useLayoutEffect(() => {
-    onReadyRef.current = onCatalogReadyChange;
-    onReadyRef.current?.(catalogUsable);
-  }, [catalogUsable, onCatalogReadyChange]);
-
   // Only scroll when highlight moves — not on every new results array identity.
   useEffect(() => {
     if (!showList || activeHighlight < 0) return;
@@ -210,8 +199,6 @@ function ProductPickerInner({
 
   const pickProduct = useCallback(
     (p: CatalogSearchProduct) => {
-      // Warm pick ⇒ catalog already in memory; sync parent gate immediately.
-      if (catalogUsable) onReadyRef.current?.(true);
       onChange(p);
       setQuery("");
       setColdResults(null);
@@ -219,7 +206,7 @@ function ProductPickerInner({
       setHighlightIndex(-1);
       setListDismissed(true);
     },
-    [onChange, catalogUsable],
+    [onChange],
   );
 
   function onQueryChange(next: string) {
