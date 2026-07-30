@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,6 +34,9 @@ import {
   ConfirmQuoteSplitButton,
   type ConfirmQuoteAction,
 } from "@/components/quote/confirm-quote-split-button";
+
+/** Keep in sync with `.quote-panel-enter` duration in globals.css */
+const QUOTE_PANEL_ENTER_MS = 200;
 
 type QuoteBuilderProps = {
   /** When set (admin flow), prices and submit use this customer. */
@@ -91,6 +94,27 @@ export function QuoteBuilder({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Admin: after customer select + panel enter. Cotizar: product field is main entry.
+  // Skip while exiting so “Cambiar cliente” / confirm-new keep customer search focus.
+  useEffect(() => {
+    if (exiting) return;
+
+    const reduced =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // First reveal child (product card) delay 0ms + enter 200ms; +40 like exit buffer.
+    const delay = customerId
+      ? reduced
+        ? 0
+        : QUOTE_PANEL_ENTER_MS + 40
+      : 0;
+
+    const t = window.setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, delay);
+    return () => window.clearTimeout(t);
+  }, [customerId, exiting]);
 
   const selectedAllowsUnit = selected?.allowsUnitOrder === true;
   const hasUnitOrderLines = lines.some((l) => l.orderByUnit);
