@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
-import { formatPrice } from "@/lib/utils";
+import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
+import { cn, formatPrice } from "@/lib/utils";
 
 /** Dynamic shell; dashboard payload uses tagged Data Cache (TTL 1h, bust on quote create / wipe). */
 export const dynamic = "force-dynamic";
@@ -14,7 +15,10 @@ export default async function AdminDashboardPage() {
         <h1 className="text-2xl font-semibold text-neutral-900">Dashboard</h1>
         <Link
           href="/admin/cotizaciones/nueva"
-          className="inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm text-white hover:opacity-90"
+          className={cn(
+            "inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm text-white hover:opacity-90",
+            FOCUS_BRAND_PRIMARY,
+          )}
         >
           Nueva cotización
         </Link>

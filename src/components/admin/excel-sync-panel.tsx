@@ -4,6 +4,8 @@ import { FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
+import { cn } from "@/lib/utils";
 
 type ImportSummary = {
   created: number;
@@ -87,7 +89,10 @@ export function ExcelSyncPanel({
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[18rem]">
           <a
             href={exportUrl}
-            className="inline-flex h-10 w-full items-center justify-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50 sm:w-auto"
+            className={cn(
+              "inline-flex h-10 w-full items-center justify-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50 sm:w-auto",
+              FOCUS_BRAND_BORDER,
+            )}
           >
             Descargar Excel
           </a>

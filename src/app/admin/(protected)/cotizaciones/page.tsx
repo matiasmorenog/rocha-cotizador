@@ -3,6 +3,8 @@ import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-rout
 import { QuotesAdminPanel } from "@/components/admin/quotes-admin-panel";
 import { resolveQuotesExportRange } from "@/lib/argentina-time";
 import { formatDateOnlyYmd } from "@/lib/delivery-date";
+import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
+import { cn } from "@/lib/utils";
 
 /** Always hit DB — quote lists must reflect deletes/wipes immediately. */
 export const dynamic = "force-dynamic";
@@ -40,7 +42,10 @@ export default async function AdminCotizacionesPage({
         <h1 className="text-2xl font-semibold text-neutral-900">Cotizaciones</h1>
         <CotizacionesTransitionLink
           href="/admin/cotizaciones/nueva"
-          className="inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm text-white hover:opacity-90"
+          className={cn(
+            "inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm text-white hover:opacity-90",
+            FOCUS_BRAND_PRIMARY,
+          )}
         >
           Nueva cotización
         </CotizacionesTransitionLink>

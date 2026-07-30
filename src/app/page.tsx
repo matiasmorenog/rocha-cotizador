@@ -5,6 +5,8 @@ import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { SkeletonHomePage } from "@/components/ui/skeleton";
 import { auth } from "@/lib/auth";
+import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
+import { cn } from "@/lib/utils";
 
 async function HomeContent() {
   const session = await auth();
@@ -24,7 +26,10 @@ async function HomeContent() {
         <div className="flex flex-col items-center gap-3">
           <Link
             href="/login"
-            className="inline-flex h-11 w-full items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:brightness-95"
+            className={cn(
+              "inline-flex h-11 w-full items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:brightness-95",
+              FOCUS_BRAND_PRIMARY,
+            )}
           >
             Ingresar como cliente
           </Link>

@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
 import { Input } from "@/components/ui/input";
@@ -213,10 +214,11 @@ export function QuotesAdminPanel({
             ) : null}
 
             <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:items-center">
-              <button
+              <Button
                 type="submit"
+                variant="outline"
                 disabled={loading}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                className="w-full gap-2 sm:w-auto"
               >
                 {loading ? (
                   <>
@@ -226,12 +228,12 @@ export function QuotesAdminPanel({
                 ) : (
                   "Filtrar lista"
                 )}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={onDownload}
                 disabled={downloading}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                className="w-full gap-2 sm:w-auto"
               >
                 {downloading ? (
                   <>
@@ -241,7 +243,7 @@ export function QuotesAdminPanel({
                 ) : (
                   "Descargar PDF"
                 )}
-              </button>
+              </Button>
             </div>
           </div>
         </form>
