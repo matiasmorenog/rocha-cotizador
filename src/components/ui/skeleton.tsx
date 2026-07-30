@@ -430,12 +430,13 @@ export function SkeletonAdminDashboardPage() {
             key={i}
             className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
           >
-            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-3 w-40" />
             <Skeleton className="mt-2 h-9 w-16" />
             <Skeleton className="mt-2 h-3 w-36" />
           </div>
         ))}
       </div>
+      {/* Chart slot — sibling: nexus analytics skeleton goes here. */}
       <div className="rounded-lg border border-neutral-200 bg-white">
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
           <Skeleton className="h-5 w-44" />

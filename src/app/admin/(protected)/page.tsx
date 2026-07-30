@@ -8,37 +8,33 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
   const {
-    customers,
-    customersInactive,
-    products,
-    productsInactive,
     quotesToday,
     quotesTodayTotal,
     quotesYesterday,
+    customersQuotedToday,
+    customersQuotedWeek,
+    pendingWeighLines,
     recent,
   } = await getAdminDashboardData();
 
   const stats: { label: string; value: number | string; hint: string }[] = [
     {
-      label: "Clientes activos",
-      value: customers,
-      hint:
-        customersInactive > 0
-          ? `${customersInactive} inactivo${customersInactive === 1 ? "" : "s"}`
-          : "Sin inactivos",
-    },
-    {
-      label: "Productos activos",
-      value: products,
-      hint:
-        productsInactive > 0
-          ? `${productsInactive} inactivo${productsInactive === 1 ? "" : "s"}`
-          : "Sin inactivos",
-    },
-    {
       label: "Cotizaciones hoy",
       value: quotesToday,
       hint: `${formatPrice(quotesTodayTotal)} · ayer ${quotesYesterday}`,
+    },
+    {
+      label: "Clientes que cotizaron hoy",
+      value: customersQuotedToday,
+      hint: `esta semana: ${customersQuotedWeek}`,
+    },
+    {
+      label: "Líneas pendientes de pesaje",
+      value: pendingWeighLines,
+      hint:
+        pendingWeighLines > 0
+          ? "orden por unidad / precio $0"
+          : "Sin pendientes",
     },
   ];
 
@@ -70,6 +66,8 @@ export default async function AdminDashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* Chart slot — sibling ports nexus analytics here (keep KPI row above). */}
 
       <div className="rounded-lg border border-neutral-200 bg-white">
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">

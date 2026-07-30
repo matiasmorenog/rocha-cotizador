@@ -12,17 +12,16 @@ export type AdminDashboardRecentQuote = {
 };
 
 export type AdminDashboardData = {
-  customers: number;
-  customersInactive: number;
-  products: number;
-  productsInactive: number;
   quotesToday: number;
   quotesTodayTotal: number;
   quotesYesterday: number;
+  customersQuotedToday: number;
+  customersQuotedWeek: number;
+  pendingWeighLines: number;
   recent: AdminDashboardRecentQuote[];
 };
 
-/** Calendar day key in America/Argentina/Buenos_Aires (`YYYY-M-D` / `YYYY-MM-DD`). */
+/** Calendar day key in America/Argentina/Buenos_Aires (`YYYY-MM-DD`). */
 function argentinaDayKey(d = new Date()): string {
   return toArgentinaDatetimeLocal(d).slice(0, 10);
 }
@@ -31,6 +30,27 @@ function argentinaDayStart(day: string): Date {
   const start = parseArgentinaDateTime(`${day}T00:00`);
   if (!start) throw new Error(`Invalid Argentina day key: ${day}`);
   return start;
+}
+
+/** Monday 00:00 Argentina of the week containing `day` (Mon–Sun). */
+function argentinaWeekMondayStart(day: string): Date {
+  const noon = parseArgentinaDateTime(`${day}T12:00`);
+  if (!noon) throw new Error(`Invalid Argentina day key: ${day}`);
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    weekday: "short",
+  }).format(noon);
+  const dow: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  const daysFromMonday = ((dow[weekday] ?? 1) + 6) % 7;
+  return new Date(argentinaDayStart(day).getTime() - daysFromMonday * 24 * 60 * 60 * 1000);
 }
 
 /**
@@ -43,12 +63,9 @@ const getCachedAdminDashboard = unstable_cache(
   async (day: string): Promise<AdminDashboardData> => {
     const startToday = argentinaDayStart(day);
     const startYesterday = new Date(startToday.getTime() - 24 * 60 * 60 * 1000);
+    const startWeek = argentinaWeekMondayStart(day);
 
     return db.$transaction(async (tx) => {
-      const customers = await tx.customer.count({ where: { active: true } });
-      const customersInactive = await tx.customer.count({ where: { active: false } });
-      const products = await tx.product.count({ where: { active: true } });
-      const productsInactive = await tx.product.count({ where: { active: false } });
       const quotesToday = await tx.quote.count({
         where: { createdAt: { gte: startToday } },
       });
@@ -61,6 +78,20 @@ const getCachedAdminDashboard = unstable_cache(
           createdAt: { gte: startYesterday, lt: startToday },
         },
       });
+      const customersQuotedTodayGroups = await tx.quote.groupBy({
+        by: ["customerId"],
+        where: { createdAt: { gte: startToday } },
+      });
+      const customersQuotedWeekGroups = await tx.quote.groupBy({
+        by: ["customerId"],
+        where: { createdAt: { gte: startWeek } },
+      });
+      // Same rule as remito: unit-order lines or $0 price still need weigh/confirm.
+      const pendingWeighLines = await tx.quoteItem.count({
+        where: {
+          OR: [{ orderByUnit: true }, { unitPrice: 0 }],
+        },
+      });
       const recentRows = await tx.quote.findMany({
         take: 8,
         orderBy: { createdAt: "desc" },
@@ -68,13 +99,12 @@ const getCachedAdminDashboard = unstable_cache(
       });
 
       return {
-        customers,
-        customersInactive,
-        products,
-        productsInactive,
         quotesToday,
         quotesTodayTotal: Number(quotesTodaySum._sum.total ?? 0),
         quotesYesterday,
+        customersQuotedToday: customersQuotedTodayGroups.length,
+        customersQuotedWeek: customersQuotedWeekGroups.length,
+        pendingWeighLines,
         recent: recentRows.map((q) => ({
           id: q.id,
           number: q.number,
