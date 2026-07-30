@@ -18,19 +18,19 @@ export const QUOTE_ACTIVITY_PERIOD_LABELS: Record<
   { short: string; summary: string; description: string; empty: string }
 > = {
   week: {
-    short: "7 días",
+    short: "Semana",
     summary: "7 días",
     description: "Totales de cotizaciones por día (últimos 7 días, hora Argentina)",
     empty: "Sin cotizaciones en los últimos 7 días.",
   },
   month: {
-    short: "30 días",
+    short: "Mes",
     summary: "30 días",
     description: "Totales de cotizaciones por día (últimos 30 días, hora Argentina)",
     empty: "Sin cotizaciones en los últimos 30 días.",
   },
   year: {
-    short: "12 meses",
+    short: "Año",
     summary: "año",
     description: "Totales de cotizaciones por mes (año calendario actual, hora Argentina)",
     empty: "Sin cotizaciones en el año calendario actual.",
