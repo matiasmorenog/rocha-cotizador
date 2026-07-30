@@ -20,13 +20,8 @@ export type RemitoAdminItemRowsProps = {
   lineTotal: number;
   measureLabel: string;
   canDelete: boolean;
-  /** Pending $0 / orderByUnit — open weigh confirm editor. */
+  /** Pending $0 / orderByUnit — open weigh confirm editor + amber row. */
   needsWeighPrice: boolean;
-  /**
-   * Product allows unit/kg weigh confirm. Amber row + panels even after
-   * price already confirmed.
-   */
-  isWeighConfirmProduct: boolean;
   suggestedKgPrice: number;
   orderedByUnit: boolean;
   /** Total table columns including the actions column when editMode. */
@@ -50,7 +45,6 @@ export function RemitoAdminItemRows({
   measureLabel,
   canDelete,
   needsWeighPrice,
-  isWeighConfirmProduct,
   suggestedKgPrice,
   orderedByUnit,
   colSpan,
@@ -73,7 +67,7 @@ export function RemitoAdminItemRows({
     priceNum >= 0;
   const previewTotal = previewOk ? qtyNum * priceNum : null;
 
-  const showAmber = needsWeighPrice || isWeighConfirmProduct;
+  const showAmber = needsWeighPrice;
   /** editMode gates panels — stale `editing` while view mode is harmless. */
   const showPanel = editMode && (needsWeighPrice || editing);
 

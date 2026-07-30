@@ -13,7 +13,6 @@ export type RemitoAdminLine = {
   lineTotal: number;
   measureLabel: string;
   needsWeighPrice: boolean;
-  isWeighConfirmProduct: boolean;
   suggestedKgPrice: number;
   orderedByUnit: boolean;
 };
@@ -63,7 +62,6 @@ export function RemitoAdminTable({ quoteId, lines, canDeleteLine }: Props) {
               measureLabel={line.measureLabel}
               canDelete={canDeleteLine}
               needsWeighPrice={line.needsWeighPrice}
-              isWeighConfirmProduct={line.isWeighConfirmProduct}
               suggestedKgPrice={line.suggestedKgPrice}
               orderedByUnit={line.orderedByUnit}
               colSpan={colSpan}

@@ -158,7 +158,6 @@ export default async function RemitoDetailPage({
             allowsUnitOrder,
           ),
           needsWeighPrice,
-          isWeighConfirmProduct: allowsUnitOrder,
           suggestedKgPrice: item.productId
             ? (kgPriceByProductId.get(item.productId) ?? 0)
             : 0,
@@ -252,8 +251,7 @@ export default async function RemitoDetailPage({
                     : false;
                   const needsWeighPrice =
                     item.orderByUnit || Number(item.unitPrice) === 0;
-                  const isWeighConfirmProduct = allowsUnitOrder;
-                  const showAmber = needsWeighPrice || isWeighConfirmProduct;
+                  const showAmber = needsWeighPrice;
                   const measureLabel = quoteLineMeasureLabel(
                     item.orderByUnit,
                     allowsUnitOrder,
