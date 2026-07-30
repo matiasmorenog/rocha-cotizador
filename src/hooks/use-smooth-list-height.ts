@@ -5,11 +5,14 @@ import { useLayoutEffect, useRef, type RefObject } from "react";
 /**
  * Deliberately slower than `.quote-draft-row-*` / `.admin-late-row-*` (200ms,
  * globals.css): those are small per-row enter/exit effects, while this eases
- * the whole table shell's height/columns — at 200ms a small row-count delta
- * read as an instant jump. 320ms keeps it clearly visible without feeling
- * sluggish. Shared by `useSmoothColumnWidths`.
+ * the whole table shell's height/columns. Bumped 320 → 480ms + a steeper
+ * ease-out after user testing showed shrink (fewer rows while typing a
+ * filter) still read as broken/instant while grow (clearing the filter)
+ * looked smooth — see the root-cause note below. Shared by
+ * `useSmoothColumnWidths`.
  */
-export const SEARCH_TABLE_RESIZE_MS = 320;
+export const SEARCH_TABLE_RESIZE_MS = 480;
+const SEARCH_TABLE_RESIZE_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 function prefersReducedMotion(): boolean {
   return (
@@ -18,26 +21,42 @@ function prefersReducedMotion(): boolean {
   );
 }
 
+function borderBoxHeight(entry: ResizeObserverEntry): number {
+  const box = entry.borderBoxSize?.[0];
+  return box ? box.blockSize : entry.contentRect.height;
+}
+
 /**
  * FLIP height on a table/list shell when `resizeKey` changes (e.g. search
  * filtering growing/shrinking the row count, including empty ↔ results).
- * Same technique as `useSmoothDraftTableHeight` (quote-builder): measure
- * before/after height, lock the starting height, then transition to the new
- * one so the container eases instead of jumping. Ignores height changes that
- * don't come with a `resizeKey` change (e.g. an unrelated row expanding into
- * an edit form) so the animation stays scoped to search/filter resizes.
  *
- * `prev`/`next` are measured fresh each run instead of cached in a ref:
- * `scrollHeight` is `max(clientHeight, contentHeight)`, so a cached value
- * taken while a previous transition was still mid-flight (e.g. fast typing
- * that fires this effect again before the last 200ms resize finished) can
- * report a stale, too-large height. That's harmless for *growth* (content is
- * already ≥ the animating height), but it silently broke *shrink* — the
- * shell would barely move each keystroke, then snap to the true (smaller)
- * height instantly once `clear()` released the lock. Reading live geometry
- * (`getBoundingClientRect` for "prev", and a momentarily unlocked
- * `scrollHeight` for "next") keeps both directions accurate even when resizes
- * interrupt each other.
+ * ROOT CAUSE (grow worked, shrink didn't): the previous implementation read
+ * "prev" with `getBoundingClientRect()` *inside* `useLayoutEffect`. Layout
+ * effects always run *after* React has already mutated the DOM for the
+ * current commit, so by the time that read happens the box (which has no
+ * explicit height between animations — it's `auto`) has *already* resized
+ * to fit the *new* row count. Reading "prev" then doesn't reliably capture
+ * "what the user was just looking at" — it can silently collapse to the
+ * *same* value as "next", especially once a previous transition has settled
+ * and released its `height` lock, which happens to line up more often with
+ * shrink in real typing (each shrink step usually starts from an already-
+ * settled state, since removed rows unmount immediately with no exit
+ * animation of their own to keep the box "busy"; grow's target is simply
+ * ≥ the current locked height more often, which masked the same bug there).
+ *
+ * A render-phase read (measuring before the DOM mutates) would fix this, but
+ * React's `react-hooks/refs` lint rule (rightly) forbids reading refs during
+ * render — a render can be thrown away without committing. Instead, a
+ * `ResizeObserver` tracks the shell's *actual* rendered size continuously
+ * from a proper effect (never during render): its notifications are
+ * delivered slightly *after* the synchronous commit + layout effects for
+ * whatever DOM mutation caused the resize, so `lastHeightRef` — updated only
+ * from the observer's callback — is guaranteed to still hold the size from
+ * *before* the current commit when this effect's "did `resizeKey` change?"
+ * check runs. That gives an accurate "prev" for both directions, and it
+ * keeps being accurate even when a keystroke interrupts a still-running
+ * transition, since the observer also fires (with the live, interpolated
+ * value) while a CSS transition is mid-flight.
  */
 export function useSmoothListHeight(
   lockRef: RefObject<HTMLElement | null>,
@@ -45,6 +64,24 @@ export function useSmoothListHeight(
 ): void {
   const prevKeyRef = useRef<string | number | null>(null);
   const mountedRef = useRef(false);
+  const lastHeightRef = useRef<number | null>(null);
+
+  // Mount-only: track the shell's real rendered height continuously, from a
+  // proper effect callback (not render) — see doc comment above.
+  useLayoutEffect(() => {
+    const el = lockRef.current;
+    if (!el) return;
+
+    lastHeightRef.current = el.getBoundingClientRect().height;
+
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) lastHeightRef.current = borderBoxHeight(entry);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [lockRef]);
 
   useLayoutEffect(() => {
     const el = lockRef.current;
@@ -58,17 +95,15 @@ export function useSmoothListHeight(
       return;
     }
 
-    // Current on-screen height — accurate even mid-transition, unlike a
-    // cached ref (see doc comment above).
-    const prev = el.getBoundingClientRect().height;
+    const prev = lastHeightRef.current ?? el.getBoundingClientRect().height;
 
     // Momentarily release any lock so `scrollHeight` reflects the *natural*
-    // height of the current DOM rather than a stale locked value.
+    // height of the current (already-committed) DOM.
     el.style.transition = "none";
     el.style.height = "";
     const next = el.scrollHeight;
 
-    if (prev === next || prefersReducedMotion()) {
+    if (Math.abs(prev - next) < 0.5 || prefersReducedMotion()) {
       el.style.height = "";
       el.style.overflow = "";
       el.style.transition = "";
@@ -78,7 +113,7 @@ export function useSmoothListHeight(
     el.style.height = `${prev}px`;
     el.style.overflow = "hidden";
     void el.offsetHeight;
-    el.style.transition = `height ${SEARCH_TABLE_RESIZE_MS}ms ease-out`;
+    el.style.transition = `height ${SEARCH_TABLE_RESIZE_MS}ms ${SEARCH_TABLE_RESIZE_EASE}`;
     el.style.height = `${next}px`;
 
     const clear = () => {
