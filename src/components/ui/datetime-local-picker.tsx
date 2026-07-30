@@ -327,10 +327,10 @@ export function DatetimeLocalPicker({
               </div>
             </div>
 
-            <div className="flex w-[4.75rem] shrink-0 flex-col border-l border-[var(--brand-latte)]/60">
+            <div className="relative w-[4.75rem] shrink-0 border-l border-[var(--brand-latte)]/60">
               <div
                 ref={hourListRef}
-                className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-3 pl-2 pr-1 [scrollbar-gutter:stable]"
+                className="absolute inset-0 overflow-y-auto overscroll-contain py-3 pl-2 pr-1 [scrollbar-gutter:stable]"
                 aria-label="Hora"
               >
                 {HOURS.map((h) => {
