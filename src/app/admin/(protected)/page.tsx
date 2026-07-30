@@ -60,7 +60,7 @@ export default async function AdminDashboardPage({
         <Link
           href="/admin/cotizaciones/nueva"
           className={cn(
-            "inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm text-white hover:opacity-90",
+            "inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:opacity-90",
             FOCUS_BRAND_PRIMARY,
           )}
         >
