@@ -178,7 +178,9 @@ export function RemitoAdminItemRows({
           <span className="text-neutral-500">{measureLabel}</span>
         </td>
         <td className="py-2 pr-2 align-middle">
-          <div>{productName}</div>
+          <div className="line-clamp-2 max-w-[16rem] break-words">
+            {productName}
+          </div>
           {needsWeighPrice ? (
             <p className="mt-0.5 text-xs text-amber-800">
               {UNIT_ORDER_PRICE_WARNING}

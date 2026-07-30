@@ -280,7 +280,11 @@ function ProductViewRow({
   return (
     <tr {...rowProps} tabIndex={0} className="admin-table-row border-t border-neutral-100">
       <td className="px-3 py-2 font-mono">{product.code}</td>
-      <td className="px-3 py-2">{product.name}</td>
+      <td className="px-3 py-2">
+        <span className="line-clamp-2 max-w-[18rem] break-words">
+          {product.name}
+        </span>
+      </td>
       <td className="px-3 py-2 text-neutral-600">{product.rubro ?? "—"}</td>
       <td className="px-3 py-2">{formatPrice(product.basePrice)}</td>
       {activeLists.map((l) => {

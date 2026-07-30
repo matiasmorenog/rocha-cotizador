@@ -285,7 +285,9 @@ export function PriceListEditor({
                 <tr key={i.productId} className="border-t border-neutral-100">
                   <td className="px-3 py-2 font-mono">{i.product.code}</td>
                   <td className="px-3 py-2">
-                    {i.product.name}
+                    <span className="line-clamp-2 max-w-[18rem] break-words">
+                      {i.product.name}
+                    </span>
                     {!i.product.active ? (
                       <span className="ml-2 text-xs text-red-600">inactivo</span>
                     ) : null}
