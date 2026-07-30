@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Pencil, Plus, X } from "lucide-react";
 import {
@@ -28,6 +28,7 @@ import {
   RevealMoreTableRow,
   useIncrementalReveal,
 } from "@/hooks/use-incremental-reveal";
+import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
 
 export type ProductTableRow = {
   id: string;
@@ -338,6 +339,9 @@ export function ProductAdminTable({
     resetKey: query,
   });
 
+  const tableHeightLockRef = useRef<HTMLDivElement>(null);
+  useSmoothListHeight(tableHeightLockRef, visible.length);
+
   const colSpan = 6 + activeLists.length;
 
   return (
@@ -364,65 +368,67 @@ export function ProductAdminTable({
       {creating ? (
         <ProductAdminForm onCancel={() => setCreating(false)} />
       ) : null}
-      <DataTableScroll>
-        <table className="w-full min-w-[36rem] text-sm">
-          <thead className="bg-neutral-50 text-left text-neutral-600">
-            <tr>
-              <th className="px-3 py-2">Código</th>
-              <th className="px-3 py-2">Nombre</th>
-              <th className="px-3 py-2">Rubro</th>
-              <th className="px-3 py-2">Base</th>
-              {activeLists.map((l) => (
-                <th key={l.id} className="whitespace-nowrap px-3 py-2">
-                  {l.name}
-                </th>
-              ))}
-              <th className="px-3 py-2">Estado</th>
-              <th className="px-3 py-2">Medida</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map((p) =>
-              editingId === p.id ? (
-                <ProductEditRow
-                  key={p.id}
-                  product={p}
-                  activeLists={activeLists}
-                  onCancel={() => setEditingId(null)}
-                />
-              ) : (
-                <ProductViewRow
-                  key={p.id}
-                  product={p}
-                  activeLists={activeLists}
-                  editDisabled={isBusy}
-                  onStartEdit={() => setEditingId(p.id)}
-                />
-              ),
-            )}
-            <RevealMoreTableRow
-              colSpan={colSpan}
-              enabled={hasMore}
-              onReveal={revealMore}
-              shown={visible.length}
-              total={total}
-            />
-            {filtered.length === 0 ? (
+      <div ref={tableHeightLockRef}>
+        <DataTableScroll>
+          <table className="w-full min-w-[36rem] text-sm">
+            <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
-                <td
-                  colSpan={colSpan}
-                  className="px-3 py-8 text-center text-neutral-500"
-                >
-                  {query.trim()
-                    ? "Sin productos para esa búsqueda"
-                    : "No hay productos"}
-                </td>
+                <th className="px-3 py-2">Código</th>
+                <th className="px-3 py-2">Nombre</th>
+                <th className="px-3 py-2">Rubro</th>
+                <th className="px-3 py-2">Base</th>
+                {activeLists.map((l) => (
+                  <th key={l.id} className="whitespace-nowrap px-3 py-2">
+                    {l.name}
+                  </th>
+                ))}
+                <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2">Medida</th>
+                <th className="px-3 py-2" />
               </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </DataTableScroll>
+            </thead>
+            <tbody>
+              {visible.map((p) =>
+                editingId === p.id ? (
+                  <ProductEditRow
+                    key={p.id}
+                    product={p}
+                    activeLists={activeLists}
+                    onCancel={() => setEditingId(null)}
+                  />
+                ) : (
+                  <ProductViewRow
+                    key={p.id}
+                    product={p}
+                    activeLists={activeLists}
+                    editDisabled={isBusy}
+                    onStartEdit={() => setEditingId(p.id)}
+                  />
+                ),
+              )}
+              <RevealMoreTableRow
+                colSpan={colSpan}
+                enabled={hasMore}
+                onReveal={revealMore}
+                shown={visible.length}
+                total={total}
+              />
+              {filtered.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={colSpan}
+                    className="px-3 py-8 text-center text-neutral-500"
+                  >
+                    {query.trim()
+                      ? "Sin productos para esa búsqueda"
+                      : "No hay productos"}
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </DataTableScroll>
+      </div>
     </div>
   );
 }

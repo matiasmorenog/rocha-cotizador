@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { Pencil, Plus } from "lucide-react";
 import {
   AdminTableActions,
@@ -19,6 +19,7 @@ import {
   RevealMoreTableRow,
   useIncrementalReveal,
 } from "@/hooks/use-incremental-reveal";
+import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
 
 export type CustomerListRow = {
   id: string;
@@ -78,6 +79,9 @@ export function CustomersAdminPanel({
     resetKey: query,
   });
 
+  const tableHeightLockRef = useRef<HTMLDivElement>(null);
+  useSmoothListHeight(tableHeightLockRef, visible.length);
+
   const editing = editingId
     ? customers.find((c) => c.id === editingId)
     : undefined;
@@ -133,91 +137,93 @@ export function CustomersAdminPanel({
         />
       ) : null}
 
-      <DataTableScroll>
-        <table className="w-full min-w-[40rem] text-sm">
-          <thead className="bg-neutral-50 text-left text-neutral-600">
-            <tr>
-              <th className="px-3 py-2">Código</th>
-              <th className="px-3 py-2">Nombre</th>
-              <th className="px-3 py-2">Dirección</th>
-              <th className="px-3 py-2">Teléfono</th>
-              <th className="px-3 py-2">Lista</th>
-              <th className="px-3 py-2">Estado</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
+      <div ref={tableHeightLockRef}>
+        <DataTableScroll>
+          <table className="w-full min-w-[40rem] text-sm">
+            <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
-                <td
-                  colSpan={7}
-                  className="px-3 py-8 text-center text-neutral-500"
-                >
-                  {query.trim()
-                    ? "Sin clientes para esa búsqueda"
-                    : "Sin clientes"}
-                </td>
+                <th className="px-3 py-2">Código</th>
+                <th className="px-3 py-2">Nombre</th>
+                <th className="px-3 py-2">Dirección</th>
+                <th className="px-3 py-2">Teléfono</th>
+                <th className="px-3 py-2">Lista</th>
+                <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2" />
               </tr>
-            ) : (
-              <>
-                {visible.map((c) => {
-                  const wa = c.phone ? whatsappUrl(c.phone) : null;
-                  return (
-                    <tr key={c.id} className="border-t border-neutral-100">
-                      <td className="px-3 py-2 font-mono">{c.code}</td>
-                      <td className="px-3 py-2">{c.name}</td>
-                      <td className="px-3 py-2 text-neutral-700">
-                        {c.address ?? "—"}
-                      </td>
-                      <td className="px-3 py-2 text-neutral-700">
-                        {c.phone && wa ? (
-                          <a
-                            href={wa}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[var(--brand-primary)] underline hover:opacity-80"
-                          >
-                            {c.phone}
-                          </a>
-                        ) : (
-                          (c.phone ?? "—")
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        {c.priceListName ?? "Precio base"}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Badge variant={c.active ? "success" : "danger"}>
-                          {c.active ? "Activo" : "Inactivo"}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <AdminTableActions className="justify-end">
-                          <AdminTableIconAction
-                            label="Editar"
-                            icon={Pencil}
-                            onClick={() => {
-                              setCreating(false);
-                              setEditingId(c.id);
-                            }}
-                          />
-                        </AdminTableActions>
-                      </td>
-                    </tr>
-                  );
-                })}
-                <RevealMoreTableRow
-                  colSpan={7}
-                  enabled={hasMore}
-                  onReveal={revealMore}
-                  shown={visible.length}
-                  total={total}
-                />
-              </>
-            )}
-          </tbody>
-        </table>
-      </DataTableScroll>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="px-3 py-8 text-center text-neutral-500"
+                  >
+                    {query.trim()
+                      ? "Sin clientes para esa búsqueda"
+                      : "Sin clientes"}
+                  </td>
+                </tr>
+              ) : (
+                <>
+                  {visible.map((c) => {
+                    const wa = c.phone ? whatsappUrl(c.phone) : null;
+                    return (
+                      <tr key={c.id} className="border-t border-neutral-100">
+                        <td className="px-3 py-2 font-mono">{c.code}</td>
+                        <td className="px-3 py-2">{c.name}</td>
+                        <td className="px-3 py-2 text-neutral-700">
+                          {c.address ?? "—"}
+                        </td>
+                        <td className="px-3 py-2 text-neutral-700">
+                          {c.phone && wa ? (
+                            <a
+                              href={wa}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-[var(--brand-primary)] underline hover:opacity-80"
+                            >
+                              {c.phone}
+                            </a>
+                          ) : (
+                            (c.phone ?? "—")
+                          )}
+                        </td>
+                        <td className="px-3 py-2">
+                          {c.priceListName ?? "Precio base"}
+                        </td>
+                        <td className="px-3 py-2">
+                          <Badge variant={c.active ? "success" : "danger"}>
+                            {c.active ? "Activo" : "Inactivo"}
+                          </Badge>
+                        </td>
+                        <td className="px-3 py-2 text-right">
+                          <AdminTableActions className="justify-end">
+                            <AdminTableIconAction
+                              label="Editar"
+                              icon={Pencil}
+                              onClick={() => {
+                                setCreating(false);
+                                setEditingId(c.id);
+                              }}
+                            />
+                          </AdminTableActions>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <RevealMoreTableRow
+                    colSpan={7}
+                    enabled={hasMore}
+                    onReveal={revealMore}
+                    shown={visible.length}
+                    total={total}
+                  />
+                </>
+              )}
+            </tbody>
+          </table>
+        </DataTableScroll>
+      </div>
     </div>
   );
 }
