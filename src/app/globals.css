@@ -474,6 +474,79 @@ select:not([multiple]):disabled {
 }
 
 /*
+  Admin cotizaciones: after-cutoff rows expand/collapse.
+  Fade + slight slide on <tr> (~200ms); no height/0fr on table rows.
+  Keep-mount via useExitPresence; reduced-motion → instant unmount.
+*/
+.admin-late-row-enter {
+  animation: quote-draft-row-enter 0.2s ease-out both;
+}
+
+.admin-late-row-exit {
+  animation: quote-draft-row-exit 0.2s ease-in both;
+}
+
+/*
+  Admin mobile drawer: backdrop fade + panel slide from left (~200ms).
+  Keep-mount on close until exit ends (useExitPresence).
+*/
+@keyframes admin-drawer-backdrop-enter {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes admin-drawer-backdrop-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes admin-drawer-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes admin-drawer-panel-exit {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+.admin-drawer-backdrop-enter {
+  animation: admin-drawer-backdrop-enter 0.2s ease-out both;
+}
+
+.admin-drawer-backdrop-exit {
+  animation: admin-drawer-backdrop-exit 0.2s ease-in both;
+}
+
+.admin-drawer-panel-enter {
+  animation: admin-drawer-panel-enter 0.2s ease-out both;
+}
+
+.admin-drawer-panel-exit {
+  animation: admin-drawer-panel-exit 0.2s ease-in both;
+}
+
+/*
   Admin shell breakpoints — plain CSS so visibility never depends on a single
   Tailwind `hidden` + `lg:block` utility pair (if that variant is missing from
   the prod CSS chunk, the sidebar stays display:none forever).
@@ -559,7 +632,13 @@ select:not([multiple]):disabled {
   .quote-unit-warn-enter,
   .quote-unit-warn-exit,
   .quote-unit-banner-enter,
-  .quote-unit-banner-exit {
+  .quote-unit-banner-exit,
+  .admin-late-row-enter,
+  .admin-late-row-exit,
+  .admin-drawer-backdrop-enter,
+  .admin-drawer-backdrop-exit,
+  .admin-drawer-panel-enter,
+  .admin-drawer-panel-exit {
     animation: none;
   }
 

@@ -4,6 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { X } from "lucide-react";
+import {
+  useExitPresence,
+  QUOTE_PICKER_FLOAT_MS,
+} from "@/hooks/use-exit-presence";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 import { useAdminNavStore } from "@/stores/admin-nav-store";
@@ -93,6 +97,10 @@ function AdminSidebarPanel({
 function AdminMobileDrawer({ pathname }: { pathname: string }) {
   const open = useAdminNavStore((s) => s.open);
   const setOpen = useAdminNavStore((s) => s.setOpen);
+  const { present, exiting, animKey } = useExitPresence(
+    open,
+    QUOTE_PICKER_FLOAT_MS,
+  );
 
   useEffect(() => {
     setOpen(false);
@@ -111,22 +119,35 @@ function AdminMobileDrawer({ pathname }: { pathname: string }) {
 
   const close = () => setOpen(false);
 
-  if (!open) return null;
+  if (!present) return null;
 
   return (
     <div className="admin-mobile-drawer-root fixed inset-0 z-50 print:hidden">
       <button
         type="button"
         aria-label="Cerrar menú"
-        className="absolute inset-0 bg-black/40"
+        className={cn(
+          "absolute inset-0 bg-black/40",
+          exiting
+            ? "admin-drawer-backdrop-exit pointer-events-none"
+            : "admin-drawer-backdrop-enter",
+        )}
         onClick={close}
+        tabIndex={exiting ? -1 : undefined}
       />
       <aside
+        key={animKey}
         id="admin-mobile-nav"
         role="dialog"
-        aria-modal="true"
+        aria-modal={exiting ? undefined : true}
+        aria-hidden={exiting || undefined}
         aria-label="Menú de administración"
-        className="relative h-full w-[min(100%,16rem)] overflow-y-auto border-r border-neutral-200 bg-white p-4 shadow-xl"
+        className={cn(
+          "relative h-full w-[min(100%,16rem)] overflow-y-auto border-r border-neutral-200 bg-white p-4 shadow-xl",
+          exiting
+            ? "admin-drawer-panel-exit pointer-events-none"
+            : "admin-drawer-panel-enter",
+        )}
       >
         <AdminSidebarPanel
           pathname={pathname}

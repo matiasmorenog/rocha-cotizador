@@ -10,6 +10,10 @@ import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
+  useExitPresence,
+  QUOTE_PICKER_FLOAT_MS,
+} from "@/hooks/use-exit-presence";
+import {
   ARGENTINA_TZ,
   ORDER_CUTOFF_HOUR_AR,
   splitQuotesByDayCutoff,
@@ -41,15 +45,18 @@ function afterCutoffSummary(count: number): string {
 function QuoteDataRow({
   qrow,
   muted,
+  className,
 }: {
   qrow: QuoteListRow;
   muted?: boolean;
+  className?: string;
 }) {
   return (
     <tr
       className={cn(
         "border-t border-neutral-200",
         muted && "bg-amber-50/40",
+        className,
       )}
     >
       <td className="px-3 py-2">
@@ -96,6 +103,11 @@ export function QuotesAdminPanel({
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lateOpen, setLateOpen] = useState(false);
+  const {
+    present: latePresent,
+    exiting: lateExiting,
+    animKey: lateAnimKey,
+  } = useExitPresence(lateOpen, QUOTE_PICKER_FLOAT_MS);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -134,6 +146,13 @@ export function QuotesAdminPanel({
     () => splitQuotesByDayCutoff(filtered, to),
     [filtered, to],
   );
+
+  // Freeze late rows while exit plays (filter can clear afterCutoff same tick).
+  const [frozenLate, setFrozenLate] = useState(afterCutoff);
+  if (lateOpen && frozenLate !== afterCutoff) {
+    setFrozenLate(afterCutoff);
+  }
+  const lateRows = lateOpen ? afterCutoff : frozenLate;
 
   function buildParams() {
     const params = new URLSearchParams();
@@ -288,7 +307,7 @@ export function QuotesAdminPanel({
                     </span>
                     <ChevronDown
                       className={cn(
-                        "h-4 w-4 shrink-0 text-amber-900/70 transition-transform",
+                        "h-4 w-4 shrink-0 text-amber-900/70 transition-transform duration-200 motion-reduce:transition-none",
                         lateOpen && "rotate-180",
                       )}
                       aria-hidden
@@ -298,9 +317,18 @@ export function QuotesAdminPanel({
               </tr>
             ) : null}
 
-            {lateOpen
-              ? afterCutoff.map((qrow) => (
-                  <QuoteDataRow key={qrow.id} qrow={qrow} muted />
+            {latePresent
+              ? lateRows.map((qrow) => (
+                  <QuoteDataRow
+                    key={`${lateAnimKey}-${qrow.id}`}
+                    qrow={qrow}
+                    muted
+                    className={cn(
+                      lateExiting
+                        ? "admin-late-row-exit pointer-events-none"
+                        : "admin-late-row-enter",
+                    )}
+                  />
                 ))
               : null}
 
