@@ -401,6 +401,8 @@ function ProductPickerInner({
           className={cn(
             showInputSpinner && "pr-10",
             catalogLoading && "cursor-wait",
+            // A/B: thinner focus than global FOCUS_BRAND_BORDER (border-2)
+            "focus-visible:border focus-visible:border-[var(--brand-primary)]",
           )}
         />
         {showInputSpinner ? (
