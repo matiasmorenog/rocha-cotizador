@@ -3,8 +3,9 @@
 # Exit 0 = cancel build; exit 1 = proceed.
 # Docs: https://vercel.com/docs/project-configuration/vercel-json#ignorecommand
 #
-# Requires Preview env var GITHUB_TOKEN (or GH_TOKEN) with pull_requests:read
+# Requires Preview env var GITHUB_TOKEN (or GH_TOKEN) with repo / pull_requests:read
 # so the GitHub API can see draft status on this private repo.
+# Missing token or API errors on feature branches → fail closed (cancel build).
 
 set -u
 
@@ -36,12 +37,16 @@ pr_id="${VERCEL_GIT_PULL_REQUEST_ID:-}"
 token="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
 
 if [[ -z "$owner" || -z "$repo" ]]; then
-  proceed "missing VERCEL_GIT_REPO_* (fail open)"
+  skip "missing VERCEL_GIT_REPO_* (fail closed)"
 fi
 
 if [[ -z "$token" ]]; then
-  echo "⚠️ GITHUB_TOKEN/GH_TOKEN unset — cannot detect draft; fail open"
-  proceed "no GitHub token"
+  # Without a token we cannot see draft status on a private repo. Fail closed
+  # on feature branches so missing Preview env does not burn preview minutes.
+  # Set GITHUB_TOKEN (or GH_TOKEN) in Vercel → Project → Env → Preview
+  # (PAT or gh OAuth with pull_requests:read / repo).
+  echo "⚠️ GITHUB_TOKEN/GH_TOKEN unset — cannot detect draft; fail closed"
+  skip "no GitHub token (fail closed)"
 fi
 
 api="https://api.github.com"
@@ -74,7 +79,7 @@ fetch_open_prs_for_head() {
 }
 
 if [[ -n "$pr_id" ]]; then
-  body="$(fetch_pr_by_number "$pr_id")" || proceed "GitHub API error for PR #${pr_id} (fail open)"
+  body="$(fetch_pr_by_number "$pr_id")" || skip "GitHub API error for PR #${pr_id} (fail closed)"
   draft="$(printf '%s' "$body" | json_is_draft)"
   if [[ "$draft" == "true" ]]; then
     skip "draft PR #${pr_id}"
@@ -83,7 +88,7 @@ if [[ -n "$pr_id" ]]; then
 fi
 
 # Branch push with no PR id yet (or first deploy before id is wired): look up open PRs.
-prs="$(fetch_open_prs_for_head)" || proceed "GitHub API list error (fail open)"
+prs="$(fetch_open_prs_for_head)" || skip "GitHub API list error (fail closed)"
 
 if command -v python3 >/dev/null 2>&1; then
   result="$(printf '%s' "$prs" | python3 -c '

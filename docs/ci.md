@@ -14,7 +14,7 @@ Los PRs en **draft** no consumen CI ni previews:
 
 `vercel.json` ya no usa hacks por branch (`deploymentEnabled` solo apaga auto-deploy de `main`).
 
-**Vercel:** en Project → Environment Variables (Preview) hace falta `GITHUB_TOKEN` o `GH_TOKEN` (PAT con `pull_requests: read`). Sin token el script hace fail-open y **sí** buildea. System env vars de Vercel deben estar expuestas (default).
+**Vercel:** en Project → Environment Variables (Preview) hace falta `GITHUB_TOKEN` o `GH_TOKEN` (PAT / token con `repo` o `pull_requests: read`). Sin token el script hace **fail-closed** en feature branches (cancela el build) para no quemar previews. System env vars de Vercel (`VERCEL_GIT_*`) deben estar expuestas (default).
 
 WIP → abrí draft. Cuando quieras checks/preview → **Ready for review**.
 
