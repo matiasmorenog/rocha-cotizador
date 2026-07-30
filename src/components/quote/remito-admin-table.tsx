@@ -1,8 +1,11 @@
 "use client";
 
+import { useRef } from "react";
 import { RemitoAdminItemRows } from "@/components/quote/remito-admin-item-rows";
 import { useRemitoEditMode } from "@/components/quote/remito-edit-mode";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
+import { useSelectedRow } from "@/hooks/use-selected-row";
 
 export type RemitoAdminLine = {
   itemId: string;
@@ -30,9 +33,13 @@ export function RemitoAdminTable({ quoteId, lines, canDeleteLine }: Props) {
   const { editMode } = useRemitoEditMode();
   const colSpan = editMode ? 6 : 5;
 
+  const tableRef = useRef<HTMLTableElement>(null);
+  useSmoothColumnWidths(tableRef, `${lines.length}|${editMode}`);
+  const { rowProps } = useSelectedRow();
+
   return (
     <DataTableScroll className="rounded-none border-0 bg-transparent">
-      <table className="w-full min-w-[28rem] text-sm">
+      <table ref={tableRef} className="w-full min-w-[28rem] text-sm">
         <thead>
           <tr className="border-b border-neutral-300 text-left text-neutral-600">
             <th className="py-2 pl-2 pr-2 font-medium">Cód.</th>
@@ -66,6 +73,7 @@ export function RemitoAdminTable({ quoteId, lines, canDeleteLine }: Props) {
               orderedByUnit={line.orderedByUnit}
               colSpan={colSpan}
               editMode={editMode}
+              rowProps={rowProps(line.itemId)}
             />
           ))}
         </tbody>

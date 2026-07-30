@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { RemitoWeighPriceEditor } from "@/components/quote/remito-weigh-price-editor";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
-import { formatPrice, formatQty } from "@/lib/utils";
+import { cn, formatPrice, formatQty } from "@/lib/utils";
+import type { RowSelectionProps } from "@/hooks/use-selected-row";
 
 export type RemitoAdminItemRowsProps = {
   quoteId: string;
@@ -28,6 +29,7 @@ export type RemitoAdminItemRowsProps = {
   colSpan: number;
   /** When false, clean view — no icons / edit panels. */
   editMode: boolean;
+  rowProps?: RowSelectionProps;
 };
 
 /**
@@ -49,6 +51,7 @@ export function RemitoAdminItemRows({
   orderedByUnit,
   colSpan,
   editMode,
+  rowProps,
 }: RemitoAdminItemRowsProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -71,7 +74,7 @@ export function RemitoAdminItemRows({
   /** editMode gates panels — stale `editing` while view mode is harmless. */
   const showPanel = editMode && (needsWeighPrice || editing);
 
-  const rowClass = `border-b border-neutral-100${showAmber ? " bg-amber-50" : ""}`;
+  const rowClass = cn("border-b border-neutral-100", showAmber && "bg-amber-50");
 
   /** Match quote draft table: secondary + red hover on delete. */
   const iconBtnClass = "h-8 shrink-0 px-2";
@@ -162,7 +165,11 @@ export function RemitoAdminItemRows({
 
   return (
     <>
-      <tr className={rowClass}>
+      <tr
+        {...rowProps}
+        tabIndex={0}
+        className={cn("admin-table-row", rowClass)}
+      >
         <td className="py-2 pl-2 pr-2 align-middle font-mono text-xs">
           {productCode}
         </td>

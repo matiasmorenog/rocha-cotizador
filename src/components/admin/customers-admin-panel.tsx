@@ -20,6 +20,8 @@ import {
   useIncrementalReveal,
 } from "@/hooks/use-incremental-reveal";
 import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
+import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
+import { useSelectedRow } from "@/hooks/use-selected-row";
 
 export type CustomerListRow = {
   id: string;
@@ -82,6 +84,10 @@ export function CustomersAdminPanel({
   const tableHeightLockRef = useRef<HTMLDivElement>(null);
   useSmoothListHeight(tableHeightLockRef, visible.length);
 
+  const tableRef = useRef<HTMLTableElement>(null);
+  useSmoothColumnWidths(tableRef, `${query}|${visible.length}`);
+  const { rowProps } = useSelectedRow();
+
   const editing = editingId
     ? customers.find((c) => c.id === editingId)
     : undefined;
@@ -139,7 +145,7 @@ export function CustomersAdminPanel({
 
       <div ref={tableHeightLockRef}>
         <DataTableScroll>
-          <table className="w-full min-w-[40rem] text-sm">
+          <table ref={tableRef} className="w-full min-w-[40rem] text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
                 <th className="px-3 py-2">Código</th>
@@ -168,7 +174,12 @@ export function CustomersAdminPanel({
                   {visible.map((c) => {
                     const wa = c.phone ? whatsappUrl(c.phone) : null;
                     return (
-                      <tr key={c.id} className="border-t border-neutral-100">
+                      <tr
+                        key={c.id}
+                        {...rowProps(c.id)}
+                        tabIndex={0}
+                        className="admin-table-row border-t border-neutral-100"
+                      >
                         <td className="px-3 py-2 font-mono">{c.code}</td>
                         <td className="px-3 py-2">{c.name}</td>
                         <td className="px-3 py-2 text-neutral-700">

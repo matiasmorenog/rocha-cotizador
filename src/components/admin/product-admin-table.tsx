@@ -29,6 +29,11 @@ import {
   useIncrementalReveal,
 } from "@/hooks/use-incremental-reveal";
 import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
+import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
+import {
+  useSelectedRow,
+  type RowSelectionProps,
+} from "@/hooks/use-selected-row";
 
 export type ProductTableRow = {
   id: string;
@@ -64,10 +69,12 @@ function ProductEditRow({
   product,
   activeLists,
   onCancel,
+  rowProps,
 }: {
   product: ProductTableRow;
   activeLists: PriceListOption[];
   onCancel: () => void;
+  rowProps?: RowSelectionProps;
 }) {
   const router = useRouter();
   const formId = `product-edit-${product.id}`;
@@ -143,7 +150,11 @@ function ProductEditRow({
   }
 
   return (
-    <tr className="border-t border-neutral-100 bg-neutral-50/60">
+    <tr
+      {...rowProps}
+      tabIndex={0}
+      className="admin-table-row border-t border-neutral-100 bg-neutral-50/60"
+    >
       <td className="px-3 py-2 font-mono text-neutral-700">
         {product.code}
         <form id={formId} onSubmit={onSubmit} className="hidden" />
@@ -258,14 +269,16 @@ function ProductViewRow({
   activeLists,
   editDisabled,
   onStartEdit,
+  rowProps,
 }: {
   product: ProductTableRow;
   activeLists: PriceListOption[];
   editDisabled: boolean;
   onStartEdit: () => void;
+  rowProps?: RowSelectionProps;
 }) {
   return (
-    <tr className="border-t border-neutral-100">
+    <tr {...rowProps} tabIndex={0} className="admin-table-row border-t border-neutral-100">
       <td className="px-3 py-2 font-mono">{product.code}</td>
       <td className="px-3 py-2">{product.name}</td>
       <td className="px-3 py-2 text-neutral-600">{product.rubro ?? "—"}</td>
@@ -342,6 +355,10 @@ export function ProductAdminTable({
   const tableHeightLockRef = useRef<HTMLDivElement>(null);
   useSmoothListHeight(tableHeightLockRef, visible.length);
 
+  const tableRef = useRef<HTMLTableElement>(null);
+  useSmoothColumnWidths(tableRef, `${query}|${visible.length}`);
+  const { rowProps } = useSelectedRow();
+
   const colSpan = 6 + activeLists.length;
 
   return (
@@ -370,7 +387,7 @@ export function ProductAdminTable({
       ) : null}
       <div ref={tableHeightLockRef}>
         <DataTableScroll>
-          <table className="w-full min-w-[36rem] text-sm">
+          <table ref={tableRef} className="w-full min-w-[36rem] text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
                 <th className="px-3 py-2">Código</th>
@@ -395,6 +412,7 @@ export function ProductAdminTable({
                     product={p}
                     activeLists={activeLists}
                     onCancel={() => setEditingId(null)}
+                    rowProps={rowProps(p.id)}
                   />
                 ) : (
                   <ProductViewRow
@@ -403,6 +421,7 @@ export function ProductAdminTable({
                     activeLists={activeLists}
                     editDisabled={isBusy}
                     onStartEdit={() => setEditingId(p.id)}
+                    rowProps={rowProps(p.id)}
                   />
                 ),
               )}

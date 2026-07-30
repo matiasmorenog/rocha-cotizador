@@ -86,6 +86,37 @@ body {
   border-top-right-radius: 0.5rem;
 }
 
+/*
+  Admin table rows: hover + persistent click/focus selection so scrolling a
+  wide table horizontally doesn't lose which row you were reading. The
+  background sits on the actual `<tr>`, which already spans the full
+  (possibly off-screen) row width — no sticky-column trickery needed since
+  these tables don't use sticky columns/headers.
+*/
+.admin-table-row {
+  transition: background-color 150ms ease-out;
+}
+
+/* Grayish — deliberately distinct from the brownish `--brand-primary-soft`
+   selected state below, so hover and selection read as two different things. */
+.admin-table-row:hover {
+  background-color: #f5f5f5;
+}
+
+.admin-table-row[data-selected="true"] {
+  background-color: var(--brand-primary-soft);
+}
+
+.admin-table-row[data-selected="true"]:hover {
+  filter: brightness(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-table-row {
+    transition: none;
+  }
+}
+
 /* Native date/time pickers: icon at field end + brand accent.
    Note: OS/browser popup chrome (Chrome/Safari) cannot be themed;
    accent-color + input indicator are the reliable surface.

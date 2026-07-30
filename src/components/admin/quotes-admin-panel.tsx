@@ -21,6 +21,11 @@ import {
   QUOTE_PICKER_FLOAT_MS,
 } from "@/hooks/use-exit-presence";
 import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
+import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
+import {
+  useSelectedRow,
+  type RowSelectionProps,
+} from "@/hooks/use-selected-row";
 import {
   ARGENTINA_TZ,
   ORDER_CUTOFF_HOUR_AR,
@@ -73,10 +78,12 @@ function QuoteDataRow({
   qrow,
   muted,
   className,
+  rowProps,
 }: {
   qrow: QuoteListRow;
   muted?: boolean;
   className?: string;
+  rowProps?: RowSelectionProps;
 }) {
   const numberCell = (
     <Link
@@ -102,8 +109,10 @@ function QuoteDataRow({
 
   return (
     <tr
+      {...rowProps}
+      tabIndex={0}
       className={cn(
-        "border-t border-neutral-200",
+        "admin-table-row border-t border-neutral-200",
         muted && "bg-amber-50/40",
         className,
       )}
@@ -201,6 +210,10 @@ export function QuotesAdminPanel({
 
   const tableHeightLockRef = useRef<HTMLDivElement>(null);
   useSmoothListHeight(tableHeightLockRef, filtered.length);
+
+  const tableRef = useRef<HTMLTableElement>(null);
+  useSmoothColumnWidths(tableRef, `${query}|${filtered.length}`);
+  const { rowProps } = useSelectedRow();
 
   function buildParams() {
     const params = new URLSearchParams();
@@ -326,7 +339,7 @@ export function QuotesAdminPanel({
 
       <div ref={tableHeightLockRef}>
         <DataTableScroll>
-          <table className="w-full min-w-[42rem] text-sm">
+          <table ref={tableRef} className="w-full min-w-[42rem] text-sm">
             <thead className="border-b border-neutral-200 bg-neutral-50 text-left text-neutral-600">
               <tr>
                 <th className="px-3 py-2">Número</th>
@@ -372,6 +385,7 @@ export function QuotesAdminPanel({
                       key={`${lateAnimKey}-${qrow.id}`}
                       qrow={qrow}
                       muted
+                      rowProps={rowProps(qrow.id)}
                       className={cn(
                         lateExiting
                           ? "admin-late-row-exit pointer-events-none"
@@ -390,7 +404,11 @@ export function QuotesAdminPanel({
               ) : null}
 
               {main.map((qrow) => (
-                <QuoteDataRow key={qrow.id} qrow={qrow} />
+                <QuoteDataRow
+                  key={qrow.id}
+                  qrow={qrow}
+                  rowProps={rowProps(qrow.id)}
+                />
               ))}
 
               {showEmpty ? (
