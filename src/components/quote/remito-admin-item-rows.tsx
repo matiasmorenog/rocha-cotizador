@@ -29,8 +29,10 @@ export type RemitoAdminItemRowsProps = {
   isWeighConfirmProduct: boolean;
   suggestedKgPrice: number;
   orderedByUnit: boolean;
-  /** Total table columns including the actions column. */
+  /** Total table columns including the actions column when editMode. */
   colSpan: number;
+  /** When false, clean view — no icons / edit panels. */
+  editMode: boolean;
 };
 
 /**
@@ -52,6 +54,7 @@ export function RemitoAdminItemRows({
   suggestedKgPrice,
   orderedByUnit,
   colSpan,
+  editMode,
 }: RemitoAdminItemRowsProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -71,7 +74,8 @@ export function RemitoAdminItemRows({
   const previewTotal = previewOk ? qtyNum * priceNum : null;
 
   const showAmber = needsWeighPrice || isWeighConfirmProduct;
-  const showPanel = needsWeighPrice || editing;
+  /** editMode gates panels — stale `editing` while view mode is harmless. */
+  const showPanel = editMode && (needsWeighPrice || editing);
 
   const rowClass = showAmber
     ? "border-b border-amber-200 bg-amber-50"
@@ -188,39 +192,10 @@ export function RemitoAdminItemRows({
         <td className="py-2 pr-2 text-right align-middle font-medium">
           {formatPrice(lineTotal)}
         </td>
-        <td className="w-0 whitespace-nowrap py-2 pl-1 pr-2 align-middle print:hidden">
-          <div className="flex items-center justify-end gap-1">
-            {needsWeighPrice || editing ? (
-              <Button
-                type="button"
-                size="sm"
-                variant="secondary"
-                disabled={busy || !canDelete}
-                className={deleteBtnClass}
-                aria-label={deleteTitle}
-                title={deleteTitle}
-                onClick={onDelete}
-              >
-                {deleting ? (
-                  <Spinner className="h-4 w-4" />
-                ) : (
-                  <Trash2 className="h-4 w-4" aria-hidden />
-                )}
-              </Button>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  className={iconBtnClass}
-                  aria-label="Editar línea"
-                  title="Editar línea"
-                  onClick={openEdit}
-                >
-                  <Pencil className="h-4 w-4" aria-hidden />
-                </Button>
+        {editMode ? (
+          <td className="w-0 whitespace-nowrap py-2 pl-1 pr-2 align-middle print:hidden">
+            <div className="flex items-center justify-end gap-1">
+              {needsWeighPrice || editing ? (
                 <Button
                   type="button"
                   size="sm"
@@ -237,10 +212,41 @@ export function RemitoAdminItemRows({
                     <Trash2 className="h-4 w-4" aria-hidden />
                   )}
                 </Button>
-              </>
-            )}
-          </div>
-        </td>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy}
+                    className={iconBtnClass}
+                    aria-label="Editar línea"
+                    title="Editar línea"
+                    onClick={openEdit}
+                  >
+                    <Pencil className="h-4 w-4" aria-hidden />
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={busy || !canDelete}
+                    className={deleteBtnClass}
+                    aria-label={deleteTitle}
+                    title={deleteTitle}
+                    onClick={onDelete}
+                  >
+                    {deleting ? (
+                      <Spinner className="h-4 w-4" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" aria-hidden />
+                    )}
+                  </Button>
+                </>
+              )}
+            </div>
+          </td>
+        ) : null}
       </tr>
 
       {showPanel ? (
@@ -256,14 +262,7 @@ export function RemitoAdminItemRows({
                 orderedByUnit={orderedByUnit}
               />
             ) : (
-              <form
-                onSubmit={onSave}
-                className={
-                  showAmber
-                    ? "space-y-2 rounded-md border border-amber-300 bg-amber-50/80 p-2"
-                    : "space-y-2 rounded-md border border-neutral-300 bg-neutral-50 p-2"
-                }
-              >
+              <form onSubmit={onSave} className="space-y-2">
                 <p
                   className={
                     showAmber
@@ -352,7 +351,7 @@ export function RemitoAdminItemRows({
             ) : null}
           </td>
         </tr>
-      ) : error ? (
+      ) : editMode && error ? (
         <tr className={`${rowClass} print:hidden`}>
           <td colSpan={colSpan} className="px-2 pb-2 pt-0">
             <p className="text-xs text-red-700">{error}</p>

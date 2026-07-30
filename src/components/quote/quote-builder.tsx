@@ -350,9 +350,11 @@ export function QuoteBuilder({
                   animateEnter={animateEnter}
                   onExitComplete={() => completeExit(l.id)}
                   onEnterComplete={() => completeEnter(l.id)}
-                  className={`border-t border-neutral-100 ${
-                    l.orderByUnit ? "bg-amber-50/40" : ""
-                  }`}
+                  className={
+                    l.orderByUnit
+                      ? "border-t border-amber-200 bg-amber-50"
+                      : "border-t border-neutral-100"
+                  }
                 >
                   <td className="px-3 py-2 font-mono text-xs">{l.code}</td>
                   <td className="px-3 py-2">

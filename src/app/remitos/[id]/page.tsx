@@ -18,7 +18,11 @@ import {
 } from "@/lib/whatsapp";
 import { BrandLogo } from "@/components/brand-logo";
 import { PrintButton } from "@/components/quote/print-button";
-import { RemitoAdminItemRows } from "@/components/quote/remito-admin-item-rows";
+import { RemitoAdminTable } from "@/components/quote/remito-admin-table";
+import {
+  RemitoEditModeProvider,
+  RemitoEditModeToggle,
+} from "@/components/quote/remito-edit-mode";
 import { WhatsAppNotifyButton } from "@/components/quote/whatsapp-notify-button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import {
@@ -135,7 +139,35 @@ export default async function RemitoDetailPage({
   ).length;
   const canDeleteLine = quote.items.length > 1;
 
-  return (
+  const adminLines = isAdmin
+    ? quote.items.map((item) => {
+        const allowsUnitOrder = item.productId
+          ? (allowsUnitOrderByProductId.get(item.productId) ?? false)
+          : false;
+        const needsWeighPrice =
+          item.orderByUnit || Number(item.unitPrice) === 0;
+        return {
+          itemId: item.id,
+          productCode: item.productCode,
+          productName: item.productName,
+          qty: Number(item.qty),
+          unitPrice: Number(item.unitPrice),
+          lineTotal: Number(item.lineTotal),
+          measureLabel: quoteLineMeasureLabel(
+            item.orderByUnit,
+            allowsUnitOrder,
+          ),
+          needsWeighPrice,
+          isWeighConfirmProduct: allowsUnitOrder,
+          suggestedKgPrice: item.productId
+            ? (kgPriceByProductId.get(item.productId) ?? 0)
+            : 0,
+          orderedByUnit: item.orderByUnit,
+        };
+      })
+    : [];
+
+  const pageBody = (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 print:hidden">
         <div>
@@ -154,7 +186,7 @@ export default async function RemitoDetailPage({
             </p>
           ) : null}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Link
             href={session.user.role === "ADMIN" ? "/admin/cotizaciones" : "/remitos"}
             className="inline-flex h-10 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm"
@@ -162,6 +194,7 @@ export default async function RemitoDetailPage({
             Volver
           </Link>
           <PrintButton />
+          {isAdmin ? <RemitoEditModeToggle /> : null}
         </div>
       </div>
 
@@ -194,97 +227,75 @@ export default async function RemitoDetailPage({
           </div>
         </header>
 
-        <DataTableScroll className="rounded-none border-0 bg-transparent">
-          <table className="w-full min-w-[28rem] text-sm">
-            <thead>
-              <tr className="border-b border-neutral-300 text-left text-neutral-600">
-                <th className="py-2 pl-2 pr-2 font-medium">Cód.</th>
-                <th className="py-2 pr-2 font-medium">Cant.</th>
-                <th className="py-2 pr-2 font-medium">Artículo</th>
-                <th className="py-2 pr-2 text-right font-medium">Precio</th>
-                <th className="py-2 pr-2 text-right font-medium">Importe</th>
-                {isAdmin ? (
-                  <th className="w-0 py-2 pl-1 pr-2 print:hidden" aria-label="Acciones" />
-                ) : null}
-              </tr>
-            </thead>
-            <tbody>
-              {quote.items.map((item) => {
-                const allowsUnitOrder = item.productId
-                  ? (allowsUnitOrderByProductId.get(item.productId) ?? false)
-                  : false;
-                const needsWeighPrice =
-                  item.orderByUnit || Number(item.unitPrice) === 0;
-                /** Weigh-confirm products stay amber even after $/kg set. */
-                const isWeighConfirmProduct = allowsUnitOrder;
-                const showAmber = needsWeighPrice || isWeighConfirmProduct;
-                const measureLabel = quoteLineMeasureLabel(
-                  item.orderByUnit,
-                  allowsUnitOrder,
-                );
-
-                if (isAdmin) {
-                  return (
-                    <RemitoAdminItemRows
-                      key={item.id}
-                      quoteId={quote.id}
-                      itemId={item.id}
-                      productCode={item.productCode}
-                      productName={item.productName}
-                      qty={Number(item.qty)}
-                      unitPrice={Number(item.unitPrice)}
-                      lineTotal={Number(item.lineTotal)}
-                      measureLabel={measureLabel}
-                      canDelete={canDeleteLine}
-                      needsWeighPrice={needsWeighPrice}
-                      isWeighConfirmProduct={isWeighConfirmProduct}
-                      suggestedKgPrice={
-                        item.productId
-                          ? (kgPriceByProductId.get(item.productId) ?? 0)
-                          : 0
-                      }
-                      orderedByUnit={item.orderByUnit}
-                      colSpan={6}
-                    />
+        {isAdmin ? (
+          <RemitoAdminTable
+            quoteId={quote.id}
+            lines={adminLines}
+            canDeleteLine={canDeleteLine}
+          />
+        ) : (
+          <DataTableScroll className="rounded-none border-0 bg-transparent">
+            <table className="w-full min-w-[28rem] text-sm">
+              <thead>
+                <tr className="border-b border-neutral-300 text-left text-neutral-600">
+                  <th className="py-2 pl-2 pr-2 font-medium">Cód.</th>
+                  <th className="py-2 pr-2 font-medium">Cant.</th>
+                  <th className="py-2 pr-2 font-medium">Artículo</th>
+                  <th className="py-2 pr-2 text-right font-medium">Precio</th>
+                  <th className="py-2 pr-2 text-right font-medium">Importe</th>
+                </tr>
+              </thead>
+              <tbody>
+                {quote.items.map((item) => {
+                  const allowsUnitOrder = item.productId
+                    ? (allowsUnitOrderByProductId.get(item.productId) ?? false)
+                    : false;
+                  const needsWeighPrice =
+                    item.orderByUnit || Number(item.unitPrice) === 0;
+                  const isWeighConfirmProduct = allowsUnitOrder;
+                  const showAmber = needsWeighPrice || isWeighConfirmProduct;
+                  const measureLabel = quoteLineMeasureLabel(
+                    item.orderByUnit,
+                    allowsUnitOrder,
                   );
-                }
 
-                return (
-                  <tr
-                    key={item.id}
-                    className={
-                      showAmber
-                        ? "border-b border-amber-200 bg-amber-50"
-                        : "border-b border-neutral-100"
-                    }
-                  >
-                    <td className="py-2 pl-2 pr-2 align-middle font-mono text-xs">
-                      {item.productCode}
-                    </td>
-                    <td className="py-2 pr-2 align-middle">
-                      {formatQty(item.qty)}{" "}
-                      <span className="text-neutral-500">{measureLabel}</span>
-                    </td>
-                    <td className="py-2 pr-2 align-middle">
-                      <div>{item.productName}</div>
-                      {needsWeighPrice ? (
-                        <p className="mt-0.5 text-xs text-amber-800">
-                          {UNIT_ORDER_PRICE_WARNING}
-                        </p>
-                      ) : null}
-                    </td>
-                    <td className="py-2 pr-2 text-right align-middle">
-                      {formatPrice(item.unitPrice)}
-                    </td>
-                    <td className="py-2 pr-2 text-right align-middle font-medium">
-                      {formatPrice(item.lineTotal)}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </DataTableScroll>
+                  return (
+                    <tr
+                      key={item.id}
+                      className={
+                        showAmber
+                          ? "border-b border-amber-200 bg-amber-50"
+                          : "border-b border-neutral-100"
+                      }
+                    >
+                      <td className="py-2 pl-2 pr-2 align-middle font-mono text-xs">
+                        {item.productCode}
+                      </td>
+                      <td className="py-2 pr-2 align-middle">
+                        {formatQty(item.qty)}{" "}
+                        <span className="text-neutral-500">{measureLabel}</span>
+                      </td>
+                      <td className="py-2 pr-2 align-middle">
+                        <div>{item.productName}</div>
+                        {needsWeighPrice ? (
+                          <p className="mt-0.5 text-xs text-amber-800">
+                            {UNIT_ORDER_PRICE_WARNING}
+                          </p>
+                        ) : null}
+                      </td>
+                      <td className="py-2 pr-2 text-right align-middle">
+                        {formatPrice(item.unitPrice)}
+                      </td>
+                      <td className="py-2 pr-2 text-right align-middle font-medium">
+                        {formatPrice(item.lineTotal)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </DataTableScroll>
+        )}
 
         {quote.notes ? (
           <div className="mt-6 border-t border-neutral-200 pt-4">
@@ -305,4 +316,10 @@ export default async function RemitoDetailPage({
       </article>
     </div>
   );
+
+  if (isAdmin) {
+    return <RemitoEditModeProvider>{pageBody}</RemitoEditModeProvider>;
+  }
+
+  return pageBody;
 }
