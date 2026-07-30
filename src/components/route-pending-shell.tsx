@@ -80,6 +80,9 @@ type RoutePendingShellProps = {
 /**
  * On soft-nav start (`pending`), cover children with a destination skeleton
  * immediately — do not wait for Next `loading.tsx` to swap the segment.
+ *
+ * Overlay bleeds out of root `main` padding (`px-4 py-6`) so one solid cream
+ * surface meets the header edge-to-edge — no inset panel over body radials.
  */
 export function RoutePendingShell({ children, variant }: RoutePendingShellProps) {
   const { pending, pendingPath } = useRouteLoading();
@@ -89,7 +92,7 @@ export function RoutePendingShell({ children, variant }: RoutePendingShellProps)
     variant === "admin" ? adminSkeletonFor(path) : customerSkeletonFor(path);
 
   return (
-    <div className="relative">
+    <div className={cn("relative", pending && "min-h-[12rem]")}>
       <div
         className={cn(pending && "invisible pointer-events-none select-none")}
         aria-hidden={pending || undefined}
@@ -100,7 +103,7 @@ export function RoutePendingShell({ children, variant }: RoutePendingShellProps)
       {pending ? (
         <div
           data-route-pending=""
-          className="absolute inset-0 z-[5] min-h-full cursor-wait overflow-auto bg-[var(--background)]"
+          className="absolute -inset-x-4 -inset-y-6 z-[5] cursor-wait overflow-auto bg-[var(--background)] px-4 py-6"
           role="status"
           aria-busy="true"
           aria-live="polite"
