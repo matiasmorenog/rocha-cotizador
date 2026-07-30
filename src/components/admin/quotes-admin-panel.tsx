@@ -1,10 +1,11 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -94,6 +95,29 @@ export function QuotesAdminPanel({
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lateOpen, setLateOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const el = searchInputRef.current;
+    if (!el) return;
+
+    function isIdleFocus(node: Element | null) {
+      return (
+        !node ||
+        node === document.body ||
+        node === document.documentElement ||
+        node === el
+      );
+    }
+
+    // Mount-only: focus search unless user already moved focus elsewhere.
+    if (!isIdleFocus(document.activeElement)) return;
+
+    queueMicrotask(() => {
+      if (!isIdleFocus(document.activeElement)) return;
+      el.focus({ preventScroll: true });
+    });
+  }, []);
 
   const filtered = useMemo(
     () =>
@@ -166,64 +190,65 @@ export function QuotesAdminPanel({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <label className="flex min-w-0 flex-col gap-1 text-xs text-neutral-600">
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
               Desde
-              <Input
-                type="datetime-local"
+              <DatetimeLocalPicker
                 value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                className="w-full"
+                onChange={setFrom}
+                aria-label="Desde"
               />
             </label>
-            <label className="flex min-w-0 flex-col gap-1 text-xs text-neutral-600">
+            <label className="flex w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
               Hasta
-              <Input
-                type="datetime-local"
+              <DatetimeLocalPicker
                 value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="w-full"
+                onChange={setTo}
+                aria-label="Hasta"
               />
             </label>
-          </div>
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {error ? (
+              <p className="w-full text-sm text-red-600 sm:order-last">{error}</p>
+            ) : null}
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <button
-              type="submit"
-              disabled={loading}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-            >
-              {loading ? (
-                <>
-                  <Spinner />
-                  Filtrando…
-                </>
-              ) : (
-                "Filtrar lista"
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={onDownload}
-              disabled={downloading}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-            >
-              {downloading ? (
-                <>
-                  <Spinner className="text-white" />
-                  Generando…
-                </>
-              ) : (
-                "Descargar PDF"
-              )}
-            </button>
+            <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:items-center">
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-900 hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                {loading ? (
+                  <>
+                    <Spinner />
+                    Filtrando…
+                  </>
+                ) : (
+                  "Filtrar lista"
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={onDownload}
+                disabled={downloading}
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                {downloading ? (
+                  <>
+                    <Spinner className="text-white" />
+                    Generando…
+                  </>
+                ) : (
+                  "Descargar PDF"
+                )}
+              </button>
+            </div>
           </div>
         </form>
       </div>
 
       <Input
+        ref={searchInputRef}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         placeholder="Buscar número o cliente…"

@@ -86,8 +86,9 @@ body {
 }
 
 /* Native date/time pickers: icon at field end + brand accent.
-   Note: OS/browser popup chrome (Chrome/Safari) cannot be fully themed red;
-   accent-color + input indicator are the reliable surface. */
+   Note: OS/browser popup chrome (Chrome/Safari) cannot be themed;
+   accent-color + input indicator are the reliable surface.
+   Admin quotes filter uses DatetimeLocalPicker (custom, brand-themed). */
 input[type="date"],
 input[type="datetime-local"],
 input[type="time"],
