@@ -86,7 +86,7 @@ export function CustomersAdminPanel({
 
   const tableRef = useRef<HTMLTableElement>(null);
   useSmoothColumnWidths(tableRef, `${query}|${visible.length}`);
-  const { rowProps } = useSelectedRow();
+  const { rowProps } = useSelectedRow(visible.map((c) => c.id));
 
   const editing = editingId
     ? customers.find((c) => c.id === editingId)

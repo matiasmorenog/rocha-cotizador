@@ -357,7 +357,7 @@ export function ProductAdminTable({
 
   const tableRef = useRef<HTMLTableElement>(null);
   useSmoothColumnWidths(tableRef, `${query}|${visible.length}`);
-  const { rowProps } = useSelectedRow();
+  const { rowProps } = useSelectedRow(visible.map((p) => p.id));
 
   const colSpan = 6 + activeLists.length;
 

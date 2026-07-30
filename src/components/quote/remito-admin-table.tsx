@@ -35,7 +35,7 @@ export function RemitoAdminTable({ quoteId, lines, canDeleteLine }: Props) {
 
   const tableRef = useRef<HTMLTableElement>(null);
   useSmoothColumnWidths(tableRef, `${lines.length}|${editMode}`);
-  const { rowProps } = useSelectedRow();
+  const { rowProps } = useSelectedRow(lines.map((line) => line.itemId));
 
   return (
     <DataTableScroll className="rounded-none border-0 bg-transparent">

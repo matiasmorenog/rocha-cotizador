@@ -213,7 +213,14 @@ export function QuotesAdminPanel({
 
   const tableRef = useRef<HTMLTableElement>(null);
   useSmoothColumnWidths(tableRef, `${query}|${filtered.length}`);
-  const { rowProps } = useSelectedRow();
+  const rowIds = useMemo(
+    () => [
+      ...(latePresent ? lateRows.map((r) => r.id) : []),
+      ...main.map((r) => r.id),
+    ],
+    [latePresent, lateRows, main],
+  );
+  const { rowProps } = useSelectedRow(rowIds);
 
   function buildParams() {
     const params = new URLSearchParams();
