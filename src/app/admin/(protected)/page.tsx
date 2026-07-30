@@ -7,7 +7,40 @@ import { cn, formatPrice } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const { customers, products, quotesToday, recent } = await getAdminDashboardData();
+  const {
+    customers,
+    customersInactive,
+    products,
+    productsInactive,
+    quotesToday,
+    quotesTodayTotal,
+    quotesYesterday,
+    recent,
+  } = await getAdminDashboardData();
+
+  const stats: { label: string; value: number | string; hint: string }[] = [
+    {
+      label: "Clientes activos",
+      value: customers,
+      hint:
+        customersInactive > 0
+          ? `${customersInactive} inactivo${customersInactive === 1 ? "" : "s"}`
+          : "Sin inactivos",
+    },
+    {
+      label: "Productos activos",
+      value: products,
+      hint:
+        productsInactive > 0
+          ? `${productsInactive} inactivo${productsInactive === 1 ? "" : "s"}`
+          : "Sin inactivos",
+    },
+    {
+      label: "Cotizaciones hoy",
+      value: quotesToday,
+      hint: `${formatPrice(quotesTodayTotal)} · ayer ${quotesYesterday}`,
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -24,17 +57,16 @@ export default async function AdminDashboardPage() {
         </Link>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
-        {[
-          { label: "Clientes activos", value: customers },
-          { label: "Productos activos", value: products },
-          { label: "Cotizaciones hoy", value: quotesToday },
-        ].map((s) => (
+        {stats.map((s) => (
           <div
             key={s.label}
             className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
           >
             <p className="text-xs uppercase tracking-wide text-neutral-500">{s.label}</p>
-            <p className="mt-1 text-3xl font-semibold text-neutral-900">{s.value}</p>
+            <p className="mt-1 text-3xl font-semibold tabular-nums text-neutral-900">
+              {s.value}
+            </p>
+            <p className="mt-1 text-xs text-neutral-500">{s.hint}</p>
           </div>
         ))}
       </div>

@@ -432,6 +432,7 @@ export function SkeletonAdminDashboardPage() {
           >
             <Skeleton className="h-3 w-28" />
             <Skeleton className="mt-2 h-9 w-16" />
+            <Skeleton className="mt-2 h-3 w-36" />
           </div>
         ))}
       </div>
