@@ -2,6 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { Pencil, Plus } from "lucide-react";
+import {
+  AdminTableActions,
+  AdminTableIconAction,
+} from "@/components/admin/admin-table";
 import { CustomerAdminForm } from "@/components/admin/customer-admin-form";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -188,18 +192,16 @@ export function CustomersAdminPanel({
                         </Badge>
                       </td>
                       <td className="px-3 py-2 text-right">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCreating(false);
-                            setEditingId(c.id);
-                          }}
-                          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
-                          aria-label="Editar"
-                          title="Editar"
-                        >
-                          <Pencil className="h-4 w-4" aria-hidden />
-                        </button>
+                        <AdminTableActions className="justify-end">
+                          <AdminTableIconAction
+                            label="Editar"
+                            icon={Pencil}
+                            onClick={() => {
+                              setCreating(false);
+                              setEditingId(c.id);
+                            }}
+                          />
+                        </AdminTableActions>
                       </td>
                     </tr>
                   );

@@ -1,10 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  AdminTableActions,
+  AdminTableIconAction,
+} from "@/components/admin/admin-table";
 
 export function PriceListRowActions({
   id,
@@ -50,32 +52,24 @@ export function PriceListRowActions({
 
   return (
     <div className="flex flex-col items-end gap-1">
-      <div className="flex items-center justify-end gap-2">
-        <Link
+      <AdminTableActions className="justify-end">
+        <AdminTableIconAction
+          label="Editar"
+          icon={Pencil}
           href={`/admin/listas-precios/${id}`}
-          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
-          aria-label="Editar"
-          title="Editar"
-        >
-          <Pencil className="h-4 w-4" aria-hidden />
-        </Link>
+        />
         {!isBase ? (
-          <Button
-            type="button"
+          <AdminTableIconAction
+            label="Eliminar"
+            icon={Trash2}
             variant="destructive"
-            size="sm"
-            disabled={loading}
+            loading={loading}
             onClick={() => void onDelete()}
-            className="h-8 w-8 px-0"
-            aria-label="Eliminar"
-            title="Eliminar"
-          >
-            <Trash2 className="h-4 w-4" aria-hidden />
-          </Button>
+          />
         ) : (
-          <span className="inline-block h-8 w-8 shrink-0" aria-hidden />
+          <span className="inline-block size-8 shrink-0" aria-hidden />
         )}
-      </div>
+      </AdminTableActions>
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
     </div>
   );
