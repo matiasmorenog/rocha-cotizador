@@ -10,7 +10,7 @@ let lastPlayAt = 0;
 /** Nodes for the chime currently ringing — lets a dismiss cut it instantly. */
 let activeNodes: { osc: OscillatorNode; gain: GainNode }[] = [];
 
-const SOUND_DEDUPE_MS = 700;
+const SOUND_DEDUPE_MS = 800;
 /** Peak gain per note (was 0.07 — barely audible at max Mac volume). */
 const PEAK_GAIN = 0.65;
 /** Fade when force-stopped mid-note — short enough to not be its own click/pop. */
@@ -27,7 +27,14 @@ function getCtx(): AudioContext | null {
   return audioCtx;
 }
 
-/** Two-note chime — audible but not harsh. */
+/**
+ * Single-onset chord chime — audible but not harsh.
+ * Was previously a two-note arpeggio (G5 then B5, 110ms apart); every
+ * legitimate single play of that pattern is heard as "ding-ding", which
+ * reads as a double sound regardless of how well channel-level dedupe
+ * works upstream. Both notes now start at the same instant (a dyad) so
+ * one notification event produces exactly one perceived chime.
+ */
 export function playAdminNotificationSound(): void {
   const now = Date.now();
   if (now - lastPlayAt < SOUND_DEDUPE_MS) return;
@@ -58,7 +65,7 @@ export function playAdminNotificationSound(): void {
     const t0 = ctx.currentTime;
     const notes = [
       { freq: 784, at: 0 }, // G5
-      { freq: 988, at: 0.11 }, // B5
+      { freq: 988, at: 0 }, // B5 — same onset as G5, forms one dyad, not a second beep
     ];
     for (const note of notes) {
       const osc = ctx.createOscillator();
