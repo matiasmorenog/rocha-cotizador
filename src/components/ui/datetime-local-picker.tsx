@@ -20,6 +20,7 @@ import {
   FOCUS_BRAND_PRIMARY,
 } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
+import { useExitPresence } from "@/hooks/use-exit-presence";
 
 const WEEKDAYS = ["L", "M", "X", "J", "V", "S", "D"] as const;
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -104,6 +105,7 @@ export function DatetimeLocalPicker({
   const rootRef = useRef<HTMLDivElement>(null);
   const hourListRef = useRef<HTMLDivElement>(null);
   const panelId = useId();
+  const { present, exiting, animKey } = useExitPresence(open);
 
   const selected = partsFromValue(value);
   const fallbackNow = (): Parts => {
@@ -257,12 +259,19 @@ export function DatetimeLocalPicker({
         />
       </button>
 
-      {open ? (
+      {present ? (
         <div
+          key={animKey}
           id={panelId}
           role="dialog"
           aria-label="Elegir fecha y hora"
-          className="absolute left-0 z-50 mt-1 w-[min(100vw-2rem,22.5rem)] overflow-hidden rounded-lg border border-[var(--brand-latte)]/70 bg-white shadow-lg"
+          aria-hidden={exiting || undefined}
+          className={cn(
+            "absolute left-0 z-50 mt-1 w-[min(100vw-2rem,22.5rem)] overflow-hidden rounded-lg border border-[var(--brand-latte)]/70 bg-white shadow-lg",
+            exiting
+              ? "quote-picker-float-exit pointer-events-none"
+              : "quote-picker-float-enter",
+          )}
         >
           <div className="flex items-stretch">
             <div className="min-w-0 flex-1 p-3">
