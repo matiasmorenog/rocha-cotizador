@@ -1,0 +1,33 @@
+---
+description: Draft PRs skip CI and Vercel previews until marked ready
+alwaysApply: true
+---
+
+# Draft PRs = no checks
+
+Save CI/Vercel until the PR is ready for review.
+
+## Rule
+
+| PR state | GitHub Actions | Vercel preview |
+|----------|----------------|----------------|
+| **draft** | Jobs skipped (`ci.yml` `if`) | Ignored via `scripts/vercel-ignore-draft-pr.sh` |
+| **ready** | Runs normally | Preview builds |
+| **push** to `development` / `main` | Always runs (not a PR event) | `main` auto-deploy off; `development` builds |
+
+## Agent behavior
+
+- Open WIP as **draft** when checks/previews not needed yet.
+- Mark **Ready for review** when you want lint/typecheck + preview (triggers `ready_for_review`).
+- Do **not** add branch-only `deploymentEnabled` hacks for draft pause — use this global rule.
+- After merge of draft-skip tooling: rebase open draft feature PRs onto `development` so they pick up `ci.yml` / `vercel.json`.
+
+## Vercel token
+
+Preview env needs `GITHUB_TOKEN` (or `GH_TOKEN`) with `pull_requests: read` so the ignore script can see draft status on this private repo. Without it, script fails open (builds).
+
+## Refs
+
+- `.github/workflows/ci.yml`
+- `scripts/vercel-ignore-draft-pr.sh`
+- `docs/ci.md`
