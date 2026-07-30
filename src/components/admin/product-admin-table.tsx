@@ -22,6 +22,12 @@ import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { cn, formatPrice } from "@/lib/utils";
 import { filterFoldedSearch } from "@/lib/search-fold";
+import {
+  INCREMENTAL_REVEAL_INITIAL,
+  INCREMENTAL_REVEAL_STEP,
+  RevealMoreTableRow,
+  useIncrementalReveal,
+} from "@/hooks/use-incremental-reveal";
 
 export type ProductTableRow = {
   id: string;
@@ -321,6 +327,19 @@ export function ProductAdminTable({
     [products, query],
   );
 
+  const {
+    visible,
+    hasMore,
+    revealMore,
+    total,
+  } = useIncrementalReveal(filtered, {
+    initial: INCREMENTAL_REVEAL_INITIAL,
+    step: INCREMENTAL_REVEAL_STEP,
+    resetKey: query,
+  });
+
+  const colSpan = 6 + activeLists.length;
+
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -364,7 +383,7 @@ export function ProductAdminTable({
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p) =>
+            {visible.map((p) =>
               editingId === p.id ? (
                 <ProductEditRow
                   key={p.id}
@@ -382,10 +401,17 @@ export function ProductAdminTable({
                 />
               ),
             )}
+            <RevealMoreTableRow
+              colSpan={colSpan}
+              enabled={hasMore}
+              onReveal={revealMore}
+              shown={visible.length}
+              total={total}
+            />
             {filtered.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6 + activeLists.length}
+                  colSpan={colSpan}
                   className="px-3 py-8 text-center text-neutral-500"
                 >
                   {query.trim()

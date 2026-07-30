@@ -10,6 +10,12 @@ import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { formatPrice } from "@/lib/utils";
 import { filterFoldedSearch } from "@/lib/search-fold";
+import {
+  INCREMENTAL_REVEAL_INITIAL,
+  INCREMENTAL_REVEAL_STEP,
+  RevealMoreTableRow,
+  useIncrementalReveal,
+} from "@/hooks/use-incremental-reveal";
 
 type ItemRow = {
   productId: string;
@@ -65,6 +71,19 @@ export function PriceListEditor({
       }),
     [filter, priceList.items],
   );
+
+  const {
+    visible,
+    hasMore,
+    revealMore,
+    total,
+  } = useIncrementalReveal(filtered, {
+    initial: INCREMENTAL_REVEAL_INITIAL,
+    step: INCREMENTAL_REVEAL_STEP,
+    resetKey: filter,
+  });
+
+  const colSpan = isBase ? 3 : 4;
 
   async function saveMeta(e: FormEvent) {
     e.preventDefault();
@@ -262,7 +281,7 @@ export function PriceListEditor({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((i) => (
+              {visible.map((i) => (
                 <tr key={i.productId} className="border-t border-neutral-100">
                   <td className="px-3 py-2 font-mono">{i.product.code}</td>
                   <td className="px-3 py-2">
@@ -293,6 +312,13 @@ export function PriceListEditor({
                   </td>
                 </tr>
               ))}
+              <RevealMoreTableRow
+                colSpan={colSpan}
+                enabled={hasMore}
+                onReveal={revealMore}
+                shown={visible.length}
+                total={total}
+              />
             </tbody>
           </table>
         </DataTableScroll>

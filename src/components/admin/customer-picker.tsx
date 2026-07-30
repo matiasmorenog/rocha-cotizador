@@ -16,6 +16,11 @@ import { cn } from "@/lib/utils";
 import { filterFoldedSearch } from "@/lib/search-fold";
 import { useAnchoredFloatingStyle } from "@/hooks/use-anchored-floating-style";
 import { useIsClient } from "@/hooks/use-is-client";
+import {
+  PICKER_REVEAL_INITIAL,
+  PICKER_REVEAL_STEP,
+  useIncrementalReveal,
+} from "@/hooks/use-incremental-reveal";
 
 export type PickedCustomer = {
   id: string;
@@ -48,11 +53,11 @@ function activeHits(raw: SearchHit[] | undefined): SearchHit[] {
   return (raw ?? []).filter((c) => c.active);
 }
 
-function filterCustomers(catalog: SearchHit[], q: string, take = 30): SearchHit[] {
+function filterCustomers(catalog: SearchHit[], q: string): SearchHit[] {
+  // No take cap: filter full preload; DOM windowed in the listbox.
   return filterFoldedSearch(catalog, q, {
     primary: [(c) => c.code],
     secondary: [(c) => c.name],
-    take,
   });
 }
 
@@ -118,6 +123,17 @@ export function CustomerPicker({
     return warmResults;
   }, [warmResults, coldResults]);
 
+  const {
+    visible: visibleResults,
+    hasMore: hasMoreResults,
+    ensureIndex,
+    onScroll: onListScroll,
+  } = useIncrementalReveal(results, {
+    initial: PICKER_REVEAL_INITIAL,
+    step: PICKER_REVEAL_STEP,
+    resetKey: trimmedQuery,
+  });
+
   const listOpen =
     !listDismissed &&
     trimmedQuery.length > 0 &&
@@ -170,11 +186,16 @@ export function CustomerPicker({
 
   useEffect(() => {
     if (!showList || activeHighlight < 0) return;
+    ensureIndex(activeHighlight);
+  }, [activeHighlight, showList, ensureIndex]);
+
+  useEffect(() => {
+    if (!showList || activeHighlight < 0) return;
     const el = listRef.current?.querySelector<HTMLElement>(
       `[data-customer-option="${activeHighlight}"]`,
     );
     el?.scrollIntoView({ block: "nearest" });
-  }, [activeHighlight, showList, results]);
+  }, [activeHighlight, showList, visibleResults.length]);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -373,8 +394,9 @@ export function CustomerPicker({
                 id="customer-search-listbox"
                 role="listbox"
                 className="max-h-64 overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
+                onScroll={onListScroll}
               >
-                {results.map((c, index) => (
+                {visibleResults.map((c, index) => (
                   <li key={c.id} role="presentation">
                     <button
                       type="button"
@@ -400,6 +422,14 @@ export function CustomerPicker({
                     </button>
                   </li>
                 ))}
+                {hasMoreResults ? (
+                  <li
+                    role="presentation"
+                    className="px-3 py-1.5 text-center text-xs text-neutral-400"
+                  >
+                    Desplazá para ver más…
+                  </li>
+                ) : null}
               </ul>
             </div>,
             document.body,

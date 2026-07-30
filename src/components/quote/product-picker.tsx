@@ -24,6 +24,11 @@ import {
   useProductCatalog,
   type CatalogSearchProduct,
 } from "@/hooks/use-product-catalog";
+import {
+  PICKER_REVEAL_INITIAL,
+  PICKER_REVEAL_STEP,
+  useIncrementalReveal,
+} from "@/hooks/use-incremental-reveal";
 
 export type { CatalogSearchProduct };
 
@@ -128,10 +133,12 @@ function ProductPickerInner({
     if (value || deferredTrimmed.length < 1 || catalog.products.length === 0) {
       return [] as CatalogSearchProduct[];
     }
+    // No take cap: filter full in-memory catalog; DOM windowed below.
     return mapCatalogSearch(
       catalog.searchIndex,
       catalog.unitPrices,
       deferredTrimmed,
+      Number.POSITIVE_INFINITY,
     );
   }, [
     value,
@@ -145,6 +152,17 @@ function ProductPickerInner({
     () => (catalog.products.length > 0 ? warmResults : (coldResults ?? [])),
     [catalog.products.length, warmResults, coldResults],
   );
+
+  const {
+    visible: visibleResults,
+    hasMore: hasMoreResults,
+    ensureIndex,
+    onScroll: onListScroll,
+  } = useIncrementalReveal(results, {
+    initial: PICKER_REVEAL_INITIAL,
+    step: PICKER_REVEAL_STEP,
+    resetKey: deferredTrimmed,
+  });
 
   const listOpen =
     !value &&
@@ -176,14 +194,19 @@ function ProductPickerInner({
     searchAsyncRef.current = searchAsync;
   }, [searchAsync]);
 
-  // Only scroll when highlight moves — not on every new results array identity.
+  // Grow DOM window for keyboard nav, then scroll highlight into view.
+  useEffect(() => {
+    if (!showList || activeHighlight < 0) return;
+    ensureIndex(activeHighlight);
+  }, [activeHighlight, showList, ensureIndex]);
+
   useEffect(() => {
     if (!showList || activeHighlight < 0) return;
     const el = listRef.current?.querySelector<HTMLElement>(
       `[data-product-option="${activeHighlight}"]`,
     );
     el?.scrollIntoView({ block: "nearest" });
-  }, [activeHighlight, showList]);
+  }, [activeHighlight, showList, visibleResults.length]);
 
   useEffect(() => {
     function onDocDown(e: globalThis.MouseEvent) {
@@ -365,6 +388,7 @@ function ProductPickerInner({
                   className="max-h-64 overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
                   onMouseOver={onListMouseOver}
                   onClick={onListClick}
+                  onScroll={onListScroll}
                 >
                   {filterPending ? (
                     <li
@@ -374,7 +398,7 @@ function ProductPickerInner({
                       Buscando…
                     </li>
                   ) : null}
-                  {results.map((p, index) => (
+                  {visibleResults.map((p, index) => (
                     <ProductOption
                       key={p.id}
                       product={p}
@@ -382,6 +406,14 @@ function ProductPickerInner({
                       active={index === activeHighlight}
                     />
                   ))}
+                  {hasMoreResults ? (
+                    <li
+                      role="presentation"
+                      className="px-3 py-1.5 text-center text-xs text-neutral-400"
+                    >
+                      Desplazá para ver más…
+                    </li>
+                  ) : null}
                 </ul>
               ) : null}
               {showSearching ? (

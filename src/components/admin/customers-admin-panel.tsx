@@ -9,6 +9,12 @@ import { DataTableScroll } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { whatsappUrl } from "@/lib/whatsapp";
 import { filterFoldedSearch } from "@/lib/search-fold";
+import {
+  INCREMENTAL_REVEAL_INITIAL,
+  INCREMENTAL_REVEAL_STEP,
+  RevealMoreTableRow,
+  useIncrementalReveal,
+} from "@/hooks/use-incremental-reveal";
 
 export type CustomerListRow = {
   id: string;
@@ -56,6 +62,17 @@ export function CustomersAdminPanel({
       }),
     [customers, query],
   );
+
+  const {
+    visible,
+    hasMore,
+    revealMore,
+    total,
+  } = useIncrementalReveal(filtered, {
+    initial: INCREMENTAL_REVEAL_INITIAL,
+    step: INCREMENTAL_REVEAL_STEP,
+    resetKey: query,
+  });
 
   const editing = editingId
     ? customers.find((c) => c.id === editingId)
@@ -138,54 +155,63 @@ export function CustomersAdminPanel({
                 </td>
               </tr>
             ) : (
-              filtered.map((c) => {
-                const wa = c.phone ? whatsappUrl(c.phone) : null;
-                return (
-                  <tr key={c.id} className="border-t border-neutral-100">
-                    <td className="px-3 py-2 font-mono">{c.code}</td>
-                    <td className="px-3 py-2">{c.name}</td>
-                    <td className="px-3 py-2 text-neutral-700">
-                      {c.address ?? "—"}
-                    </td>
-                    <td className="px-3 py-2 text-neutral-700">
-                      {c.phone && wa ? (
-                        <a
-                          href={wa}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[var(--brand-primary)] underline hover:opacity-80"
+              <>
+                {visible.map((c) => {
+                  const wa = c.phone ? whatsappUrl(c.phone) : null;
+                  return (
+                    <tr key={c.id} className="border-t border-neutral-100">
+                      <td className="px-3 py-2 font-mono">{c.code}</td>
+                      <td className="px-3 py-2">{c.name}</td>
+                      <td className="px-3 py-2 text-neutral-700">
+                        {c.address ?? "—"}
+                      </td>
+                      <td className="px-3 py-2 text-neutral-700">
+                        {c.phone && wa ? (
+                          <a
+                            href={wa}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-[var(--brand-primary)] underline hover:opacity-80"
+                          >
+                            {c.phone}
+                          </a>
+                        ) : (
+                          (c.phone ?? "—")
+                        )}
+                      </td>
+                      <td className="px-3 py-2">
+                        {c.priceListName ?? "Precio base"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <Badge variant={c.active ? "success" : "danger"}>
+                          {c.active ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setCreating(false);
+                            setEditingId(c.id);
+                          }}
+                          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
+                          aria-label="Editar"
+                          title="Editar"
                         >
-                          {c.phone}
-                        </a>
-                      ) : (
-                        (c.phone ?? "—")
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      {c.priceListName ?? "Precio base"}
-                    </td>
-                    <td className="px-3 py-2">
-                      <Badge variant={c.active ? "success" : "danger"}>
-                        {c.active ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCreating(false);
-                          setEditingId(c.id);
-                        }}
-                        className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
-                        aria-label="Editar"
-                        title="Editar"
-                      >
-                        <Pencil className="h-4 w-4" aria-hidden />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
+                          <Pencil className="h-4 w-4" aria-hidden />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                <RevealMoreTableRow
+                  colSpan={7}
+                  enabled={hasMore}
+                  onReveal={revealMore}
+                  shown={visible.length}
+                  total={total}
+                />
+              </>
             )}
           </tbody>
         </table>
