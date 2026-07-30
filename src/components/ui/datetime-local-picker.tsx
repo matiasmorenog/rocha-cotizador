@@ -257,8 +257,8 @@ export function DatetimeLocalPicker({
           aria-label="Elegir fecha y hora"
           className="absolute left-0 z-50 mt-1 w-[min(100vw-2rem,22.5rem)] overflow-hidden rounded-lg border border-[var(--brand-latte)]/70 bg-white shadow-lg"
         >
-          <div className="flex gap-2 p-3">
-            <div className="min-w-0 flex-1">
+          <div className="flex items-stretch">
+            <div className="min-w-0 flex-1 p-3">
               <div className="mb-2 flex items-center justify-between gap-1">
                 <button
                   type="button"
@@ -327,30 +327,32 @@ export function DatetimeLocalPicker({
               </div>
             </div>
 
-            <div
-              ref={hourListRef}
-              className="h-[14.5rem] w-[4.75rem] shrink-0 overflow-y-auto overscroll-contain border-l border-[var(--brand-latte)]/60 py-0 pl-2 pr-1 [scrollbar-gutter:stable]"
-              aria-label="Hora"
-            >
-              {HOURS.map((h) => {
-                const selectedHour = draft.hour === h;
-                return (
-                  <button
-                    key={h}
-                    type="button"
-                    data-hour={h}
-                    onClick={() => commit({ ...draft, hour: h })}
-                    className={cn(
-                      "flex h-8 w-full items-center justify-center rounded-md text-sm tabular-nums",
-                      selectedHour
-                        ? "bg-[var(--brand-primary)] font-medium text-white"
-                        : "text-neutral-800 hover:bg-[var(--brand-primary-soft)]",
-                    )}
-                  >
-                    {pad2(h)}:00
-                  </button>
-                );
-              })}
+            <div className="flex w-[4.75rem] shrink-0 flex-col border-l border-[var(--brand-latte)]/60">
+              <div
+                ref={hourListRef}
+                className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-3 pl-2 pr-1 [scrollbar-gutter:stable]"
+                aria-label="Hora"
+              >
+                {HOURS.map((h) => {
+                  const selectedHour = draft.hour === h;
+                  return (
+                    <button
+                      key={h}
+                      type="button"
+                      data-hour={h}
+                      onClick={() => commit({ ...draft, hour: h })}
+                      className={cn(
+                        "flex h-8 w-full items-center justify-center rounded-md text-sm tabular-nums",
+                        selectedHour
+                          ? "bg-[var(--brand-primary)] font-medium text-white"
+                          : "text-neutral-800 hover:bg-[var(--brand-primary-soft)]",
+                      )}
+                    >
+                      {pad2(h)}:00
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
