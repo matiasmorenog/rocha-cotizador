@@ -24,7 +24,7 @@ Save CI/Vercel until the PR is ready for review.
 
 ## Vercel token
 
-Preview env needs `GITHUB_TOKEN` (or `GH_TOKEN`) with `pull_requests: read` so the ignore script can see draft status on this private repo. Without it, script fails open (builds).
+Preview env needs `GITHUB_TOKEN` (or `GH_TOKEN`) with `repo` / `pull_requests: read` so the ignore script can see draft status on this private repo. Without it, script **fails closed** (cancels feature-branch builds).
 
 ## Refs
 
