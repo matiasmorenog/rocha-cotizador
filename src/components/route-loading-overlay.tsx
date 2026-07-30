@@ -63,7 +63,7 @@ function hasPendingSkeleton(): boolean {
 }
 
 /**
- * Soft-nav listeners only — no full-screen overlay/blur.
+ * Soft-nav + initial hard-load trickle — no full-screen overlay/blur.
  * Progress lives in the header edge bar.
  */
 export function RouteLoadingOverlay() {
@@ -101,10 +101,11 @@ export function RouteLoadingOverlay() {
     const tryFinish = () => {
       const elapsed = Date.now() - startedAt;
       const skeletonGone = !hasPendingSkeleton();
+      const docReady = document.readyState === "complete";
       const minTimeOk = elapsed >= MIN_VISIBLE_AFTER_ROUTE_MS;
       const timedOut = elapsed >= SKELETON_MAX_WAIT_MS;
 
-      if ((skeletonGone && minTimeOk) || timedOut) {
+      if ((skeletonGone && docReady && minTimeOk) || timedOut) {
         clearSettle();
         navStartedRef.current = false;
         finishLoading();
@@ -117,6 +118,42 @@ export function RouteLoadingOverlay() {
       pollRef.current = setInterval(tryFinish, SKELETON_POLL_MS);
     }, 32);
   }, [clearSettle, finishLoading]);
+
+  /** Hard refresh / first paint — soft-nav only listened to clicks before. */
+  useEffect(() => {
+    let cancelled = false;
+    let pollId: ReturnType<typeof setInterval> | null = null;
+    let rafId = 0;
+
+    const startInitialIfNeeded = () => {
+      if (cancelled || navStartedRef.current) return true;
+      const docStillLoading = document.readyState !== "complete";
+      if (!docStillLoading && !hasPendingSkeleton()) return false;
+      beginNavigation();
+      settleAfterRoute();
+      return true;
+    };
+
+    if (!startInitialIfNeeded()) {
+      // loading.tsx / streaming may paint one frame after hydration.
+      rafId = requestAnimationFrame(() => {
+        if (startInitialIfNeeded()) return;
+        const until = Date.now() + 120;
+        pollId = setInterval(() => {
+          if (startInitialIfNeeded() || Date.now() >= until) {
+            if (pollId) clearInterval(pollId);
+            pollId = null;
+          }
+        }, SKELETON_POLL_MS);
+      });
+    }
+
+    return () => {
+      cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      if (pollId) clearInterval(pollId);
+    };
+  }, [beginNavigation, settleAfterRoute]);
 
   useEffect(() => {
     if (isFirstRouteRef.current) {
