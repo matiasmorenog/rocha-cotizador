@@ -87,6 +87,37 @@ body {
 }
 
 /*
+  Floating chevrons for horizontal table scroll (Windows trackpad-less
+  laptops have no easy shift-scroll gesture). Pinned over the header, not
+  centered on the full table height, so they never sit on top of row
+  actions in `<tbody>`.
+*/
+.data-table-scroll-btn {
+  display: flex;
+  height: 2rem;
+  width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid var(--brand-primary-soft);
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #57534e;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.12),
+    0 1px 2px rgba(0, 0, 0, 0.08);
+  transition:
+    color 150ms ease-out,
+    border-color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+
+.data-table-scroll-btn:hover {
+  border-color: var(--brand-primary);
+  background-color: #fff;
+  color: var(--brand-primary);
+}
+
+/*
   Admin table rows: hover + persistent click/focus selection so scrolling a
   wide table horizontally doesn't lose which row you were reading. The
   background sits on the actual `<tr>`, which already spans the full
@@ -798,6 +829,9 @@ select:not([multiple]):disabled {
   }
   .data-table-scroll {
     overflow: visible;
+  }
+  .data-table-scroll-btn {
+    display: none !important;
   }
   .rocha-skeleton {
     animation: none !important;
