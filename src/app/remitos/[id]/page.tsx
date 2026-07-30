@@ -18,7 +18,7 @@ import {
 } from "@/lib/whatsapp";
 import { BrandLogo } from "@/components/brand-logo";
 import { PrintButton } from "@/components/quote/print-button";
-import { RemitoLineAdminControls } from "@/components/quote/remito-line-admin-controls";
+import { RemitoAdminItemRows } from "@/components/quote/remito-admin-item-rows";
 import { WhatsAppNotifyButton } from "@/components/quote/whatsapp-notify-button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import {
@@ -203,6 +203,9 @@ export default async function RemitoDetailPage({
                 <th className="py-2 pr-2 font-medium">Artículo</th>
                 <th className="py-2 pr-2 text-right font-medium">Precio</th>
                 <th className="py-2 pr-2 text-right font-medium">Importe</th>
+                {isAdmin ? (
+                  <th className="w-0 py-2 pl-1 pr-2 print:hidden" aria-label="Acciones" />
+                ) : null}
               </tr>
             </thead>
             <tbody>
@@ -212,57 +215,71 @@ export default async function RemitoDetailPage({
                   : false;
                 const needsWeighPrice =
                   item.orderByUnit || Number(item.unitPrice) === 0;
+                /** Weigh-confirm products stay amber even after $/kg set. */
+                const isWeighConfirmProduct = allowsUnitOrder;
+                const showAmber = needsWeighPrice || isWeighConfirmProduct;
+                const measureLabel = quoteLineMeasureLabel(
+                  item.orderByUnit,
+                  allowsUnitOrder,
+                );
+
+                if (isAdmin) {
+                  return (
+                    <RemitoAdminItemRows
+                      key={item.id}
+                      quoteId={quote.id}
+                      itemId={item.id}
+                      productCode={item.productCode}
+                      productName={item.productName}
+                      qty={Number(item.qty)}
+                      unitPrice={Number(item.unitPrice)}
+                      lineTotal={Number(item.lineTotal)}
+                      measureLabel={measureLabel}
+                      canDelete={canDeleteLine}
+                      needsWeighPrice={needsWeighPrice}
+                      isWeighConfirmProduct={isWeighConfirmProduct}
+                      suggestedKgPrice={
+                        item.productId
+                          ? (kgPriceByProductId.get(item.productId) ?? 0)
+                          : 0
+                      }
+                      orderedByUnit={item.orderByUnit}
+                      colSpan={6}
+                    />
+                  );
+                }
+
                 return (
-                <tr
-                  key={item.id}
-                  className={
-                    needsWeighPrice
-                      ? "border-b border-amber-200 bg-amber-50"
-                      : "border-b border-neutral-100"
-                  }
-                >
-                  <td className="py-2 pl-2 pr-2 font-mono text-xs">{item.productCode}</td>
-                  <td className="py-2 pr-2 align-top">
-                    {formatQty(item.qty)}{" "}
-                    <span className="text-neutral-500">
-                      {quoteLineMeasureLabel(item.orderByUnit, allowsUnitOrder)}
-                    </span>
-                  </td>
-                  <td className="py-2 pr-2">
-                    <div>{item.productName}</div>
-                    {item.orderByUnit || Number(item.unitPrice) === 0 ? (
-                      <p className="mt-0.5 text-xs text-amber-800">
-                        {UNIT_ORDER_PRICE_WARNING}
-                      </p>
-                    ) : null}
-                    {isAdmin ? (
-                      <RemitoLineAdminControls
-                        quoteId={quote.id}
-                        itemId={item.id}
-                        initialQty={Number(item.qty)}
-                        initialUnitPrice={Number(item.unitPrice)}
-                        measureLabel={quoteLineMeasureLabel(
-                          item.orderByUnit,
-                          allowsUnitOrder,
-                        )}
-                        canDelete={canDeleteLine}
-                        needsWeighPrice={needsWeighPrice}
-                        suggestedKgPrice={
-                          item.productId
-                            ? (kgPriceByProductId.get(item.productId) ?? 0)
-                            : 0
-                        }
-                        orderedByUnit={item.orderByUnit}
-                      />
-                    ) : null}
-                  </td>
-                  <td className="py-2 pr-2 text-right align-top">
-                    {formatPrice(item.unitPrice)}
-                  </td>
-                  <td className="py-2 pr-2 text-right align-top font-medium">
-                    {formatPrice(item.lineTotal)}
-                  </td>
-                </tr>
+                  <tr
+                    key={item.id}
+                    className={
+                      showAmber
+                        ? "border-b border-amber-200 bg-amber-50"
+                        : "border-b border-neutral-100"
+                    }
+                  >
+                    <td className="py-2 pl-2 pr-2 align-middle font-mono text-xs">
+                      {item.productCode}
+                    </td>
+                    <td className="py-2 pr-2 align-middle">
+                      {formatQty(item.qty)}{" "}
+                      <span className="text-neutral-500">{measureLabel}</span>
+                    </td>
+                    <td className="py-2 pr-2 align-middle">
+                      <div>{item.productName}</div>
+                      {needsWeighPrice ? (
+                        <p className="mt-0.5 text-xs text-amber-800">
+                          {UNIT_ORDER_PRICE_WARNING}
+                        </p>
+                      ) : null}
+                    </td>
+                    <td className="py-2 pr-2 text-right align-middle">
+                      {formatPrice(item.unitPrice)}
+                    </td>
+                    <td className="py-2 pr-2 text-right align-middle font-medium">
+                      {formatPrice(item.lineTotal)}
+                    </td>
+                  </tr>
                 );
               })}
             </tbody>
