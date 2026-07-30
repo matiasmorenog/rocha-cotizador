@@ -12,10 +12,8 @@ import {
 } from "react";
 
 type RouteLoadingContextValue = {
-  /** 0–100 fill while navigating; 0 when hidden. */
+  /** 0–100 fill; idle stays at 100. */
   progress: number;
-  visible: boolean;
-  overlayVisible: boolean;
   startLoading: () => void;
   finishLoading: () => void;
 };
@@ -25,27 +23,16 @@ const RouteLoadingContext = createContext<RouteLoadingContextValue | null>(null)
 const START_PCT = 8;
 const TRICKLE_CAP = 92;
 const TRICKLE_MS = 350;
-const HIDE_AFTER_DONE_MS = 280;
 
 export function RouteLoadingProvider({ children }: { children: ReactNode }) {
-  const [progress, setProgress] = useState(0);
-  const [visible, setVisible] = useState(false);
-  const [overlayVisible, setOverlayVisible] = useState(false);
+  const [progress, setProgress] = useState(100);
   const trickleRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(false);
 
   const clearTrickle = useCallback(() => {
     if (trickleRef.current) {
       clearInterval(trickleRef.current);
       trickleRef.current = null;
-    }
-  }, []);
-
-  const clearHide = useCallback(() => {
-    if (hideRef.current) {
-      clearTimeout(hideRef.current);
-      hideRef.current = null;
     }
   }, []);
 
@@ -63,48 +50,32 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
   }, [clearTrickle]);
 
   const startLoading = useCallback(() => {
-    clearHide();
     activeRef.current = true;
     setProgress(START_PCT);
-    setVisible(true);
-    setOverlayVisible(true);
     startTrickle();
-  }, [clearHide, startTrickle]);
+  }, [startTrickle]);
 
   const finishLoading = useCallback(() => {
     clearTrickle();
-    setOverlayVisible(false);
     if (!activeRef.current) {
-      setVisible(false);
-      setProgress(0);
+      setProgress(100);
       return;
     }
     activeRef.current = false;
     setProgress(100);
-    clearHide();
-    hideRef.current = setTimeout(() => {
-      setVisible(false);
-      setProgress(0);
-      hideRef.current = null;
-    }, HIDE_AFTER_DONE_MS);
-  }, [clearHide, clearTrickle]);
+  }, [clearTrickle]);
 
   useEffect(() => {
-    return () => {
-      clearTrickle();
-      clearHide();
-    };
-  }, [clearTrickle, clearHide]);
+    return () => clearTrickle();
+  }, [clearTrickle]);
 
   const value = useMemo(
     () => ({
       progress,
-      visible,
-      overlayVisible,
       startLoading,
       finishLoading,
     }),
-    [progress, visible, overlayVisible, startLoading, finishLoading],
+    [progress, startLoading, finishLoading],
   );
 
   return (

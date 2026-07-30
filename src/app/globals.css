@@ -432,27 +432,12 @@ select:not([multiple]):disabled {
   }
 }
 
-@keyframes route-loading-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.route-loading-enter {
-  animation: route-loading-fade-in 0.2s ease-out both;
-}
-
 .route-loading-fill {
   transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .route-loading-fill-done {
-  transition:
-    width 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.2s ease-out;
+  transition: width 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -463,10 +448,6 @@ select:not([multiple]):disabled {
 
   .admin-toast-enter {
     animation: none;
-  }
-
-  .route-loading-enter {
-    animation: none !important;
   }
 
   .route-loading-fill,

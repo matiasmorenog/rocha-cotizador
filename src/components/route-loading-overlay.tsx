@@ -3,7 +3,6 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef } from "react";
 import { useRouteLoading } from "@/lib/route-loading-context";
-import { cn } from "@/lib/utils";
 
 /** Keep bar trickling at least this long after route change so fill is visible. */
 const MIN_VISIBLE_AFTER_ROUTE_MS = 220;
@@ -63,15 +62,20 @@ function hasPendingSkeleton(): boolean {
   );
 }
 
+/**
+ * Soft-nav listeners only — no full-screen overlay/blur.
+ * Progress lives in the header edge bar.
+ */
 export function RouteLoadingOverlay() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
-  const { overlayVisible, startLoading, finishLoading } = useRouteLoading();
+  const { progress, startLoading, finishLoading } = useRouteLoading();
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navStartedRef = useRef(false);
   const isFirstRouteRef = useRef(true);
+  const loading = progress < 100;
 
   const clearSettle = useCallback(() => {
     if (settleTimerRef.current) {
@@ -143,21 +147,11 @@ export function RouteLoadingOverlay() {
     };
   }, [pathname, search, beginNavigation, clearSettle]);
 
-  if (!overlayVisible) return null;
+  if (!loading) return null;
 
   return (
-    <>
-      <div
-        className={cn(
-          "fixed inset-0 z-[200] cursor-wait touch-none",
-          "bg-white/20 backdrop-blur-[2px]",
-          "route-loading-enter",
-        )}
-        aria-hidden
-      />
-      <p className="sr-only" role="status" aria-live="polite">
-        Cargando página…
-      </p>
-    </>
+    <p className="sr-only" role="status" aria-live="polite">
+      Cargando página…
+    </p>
   );
 }
