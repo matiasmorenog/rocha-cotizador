@@ -138,8 +138,11 @@ export function MeasureSelect({
         }}
         onKeyDown={onTriggerKeyDown}
         className={cn(
-          "flex w-full items-center gap-1 rounded-md border border-neutral-300 bg-white text-left text-neutral-900",
+          "flex w-full items-center gap-1 rounded-md border bg-white text-left text-neutral-900",
           "focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1",
+          open
+            ? "border-[var(--brand-primary)]"
+            : "border-neutral-300",
           size === "sm"
             ? "h-8 pl-2 pr-1.5 text-xs"
             : "h-10 pl-3 pr-2 text-sm",
@@ -148,9 +151,11 @@ export function MeasureSelect({
         <span className="min-w-0 flex-1 truncate">{selectedLabel}</span>
         <ChevronDown
           className={cn(
-            "shrink-0 text-neutral-500 transition-transform duration-200 motion-reduce:transition-none",
+            "shrink-0 transition-transform duration-200 motion-reduce:transition-none",
             size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4",
-            open && "rotate-180",
+            open
+              ? "rotate-180 text-[var(--brand-primary)]"
+              : "text-neutral-500",
           )}
           aria-hidden
         />
@@ -189,14 +194,15 @@ export function MeasureSelect({
                         aria-selected={selected}
                         tabIndex={-1}
                         className={cn(
-                          "flex w-full items-center px-3 text-left text-sm text-neutral-900",
+                          "flex w-full items-center px-3 text-left text-sm",
                           size === "sm" ? "py-1.5 text-xs" : "py-2",
                           isFirst && "rounded-t-md",
                           isLast && "rounded-b-md",
                           active
-                            ? "bg-[var(--brand-primary-soft)]"
-                            : "hover:bg-neutral-50",
-                          selected && "font-medium",
+                            ? "bg-[var(--brand-primary)] font-medium text-white"
+                            : selected
+                              ? "font-medium text-[var(--brand-primary)] hover:bg-[var(--brand-primary-soft)]"
+                              : "text-neutral-900 hover:bg-[var(--brand-primary-soft)]",
                         )}
                         onMouseEnter={() => setHighlight(index)}
                         onClick={() => pick(opt.value)}
