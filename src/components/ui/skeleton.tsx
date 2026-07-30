@@ -436,7 +436,31 @@ export function SkeletonAdminDashboardPage() {
           </div>
         ))}
       </div>
-      {/* Chart slot — sibling: nexus analytics skeleton goes here. */}
+      <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <div className="space-y-2">
+            <Skeleton className="h-5 w-52" />
+            <Skeleton className="h-4 w-72 max-w-full" />
+          </div>
+          <Skeleton className="h-9 w-36 rounded-lg" />
+        </div>
+        <div className="mb-6 flex flex-wrap gap-6">
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-28" />
+            <Skeleton className="h-7 w-14" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="h-7 w-28" />
+          </div>
+        </div>
+        <Skeleton className="h-44 w-full rounded-md sm:h-48" />
+        <div className="mt-3 flex justify-between gap-1">
+          {Array.from({ length: 7 }, (_, i) => (
+            <Skeleton key={i} className="h-3 w-6" />
+          ))}
+        </div>
+      </div>
       <div className="rounded-lg border border-neutral-200 bg-white">
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
           <Skeleton className="h-5 w-44" />

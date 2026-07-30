@@ -197,6 +197,39 @@ select:not([multiple]):disabled {
   animation: admin-toast-enter 0.28s ease-out both;
 }
 
+/* Admin dashboard quote activity chart (ported from nexus SVG chart) */
+@keyframes admin-stat-land {
+  0% {
+    transform: translateY(2px);
+    filter: blur(0.4px);
+  }
+  100% {
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.admin-stat-landed {
+  animation: admin-stat-land 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes admin-chart-dot-in {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.admin-chart-dot-enter {
+  opacity: 0;
+  transform: scale(0);
+  animation: admin-chart-dot-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
 /* Draft quote table rows — enter/exit + cell height (quote-builder) */
 @keyframes quote-draft-row-enter {
   from {
@@ -627,8 +660,15 @@ select:not([multiple]):disabled {
     background: #e5e5e5;
   }
 
-  .admin-toast-enter {
+  .admin-toast-enter,
+  .admin-stat-landed,
+  .admin-chart-dot-enter {
     animation: none;
+  }
+
+  .admin-chart-dot-enter {
+    opacity: 1;
+    transform: scale(1);
   }
 
   .route-loading-fill,
