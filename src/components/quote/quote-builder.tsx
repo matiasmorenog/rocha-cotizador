@@ -26,6 +26,7 @@ import {
   ProductPicker,
   type CatalogSearchProduct,
 } from "@/components/quote/product-picker";
+import { MeasureSelect } from "@/components/quote/measure-select";
 import { QuoteDraftAnimatedRow } from "@/components/quote/quote-draft-animated-row";
 import { QuoteDraftEmptyRow } from "@/components/quote/quote-draft-empty-row";
 import { useAnimatedDraftLines } from "@/components/quote/use-animated-draft-lines";
@@ -273,17 +274,11 @@ export function QuoteBuilder({
               <div className="flex min-w-[9rem] flex-1 items-end gap-3 sm:flex-none">
                 <div className="min-w-0 flex-1">
                   <Label htmlFor="order-mode">Medida</Label>
-                  <select
+                  <MeasureSelect
                     id="order-mode"
                     value={orderByUnit ? "unit" : "kg"}
-                    onChange={(e) =>
-                      setLocalOrderByUnit(e.target.value === "unit")
-                    }
-                    className="flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-9 text-sm focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
-                  >
-                    <option value="kg">Kg</option>
-                    <option value="unit">Unidades</option>
-                  </select>
+                    onChange={(v) => setLocalOrderByUnit(v === "unit")}
+                  />
                 </div>
                 {unitWarnPresent ? (
                   <span
@@ -416,17 +411,13 @@ export function QuoteBuilder({
                   </td>
                   <td className="px-3 py-2">
                     {l.allowsUnitOrder ? (
-                      <select
+                      <MeasureSelect
+                        size="sm"
+                        className="w-[7.5rem]"
                         value={l.orderByUnit ? "unit" : "kg"}
-                        onChange={(e) =>
-                          setOrderByUnit(l.id, e.target.value === "unit")
-                        }
+                        onChange={(v) => setOrderByUnit(l.id, v === "unit")}
                         aria-label="Medida"
-                        className="flex h-8 w-[7.5rem] rounded-md border border-neutral-300 bg-white pl-2 pr-8 text-xs focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
-                      >
-                        <option value="kg">Kg</option>
-                        <option value="unit">Unidades</option>
-                      </select>
+                      />
                     ) : (
                       <span className="text-neutral-500">
                         {quoteLineMeasureLabel(
