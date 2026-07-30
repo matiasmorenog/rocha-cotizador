@@ -197,6 +197,21 @@ select:not([multiple]):disabled {
   animation: admin-toast-enter 0.28s ease-out both;
 }
 
+@keyframes admin-toast-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(0.75rem) scale(0.98);
+  }
+}
+
+.admin-toast-exit {
+  animation: admin-toast-exit 0.28s ease-in forwards;
+}
+
 /* Admin dashboard quote activity chart (ported from nexus SVG chart) */
 @keyframes admin-stat-land {
   0% {
@@ -661,6 +676,7 @@ select:not([multiple]):disabled {
   }
 
   .admin-toast-enter,
+  .admin-toast-exit,
   .admin-stat-landed,
   .admin-chart-dot-enter {
     animation: none;
