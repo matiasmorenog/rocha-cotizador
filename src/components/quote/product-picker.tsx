@@ -5,6 +5,7 @@ import {
   useCallback,
   useDeferredValue,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -113,7 +114,9 @@ function ProductPickerInner({
   const searchRequestId = useRef(0);
 
   const inputElRef = inputRef ?? localInputRef;
-  const catalogLoading = catalog.loading && !catalog.ready;
+  // Usable = in-memory products present (ready flag alone can lag parent gate).
+  const catalogUsable = catalog.ready || catalog.products.length > 0;
+  const catalogLoading = catalog.loading && !catalogUsable;
   const trimmedQuery = query.trim();
   const deferredTrimmed = deferredQuery.trim();
   const filterPending =
@@ -165,7 +168,7 @@ function ProductPickerInner({
     results.length === 0 &&
     !catalogLoading &&
     !searchBusy;
-  const showError = Boolean(catalog.error && !catalog.ready);
+  const showError = Boolean(catalog.error && !catalogUsable);
   const floatingOpen = showList || showSearching || showEmpty || showError;
   const floatingStyle = useAnchoredFloatingStyle(anchorRef, floatingOpen);
 
@@ -178,13 +181,11 @@ function ProductPickerInner({
     searchAsyncRef.current = searchAsync;
   }, [searchAsync]);
 
-  useEffect(() => {
+  // Layout: unlock Agregar before paint once products exist (avoid stuck gate).
+  useLayoutEffect(() => {
     onReadyRef.current = onCatalogReadyChange;
-  }, [onCatalogReadyChange]);
-
-  useEffect(() => {
-    onReadyRef.current?.(catalog.ready);
-  }, [catalog.ready]);
+    onReadyRef.current?.(catalogUsable);
+  }, [catalogUsable, onCatalogReadyChange]);
 
   // Only scroll when highlight moves — not on every new results array identity.
   useEffect(() => {
@@ -209,6 +210,8 @@ function ProductPickerInner({
 
   const pickProduct = useCallback(
     (p: CatalogSearchProduct) => {
+      // Warm pick ⇒ catalog already in memory; sync parent gate immediately.
+      if (catalogUsable) onReadyRef.current?.(true);
       onChange(p);
       setQuery("");
       setColdResults(null);
@@ -216,7 +219,7 @@ function ProductPickerInner({
       setHighlightIndex(-1);
       setListDismissed(true);
     },
-    [onChange],
+    [onChange, catalogUsable],
   );
 
   function onQueryChange(next: string) {
@@ -332,7 +335,7 @@ function ProductPickerInner({
               : undefined
           }
           placeholder={
-            catalog.ready
+            catalogUsable
               ? "Buscar por nombre o código…"
               : catalog.loading
                 ? "Cargando catálogo…"

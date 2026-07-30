@@ -111,7 +111,7 @@ export function QuoteBuilder({
   }, []);
 
   function addLine() {
-    if (!selected) return;
+    if (!selected || !catalogReady) return;
     const n = Number(qty.replace(",", "."));
     if (!Number.isFinite(n) || n <= 0) {
       setError("Cantidad inválida");

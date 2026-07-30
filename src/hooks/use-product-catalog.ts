@@ -165,6 +165,31 @@ export function useProductCatalog(
 
     async function revalidate() {
       const cached = readCachedCatalog();
+
+      // SSR/hydration often keeps empty useState even when sessionStorage has a
+      // catalog (initializer ran without window). Hydrate immediately so
+      // ready/products are usable before the network round-trip finishes.
+      if (
+        cached &&
+        cached.products.length > 0 &&
+        snapshotRef.current.products.length === 0
+      ) {
+        const prices = readCachedUnitPrices(key);
+        const { products, searchIndex } = hydrateCatalog(cached.products);
+        if (!cancelled) {
+          setState((s) => ({
+            ...s,
+            products,
+            searchIndex,
+            version: cached.version,
+            unitPrices: prices?.unitPrices ?? s.unitPrices,
+            ready: true,
+            loading: true,
+            error: null,
+          }));
+        }
+      }
+
       const hasLocal =
         (cached?.products.length ?? 0) > 0 ||
         snapshotRef.current.products.length > 0;
@@ -300,6 +325,26 @@ export function useProductCatalog(
         });
       } catch {
         if (cancelled) return;
+        // Prefer session cache over an empty in-memory miss after network error.
+        const fallback = readCachedCatalog();
+        if (
+          snapshotRef.current.products.length === 0 &&
+          fallback &&
+          fallback.products.length > 0
+        ) {
+          const prices = readCachedUnitPrices(key);
+          const hydrated = hydrateCatalog(fallback.products);
+          setState({
+            products: hydrated.products,
+            searchIndex: hydrated.searchIndex,
+            version: fallback.version,
+            unitPrices: prices?.unitPrices ?? {},
+            ready: true,
+            loading: false,
+            error: null,
+          });
+          return;
+        }
         setState((s) => ({
           ...s,
           loading: false,
