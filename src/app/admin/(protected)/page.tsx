@@ -1,13 +1,7 @@
 import Link from "next/link";
-import { Suspense } from "react";
-import { AdminQuoteActivityChart } from "@/components/admin/admin-quote-activity-chart";
-import { AdminQuoteActivityPeriodTabs } from "@/components/admin/admin-quote-activity-period-tabs";
+import { AdminQuoteActivitySection } from "@/components/admin/admin-quote-activity-section";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
-import {
-  getAdminQuoteActivity,
-  QUOTE_ACTIVITY_PERIOD_LABELS,
-  parseQuoteActivityPeriod,
-} from "@/lib/admin-quote-activity";
+import { getAdminQuoteActivity, parseQuoteActivityPeriod } from "@/lib/admin-quote-activity";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn, formatPrice } from "@/lib/utils";
 
@@ -21,7 +15,6 @@ export default async function AdminDashboardPage({
 }) {
   const { chart: chartParam } = await searchParams;
   const chartPeriod = parseQuoteActivityPeriod(chartParam);
-  const periodLabels = QUOTE_ACTIVITY_PERIOD_LABELS[chartPeriod];
 
   const [
     {
@@ -89,34 +82,14 @@ export default async function AdminDashboardPage({
         ))}
       </div>
 
-      <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="font-medium text-neutral-900">Actividad de cotizaciones</h2>
-            <p className="mt-0.5 text-sm text-neutral-500">
-              {periodLabels.description}
-            </p>
-          </div>
-          <Suspense
-            fallback={
-              <div
-                className="h-9 w-36 animate-pulse rounded-lg bg-neutral-100"
-                aria-hidden
-              />
-            }
-          >
-            <AdminQuoteActivityPeriodTabs period={chartPeriod} />
-          </Suspense>
-        </div>
-        <AdminQuoteActivityChart
-          period={activity.period}
-          data={activity.points}
-          totalQuotes={activity.totalQuotes}
-          totalRevenue={activity.totalRevenue}
-          summaryLabel={periodLabels.summary}
-          emptyLabel={periodLabels.empty}
-        />
-      </section>
+      <AdminQuoteActivitySection
+        initial={{
+          period: activity.period,
+          points: activity.points,
+          totalQuotes: activity.totalQuotes,
+          totalRevenue: activity.totalRevenue,
+        }}
+      />
 
       <div className="rounded-lg border border-neutral-200 bg-white">
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
