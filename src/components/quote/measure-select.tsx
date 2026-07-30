@@ -173,11 +173,13 @@ export function MeasureSelect({
                 id={listId}
                 role="listbox"
                 aria-label={ariaLabel}
-                className="overflow-hidden rounded-md border border-neutral-200 bg-white py-1 shadow-lg"
+                className="overflow-hidden rounded-md border border-neutral-200 bg-white shadow-lg"
               >
                 {OPTIONS.map((opt, index) => {
                   const selected = opt.value === value;
                   const active = index === activeIndex;
+                  const isFirst = index === 0;
+                  const isLast = index === OPTIONS.length - 1;
                   return (
                     <li key={opt.value} role="presentation">
                       <button
@@ -187,13 +189,14 @@ export function MeasureSelect({
                         aria-selected={selected}
                         tabIndex={-1}
                         className={cn(
-                          "flex w-full items-center px-3 text-left text-neutral-900",
-                          size === "sm" ? "py-1.5 text-xs" : "py-2 text-sm",
-                          active && "bg-neutral-50",
-                          selected &&
-                            "bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]",
-                          selected && active && "bg-[var(--brand-primary-soft)]",
-                          !selected && "hover:bg-neutral-50",
+                          "flex w-full items-center px-3 text-left text-sm text-neutral-900",
+                          size === "sm" ? "py-1.5 text-xs" : "py-2",
+                          isFirst && "rounded-t-md",
+                          isLast && "rounded-b-md",
+                          active
+                            ? "bg-[var(--brand-primary-soft)]"
+                            : "hover:bg-neutral-50",
+                          selected && "font-medium",
                         )}
                         onMouseEnter={() => setHighlight(index)}
                         onClick={() => pick(opt.value)}
