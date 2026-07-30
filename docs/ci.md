@@ -2,9 +2,25 @@
 
 Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
 
+## Draft PRs (sin checks)
+
+Los PRs en **draft** no consumen CI ni previews:
+
+| Superficie | Comportamiento |
+|------------|----------------|
+| GitHub Actions | Job `lint-and-typecheck` con `if: … draft == false`. También escucha `ready_for_review`. |
+| Vercel preview | `ignoreCommand` → [`scripts/vercel-ignore-draft-pr.sh`](../scripts/vercel-ignore-draft-pr.sh) cancela el build si el PR abierto de la branch es draft. |
+| Push a `development` / `main` | Sigue corriendo CI (evento `push`, no PR). |
+
+`vercel.json` ya no usa hacks por branch (`deploymentEnabled` solo apaga auto-deploy de `main`).
+
+**Vercel:** en Project → Environment Variables (Preview) hace falta `GITHUB_TOKEN` o `GH_TOKEN` (PAT con `pull_requests: read`). Sin token el script hace fail-open y **sí** buildea. System env vars de Vercel deben estar expuestas (default).
+
+WIP → abrí draft. Cuando quieras checks/preview → **Ready for review**.
+
 ## Job `lint-and-typecheck`
 
-Corre en PR/push a `development` y `main`:
+Corre en PR **ready**/push a `development` y `main`:
 
 1. `npm ci`
 2. `npx prisma generate` (con `DATABASE_URL` dummy; schema includes `rhel-openssl-3.0.x` for Vercel)
@@ -28,7 +44,7 @@ Solo en **push a `main`**, y **solo si** `lint-and-typecheck` pasó:
 6. **Post-deploy cache revalidate** — `vercel cache purge --type data` + `vercel cache invalidate` de **todas** las tags en `src/lib/cache-tags.ts` (`products`, `price-lists`, `customers`, `admin-dashboard`). Obliga Data Cache fresca tras cada release.
 
 `vercel.json` desactiva auto-deploy de Vercel en `main` → no hay carrera paralela.
-Previews (`development` / feature branches) siguen con el Git integration de Vercel.
+Previews (`development` / feature branches **ready**) siguen con el Git integration de Vercel; draft = skip (ver arriba).
 
 ### Schema gate: de dónde sale `DATABASE_URL`
 

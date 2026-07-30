@@ -10,9 +10,10 @@ Estado: workflow `.github/workflows/ci.yml`.
 ## Hecho
 
 - GitHub Actions en PRs/push a `development` y `main` — job `lint-and-typecheck`
+- **Draft PRs:** CI + Vercel preview skipped (`draft-pr-checks.mdc`, `scripts/vercel-ignore-draft-pr.sh`)
 - Job `deploy-production` en push a `main` **después** de lint/typecheck
 - Pre-deploy **schema sync gate** (`scripts/check-schema-sync.sh`) + post-deploy `GET /api/health`
-- `vercel.json`: auto-deploy OFF en `main` (prod solo vía Actions)
+- `vercel.json`: auto-deploy OFF en `main` (prod solo vía Actions); draft skip vía `ignoreCommand`
 - `prisma generate` con `DATABASE_URL` dummy en CI
 - Node 24
 - Docs: `docs/ci.md`, checklist go-live + schema warning en `DEPLOY.md`
