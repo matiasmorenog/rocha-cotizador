@@ -4,15 +4,13 @@ import { useRouteLoading } from "@/lib/route-loading-context";
 import { cn } from "@/lib/utils";
 
 export function HeaderProgressLine() {
-  const { progress } = useRouteLoading();
-  const pct = Math.max(0, Math.min(100, progress));
-  const done = pct >= 100;
+  const { progress, visible } = useRouteLoading();
 
   return (
     <div
       className={cn(
-        "pointer-events-none h-0.5 w-full shrink-0 overflow-hidden",
-        done ? "bg-[var(--brand-primary)]" : "bg-neutral-200/70",
+        "pointer-events-none h-0.5 w-full shrink-0 overflow-hidden bg-transparent",
+        !visible && "opacity-0",
       )}
       aria-hidden
     >
@@ -20,9 +18,9 @@ export function HeaderProgressLine() {
         className={cn(
           "h-full bg-[var(--brand-primary)]",
           "route-loading-fill",
-          done && "route-loading-fill-done",
+          visible && progress >= 100 && "route-loading-fill-done",
         )}
-        style={{ width: `${pct}%` }}
+        style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
       />
     </div>
   );

@@ -70,12 +70,11 @@ export function RouteLoadingOverlay() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
-  const { progress, startLoading, finishLoading } = useRouteLoading();
+  const { visible, startLoading, finishLoading } = useRouteLoading();
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navStartedRef = useRef(false);
   const isFirstRouteRef = useRef(true);
-  const loading = progress < 100;
 
   const clearSettle = useCallback(() => {
     if (settleTimerRef.current) {
@@ -147,7 +146,7 @@ export function RouteLoadingOverlay() {
     };
   }, [pathname, search, beginNavigation, clearSettle]);
 
-  if (!loading) return null;
+  if (!visible) return null;
 
   return (
     <p className="sr-only" role="status" aria-live="polite">

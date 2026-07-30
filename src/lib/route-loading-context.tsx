@@ -12,8 +12,9 @@ import {
 } from "react";
 
 type RouteLoadingContextValue = {
-  /** 0–100 fill; idle stays at 100. */
+  /** 0–100 fill while navigating; 0 when hidden. */
   progress: number;
+  visible: boolean;
   startLoading: () => void;
   finishLoading: () => void;
 };
@@ -23,16 +24,26 @@ const RouteLoadingContext = createContext<RouteLoadingContextValue | null>(null)
 const START_PCT = 8;
 const TRICKLE_CAP = 92;
 const TRICKLE_MS = 350;
+const HIDE_AFTER_DONE_MS = 280;
 
 export function RouteLoadingProvider({ children }: { children: ReactNode }) {
-  const [progress, setProgress] = useState(100);
+  const [progress, setProgress] = useState(0);
+  const [visible, setVisible] = useState(false);
   const trickleRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(false);
 
   const clearTrickle = useCallback(() => {
     if (trickleRef.current) {
       clearInterval(trickleRef.current);
       trickleRef.current = null;
+    }
+  }, []);
+
+  const clearHide = useCallback(() => {
+    if (hideRef.current) {
+      clearTimeout(hideRef.current);
+      hideRef.current = null;
     }
   }, []);
 
@@ -50,32 +61,45 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
   }, [clearTrickle]);
 
   const startLoading = useCallback(() => {
+    clearHide();
     activeRef.current = true;
     setProgress(START_PCT);
+    setVisible(true);
     startTrickle();
-  }, [startTrickle]);
+  }, [clearHide, startTrickle]);
 
   const finishLoading = useCallback(() => {
     clearTrickle();
     if (!activeRef.current) {
-      setProgress(100);
+      setVisible(false);
+      setProgress(0);
       return;
     }
     activeRef.current = false;
     setProgress(100);
-  }, [clearTrickle]);
+    clearHide();
+    hideRef.current = setTimeout(() => {
+      setVisible(false);
+      setProgress(0);
+      hideRef.current = null;
+    }, HIDE_AFTER_DONE_MS);
+  }, [clearHide, clearTrickle]);
 
   useEffect(() => {
-    return () => clearTrickle();
-  }, [clearTrickle]);
+    return () => {
+      clearTrickle();
+      clearHide();
+    };
+  }, [clearTrickle, clearHide]);
 
   const value = useMemo(
     () => ({
       progress,
+      visible,
       startLoading,
       finishLoading,
     }),
-    [progress, startLoading, finishLoading],
+    [progress, visible, startLoading, finishLoading],
   );
 
   return (
