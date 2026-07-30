@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { db } from "@/lib/db";
+import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-route-transition";
 import { QuotesAdminPanel } from "@/components/admin/quotes-admin-panel";
 import { resolveQuotesExportRange } from "@/lib/argentina-time";
 import { formatDateOnlyYmd } from "@/lib/delivery-date";
@@ -38,12 +38,12 @@ export default async function AdminCotizacionesPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-2xl font-semibold text-neutral-900">Cotizaciones</h1>
-        <Link
+        <CotizacionesTransitionLink
           href="/admin/cotizaciones/nueva"
           className="inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm text-white hover:opacity-90"
         >
           Nueva cotización
-        </Link>
+        </CotizacionesTransitionLink>
       </div>
 
       <QuotesAdminPanel
