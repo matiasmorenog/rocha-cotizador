@@ -255,7 +255,7 @@ export function DatetimeLocalPicker({
           id={panelId}
           role="dialog"
           aria-label="Elegir fecha y hora"
-          className="absolute left-0 z-50 mt-1 w-[min(100vw-2rem,20.5rem)] overflow-hidden rounded-lg border border-[var(--brand-latte)]/70 bg-white shadow-lg"
+          className="absolute left-0 z-50 mt-1 w-[min(100vw-2rem,22.5rem)] overflow-hidden rounded-lg border border-[var(--brand-latte)]/70 bg-white shadow-lg"
         >
           <div className="flex gap-2 p-3">
             <div className="min-w-0 flex-1">
@@ -329,7 +329,7 @@ export function DatetimeLocalPicker({
 
             <div
               ref={hourListRef}
-              className="h-[14.5rem] w-11 shrink-0 overflow-y-auto overscroll-contain border-l border-[var(--brand-latte)]/60 pl-2"
+              className="h-[14.5rem] w-[4.75rem] shrink-0 overflow-y-auto overscroll-contain border-l border-[var(--brand-latte)]/60 py-0 pl-2 pr-1 [scrollbar-gutter:stable]"
               aria-label="Hora"
             >
               {HOURS.map((h) => {
@@ -347,7 +347,7 @@ export function DatetimeLocalPicker({
                         : "text-neutral-800 hover:bg-[var(--brand-primary-soft)]",
                     )}
                   >
-                    {pad2(h)}
+                    {pad2(h)}:00
                   </button>
                 );
               })}
