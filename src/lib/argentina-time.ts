@@ -9,8 +9,7 @@
 export const ARGENTINA_TZ = "America/Argentina/Buenos_Aires";
 
 /** Order / export batch closing hour (Argentina wall time). */
-// TEMP TEST: revert before merge — force post-cutoff section visible
-export const ORDER_CUTOFF_HOUR_AR = 8;
+export const ORDER_CUTOFF_HOUR_AR = 16;
 
 /** Argentina offset used when parsing naive local datetimes. */
 const ARGENTINA_OFFSET = "-03:00";
