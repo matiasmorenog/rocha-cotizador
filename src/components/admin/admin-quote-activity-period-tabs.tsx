@@ -48,7 +48,7 @@ export function AdminQuoteActivityPeriodTabs({
             "rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm",
             FOCUS_BRAND_OUTLINE,
             period === value
-              ? "bg-white text-[var(--brand-primary)] shadow-sm"
+              ? "bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
               : "text-neutral-600 hover:bg-white/70 hover:text-neutral-900",
           )}
         >
