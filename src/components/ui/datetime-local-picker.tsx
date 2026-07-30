@@ -13,6 +13,7 @@ import {
   parseArgentinaDateTime,
   toArgentinaDatetimeLocal,
 } from "@/lib/argentina-time";
+import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["L", "M", "X", "J", "V", "S", "D"] as const;
@@ -238,7 +239,7 @@ export function DatetimeLocalPicker({
         onClick={toggleOpen}
         className={cn(
           "flex h-10 w-full items-center gap-2 rounded-md border border-neutral-300 bg-white px-3 py-2 text-left text-sm",
-          "focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1",
+          FOCUS_BRAND_BORDER,
           "disabled:cursor-not-allowed disabled:opacity-50",
           !value.trim() && "text-neutral-400",
         )}

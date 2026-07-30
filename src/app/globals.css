@@ -15,14 +15,15 @@
     cursor: not-allowed;
   }
 
-  /* Brand focus: kill UA blue; keyboard-only via :focus-visible */
+  /* Brand focus: kill UA blue; keyboard-only via :focus-visible.
+     offset 0 — no grey halo gap. Bordered controls override via FOCUS_BRAND_BORDER. */
   :focus:not(:focus-visible) {
     outline: none;
   }
 
   :focus-visible {
     outline: 2px solid var(--brand-primary);
-    outline-offset: 2px;
+    outline-offset: 0;
   }
 }
 

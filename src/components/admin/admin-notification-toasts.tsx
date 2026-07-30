@@ -1,5 +1,8 @@
 "use client";
 
+import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
+import { cn } from "@/lib/utils";
+
 export type AdminToastTone = "info" | "success" | "error";
 
 export type AdminToastItem = {
@@ -44,7 +47,7 @@ export function AdminNotificationToasts({ toasts, onDismiss }: Props) {
           <div className="flex items-start gap-2 p-3">
             <a
               href={toast.url}
-              className="min-w-0 flex-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]"
+              className={cn("min-w-0 flex-1 rounded-sm", FOCUS_BRAND_OUTLINE)}
               onClick={() => onDismiss(toast.id)}
             >
               <p className="text-sm font-semibold leading-snug text-[var(--brand-primary)]">

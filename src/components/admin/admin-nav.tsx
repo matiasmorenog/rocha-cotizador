@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
 import { X } from "lucide-react";
+import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 import { useAdminNavStore } from "@/stores/admin-nav-store";
 
@@ -38,7 +39,8 @@ function NavLinks({
             href={l.href}
             onClick={onNavigate}
             className={cn(
-              "rounded-md px-2 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1",
+              "rounded-md px-2 py-1.5 transition-colors",
+              FOCUS_BRAND_OUTLINE,
               active
                 ? "bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
                 : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900",
@@ -74,7 +76,10 @@ function AdminSidebarPanel({
             type="button"
             onClick={onClose}
             aria-label="Cerrar menú"
-            className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
+            className={cn(
+              "rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900",
+              FOCUS_BRAND_OUTLINE,
+            )}
           >
             <X className="h-5 w-5" />
           </button>

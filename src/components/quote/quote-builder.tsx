@@ -17,6 +17,7 @@ import {
   quoteLineQtyAriaLabel,
 } from "@/lib/order-measure";
 import { cn, formatPrice } from "@/lib/utils";
+import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import {
   effectiveLineTotal,
   effectiveUnitPrice,
@@ -292,7 +293,7 @@ export function QuoteBuilder({
                   >
                     <button
                       type="button"
-                      className="inline-flex rounded text-amber-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 focus-visible:ring-offset-1"
+                      className="inline-flex rounded text-amber-700 focus:outline-none focus-visible:outline-none focus-visible:outline-2 focus-visible:outline-amber-600 focus-visible:outline-offset-0"
                       aria-describedby="unit-order-warning-tip"
                       aria-label={UNIT_ORDER_PRICE_WARNING}
                     >
@@ -485,7 +486,10 @@ export function QuoteBuilder({
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Opcional — aclaraciones del pedido (horario, detalle, etc.)"
-          className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+          className={cn(
+            "flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:opacity-50",
+            FOCUS_BRAND_BORDER,
+          )}
         />
       </div>
 
