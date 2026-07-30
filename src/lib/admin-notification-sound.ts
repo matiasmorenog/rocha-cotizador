@@ -27,48 +27,47 @@ function getCtx(): AudioContext | null {
 export function playAdminNotificationSound(): void {
   const now = Date.now();
   if (now - lastPlayAt < SOUND_DEDUPE_MS) return;
-  lastPlayAt = now;
 
   try {
     const ctx = getCtx();
     if (!ctx) return;
 
-    const start = () => {
-      const t0 = ctx.currentTime;
-      const notes = [
-        { freq: 784, at: 0 }, // G5
-        { freq: 988, at: 0.11 }, // B5
-      ];
-      for (const note of notes) {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = note.freq;
-        // Fast attack, hold briefly, smooth release (~0.35s each).
-        gain.gain.setValueAtTime(0.0001, t0 + note.at);
-        gain.gain.exponentialRampToValueAtTime(
-          PEAK_GAIN,
-          t0 + note.at + 0.015,
-        );
-        gain.gain.exponentialRampToValueAtTime(
-          PEAK_GAIN * 0.55,
-          t0 + note.at + 0.12,
-        );
-        gain.gain.exponentialRampToValueAtTime(
-          0.0001,
-          t0 + note.at + 0.38,
-        );
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(t0 + note.at);
-        osc.stop(t0 + note.at + 0.42);
-      }
-    };
-
+    // Autoplay policy: an AudioContext created without a prior user gesture
+    // starts "suspended". Chaining `.then(start)` on resume() used to DEFER
+    // playback to whenever the *next* gesture landed — which is very often
+    // the click that dismisses this same toast (X button / body / TTL timer
+    // racing a later click), making the chime sound like it fires on
+    // dismiss. Never queue playback like that: only play if the context is
+    // already unlocked "now"; otherwise best-effort resume so a *future*
+    // notification can play, and silently drop this one.
     if (ctx.state === "suspended") {
-      void ctx.resume().then(start).catch(() => undefined);
-    } else {
-      start();
+      void ctx.resume().catch(() => undefined);
+      return;
+    }
+
+    lastPlayAt = now;
+    const t0 = ctx.currentTime;
+    const notes = [
+      { freq: 784, at: 0 }, // G5
+      { freq: 988, at: 0.11 }, // B5
+    ];
+    for (const note of notes) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = note.freq;
+      // Fast attack, hold briefly, smooth release (~0.35s each).
+      gain.gain.setValueAtTime(0.0001, t0 + note.at);
+      gain.gain.exponentialRampToValueAtTime(PEAK_GAIN, t0 + note.at + 0.015);
+      gain.gain.exponentialRampToValueAtTime(
+        PEAK_GAIN * 0.55,
+        t0 + note.at + 0.12,
+      );
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + note.at + 0.38);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t0 + note.at);
+      osc.stop(t0 + note.at + 0.42);
     }
   } catch {
     // ignore autoplay / unsupported
