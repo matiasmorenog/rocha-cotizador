@@ -1,6 +1,13 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +49,25 @@ function afterCutoffSummary(count: number): string {
   return `${count} cotizaciones ingresadas después del cierre (${hora})`;
 }
 
+/** Late rows: padding in inner pad so 0fr↔1fr cell shells can ease table height. */
+function LateCell({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <td className={cn("quote-draft-row-td", className)}>
+      <div className="quote-draft-row-cell-shell">
+        <div className="quote-draft-row-cell-clip">
+          <div className="quote-draft-row-cell-pad">{children}</div>
+        </div>
+      </div>
+    </td>
+  );
+}
+
 function QuoteDataRow({
   qrow,
   muted,
@@ -51,6 +77,28 @@ function QuoteDataRow({
   muted?: boolean;
   className?: string;
 }) {
+  const numberCell = (
+    <Link
+      href={`/remitos/${qrow.id}`}
+      className="font-medium text-[var(--brand-primary)] hover:underline"
+    >
+      {qrow.number}
+    </Link>
+  );
+  const customerCell = (
+    <>
+      {qrow.customer.code} — {qrow.customer.name}
+    </>
+  );
+  const createdCell = new Date(qrow.createdAt).toLocaleString("es-AR", {
+    timeZone: ARGENTINA_TZ,
+  });
+  const deliveryCell = formatDeliveryDateLabel(qrow.deliveryDate);
+  const statusCell = (
+    <Badge variant="success">{quoteStatusLabel(qrow.status)}</Badge>
+  );
+  const totalCell = formatPrice(qrow.total);
+
   return (
     <tr
       className={cn(
@@ -59,29 +107,25 @@ function QuoteDataRow({
         className,
       )}
     >
-      <td className="px-3 py-2">
-        <Link
-          href={`/remitos/${qrow.id}`}
-          className="font-medium text-[var(--brand-primary)] hover:underline"
-        >
-          {qrow.number}
-        </Link>
-      </td>
-      <td className="px-3 py-2">
-        {qrow.customer.code} — {qrow.customer.name}
-      </td>
-      <td className="px-3 py-2">
-        {new Date(qrow.createdAt).toLocaleString("es-AR", {
-          timeZone: ARGENTINA_TZ,
-        })}
-      </td>
-      <td className="px-3 py-2 text-neutral-700">
-        {formatDeliveryDateLabel(qrow.deliveryDate)}
-      </td>
-      <td className="px-3 py-2">
-        <Badge variant="success">{quoteStatusLabel(qrow.status)}</Badge>
-      </td>
-      <td className="px-3 py-2 font-medium">{formatPrice(qrow.total)}</td>
+      {muted ? (
+        <>
+          <LateCell>{numberCell}</LateCell>
+          <LateCell>{customerCell}</LateCell>
+          <LateCell>{createdCell}</LateCell>
+          <LateCell className="text-neutral-700">{deliveryCell}</LateCell>
+          <LateCell>{statusCell}</LateCell>
+          <LateCell className="font-medium">{totalCell}</LateCell>
+        </>
+      ) : (
+        <>
+          <td className="px-3 py-2">{numberCell}</td>
+          <td className="px-3 py-2">{customerCell}</td>
+          <td className="px-3 py-2">{createdCell}</td>
+          <td className="px-3 py-2 text-neutral-700">{deliveryCell}</td>
+          <td className="px-3 py-2">{statusCell}</td>
+          <td className="px-3 py-2 font-medium">{totalCell}</td>
+        </>
+      )}
     </tr>
   );
 }

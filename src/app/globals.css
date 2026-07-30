@@ -228,6 +228,15 @@ select:not([multiple]):disabled {
   }
 }
 
+@keyframes quote-draft-cell-open {
+  from {
+    grid-template-rows: 0fr;
+  }
+  to {
+    grid-template-rows: 1fr;
+  }
+}
+
 @keyframes quote-panel-enter {
   from {
     opacity: 0;
@@ -475,7 +484,8 @@ select:not([multiple]):disabled {
 
 /*
   Admin cotizaciones: after-cutoff rows expand/collapse.
-  Fade + slight slide on <tr> (~200ms); no height/0fr on table rows.
+  Fade + slight slide on <tr> (~200ms); height via cell 0fr↔1fr
+  (same shell as draft rows) so table grow/shrink eases with content.
   Keep-mount via useExitPresence; reduced-motion → instant unmount.
 */
 .admin-late-row-enter {
@@ -484,6 +494,14 @@ select:not([multiple]):disabled {
 
 .admin-late-row-exit {
   animation: quote-draft-row-exit 0.2s ease-in both;
+}
+
+.admin-late-row-enter .quote-draft-row-cell-shell {
+  animation: quote-draft-cell-open 0.2s ease-out both;
+}
+
+.admin-late-row-exit .quote-draft-row-cell-shell {
+  animation: quote-draft-cell-close 0.2s ease-in both;
 }
 
 /*
@@ -635,6 +653,8 @@ select:not([multiple]):disabled {
   .quote-unit-banner-exit,
   .admin-late-row-enter,
   .admin-late-row-exit,
+  .admin-late-row-enter .quote-draft-row-cell-shell,
+  .admin-late-row-exit .quote-draft-row-cell-shell,
   .admin-drawer-backdrop-enter,
   .admin-drawer-backdrop-exit,
   .admin-drawer-panel-enter,
@@ -698,7 +718,11 @@ select:not([multiple]):disabled {
   .quote-draft-row-enter,
   .quote-draft-row-exit,
   .quote-draft-row-exit-soft,
-  .quote-draft-row-exit .quote-draft-row-cell-shell {
+  .quote-draft-row-exit .quote-draft-row-cell-shell,
+  .admin-late-row-enter,
+  .admin-late-row-exit,
+  .admin-late-row-enter .quote-draft-row-cell-shell,
+  .admin-late-row-exit .quote-draft-row-cell-shell {
     animation: none !important;
   }
 
