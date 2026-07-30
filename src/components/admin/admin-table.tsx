@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Loader2, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 /** Ported from nexus-web-store AdminTableActions / AdminTableIconAction. */
@@ -18,8 +19,10 @@ export function AdminTableActions({
   return <div className={cn("flex gap-2", className)}>{children}</div>;
 }
 
-const iconLinkClass =
-  "inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary-soft)] active:brightness-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50";
+const iconLinkClass = cn(
+  "inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary-soft)] active:brightness-95 disabled:pointer-events-none disabled:opacity-50",
+  FOCUS_BRAND_BORDER,
+);
 
 type AdminTableIconActionProps = {
   label: string;

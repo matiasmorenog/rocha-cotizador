@@ -1,16 +1,43 @@
-import type { ProductBase } from "@/lib/product-base";
+import {
+  indexCatalogProducts,
+  type CatalogProduct,
+  type ProductBase,
+} from "@/lib/product-base";
+import {
+  searchProductIndex,
+  type ProductSearchIndex,
+} from "@/lib/product-search";
+import { filterFoldedSearch } from "@/lib/search-fold";
 
 /** Bump key when cache shape/semantics change — clears poisoned empty catalogs. */
 const CATALOG_KEY = "rocha:product-catalog:v4";
 const UNIT_PRICES_KEY = "rocha:unit-prices:v4";
 const MAX_AGE_MS = 1000 * 60 * 60; // 1h
 
-export type { ProductBase };
+export type { CatalogProduct, ProductBase };
 export type CachedCatalog = {
   version: string;
   products: ProductBase[];
   fetchedAt: number;
 };
+
+/** Session-storage shape is ProductBase[]; memory always holds indexed lowers. */
+export type IndexedCachedCatalog = {
+  version: string;
+  products: CatalogProduct[];
+  fetchedAt: number;
+};
+
+function stripSearchIndex(products: Array<ProductBase | CatalogProduct>): ProductBase[] {
+  return products.map((p) => ({
+    id: p.id,
+    code: p.code,
+    name: p.name,
+    rubro: p.rubro,
+    basePrice: p.basePrice,
+    allowsUnitOrder: p.allowsUnitOrder,
+  }));
+}
 
 type CachedUnitPrices = {
   customerKey: string;
@@ -37,7 +64,7 @@ function purgeLegacyCatalogKeys(): void {
   }
 }
 
-export function readCachedCatalog(): CachedCatalog | null {
+export function readCachedCatalog(): IndexedCachedCatalog | null {
   if (!canUseStorage()) return null;
   purgeLegacyCatalogKeys();
   try {
@@ -56,7 +83,11 @@ export function readCachedCatalog(): CachedCatalog | null {
     if (Date.now() - parsed.fetchedAt > MAX_AGE_MS) {
       return null;
     }
-    return parsed;
+    return {
+      version: parsed.version,
+      fetchedAt: parsed.fetchedAt,
+      products: indexCatalogProducts(parsed.products),
+    };
   } catch {
     sessionStorage.removeItem(CATALOG_KEY);
     return null;
@@ -70,7 +101,12 @@ export function writeCachedCatalog(catalog: CachedCatalog): void {
     return;
   }
   try {
-    sessionStorage.setItem(CATALOG_KEY, JSON.stringify(catalog));
+    const payload: CachedCatalog = {
+      version: catalog.version,
+      fetchedAt: catalog.fetchedAt,
+      products: stripSearchIndex(catalog.products),
+    };
+    sessionStorage.setItem(CATALOG_KEY, JSON.stringify(payload));
   } catch {
     // Quota / private mode
   }
@@ -122,24 +158,25 @@ export function writeCachedUnitPrices(
   }
 }
 
+/**
+ * Filter catalog by substring on code/name.
+ * Prefer `searchIndex` (trigrams) when available; otherwise linear early-exit.
+ */
 export function filterCatalog(
-  products: ProductBase[],
+  products: Array<ProductBase | CatalogProduct>,
   q: string,
   take = 30,
+  searchIndex?: ProductSearchIndex<CatalogProduct> | null,
 ): ProductBase[] {
-  const needle = q.trim().toLowerCase();
-  if (!needle) return [];
-
-  const matched: ProductBase[] = [];
-  for (const p of products) {
-    const code = String(p.code ?? "").toLowerCase();
-    const name = String(p.name ?? "").toLowerCase();
-    if (code.includes(needle) || name.includes(needle)) {
-      matched.push(p);
-      if (matched.length >= take) break;
-    }
+  if (searchIndex && searchIndex.items.length > 0) {
+    return searchProductIndex(searchIndex, q, take);
   }
-  return matched;
+
+  return filterFoldedSearch(products, q, {
+    primary: [(p) => p.code],
+    secondary: [(p) => p.name],
+    take,
+  });
 }
 
 export function unitPriceFromMap(

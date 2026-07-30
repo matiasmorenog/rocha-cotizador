@@ -4,6 +4,8 @@ import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { auth } from "@/lib/auth";
 import { safeCallbackUrl } from "@/lib/callback-url";
+import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
+import { cn } from "@/lib/utils";
 
 export default async function EntrarPage({
   searchParams,
@@ -49,7 +51,10 @@ export default async function EntrarPage({
         <div className="flex flex-col items-center gap-3">
           <Link
             href={customerHref}
-            className="inline-flex h-11 w-full items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90"
+            className={cn(
+              "inline-flex h-11 w-full items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white transition-colors hover:opacity-90",
+              FOCUS_BRAND_PRIMARY,
+            )}
           >
             Soy cliente
           </Link>

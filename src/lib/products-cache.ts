@@ -1,7 +1,15 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { CACHE_TAGS, invalidateProductsCache } from "@/lib/cache-tags";
-import type { ProductBase } from "@/lib/product-base";
+import {
+  indexCatalogProducts,
+  type ProductBase,
+} from "@/lib/product-base";
+import { foldSearchText } from "@/lib/search-fold";
+import {
+  buildProductSearchIndex,
+  searchProductIndex,
+} from "@/lib/product-search";
 
 export type { ProductBase } from "@/lib/product-base";
 
@@ -87,19 +95,8 @@ export async function searchActiveProductsBase(
   q: string,
   take = 30,
 ): Promise<ProductBase[]> {
-  const needle = q.trim().toLowerCase();
-  if (!needle) return [];
-
+  if (!foldSearchText(q.trim())) return [];
   const all = await getActiveProductsBase();
-  const matched: ProductBase[] = [];
-  for (const p of all) {
-    if (
-      p.code.toLowerCase().includes(needle) ||
-      p.name.toLowerCase().includes(needle)
-    ) {
-      matched.push(p);
-      if (matched.length >= take) break;
-    }
-  }
-  return matched;
+  const indexed = indexCatalogProducts(all);
+  return searchProductIndex(buildProductSearchIndex(indexed), q, take);
 }

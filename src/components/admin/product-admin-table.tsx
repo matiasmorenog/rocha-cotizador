@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Pencil, Plus, X } from "lucide-react";
 import {
@@ -21,6 +21,19 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { cn, formatPrice } from "@/lib/utils";
+import { filterFoldedSearch } from "@/lib/search-fold";
+import {
+  INCREMENTAL_REVEAL_INITIAL,
+  INCREMENTAL_REVEAL_STEP,
+  RevealMoreTableRow,
+  useIncrementalReveal,
+} from "@/hooks/use-incremental-reveal";
+import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
+import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
+import {
+  useSelectedRow,
+  type RowSelectionProps,
+} from "@/hooks/use-selected-row";
 
 export type ProductTableRow = {
   id: string;
@@ -56,10 +69,12 @@ function ProductEditRow({
   product,
   activeLists,
   onCancel,
+  rowProps,
 }: {
   product: ProductTableRow;
   activeLists: PriceListOption[];
   onCancel: () => void;
+  rowProps?: RowSelectionProps;
 }) {
   const router = useRouter();
   const formId = `product-edit-${product.id}`;
@@ -135,7 +150,11 @@ function ProductEditRow({
   }
 
   return (
-    <tr className="border-t border-neutral-100 bg-neutral-50/60">
+    <tr
+      {...rowProps}
+      tabIndex={0}
+      className="admin-table-row border-t border-neutral-100 bg-neutral-50/60"
+    >
       <td className="px-3 py-2 font-mono text-neutral-700">
         {product.code}
         <form id={formId} onSubmit={onSubmit} className="hidden" />
@@ -250,16 +269,22 @@ function ProductViewRow({
   activeLists,
   editDisabled,
   onStartEdit,
+  rowProps,
 }: {
   product: ProductTableRow;
   activeLists: PriceListOption[];
   editDisabled: boolean;
   onStartEdit: () => void;
+  rowProps?: RowSelectionProps;
 }) {
   return (
-    <tr className="border-t border-neutral-100">
+    <tr {...rowProps} tabIndex={0} className="admin-table-row border-t border-neutral-100">
       <td className="px-3 py-2 font-mono">{product.code}</td>
-      <td className="px-3 py-2">{product.name}</td>
+      <td className="px-3 py-2">
+        <span className="line-clamp-2 max-w-[18rem] break-words">
+          {product.name}
+        </span>
+      </td>
       <td className="px-3 py-2 text-neutral-600">{product.rubro ?? "—"}</td>
       <td className="px-3 py-2">{formatPrice(product.basePrice)}</td>
       {activeLists.map((l) => {
@@ -310,16 +335,35 @@ export function ProductAdminTable({
   const activeLists = priceLists.filter((l) => l.active);
   const isBusy = editingId !== null;
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) return products;
-    return products.filter(
-      (p) =>
-        p.code.toLowerCase().includes(needle) ||
-        p.name.toLowerCase().includes(needle) ||
-        (p.rubro ?? "").toLowerCase().includes(needle),
-    );
-  }, [products, query]);
+  const filtered = useMemo(
+    () =>
+      filterFoldedSearch(products, query, {
+        primary: [(p) => p.code],
+        secondary: [(p) => p.name, (p) => p.rubro],
+        emptyReturnsAll: true,
+      }),
+    [products, query],
+  );
+
+  const {
+    visible,
+    hasMore,
+    revealMore,
+    total,
+  } = useIncrementalReveal(filtered, {
+    initial: INCREMENTAL_REVEAL_INITIAL,
+    step: INCREMENTAL_REVEAL_STEP,
+    resetKey: query,
+  });
+
+  const tableHeightLockRef = useRef<HTMLDivElement>(null);
+  useSmoothListHeight(tableHeightLockRef, visible.length);
+
+  const tableRef = useRef<HTMLTableElement>(null);
+  useSmoothColumnWidths(tableRef, `${query}|${visible.length}`);
+  const { rowProps } = useSelectedRow(visible.map((p) => p.id));
+
+  const colSpan = 6 + activeLists.length;
 
   return (
     <div className="space-y-3">
@@ -345,58 +389,69 @@ export function ProductAdminTable({
       {creating ? (
         <ProductAdminForm onCancel={() => setCreating(false)} />
       ) : null}
-      <DataTableScroll>
-        <table className="w-full min-w-[36rem] text-sm">
-          <thead className="bg-neutral-50 text-left text-neutral-600">
-            <tr>
-              <th className="px-3 py-2">Código</th>
-              <th className="px-3 py-2">Nombre</th>
-              <th className="px-3 py-2">Rubro</th>
-              <th className="px-3 py-2">Base</th>
-              {activeLists.map((l) => (
-                <th key={l.id} className="whitespace-nowrap px-3 py-2">
-                  {l.name}
-                </th>
-              ))}
-              <th className="px-3 py-2">Estado</th>
-              <th className="px-3 py-2">Medida</th>
-              <th className="px-3 py-2" />
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p) =>
-              editingId === p.id ? (
-                <ProductEditRow
-                  key={p.id}
-                  product={p}
-                  activeLists={activeLists}
-                  onCancel={() => setEditingId(null)}
-                />
-              ) : (
-                <ProductViewRow
-                  key={p.id}
-                  product={p}
-                  activeLists={activeLists}
-                  editDisabled={isBusy}
-                  onStartEdit={() => setEditingId(p.id)}
-                />
-              ),
-            )}
-            {filtered.length === 0 ? (
+      <div ref={tableHeightLockRef}>
+        <DataTableScroll>
+          <table ref={tableRef} className="w-full min-w-[36rem] text-sm">
+            <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
-                <td
-                  colSpan={6 + activeLists.length}
-                  className="px-3 py-8 text-center text-neutral-500"
-                >
-                  {query.trim()
-                    ? "Sin productos para esa búsqueda"
-                    : "No hay productos"}
-                </td>
+                <th className="px-3 py-2">Código</th>
+                <th className="px-3 py-2">Nombre</th>
+                <th className="px-3 py-2">Rubro</th>
+                <th className="px-3 py-2">Base</th>
+                {activeLists.map((l) => (
+                  <th key={l.id} className="whitespace-nowrap px-3 py-2">
+                    {l.name}
+                  </th>
+                ))}
+                <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2">Medida</th>
+                <th className="px-3 py-2" />
               </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </DataTableScroll>
+            </thead>
+            <tbody>
+              {visible.map((p) =>
+                editingId === p.id ? (
+                  <ProductEditRow
+                    key={p.id}
+                    product={p}
+                    activeLists={activeLists}
+                    onCancel={() => setEditingId(null)}
+                    rowProps={rowProps(p.id)}
+                  />
+                ) : (
+                  <ProductViewRow
+                    key={p.id}
+                    product={p}
+                    activeLists={activeLists}
+                    editDisabled={isBusy}
+                    onStartEdit={() => setEditingId(p.id)}
+                    rowProps={rowProps(p.id)}
+                  />
+                ),
+              )}
+              <RevealMoreTableRow
+                colSpan={colSpan}
+                enabled={hasMore}
+                onReveal={revealMore}
+                shown={visible.length}
+                total={total}
+              />
+              {filtered.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={colSpan}
+                    className="px-3 py-8 text-center text-neutral-500"
+                  >
+                    {query.trim()
+                      ? "Sin productos para esa búsqueda"
+                      : "No hay productos"}
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </DataTableScroll>
+      </div>
     </div>
   );
 }

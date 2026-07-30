@@ -36,6 +36,7 @@ feat|fix|refactor|chore|docs/*  ──PR──►  development  ──PR──�
 
 ### CI y merge
 - GitHub Actions: job **`lint-and-typecheck`** en PRs/push a `development` y `main`.
+- **Draft PRs:** sin CI ni preview Vercel — ver `draft-pr-checks.mdc`. Marcar ready para disparar checks.
 - Build = responsabilidad de Vercel (no en Actions por ahora).
 - Merge estándar: **squash** + borrado de branch.
 

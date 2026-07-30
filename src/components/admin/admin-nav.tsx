@@ -2,8 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X } from "lucide-react";
+import {
+  useExitPresence,
+  QUOTE_PICKER_FLOAT_MS,
+} from "@/hooks/use-exit-presence";
+import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 import { useAdminNavStore } from "@/stores/admin-nav-store";
 
@@ -38,7 +43,8 @@ function NavLinks({
             href={l.href}
             onClick={onNavigate}
             className={cn(
-              "rounded-md px-2 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1",
+              "rounded-md px-2 py-1.5 transition-colors",
+              FOCUS_BRAND_OUTLINE,
               active
                 ? "bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
                 : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900",
@@ -74,7 +80,10 @@ function AdminSidebarPanel({
             type="button"
             onClick={onClose}
             aria-label="Cerrar menú"
-            className="rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
+            className={cn(
+              "rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900",
+              FOCUS_BRAND_OUTLINE,
+            )}
           >
             <X className="h-5 w-5" />
           </button>
@@ -88,6 +97,15 @@ function AdminSidebarPanel({
 function AdminMobileDrawer({ pathname }: { pathname: string }) {
   const open = useAdminNavStore((s) => s.open);
   const setOpen = useAdminNavStore((s) => s.setOpen);
+  /** Skip exit keep-mount so route skeleton isn't hidden under z-50 overlay. */
+  const [skipExit, setSkipExit] = useState(false);
+  if (open && skipExit) {
+    setSkipExit(false);
+  }
+  const { present, exiting, animKey } = useExitPresence(
+    open && !skipExit,
+    QUOTE_PICKER_FLOAT_MS,
+  );
 
   useEffect(() => {
     setOpen(false);
@@ -104,28 +122,47 @@ function AdminMobileDrawer({ pathname }: { pathname: string }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, setOpen]);
 
+  /** Animated dismiss (X, backdrop, Escape). */
   const close = () => setOpen(false);
+  /** Nav: unmount instantly; Link still starts route transition same click. */
+  const closeForNavigate = () => {
+    setSkipExit(true);
+    setOpen(false);
+  };
 
-  if (!open) return null;
+  if (skipExit || !present) return null;
 
   return (
     <div className="admin-mobile-drawer-root fixed inset-0 z-50 print:hidden">
       <button
         type="button"
         aria-label="Cerrar menú"
-        className="absolute inset-0 bg-black/40"
+        className={cn(
+          "absolute inset-0 bg-black/40",
+          exiting
+            ? "admin-drawer-backdrop-exit pointer-events-none"
+            : "admin-drawer-backdrop-enter",
+        )}
         onClick={close}
+        tabIndex={exiting ? -1 : undefined}
       />
       <aside
+        key={animKey}
         id="admin-mobile-nav"
         role="dialog"
-        aria-modal="true"
+        aria-modal={exiting ? undefined : true}
+        aria-hidden={exiting || undefined}
         aria-label="Menú de administración"
-        className="relative h-full w-[min(100%,16rem)] overflow-y-auto border-r border-neutral-200 bg-white p-4 shadow-xl"
+        className={cn(
+          "relative h-full w-[min(100%,16rem)] overflow-y-auto border-r border-neutral-200 bg-white p-4 shadow-xl",
+          exiting
+            ? "admin-drawer-panel-exit pointer-events-none"
+            : "admin-drawer-panel-enter",
+        )}
       >
         <AdminSidebarPanel
           pathname={pathname}
-          onNavigate={close}
+          onNavigate={closeForNavigate}
           showCloseButton
           onClose={close}
         />

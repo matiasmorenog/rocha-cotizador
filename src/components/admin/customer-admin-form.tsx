@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
+import { cn } from "@/lib/utils";
 
 type PriceListOption = {
   id: string;
@@ -175,7 +177,10 @@ export function CustomerAdminForm({
             <select
               value={priceListId}
               onChange={(e) => setPriceListId(e.target.value)}
-              className="flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-10 text-sm focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1"
+              className={cn(
+                "flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-10 text-sm",
+                FOCUS_BRAND_BORDER,
+              )}
               required
             >
               {inactiveSelected ? (
@@ -202,7 +207,10 @@ export function CustomerAdminForm({
           rows={4}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+          className={cn(
+            "flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm placeholder:text-neutral-400 disabled:cursor-not-allowed disabled:opacity-50",
+            FOCUS_BRAND_BORDER,
+          )}
         />
       </div>
 

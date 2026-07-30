@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Source_Sans_3 } from "next/font/google";
 import { AppHeader } from "@/components/app-header";
+import { MainRoutePending } from "@/components/main-route-pending";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -24,7 +25,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col font-sans">
         <Providers>
           <AppHeader />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
+            <MainRoutePending>{children}</MainRoutePending>
+          </main>
         </Providers>
       </body>
     </html>

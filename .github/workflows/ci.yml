@@ -3,6 +3,8 @@ name: CI
 on:
   pull_request:
     branches: [development, main]
+    # ready_for_review: re-run when a draft PR is marked ready
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [development, main]
 
@@ -13,6 +15,8 @@ concurrency:
 jobs:
   lint-and-typecheck:
     name: lint-and-typecheck
+    # Draft PRs: skip (save Actions minutes). Push to development/main still runs.
+    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -113,3 +117,10 @@ jobs:
         run: |
           chmod +x scripts/post-deploy-smoke.sh
           npm run ci:post-deploy-smoke
+
+      # Bust Next.js Data Cache after every prod deploy (tags in src/lib/cache-tags.ts).
+      - name: Post-deploy cache revalidate
+        run: |
+          set -euo pipefail
+          vercel cache purge --type data --yes --token=${{ secrets.VERCEL_TOKEN }}
+          vercel cache invalidate --tag products,price-lists,customers,admin-dashboard --yes --token=${{ secrets.VERCEL_TOKEN }}

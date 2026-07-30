@@ -3,6 +3,7 @@ import { LogOut } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
 import { PinChangeHint } from "@/components/account/pin-change-hint";
 import { AdminMenuButton } from "@/components/admin/admin-menu-button";
+import { HeaderProgressLine } from "@/components/header-progress-line";
 
 export async function AppHeader() {
   const session = await auth();
@@ -75,6 +76,9 @@ export async function AppHeader() {
               )}
             </nav>
           ) : null}
+        </div>
+        <div className="absolute inset-x-0 bottom-0 translate-y-1/2">
+          <HeaderProgressLine />
         </div>
       </header>
       {isCustomer ? <PinChangeHint show={mustChangePassword} /> : null}

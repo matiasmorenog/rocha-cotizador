@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { parseArgentinaDateTime, toArgentinaDatetimeLocal } from "@/lib/argentina-time";
 import { db } from "@/lib/db";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 
@@ -11,14 +12,45 @@ export type AdminDashboardRecentQuote = {
 };
 
 export type AdminDashboardData = {
-  customers: number;
-  products: number;
   quotesToday: number;
+  quotesTodayTotal: number;
+  quotesYesterday: number;
+  customersQuotedToday: number;
+  customersQuotedWeek: number;
+  pendingWeighLines: number;
   recent: AdminDashboardRecentQuote[];
 };
 
-function dayKey(d = new Date()): string {
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+/** Calendar day key in America/Argentina/Buenos_Aires (`YYYY-MM-DD`). */
+function argentinaDayKey(d = new Date()): string {
+  return toArgentinaDatetimeLocal(d).slice(0, 10);
+}
+
+function argentinaDayStart(day: string): Date {
+  const start = parseArgentinaDateTime(`${day}T00:00`);
+  if (!start) throw new Error(`Invalid Argentina day key: ${day}`);
+  return start;
+}
+
+/** Monday 00:00 Argentina of the week containing `day` (Mon–Sun). */
+function argentinaWeekMondayStart(day: string): Date {
+  const noon = parseArgentinaDateTime(`${day}T12:00`);
+  if (!noon) throw new Error(`Invalid Argentina day key: ${day}`);
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    weekday: "short",
+  }).format(noon);
+  const dow: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  const daysFromMonday = ((dow[weekday] ?? 1) + 6) % 7;
+  return new Date(argentinaDayStart(day).getTime() - daysFromMonday * 24 * 60 * 60 * 1000);
 }
 
 /**
@@ -29,15 +61,36 @@ function dayKey(d = new Date()): string {
  */
 const getCachedAdminDashboard = unstable_cache(
   async (day: string): Promise<AdminDashboardData> => {
-    const [y, m, d] = day.split("-").map(Number);
-    const start = new Date(y, m - 1, d);
-    start.setHours(0, 0, 0, 0);
+    const startToday = argentinaDayStart(day);
+    const startYesterday = new Date(startToday.getTime() - 24 * 60 * 60 * 1000);
+    const startWeek = argentinaWeekMondayStart(day);
 
     return db.$transaction(async (tx) => {
-      const customers = await tx.customer.count({ where: { active: true } });
-      const products = await tx.product.count({ where: { active: true } });
       const quotesToday = await tx.quote.count({
-        where: { createdAt: { gte: start } },
+        where: { createdAt: { gte: startToday } },
+      });
+      const quotesTodaySum = await tx.quote.aggregate({
+        where: { createdAt: { gte: startToday } },
+        _sum: { total: true },
+      });
+      const quotesYesterday = await tx.quote.count({
+        where: {
+          createdAt: { gte: startYesterday, lt: startToday },
+        },
+      });
+      const customersQuotedTodayGroups = await tx.quote.groupBy({
+        by: ["customerId"],
+        where: { createdAt: { gte: startToday } },
+      });
+      const customersQuotedWeekGroups = await tx.quote.groupBy({
+        by: ["customerId"],
+        where: { createdAt: { gte: startWeek } },
+      });
+      // Same rule as remito: unit-order lines or $0 price still need weigh/confirm.
+      const pendingWeighLines = await tx.quoteItem.count({
+        where: {
+          OR: [{ orderByUnit: true }, { unitPrice: 0 }],
+        },
       });
       const recentRows = await tx.quote.findMany({
         take: 8,
@@ -46,9 +99,12 @@ const getCachedAdminDashboard = unstable_cache(
       });
 
       return {
-        customers,
-        products,
         quotesToday,
+        quotesTodayTotal: Number(quotesTodaySum._sum.total ?? 0),
+        quotesYesterday,
+        customersQuotedToday: customersQuotedTodayGroups.length,
+        customersQuotedWeek: customersQuotedWeekGroups.length,
+        pendingWeighLines,
         recent: recentRows.map((q) => ({
           id: q.id,
           number: q.number,
@@ -64,5 +120,5 @@ const getCachedAdminDashboard = unstable_cache(
 );
 
 export function getAdminDashboardData(): Promise<AdminDashboardData> {
-  return getCachedAdminDashboard(dayKey());
+  return getCachedAdminDashboard(argentinaDayKey());
 }
