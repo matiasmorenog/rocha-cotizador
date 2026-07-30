@@ -14,8 +14,13 @@ import {
 type RouteLoadingContextValue = {
   /** 0–100 fill while navigating; 0 when hidden. */
   progress: number;
+  /** Progress bar visible (includes brief done flash). */
   visible: boolean;
-  startLoading: () => void;
+  /** True from nav start until settle — cover main with skeleton. */
+  pending: boolean;
+  /** Destination pathname for pending skeleton (click href). */
+  pendingPath: string | null;
+  startLoading: (path?: string | null) => void;
   finishLoading: () => void;
 };
 
@@ -29,6 +34,8 @@ const HIDE_AFTER_DONE_MS = 280;
 export function RouteLoadingProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState(0);
   const [visible, setVisible] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [pendingPath, setPendingPath] = useState<string | null>(null);
   const trickleRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const hideRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(false);
@@ -60,16 +67,23 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
     }, TRICKLE_MS);
   }, [clearTrickle]);
 
-  const startLoading = useCallback(() => {
-    clearHide();
-    activeRef.current = true;
-    setProgress(START_PCT);
-    setVisible(true);
-    startTrickle();
-  }, [clearHide, startTrickle]);
+  const startLoading = useCallback(
+    (path?: string | null) => {
+      clearHide();
+      activeRef.current = true;
+      setPending(true);
+      setPendingPath(path ?? null);
+      setProgress(START_PCT);
+      setVisible(true);
+      startTrickle();
+    },
+    [clearHide, startTrickle],
+  );
 
   const finishLoading = useCallback(() => {
     clearTrickle();
+    setPending(false);
+    setPendingPath(null);
     if (!activeRef.current) {
       setVisible(false);
       setProgress(0);
@@ -96,10 +110,12 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
     () => ({
       progress,
       visible,
+      pending,
+      pendingPath,
       startLoading,
       finishLoading,
     }),
-    [progress, visible, startLoading, finishLoading],
+    [progress, visible, pending, pendingPath, startLoading, finishLoading],
   );
 
   return (

@@ -55,11 +55,15 @@ function shouldStartNavigation(
 }
 
 function hasPendingSkeleton(): boolean {
-  return Boolean(
-    document.querySelector(
-      'main [aria-busy="true"], main .rocha-skeleton, [role="status"][aria-busy="true"]',
-    ),
+  const nodes = document.querySelectorAll(
+    'main [aria-busy="true"], main .rocha-skeleton, [role="status"][aria-busy="true"]',
   );
+  for (const node of nodes) {
+    // Ignore our instant cover — otherwise settle never finishes.
+    if (node.closest("[data-route-pending]")) continue;
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -87,10 +91,13 @@ export function RouteLoadingOverlay() {
     }
   }, []);
 
-  const beginNavigation = useCallback(() => {
-    navStartedRef.current = true;
-    startLoading();
-  }, [startLoading]);
+  const beginNavigation = useCallback(
+    (path?: string | null) => {
+      navStartedRef.current = true;
+      startLoading(path);
+    },
+    [startLoading],
+  );
 
   const settleAfterRoute = useCallback(() => {
     clearSettle();
@@ -168,10 +175,16 @@ export function RouteLoadingOverlay() {
       const anchor = (event.target as HTMLElement).closest("a");
       if (!anchor) return;
       if (!shouldStartNavigation(event, anchor, pathname, search)) return;
-      beginNavigation();
+      let nextPath: string | null = null;
+      try {
+        nextPath = new URL(anchor.href, window.location.href).pathname;
+      } catch {
+        nextPath = null;
+      }
+      beginNavigation(nextPath);
     };
 
-    const onPopState = () => beginNavigation();
+    const onPopState = () => beginNavigation(window.location.pathname);
 
     document.addEventListener("click", onClick, true);
     window.addEventListener("popstate", onPopState);

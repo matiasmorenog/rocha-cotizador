@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { AdminClientSafe } from "@/components/admin/admin-client-safe";
+import { RoutePendingShell } from "@/components/route-pending-shell";
 
 function AdminPageFallback() {
   return (
@@ -23,7 +24,7 @@ function AdminPageFallback() {
 export function AdminPageSafe({ children }: { children: ReactNode }) {
   return (
     <AdminClientSafe label="admin-page" fallback={<AdminPageFallback />}>
-      {children}
+      <RoutePendingShell variant="admin">{children}</RoutePendingShell>
     </AdminClientSafe>
   );
 }
