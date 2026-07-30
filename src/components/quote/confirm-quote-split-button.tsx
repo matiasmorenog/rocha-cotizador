@@ -9,7 +9,7 @@ import {
 } from "react";
 import { ChevronDown } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
+import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 import {
   CONFIRM_QUOTE_ACTION_KEY,
@@ -100,7 +100,7 @@ export function ConfirmQuoteSplitButton({
           className={cn(
             "inline-flex h-10 cursor-pointer items-center justify-center bg-[var(--brand-primary)] px-4 text-sm font-medium text-white transition-colors",
             "hover:brightness-95 active:brightness-90",
-            FOCUS_BRAND_OUTLINE,
+            FOCUS_BRAND_PRIMARY,
             "disabled:cursor-not-allowed disabled:opacity-50",
             "rounded-l-md rounded-r-none",
           )}
@@ -125,7 +125,7 @@ export function ConfirmQuoteSplitButton({
           className={cn(
             "inline-flex h-10 w-10 cursor-pointer items-center justify-center border-l border-white/25 bg-[var(--brand-primary)] text-white transition-colors",
             "hover:brightness-95 active:brightness-90",
-            FOCUS_BRAND_OUTLINE,
+            FOCUS_BRAND_PRIMARY,
             "disabled:cursor-not-allowed disabled:opacity-50",
             "rounded-r-md rounded-l-none",
           )}

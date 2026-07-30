@@ -13,7 +13,11 @@ import {
   parseArgentinaDateTime,
   toArgentinaDatetimeLocal,
 } from "@/lib/argentina-time";
-import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
+import {
+  FOCUS_BRAND_BORDER,
+  FOCUS_BRAND_OUTLINE,
+  FOCUS_BRAND_PRIMARY,
+} from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 const WEEKDAYS = ["L", "M", "X", "J", "V", "S", "D"] as const;
@@ -265,7 +269,10 @@ export function DatetimeLocalPicker({
                   type="button"
                   aria-label="Mes anterior"
                   onClick={() => shiftMonth(-1)}
-                  className="inline-flex size-8 items-center justify-center rounded-md text-neutral-700 hover:bg-[var(--brand-primary-soft)]"
+                  className={cn(
+                    "inline-flex size-8 items-center justify-center rounded-md text-neutral-700 hover:bg-[var(--brand-primary-soft)]",
+                    FOCUS_BRAND_OUTLINE,
+                  )}
                 >
                   <ChevronLeft className="size-4" />
                 </button>
@@ -276,7 +283,10 @@ export function DatetimeLocalPicker({
                   type="button"
                   aria-label="Mes siguiente"
                   onClick={() => shiftMonth(1)}
-                  className="inline-flex size-8 items-center justify-center rounded-md text-neutral-700 hover:bg-[var(--brand-primary-soft)]"
+                  className={cn(
+                    "inline-flex size-8 items-center justify-center rounded-md text-neutral-700 hover:bg-[var(--brand-primary-soft)]",
+                    FOCUS_BRAND_OUTLINE,
+                  )}
                 >
                   <ChevronRight className="size-4" />
                 </button>
@@ -313,6 +323,7 @@ export function DatetimeLocalPicker({
                       }}
                       className={cn(
                         "inline-flex size-8 items-center justify-center rounded-md text-sm tabular-nums transition-colors",
+                        isSelected ? FOCUS_BRAND_PRIMARY : FOCUS_BRAND_OUTLINE,
                         cell.inMonth
                           ? "text-neutral-900"
                           : "text-neutral-400",
@@ -344,6 +355,7 @@ export function DatetimeLocalPicker({
                       onClick={() => commit({ ...draft, hour: h })}
                       className={cn(
                         "flex h-8 w-full items-center justify-center rounded-md text-sm tabular-nums",
+                        selectedHour ? FOCUS_BRAND_PRIMARY : FOCUS_BRAND_OUTLINE,
                         selectedHour
                           ? "bg-[var(--brand-primary)] font-medium text-white"
                           : "text-neutral-800 hover:bg-[var(--brand-primary-soft)]",
@@ -361,14 +373,20 @@ export function DatetimeLocalPicker({
             <button
               type="button"
               onClick={onClear}
-              className="text-sm font-medium text-[var(--brand-primary)] hover:underline"
+              className={cn(
+                "rounded-sm text-sm font-medium text-[var(--brand-primary)] hover:underline",
+                FOCUS_BRAND_OUTLINE,
+              )}
             >
               Borrar
             </button>
             <button
               type="button"
               onClick={onToday}
-              className="text-sm font-medium text-[var(--brand-primary)] hover:underline"
+              className={cn(
+                "rounded-sm text-sm font-medium text-[var(--brand-primary)] hover:underline",
+                FOCUS_BRAND_OUTLINE,
+              )}
             >
               Hoy
             </button>

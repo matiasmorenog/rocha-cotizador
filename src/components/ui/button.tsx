@@ -1,5 +1,8 @@
 import { ButtonHTMLAttributes, forwardRef } from "react";
-import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
+import {
+  FOCUS_BRAND_BORDER,
+  FOCUS_BRAND_PRIMARY,
+} from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -15,7 +18,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={cn(
           "inline-flex cursor-pointer items-center justify-center font-medium transition-colors disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50",
           "rounded-md border border-transparent",
-          FOCUS_BRAND_BORDER,
+          variant === "primary" ? FOCUS_BRAND_PRIMARY : FOCUS_BRAND_BORDER,
           {
             "bg-[var(--brand-primary)] text-white hover:brightness-95 active:brightness-90":
               variant === "primary",
