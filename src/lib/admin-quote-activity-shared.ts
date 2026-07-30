@@ -1,6 +1,6 @@
 /** Client-safe types/helpers for admin quote activity chart. */
 
-export type QuoteActivityPeriod = "week" | "month";
+export type QuoteActivityPeriod = "week" | "month" | "year";
 
 export type QuoteActivityPoint = {
   key: string;
@@ -29,10 +29,17 @@ export const QUOTE_ACTIVITY_PERIOD_LABELS: Record<
     description: "Totales de cotizaciones por día (últimos 30 días, hora Argentina)",
     empty: "Sin cotizaciones en los últimos 30 días.",
   },
+  year: {
+    short: "12 meses",
+    summary: "año",
+    description: "Totales de cotizaciones por mes (año calendario actual, hora Argentina)",
+    empty: "Sin cotizaciones en el año calendario actual.",
+  },
 };
 
 export function parseQuoteActivityPeriod(value?: string): QuoteActivityPeriod {
   if (value === "month") return "month";
+  if (value === "year") return "year";
   return "week";
 }
 

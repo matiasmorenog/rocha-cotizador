@@ -9,7 +9,7 @@ import {
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
-const PERIODS: QuoteActivityPeriod[] = ["week", "month"];
+const PERIODS: QuoteActivityPeriod[] = ["week", "month", "year"];
 
 type AdminQuoteActivityPeriodTabsProps = {
   period: QuoteActivityPeriod;

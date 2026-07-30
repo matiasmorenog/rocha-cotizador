@@ -418,14 +418,17 @@ export function AdminQuoteActivityChart({
 
           <div
             className={cn(
-              period === "month" &&
-                !isMobile &&
+              ((period === "month" && !isMobile) || period === "year") &&
                 "-mx-1 overflow-x-auto overflow-y-visible px-1 pb-1 sm:-mx-2 sm:px-2",
             )}
           >
             <div
               className={cn(
-                period === "month" && !isMobile ? "min-w-[35rem]" : "w-full",
+                period === "month" && !isMobile
+                  ? "min-w-[35rem]"
+                  : period === "year"
+                    ? "min-w-[22rem] sm:min-w-0 sm:w-full"
+                    : "w-full",
               )}
             >
               <div
@@ -499,7 +502,9 @@ export function AdminQuoteActivityChart({
                       "absolute -translate-x-1/2 truncate text-center text-[11px] capitalize text-neutral-500",
                       period === "month" && !isMobile
                         ? "max-w-8"
-                        : "max-w-[3.5rem]",
+                        : period === "year"
+                          ? "max-w-7"
+                          : "max-w-[3.5rem]",
                       activeKey === plot.point.key &&
                         "font-semibold text-[var(--brand-primary)]",
                     )}

@@ -30,6 +30,8 @@ export type QuoteActivitySeries = {
   totalRevenue: number;
 };
 
+type ActivityGrain = "day" | "month";
+
 function argentinaDayKey(d = new Date()): string {
   return toArgentinaDatetimeLocal(d).slice(0, 10);
 }
@@ -64,10 +66,55 @@ function dayOfMonthLabel(day: string): string {
   return String(Number(day.slice(8, 10)));
 }
 
-function buildDayBuckets(
+function monthShortLabel(yearMonth: string): string {
+  const noon = parseArgentinaDateTime(`${yearMonth}-15T12:00`);
+  if (!noon) return yearMonth;
+  return noon
+    .toLocaleDateString("es-AR", {
+      timeZone: ARGENTINA_TZ,
+      month: "short",
+    })
+    .replace(".", "");
+}
+
+/** Last calendar day of `YYYY-MM` as `YYYY-MM-DD`. */
+function lastDayOfMonth(yearMonth: string): string {
+  const [y, m] = yearMonth.split("-").map(Number);
+  const days = new Date(y, m, 0).getDate();
+  return `${yearMonth}-${String(days).padStart(2, "0")}`;
+}
+
+function buildBuckets(
   period: QuoteActivityPeriod,
   todayKey: string,
-): { buckets: QuoteActivityPoint[]; rangeStart: Date } {
+): {
+  buckets: QuoteActivityPoint[];
+  rangeStart: Date;
+  grain: ActivityGrain;
+} {
+  if (period === "year") {
+    const year = todayKey.slice(0, 4);
+    const buckets: QuoteActivityPoint[] = [];
+
+    for (let month = 1; month <= 12; month++) {
+      const yearMonth = `${year}-${String(month).padStart(2, "0")}`;
+      buckets.push({
+        key: yearMonth,
+        label: monthShortLabel(yearMonth),
+        quotes: 0,
+        revenue: 0,
+        desde: `${yearMonth}-01`,
+        hasta: lastDayOfMonth(yearMonth),
+      });
+    }
+
+    return {
+      buckets,
+      rangeStart: argentinaDayStart(`${year}-01-01`),
+      grain: "month",
+    };
+  }
+
   const dayCount = period === "week" ? 7 : 30;
   const startKey = shiftArgentinaDay(todayKey, -(dayCount - 1));
   const buckets: QuoteActivityPoint[] = [];
@@ -84,16 +131,31 @@ function buildDayBuckets(
     });
   }
 
-  return { buckets, rangeStart: argentinaDayStart(startKey) };
+  return { buckets, rangeStart: argentinaDayStart(startKey), grain: "day" };
 }
 
-async function fetchQuoteActivityRows(rangeStart: Date) {
-  return db.$queryRaw<{ dayKey: string; quotes: number; revenue: number }[]>`
+async function fetchQuoteActivityRows(rangeStart: Date, grain: ActivityGrain) {
+  if (grain === "month") {
+    return db.$queryRaw<{ bucketKey: string; quotes: number; revenue: number }[]>`
+      SELECT
+        to_char(
+          (q."createdAt" AT TIME ZONE 'America/Argentina/Buenos_Aires'),
+          'YYYY-MM'
+        ) AS "bucketKey",
+        COUNT(*)::int AS quotes,
+        COALESCE(SUM(q.total), 0)::float AS revenue
+      FROM "Quote" q
+      WHERE q."createdAt" >= ${rangeStart}
+      GROUP BY 1
+    `;
+  }
+
+  return db.$queryRaw<{ bucketKey: string; quotes: number; revenue: number }[]>`
     SELECT
       to_char(
         (q."createdAt" AT TIME ZONE 'America/Argentina/Buenos_Aires'),
         'YYYY-MM-DD'
-      ) AS "dayKey",
+      ) AS "bucketKey",
       COUNT(*)::int AS quotes,
       COALESCE(SUM(q.total), 0)::float AS revenue
     FROM "Quote" q
@@ -104,12 +166,12 @@ async function fetchQuoteActivityRows(rangeStart: Date) {
 
 function fillBuckets(
   buckets: QuoteActivityPoint[],
-  rows: { dayKey: string; quotes: number; revenue: number }[],
+  rows: { bucketKey: string; quotes: number; revenue: number }[],
   period: QuoteActivityPeriod,
 ): QuoteActivitySeries {
   const map = new Map(buckets.map((b) => [b.key, b]));
   for (const row of rows) {
-    const bucket = map.get(row.dayKey);
+    const bucket = map.get(row.bucketKey);
     if (!bucket) continue;
     bucket.quotes = row.quotes;
     bucket.revenue = row.revenue;
@@ -123,10 +185,15 @@ function fillBuckets(
   };
 }
 
+/**
+ * Quote activity series for the dashboard chart.
+ * Cache key args: Argentina day + period (`week` | `month` | `year`).
+ * Key prefix `admin-quote-activity`; tag `admin-dashboard` (bust on quote create / wipe).
+ */
 const getCachedQuoteActivity = unstable_cache(
   async (day: string, period: QuoteActivityPeriod): Promise<QuoteActivitySeries> => {
-    const { buckets, rangeStart } = buildDayBuckets(period, day);
-    const rows = await fetchQuoteActivityRows(rangeStart);
+    const { buckets, rangeStart, grain } = buildBuckets(period, day);
+    const rows = await fetchQuoteActivityRows(rangeStart, grain);
     return fillBuckets(buckets, rows, period);
   },
   ["admin-quote-activity"],
