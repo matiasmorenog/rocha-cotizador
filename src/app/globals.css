@@ -131,6 +131,19 @@ body {
   transition: background-color 150ms ease-out;
 }
 
+/* Fixed 2-line name slot: short names keep the same row height; long names
+   wrap/clip at two lines without ellipsis (text-overflow: clip). */
+.admin-table-name-2l {
+  display: block;
+  line-height: 1.25rem;
+  min-height: 2.5rem;
+  max-height: 2.5rem;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  white-space: normal;
+  text-overflow: clip;
+}
+
 /* Grayish — deliberately distinct from the brownish `--brand-primary-soft`
    selected state below, so hover and selection read as two different things. */
 .admin-table-row:hover {
