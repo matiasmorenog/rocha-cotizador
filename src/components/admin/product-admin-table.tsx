@@ -281,7 +281,7 @@ function ProductViewRow({
     <tr {...rowProps} tabIndex={0} className="admin-table-row border-t border-neutral-100">
       <td className="px-3 py-2 font-mono">{product.code}</td>
       <td className="px-3 py-2">
-        <span className="line-clamp-2 max-w-[18rem] break-words">
+        <span className="admin-table-name-2l max-w-[18rem]">
           {product.name}
         </span>
       </td>
@@ -390,7 +390,7 @@ export function ProductAdminTable({
         <ProductAdminForm onCancel={() => setCreating(false)} />
       ) : null}
       <div ref={tableHeightLockRef}>
-        <DataTableScroll>
+        <DataTableScroll className="data-table-rows-2l">
           <table ref={tableRef} className="w-full min-w-[36rem] text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>

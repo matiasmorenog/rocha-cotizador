@@ -29,7 +29,7 @@ export default async function AdminListasPreciosPage() {
 
       <PriceListCreateForm />
 
-      <DataTableScroll>
+      <DataTableScroll className="data-table-rows-2l">
         <table className="w-full min-w-[36rem] text-sm">
           <thead className="bg-neutral-50 text-left text-neutral-600">
             <tr>

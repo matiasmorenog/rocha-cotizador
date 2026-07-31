@@ -237,7 +237,7 @@ export default async function RemitoDetailPage({
             canDeleteLine={canDeleteLine}
           />
         ) : (
-          <DataTableScroll className="rounded-none border-0 bg-transparent">
+          <DataTableScroll className="data-table-rows-2l rounded-none border-0 bg-transparent">
             <table className="w-full min-w-[28rem] text-sm">
               <thead>
                 <tr className="border-b border-neutral-300 text-left text-neutral-600">
@@ -274,7 +274,7 @@ export default async function RemitoDetailPage({
                         <span className="text-neutral-500">{measureLabel}</span>
                       </td>
                       <td className="py-2 pr-2 align-middle">
-                        <div className="line-clamp-2 max-w-[16rem] break-words">
+                        <div className="admin-table-name-2l max-w-[16rem]">
                           {item.productName}
                         </div>
                         {needsWeighPrice ? (
