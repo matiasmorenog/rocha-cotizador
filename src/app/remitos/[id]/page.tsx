@@ -237,7 +237,7 @@ export default async function RemitoDetailPage({
             canDeleteLine={canDeleteLine}
           />
         ) : (
-          <DataTableScroll className="rounded-none border-0 bg-transparent">
+          <DataTableScroll className="data-table-rows-2l rounded-none border-0 bg-transparent">
             <table className="w-full min-w-[28rem] text-sm">
               <thead>
                 <tr className="border-b border-neutral-300 text-left text-neutral-600">

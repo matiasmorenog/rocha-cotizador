@@ -132,15 +132,20 @@ body {
 }
 
 /*
-  Uniform body-row height across every DataTableScroll table: enough room for
-  two lines of text (1.25rem × 2) plus the usual py-2 cell padding. CSS table
-  row `height` is a *minimum*, so edit forms / weigh warnings can still grow.
+  Opt-in uniform body-row height (2 text lines + py-2). Use on tables whose
+  cells actually wrap to two lines (productos, clientes, remitos, editor de
+  lista). Skip cotizaciones / listado de listas — those stay single-line.
 */
-.data-table-scroll tbody > tr:not([aria-hidden]):not(.pointer-events-none) {
+.data-table-scroll.data-table-rows-2l
+  tbody
+  > tr:not([aria-hidden]):not(.pointer-events-none) {
   height: 3.5rem;
 }
 
-.data-table-scroll tbody > tr:not([aria-hidden]):not(.pointer-events-none) > td {
+.data-table-scroll.data-table-rows-2l
+  tbody
+  > tr:not([aria-hidden]):not(.pointer-events-none)
+  > td {
   vertical-align: middle;
 }
 

@@ -390,7 +390,7 @@ export function ProductAdminTable({
         <ProductAdminForm onCancel={() => setCreating(false)} />
       ) : null}
       <div ref={tableHeightLockRef}>
-        <DataTableScroll>
+        <DataTableScroll className="data-table-rows-2l">
           <table ref={tableRef} className="w-full min-w-[36rem] text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>

@@ -144,7 +144,7 @@ export function CustomersAdminPanel({
       ) : null}
 
       <div ref={tableHeightLockRef}>
-        <DataTableScroll>
+        <DataTableScroll className="data-table-rows-2l">
           <table ref={tableRef} className="w-full min-w-[40rem] text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
