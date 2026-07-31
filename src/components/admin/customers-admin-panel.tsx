@@ -181,9 +181,15 @@ export function CustomersAdminPanel({
                         className="admin-table-row border-t border-neutral-100"
                       >
                         <td className="px-3 py-2 font-mono">{c.code}</td>
-                        <td className="px-3 py-2">{c.name}</td>
+                        <td className="px-3 py-2">
+                          <span className="admin-table-name-2l max-w-[14rem]">
+                            {c.name}
+                          </span>
+                        </td>
                         <td className="px-3 py-2 text-neutral-700">
-                          {c.address ?? "—"}
+                          <span className="admin-table-name-2l max-w-[16rem]">
+                            {c.address ?? "—"}
+                          </span>
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 text-neutral-700">
                           {c.phone && wa ? (

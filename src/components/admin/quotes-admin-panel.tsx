@@ -94,9 +94,9 @@ function QuoteDataRow({
     </Link>
   );
   const customerCell = (
-    <>
+    <span className="admin-table-name-2l max-w-[16rem]">
       {qrow.customer.code} — {qrow.customer.name}
-    </>
+    </span>
   );
   const createdCell = new Date(qrow.createdAt).toLocaleString("es-AR", {
     timeZone: ARGENTINA_TZ,

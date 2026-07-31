@@ -36,7 +36,7 @@ export function RecentQuotesList({
           key={q.id}
           {...rowProps(q.id)}
           tabIndex={0}
-          className="admin-table-row flex items-center justify-between px-4 py-3"
+          className="admin-table-row flex min-h-[3.5rem] items-center justify-between px-4 py-3"
         >
           <div>
             <Link

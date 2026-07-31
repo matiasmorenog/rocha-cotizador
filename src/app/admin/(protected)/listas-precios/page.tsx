@@ -44,7 +44,11 @@ export default async function AdminListasPreciosPage() {
           <tbody>
             {lists.map((l) => (
               <tr key={l.id} className="border-t border-neutral-100">
-                <td className="px-3 py-2 font-medium">{l.name}</td>
+                <td className="px-3 py-2 font-medium">
+                  <span className="admin-table-name-2l max-w-[18rem]">
+                    {l.name}
+                  </span>
+                </td>
                 <td className="px-3 py-2 font-mono text-neutral-600">
                   {l.excelKey ?? "—"}
                 </td>
