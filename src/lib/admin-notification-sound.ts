@@ -6,11 +6,9 @@
  */
 
 let audioCtx: AudioContext | null = null;
-let lastPlayAt = 0;
 /** Nodes for the chime currently ringing — lets a dismiss cut it instantly. */
 let activeNodes: { osc: OscillatorNode; gain: GainNode }[] = [];
 
-const SOUND_DEDUPE_MS = 800;
 /** Peak gain per note (was 0.07 — barely audible at max Mac volume). */
 const PEAK_GAIN = 0.65;
 /** Fade when force-stopped mid-note — short enough to not be its own click/pop. */
@@ -28,17 +26,18 @@ function getCtx(): AudioContext | null {
 }
 
 /**
- * Single-onset chord chime — audible but not harsh.
- * Was previously a two-note arpeggio (G5 then B5, 110ms apart); every
- * legitimate single play of that pattern is heard as "ding-ding", which
- * reads as a double sound regardless of how well channel-level dedupe
- * works upstream. Both notes now start at the same instant (a dyad) so
- * one notification event produces exactly one perceived chime.
+ * Two-note chime (G5 then B5, 110ms apart) — audible but not harsh.
+ *
+ * No time-based cooldown here on purpose: a blanket "mute anything within
+ * N ms of the last play" mutex can't tell a real double-fire of the *same*
+ * event apart from two legitimately different notifications that happen to
+ * land close together — it would silence the second one. Same-event dedupe
+ * (same toast id / same push payload) is the caller's job — see
+ * `playedSoundIdsRef` + `claimChimeOnce` in admin-push-sw-register.tsx and
+ * the push fingerprint dedupe in `pushToast`. Every *distinct* id that gets
+ * past those must always chime, no matter how soon after the previous one.
  */
 export function playAdminNotificationSound(): void {
-  const now = Date.now();
-  if (now - lastPlayAt < SOUND_DEDUPE_MS) return;
-
   try {
     const ctx = getCtx();
     if (!ctx) return;
@@ -61,11 +60,10 @@ export function playAdminNotificationSound(): void {
     // *this* chime.
     activeNodes = [];
 
-    lastPlayAt = now;
     const t0 = ctx.currentTime;
     const notes = [
       { freq: 784, at: 0 }, // G5
-      { freq: 988, at: 0 }, // B5 — same onset as G5, forms one dyad, not a second beep
+      { freq: 988, at: 0.11 }, // B5
     ];
     for (const note of notes) {
       const osc = ctx.createOscillator();
@@ -118,6 +116,65 @@ export function stopAdminNotificationSound(): void {
     } catch {
       // already stopped / unsupported — ignore
     }
+  }
+}
+
+const CHIME_CLAIMED_KEY = "rocha-admin-chime-claimed";
+/** Long enough to outlive any poll interval (8s) or Probar race; short enough not to leak. */
+const CHIME_CLAIM_TTL_MS = 5 * 60 * 1000;
+
+function readClaimedMap(): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(CHIME_CLAIMED_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return {};
+    return parsed as Record<string, number>;
+  } catch {
+    return {};
+  }
+}
+
+function writeClaimedMap(map: Record<string, number>): void {
+  try {
+    localStorage.setItem(CHIME_CLAIMED_KEY, JSON.stringify(map));
+  } catch {
+    // storage blocked/full — dedupe degrades to per-tab only, not fatal.
+  }
+}
+
+/**
+ * Cross-tab chime dedupe. Every open `/admin` tab runs its own
+ * AdminPushSwRegister instance with its own React refs and its own
+ * sessionStorage — a toast id that is safely deduped *within* one tab
+ * (ref/Set check) is still independently discovered by every *other* open
+ * tab (its own 8s inbox poll, or the same push message), which then plays
+ * its own chime for the same id a few seconds later. That is two real,
+ * separate `playAdminNotificationSound()` calls in two separate JS
+ * contexts — no in-tab mutex or React-level id check can ever see across
+ * that boundary. `localStorage` is the one thing actually shared across
+ * same-origin tabs, so use it as the source of truth: only the tab that
+ * wins the claim for a given id is allowed to play.
+ *
+ * Returns true if the caller "won" the claim (should play the chime).
+ */
+export function claimChimeOnce(id: string): boolean {
+  if (typeof window === "undefined" || !id) return true;
+  try {
+    const now = Date.now();
+    const map = readClaimedMap();
+    for (const [key, at] of Object.entries(map)) {
+      if (now - at > CHIME_CLAIM_TTL_MS) delete map[key];
+    }
+    if (map[id] !== undefined) {
+      writeClaimedMap(map);
+      return false;
+    }
+    map[id] = now;
+    writeClaimedMap(map);
+    return true;
+  } catch {
+    return true;
   }
 }
 

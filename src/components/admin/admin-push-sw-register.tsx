@@ -13,6 +13,7 @@ import {
   type AdminToastItem,
 } from "@/components/admin/admin-notification-toasts";
 import {
+  claimChimeOnce,
   playAdminNotificationSound,
   stopAdminNotificationSound,
   unlockAdminNotificationSound,
@@ -136,9 +137,15 @@ export function AdminPushSwRegister() {
 
     // One chime per toast id, ever — covers Probar+poll races and any
     // later re-delivery with the same id. Never plays again on dismiss/exit.
+    // claimChimeOnce is the cross-tab half of this: playedSoundIdsRef alone
+    // only dedupes *within* this tab — every other open /admin tab has its
+    // own ref and its own sessionStorage, and independently discovers the
+    // same id via its own poll a few seconds later, playing its own chime.
     if (!playedSoundIdsRef.current.has(id)) {
       playedSoundIdsRef.current.add(id);
-      playAdminNotificationSound();
+      if (claimChimeOnce(id)) {
+        playAdminNotificationSound();
+      }
     }
     setToasts((prev) => {
       const withoutDup = prev.filter((t) => t.id !== id);
