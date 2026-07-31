@@ -281,7 +281,7 @@ function ProductViewRow({
     <tr {...rowProps} tabIndex={0} className="admin-table-row border-t border-neutral-100">
       <td className="px-3 py-2 font-mono">{product.code}</td>
       <td className="px-3 py-2">
-        <span className="line-clamp-2 max-w-[18rem] break-words">
+        <span className="max-w-[18rem] break-words whitespace-normal">
           {product.name}
         </span>
       </td>
