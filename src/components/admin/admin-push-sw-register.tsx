@@ -13,7 +13,9 @@ import {
   type AdminToastItem,
 } from "@/components/admin/admin-notification-toasts";
 import {
+  claimChimeOnce,
   playAdminNotificationSound,
+  stopAdminNotificationSound,
   unlockAdminNotificationSound,
 } from "@/lib/admin-notification-sound";
 
@@ -75,6 +77,8 @@ export function AdminPushSwRegister() {
   );
   /** Recent fingerprints → timestamp; blocks double emit (Probar+poll, BC+postMessage). */
   const recentFpRef = useRef<Map<string, number>>(new Map());
+  /** Toast ids that already played their chime — sound fires once per id, never on re-delivery or dismiss. */
+  const playedSoundIdsRef = useRef<Set<string>>(new Set());
 
   // Keep poll/toast gates in sync with session without reading refs during render.
   useEffect(() => {
@@ -95,6 +99,9 @@ export function AdminPushSwRegister() {
       clearTimeout(timer);
       timersRef.current.delete(id);
     }
+    // Every dismiss path (X, body click, TTL timeout above) lands here —
+    // cut any still-ringing appear chime so closing a toast is never heard.
+    stopAdminNotificationSound();
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }
 
@@ -123,14 +130,23 @@ export function AdminPushSwRegister() {
       }
       const lastAt = recentFpRef.current.get(fp);
       if (lastAt !== undefined && now - lastAt < PUSH_DEDUPE_MS) {
-        console.log("[push] toast deduped", { id, fp: next.title });
         return;
       }
       recentFpRef.current.set(fp, now);
     }
 
-    console.log("[push] in-app toast", { id, ...next });
-    playAdminNotificationSound();
+    // One chime per toast id, ever — covers Probar+poll races and any
+    // later re-delivery with the same id. Never plays again on dismiss/exit.
+    // claimChimeOnce is the cross-tab half of this: playedSoundIdsRef alone
+    // only dedupes *within* this tab — every other open /admin tab has its
+    // own ref and its own sessionStorage, and independently discovers the
+    // same id via its own poll a few seconds later, playing its own chime.
+    if (!playedSoundIdsRef.current.has(id)) {
+      playedSoundIdsRef.current.add(id);
+      if (claimChimeOnce(id)) {
+        playAdminNotificationSound();
+      }
+    }
     setToasts((prev) => {
       const withoutDup = prev.filter((t) => t.id !== id);
       return [...withoutDup, { ...next, id }].slice(-MAX_TOASTS);
@@ -178,8 +194,22 @@ export function AdminPushSwRegister() {
       const body = typeof msg.body === "string" ? msg.body : "";
       const url =
         typeof msg.url === "string" ? msg.url : "/admin/cotizaciones";
+      const inboxId = typeof msg.id === "string" ? msg.id : null;
+      if (inboxId) {
+        // Same AdminInboxItem id as the 8s poll — reusing it as the toast id
+        // makes both delivery paths (push + poll) resolve to one chime, no
+        // matter which arrives first.
+        markInboxSeen(inboxId);
+      }
       // Same SW push arrives via BroadcastChannel AND clients.postMessage.
-      pushToast({ title, body, url, tone: "info", source: "push" });
+      pushToast({
+        id: inboxId ? `inbox-${inboxId}` : undefined,
+        title,
+        body,
+        url,
+        tone: "info",
+        source: "push",
+      });
     }
 
     const onSwMessage = (event: MessageEvent) => {
