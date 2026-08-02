@@ -266,7 +266,7 @@ export function PriceListEditor({
           value={filter}
           onChange={(e) => setFilter(e.target.value)}
         />
-        <DataTableScroll>
+        <DataTableScroll className="data-table-rows-2l">
           <table className="w-full min-w-[40rem] text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
@@ -285,7 +285,7 @@ export function PriceListEditor({
                 <tr key={i.productId} className="border-t border-neutral-100">
                   <td className="px-3 py-2 font-mono">{i.product.code}</td>
                   <td className="px-3 py-2">
-                    <span className="line-clamp-2 max-w-[18rem] break-words">
+                    <span className="admin-table-name-2l max-w-[18rem]">
                       {i.product.name}
                     </span>
                     {!i.product.active ? (

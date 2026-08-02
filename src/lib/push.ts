@@ -47,6 +47,9 @@ export type PushPayload = {
   tag?: string;
   icon?: string;
   badge?: string;
+  /** AdminInboxItem.id — lets the client reuse the same toast id as inbox
+   * polling, so a quote that arrives via both channels chimes once. */
+  id?: string;
 };
 
 function pushSiteOrigin(): string {
@@ -223,14 +226,16 @@ export async function notifyAdminsNewQuote(
   const body = quote.customerName;
   const url = `/remitos/${quote.id}`;
 
+  let inboxId: string | undefined;
   try {
-    await enqueueAdminInbox({
+    const inboxItem = await enqueueAdminInbox({
       title,
       body,
       url,
       quoteId: quote.id,
       kind: "quote",
     });
+    inboxId = inboxItem.id;
   } catch (err) {
     console.error("[push] enqueueAdminInbox failed", err);
   }
@@ -246,6 +251,9 @@ export async function notifyAdminsNewQuote(
         body,
         url,
         tag: `rocha-quote-${quote.id}-${Date.now()}`,
+        // Same inbox row id as the 8s poll — client dedupes the chime by id
+        // so Web Push + inbox polling never both ring for one quote.
+        id: inboxId,
       },
       `quote ${quote.number}`,
     );

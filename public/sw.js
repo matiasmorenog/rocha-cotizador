@@ -1,5 +1,5 @@
 /* Rocha Cotizador — admin Web Push service worker */
-/* v8 — brand icon/badge on all OS notifications */
+/* v9 — silence OS sound when an open admin tab will chime in-app */
 
 const PUSH_CHANNEL = "rocha-admin-push";
 const FALLBACK_TITLE = "Nueva cotización";
@@ -59,6 +59,7 @@ function parsePushData(event) {
         tag: typeof parsed.tag === "string" ? parsed.tag : undefined,
         icon: typeof parsed.icon === "string" ? parsed.icon : undefined,
         badge: typeof parsed.badge === "string" ? parsed.badge : undefined,
+        id: typeof parsed.id === "string" ? parsed.id : undefined,
       };
     }
   } catch {
@@ -92,6 +93,7 @@ function parsePushData(event) {
         tag: typeof parsed.tag === "string" ? parsed.tag : undefined,
         icon: typeof parsed.icon === "string" ? parsed.icon : undefined,
         badge: typeof parsed.badge === "string" ? parsed.badge : undefined,
+        id: typeof parsed.id === "string" ? parsed.id : undefined,
       };
     }
   } catch (err) {
@@ -102,7 +104,19 @@ function parsePushData(event) {
   return defaults;
 }
 
-async function broadcastToClients(payload) {
+async function getOpenClients() {
+  try {
+    return await self.clients.matchAll({
+      type: "window",
+      includeUncontrolled: true,
+    });
+  } catch (err) {
+    console.warn("[push-sw] clients.matchAll failed", err);
+    return [];
+  }
+}
+
+async function broadcastToClients(payload, clientsList) {
   const message = { type: "ROCHA_PUSH", ...payload };
   try {
     const channel = new BroadcastChannel(PUSH_CHANNEL);
@@ -112,10 +126,6 @@ async function broadcastToClients(payload) {
     console.warn("[push-sw] BroadcastChannel failed", err);
   }
   try {
-    const clientsList = await self.clients.matchAll({
-      type: "window",
-      includeUncontrolled: true,
-    });
     console.log("[push-sw] open clients:", clientsList.length);
     for (const client of clientsList) {
       client.postMessage(message);
@@ -146,6 +156,13 @@ async function handlePush(event) {
   const title = data.title || FALLBACK_TITLE;
   const icon = resolveBrandAssetUrl(data.icon);
   const badge = resolveBrandAssetUrl(data.badge ?? data.icon);
+  const clientsList = await getOpenClients();
+  const isTestTag = typeof data.tag === "string" && data.tag.startsWith("rocha-test");
+  // Any open admin tab plays its own in-app chime for non-test pushes (see
+  // admin-push-sw-register.tsx). Silence the OS sound in that case so the
+  // admin never hears both at once — "Probar sistema" stays untouched since
+  // its tag is skipped client-side and needs the OS sound to prove it works.
+  const suppressOsSound = clientsList.length > 0 && !isTestTag;
   const options = {
     body: data.body || "",
     data: { url: data.url || FALLBACK_URL },
@@ -155,7 +172,7 @@ async function handlePush(event) {
     renotify: true,
     // false = more reliable banners on macOS/Windows when tab focused
     requireInteraction: false,
-    silent: false,
+    silent: suppressOsSound,
   };
 
   console.log("[push-sw] showing notification", { title, ...options });
@@ -181,12 +198,16 @@ async function handlePush(event) {
   }
 
   try {
-    await broadcastToClients({
-      title,
-      body: options.body,
-      url: options.data.url,
-      tag: options.tag,
-    });
+    await broadcastToClients(
+      {
+        title,
+        body: options.body,
+        url: options.data.url,
+        tag: options.tag,
+        id: data.id,
+      },
+      clientsList,
+    );
   } catch (err) {
     console.warn("[push-sw] broadcast failed", err);
   }
