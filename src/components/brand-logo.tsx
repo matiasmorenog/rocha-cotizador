@@ -5,7 +5,10 @@ type BrandLogoProps = {
   /** Visual size of the mark */
   size?: "sm" | "md" | "lg" | "xl" | "2xl";
   className?: string;
+  /** Above-the-fold / LCP: preload + eager decode */
   priority?: boolean;
+  /** Prefer `priority` for LCP; use `eager` when priority preload is unwanted */
+  loading?: "eager" | "lazy";
 };
 
 const SIZE = {
@@ -16,21 +19,25 @@ const SIZE = {
   "2xl": { width: 384, height: 384, className: "h-52 w-52 sm:h-64 sm:w-64" },
 } as const;
 
-/** Official Rocha tienda de pan mark — sage circle + forest green. */
+/** Official Rocha tienda de pan mark — solid teal square + forest green. */
 export function BrandLogo({
   size = "sm",
   className,
   priority = false,
+  loading,
 }: BrandLogoProps) {
   const s = SIZE[size];
   return (
     <span className="inline-block overflow-hidden rounded-2xl">
       <Image
-        src="/brand/rocha-logo.png"
+        src="/brand/rocha-mark.png"
         alt="ROCHA tienda de pan"
         width={s.width}
         height={s.height}
         priority={priority}
+        loading={priority ? undefined : loading}
+        // Flat brand mark — skip optimizer cache/resizes that can reintroduce seams.
+        unoptimized
         className={cn(s.className, "object-contain", className)}
       />
     </span>
