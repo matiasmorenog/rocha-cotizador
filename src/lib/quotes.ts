@@ -16,3 +16,13 @@ export async function nextQuoteNumber(): Promise<string> {
 
   return `R-${String(seq).padStart(6, "0")}`;
 }
+
+/** Public remito detail path — display number (`R-XXXXXX`), not DB cuid. */
+export function remitoPath(quoteNumber: string): string {
+  return `/remitos/${encodeURIComponent(quoteNumber)}`;
+}
+
+/** Normalize URL segment for case-insensitive number match (`r-000018` → `R-000018`). */
+export function normalizeRemitoNumberParam(param: string): string {
+  return decodeURIComponent(param).trim().toUpperCase();
+}

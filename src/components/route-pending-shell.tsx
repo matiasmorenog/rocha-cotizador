@@ -87,8 +87,11 @@ type RoutePendingShellProps = {
  * On soft-nav start (`pending`), cover children with a destination skeleton
  * immediately — do not wait for Next `loading.tsx` to swap the segment.
  *
- * Overlay bleeds out of root `main` padding (`px-4 py-6`) so one solid cream
- * surface meets the header edge-to-edge — no inset panel over body radials.
+ * Customer: full-bleed `.brand-page-atmosphere` (fixed) covers viewport gutters
+ * outside `main.max-w-6xl`. Opaque bg only on the main column left a sharp
+ * vertical edge where body wheat/latte radials showed on the right (remito
+ * skeleton). Admin keeps column-local solid bg so the desktop sidebar stays
+ * visible under a fixed layer.
  */
 export function RoutePendingShell({ children, variant }: RoutePendingShellProps) {
   const { pending, pendingPath } = useRouteLoading();
@@ -107,16 +110,27 @@ export function RoutePendingShell({ children, variant }: RoutePendingShellProps)
         {children}
       </div>
       {pending ? (
-        <div
-          data-route-pending=""
-          className="absolute -inset-x-4 -inset-y-6 z-[5] cursor-wait overflow-auto bg-[var(--background)] px-4 py-6"
-          role="status"
-          aria-busy="true"
-          aria-live="polite"
-          aria-label="Cargando página"
-        >
-          {skeleton}
-        </div>
+        <>
+          {variant === "customer" ? (
+            <div
+              aria-hidden
+              className="brand-page-atmosphere pointer-events-none fixed inset-0 z-[4] print:hidden"
+            />
+          ) : null}
+          <div
+            data-route-pending=""
+            className={cn(
+              "absolute -inset-x-4 -inset-y-6 z-[5] cursor-wait overflow-auto px-4 py-6",
+              variant === "admin" && "bg-[var(--background)]",
+            )}
+            role="status"
+            aria-busy="true"
+            aria-live="polite"
+            aria-label="Cargando página"
+          >
+            {skeleton}
+          </div>
+        </>
       ) : null}
     </div>
   );

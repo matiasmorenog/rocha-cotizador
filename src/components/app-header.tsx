@@ -14,7 +14,7 @@ export async function AppHeader() {
 
   return (
     <>
-      <header className="relative z-10 border-b border-[var(--brand-latte)]/60 bg-[var(--brand-primary-soft)]/80 print:hidden">
+      <header className="relative z-10 border-b border-[var(--brand-primary)]/20 bg-[var(--brand-primary-soft)]/80 print:hidden">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
           <div className="flex min-w-0 items-center gap-2">
             {isAdmin ? <AdminMenuButton /> : null}
