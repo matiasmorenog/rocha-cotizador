@@ -205,7 +205,7 @@ export default async function RemitoDetailPage({
         <WhatsAppNotifyButton whatsappUrl={notifyWhatsappUrl} autoOpen />
       ) : null}
 
-      <article className="print-remito rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+      <article className="print-remito rounded-lg border border-neutral-200 bg-white p-7 shadow-sm">
         <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-4">
           <div>
             <BrandLogo size="md" priority className="print:h-24 print:w-24" />
