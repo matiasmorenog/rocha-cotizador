@@ -16,7 +16,7 @@ const SIZE = {
   "2xl": { width: 560, height: 224, className: "h-52 w-auto sm:h-64" },
 } as const;
 
-/** Official Rocha tienda de café mark — beige + coffee brown. */
+/** Official Rocha tienda de pan mark — sage circle + forest green. */
 export function BrandLogo({
   size = "sm",
   className,
@@ -27,7 +27,7 @@ export function BrandLogo({
     <span className="inline-block overflow-hidden rounded-2xl">
       <Image
         src="/brand/rocha-logo.png"
-        alt="ROCHA tienda de café"
+        alt="ROCHA tienda de pan"
         width={s.width}
         height={s.height}
         priority={priority}

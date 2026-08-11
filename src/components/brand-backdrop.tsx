@@ -1,19 +1,13 @@
 import { cn } from "@/lib/utils";
 
-const BEANS_PATTERN = {
-  src: "/brand/bg-pattern-beans.png",
-  size: "560px",
-  veil: 0.55,
-} as const;
-
 type BrandBackdropProps = {
   children: React.ReactNode;
   className?: string;
 };
 
 /**
- * Full-bleed coffee backdrop behind auth/landing surfaces.
- * Beans seamless tile + soft latte veil keeps forms readable.
+ * Full-bleed sage/wheat atmosphere behind auth/landing surfaces.
+ * Soft brand washes keep forms readable without a photo tile.
  */
 export function BrandBackdrop({ children, className }: BrandBackdropProps) {
   return (
@@ -22,17 +16,23 @@ export function BrandBackdrop({ children, className }: BrandBackdropProps) {
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10 select-none"
         style={{
-          backgroundImage: `url(${BEANS_PATTERN.src})`,
-          backgroundRepeat: "repeat",
-          backgroundSize: BEANS_PATTERN.size,
-          backgroundPosition: "center center",
-        }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-0 -z-10 select-none"
-        style={{
-          backgroundColor: `color-mix(in srgb, var(--background) ${Math.round(BEANS_PATTERN.veil * 100)}%, transparent)`,
+          backgroundImage: `
+            radial-gradient(
+              ellipse 70% 55% at 15% 10%,
+              color-mix(in srgb, var(--brand-primary-soft) 90%, transparent) 0%,
+              transparent 60%
+            ),
+            radial-gradient(
+              ellipse 55% 45% at 90% 0%,
+              color-mix(in srgb, var(--brand-latte) 35%, transparent) 0%,
+              transparent 55%
+            ),
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, var(--background) 70%, white) 0%,
+              var(--background) 100%
+            )
+          `,
         }}
       />
       {children}

@@ -28,12 +28,12 @@
 }
 
 :root {
-  /* Surfaces: latte/coffee from ROCHA mark. Accent: classic maroon for CTAs. */
-  --background: #f5efe7;
-  --foreground: #2c241f;
-  --brand-primary: #8b1e1e;
-  --brand-primary-soft: #ebe2d8;
-  --brand-latte: #d2bfa9;
+  /* Surfaces from ROCHA tienda de pan mark: sage circle, forest green, wheat. */
+  --background: #f3f6f5;
+  --foreground: #1a2e2c;
+  --brand-primary: #046c5d;
+  --brand-primary-soft: #e4f0ee;
+  --brand-latte: #d6bd9b;
 }
 
 @theme inline {
@@ -58,12 +58,12 @@ body {
   background-image:
     radial-gradient(
       ellipse 80% 50% at 10% -10%,
-      color-mix(in srgb, #e8ddd2 75%, transparent) 0%,
+      color-mix(in srgb, #d7e8e5 75%, transparent) 0%,
       transparent 55%
     ),
     radial-gradient(
       ellipse 60% 40% at 100% 0%,
-      color-mix(in srgb, var(--brand-latte) 45%, transparent) 0%,
+      color-mix(in srgb, var(--brand-latte) 40%, transparent) 0%,
       transparent 50%
     );
   background-repeat: no-repeat;
@@ -162,7 +162,7 @@ body {
   text-overflow: clip;
 }
 
-/* Grayish — deliberately distinct from the brownish `--brand-primary-soft`
+/* Grayish — deliberately distinct from the sage `--brand-primary-soft`
    selected state below, so hover and selection read as two different things. */
 .admin-table-row:hover {
   background-color: #f5f5f5;
@@ -226,9 +226,9 @@ input[type="week"]::-webkit-calendar-picker-indicator {
   padding: 0;
   cursor: pointer;
   opacity: 0.85;
-  /* Tint default glyph toward --brand-primary (#8b1e1e) */
-  filter: invert(14%) sepia(65%) saturate(2500%) hue-rotate(345deg)
-    brightness(0.9) contrast(0.95);
+  /* Tint default glyph toward --brand-primary (#046c5d) */
+  filter: invert(32%) sepia(42%) saturate(900%) hue-rotate(128deg)
+    brightness(0.88) contrast(0.95);
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator:hover,
