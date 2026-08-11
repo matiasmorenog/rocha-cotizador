@@ -182,21 +182,23 @@ body {
 }
 
 /*
-  Inset ring: outline with offset 0 paints outside the <tr> and the bottom
-  edge of the last row is clipped by .data-table-scroll (overflow-x:auto
-  forces overflow-y clipping too). Negative offset keeps the thick teal
-  edge fully inside the row for first and last alike.
+  Selected / keyboard focus: thick horizontal rules only (top + bottom),
+  not a full rectangle. Inset box-shadow stays inside the <tr> so the last
+  row's bottom edge is not clipped by .data-table-scroll (overflow-x:auto
+  also clips overflow-y). Kill the global :focus-visible outline (4 sides).
 */
 .admin-table-row:focus-visible {
-  outline-offset: -2px;
+  outline: none;
+  box-shadow:
+    inset 0 2px 0 var(--brand-primary),
+    inset 0 -2px 0 var(--brand-primary);
 }
 
 .admin-table-row[data-selected="true"] {
   background-color: var(--brand-primary-soft);
-  /* Same thick teal edge as keyboard :focus-visible (globals base) —
-     click select otherwise only tints the background. */
-  outline: 2px solid var(--brand-primary);
-  outline-offset: -2px;
+  box-shadow:
+    inset 0 2px 0 var(--brand-primary),
+    inset 0 -2px 0 var(--brand-primary);
 }
 
 .admin-table-row[data-selected="true"]:hover {
