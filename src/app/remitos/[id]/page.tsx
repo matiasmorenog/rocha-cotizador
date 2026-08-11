@@ -179,7 +179,7 @@ export default async function RemitoDetailPage({
             Entrega: {deliveryLabel}
           </p>
           {isAdmin && pendingWeighCount > 0 ? (
-            <p className="mt-1 text-sm text-amber-800">
+            <p className="mt-1 inline-block rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-sm text-amber-800">
               {pendingWeighCount === 1
                 ? "1 línea pendiente de precio tras pesaje"
                 : `${pendingWeighCount} líneas pendientes de precio tras pesaje`}
@@ -264,7 +264,11 @@ export default async function RemitoDetailPage({
                   return (
                     <tr
                       key={item.id}
-                      className={`border-b border-neutral-100${showAmber ? " bg-amber-50" : ""}`}
+                      className={
+                        showAmber
+                          ? "border-b border-amber-100 bg-amber-50"
+                          : "border-b border-neutral-100"
+                      }
                     >
                       <td className="py-2 pl-2 pr-2 align-middle font-mono text-xs">
                         {item.productCode}
@@ -274,7 +278,14 @@ export default async function RemitoDetailPage({
                         <span className="text-neutral-500">{measureLabel}</span>
                       </td>
                       <td className="py-2 pr-2 align-middle">
-                        <div className="admin-table-name-2l max-w-[16rem]">
+                        <div
+                          className={cn(
+                            "max-w-[16rem]",
+                            needsWeighPrice
+                              ? "admin-table-name-1l"
+                              : "admin-table-name-2l",
+                          )}
+                        >
                           {item.productName}
                         </div>
                         {needsWeighPrice ? (

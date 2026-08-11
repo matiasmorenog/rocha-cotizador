@@ -9,7 +9,7 @@ import { formatPrice } from "@/lib/utils";
 /**
  * Dashboard "Últimas cotizaciones" feed. Same hover/select visual language
  * as the admin tables (`.admin-table-row` + `useSelectedRow`): grayish hover,
- * brownish persistent selection, Up/Down/Home/End to move between rows.
+ * sage persistent selection, Up/Down/Home/End to move between rows.
  */
 export function RecentQuotesList({
   recent,

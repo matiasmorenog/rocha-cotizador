@@ -94,7 +94,7 @@ export function AdminNotificationToasts({ toasts, onDismiss }: Props) {
           key={toast.id}
           role="status"
           className={cn(
-            "pointer-events-auto overflow-hidden rounded-lg border border-[var(--brand-latte)] border-l-4 bg-[#fffdf9] shadow-[0_8px_24px_rgba(44,36,31,0.12)]",
+            "pointer-events-auto overflow-hidden rounded-lg border border-[var(--brand-latte)] border-l-4 bg-[#f7fbfa] shadow-[0_8px_24px_rgba(26,46,44,0.12)]",
             exiting ? "admin-toast-exit" : "admin-toast-enter",
             toneAccent[toast.tone],
           )}

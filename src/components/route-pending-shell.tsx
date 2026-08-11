@@ -10,6 +10,8 @@ import {
   SkeletonAdminNewQuotePage,
   SkeletonAdminPriceListsPage,
   SkeletonAdminQuotesPage,
+  SkeletonChooserPage,
+  SkeletonHomePage,
   SkeletonListPage,
   SkeletonLoginPage,
   SkeletonQuotePage,
@@ -19,6 +21,7 @@ import { useRouteLoading } from "@/lib/route-loading-context";
 import { cn } from "@/lib/utils";
 
 function customerSkeletonFor(path: string) {
+  if (path === "/" || path === "") return <SkeletonHomePage />;
   if (path.startsWith("/cotizar")) return <SkeletonQuotePage />;
   if (path.startsWith("/remitos/") && path !== "/remitos") {
     return <SkeletonRemitoDetailPage />;
@@ -34,9 +37,8 @@ function customerSkeletonFor(path: string) {
     );
   }
   if (path.startsWith("/cuenta")) return <SkeletonAccountPage />;
-  if (path.startsWith("/login") || path.startsWith("/entrar")) {
-    return <SkeletonLoginPage />;
-  }
+  if (path.startsWith("/entrar")) return <SkeletonChooserPage />;
+  if (path.startsWith("/login")) return <SkeletonLoginPage />;
   if (path.startsWith("/admin/login")) {
     return <SkeletonLoginPage title="Cargando acceso admin" />;
   }
