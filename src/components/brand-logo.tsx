@@ -26,7 +26,7 @@ export function BrandLogo({
   return (
     <span className="inline-block overflow-hidden rounded-2xl">
       <Image
-        src="/brand/rocha-logo.png?v=2"
+        src="/brand/rocha-logo.png"
         alt="ROCHA tienda de pan"
         width={s.width}
         height={s.height}
