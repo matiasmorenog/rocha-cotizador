@@ -1,15 +1,10 @@
 import { cn } from "@/lib/utils";
 
 const LOGIN_PATTERN = {
-  /**
-   * 4× tile (2504×1252): luminance-faithful recolor of beans stamp.
-   * Continuous ink→teal/wheat map keeps organic interstitial stains
-   * (not posterized dots). CSS size keeps visual density; pixel density
-   * covers retina. Legacy: beans, 1× teal, prior 3× teal.
-   */
-  src: "/brand/login-pattern-teal-hd.png",
-  size: "560px",
-  veil: 0.48,
+  /** Single teal coffee/bakery tile (1024×512). */
+  src: "/brand/login-pattern-teal.png",
+  size: "520px",
+  veil: 0.52,
 } as const;
 
 type BrandBackdropProps = {
@@ -19,9 +14,7 @@ type BrandBackdropProps = {
 
 /**
  * Full-bleed teal pattern behind auth/landing surfaces.
- * HD stamp tile + soft veil; stains stay organic (wheat midtones).
- * Kept: `/brand/bg-pattern-beans.png`, `login-pattern-teal.png`,
- * `login-pattern-teal-3x.png`.
+ * Soft veil keeps form text readable over the busy stamp.
  */
 export function BrandBackdrop({ children, className }: BrandBackdropProps) {
   return (
