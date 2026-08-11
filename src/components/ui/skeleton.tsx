@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BrandBackdrop } from "@/components/brand-backdrop";
+import { RemitoBackButton } from "@/components/quote/remito-back-button";
 import { cn } from "@/lib/utils";
 
 type SkeletonProps = {
@@ -245,9 +246,11 @@ export function SkeletonRemitoDetailPage() {
     <SkeletonRegion label="Cargando remito" className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-36" />
-        <div className="flex gap-2">
-          <Skeleton className="h-10 w-20 rounded-md" />
+        <div className="flex flex-wrap justify-end gap-2">
+          {/* Real Volver — works during route pending / loading shell */}
+          <RemitoBackButton />
           <Skeleton className="h-10 w-32 rounded-md" />
+          <Skeleton className="h-10 w-28 rounded-md" />
         </div>
       </div>
       <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">

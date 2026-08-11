@@ -161,16 +161,17 @@ body {
 }
 
 /* Fixed 2-line name slot: short names keep the same row height; long names
-   wrap/clip at two lines without ellipsis (text-overflow: clip). */
+   clamp at two lines with ellipsis. */
 .admin-table-name-2l {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   line-height: 1.25rem;
   min-height: 2.5rem;
   max-height: 2.5rem;
   overflow: hidden;
   overflow-wrap: break-word;
-  white-space: normal;
-  text-overflow: clip;
+  text-overflow: ellipsis;
 }
 
 /* Single-line name slot (e.g. remito when weigh warning takes the 2nd line). */
@@ -182,7 +183,7 @@ body {
   overflow: hidden;
   overflow-wrap: break-word;
   white-space: nowrap;
-  text-overflow: clip;
+  text-overflow: ellipsis;
 }
 
 /* Grayish — deliberately distinct from the sage `--brand-primary-soft`
@@ -191,8 +192,24 @@ body {
   background-color: #f5f5f5;
 }
 
+/*
+  Selected / keyboard focus: thick horizontal rules only (top + bottom),
+  not a full rectangle. Inset box-shadow stays inside the <tr> so the last
+  row's bottom edge is not clipped by .data-table-scroll (overflow-x:auto
+  also clips overflow-y). Kill the global :focus-visible outline (4 sides).
+*/
+.admin-table-row:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 2px 0 var(--brand-primary),
+    inset 0 -2px 0 var(--brand-primary);
+}
+
 .admin-table-row[data-selected="true"] {
   background-color: var(--brand-primary-soft);
+  box-shadow:
+    inset 0 2px 0 var(--brand-primary),
+    inset 0 -2px 0 var(--brand-primary);
 }
 
 .admin-table-row[data-selected="true"]:hover {
@@ -200,17 +217,30 @@ body {
 }
 
 /*
-  Remito weigh-price pending: amber warning must beat brand-soft selection
-  and gray hover (those rules are more specific than Tailwind bg-amber-50).
-  Keep amber-50 for default, hover, and selected so the row matches the
-  "Confirmar precio tras pesaje" panel (also bg-amber-50).
+  Remito weigh-price pending: amber base must beat Tailwind bg-amber-50 and
+  the generic gray hover / brand-soft selected rules (more specific).
+  Hover and selected stay in the amber family but shift so affordances match
+  normal rows — still readable as "needs weigh" next to the amber panel.
 */
-.admin-table-row[data-weigh-pending="true"],
-.admin-table-row[data-weigh-pending="true"]:hover,
-.admin-table-row[data-weigh-pending="true"][data-selected="true"],
-.admin-table-row[data-weigh-pending="true"][data-selected="true"]:hover {
+.admin-table-row[data-weigh-pending="true"] {
   background-color: #fffbeb; /* amber-50 */
-  filter: none;
+}
+
+.admin-table-row[data-weigh-pending="true"]:hover {
+  background-color: #fef3c7; /* amber-100 */
+}
+
+.admin-table-row[data-weigh-pending="true"][data-selected="true"] {
+  /* Sage selection tint mixed with amber so both cues read. */
+  background-color: color-mix(
+    in srgb,
+    var(--brand-primary-soft) 65%,
+    #fef3c7 35%
+  );
+}
+
+.admin-table-row[data-weigh-pending="true"][data-selected="true"]:hover {
+  filter: brightness(0.97);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -516,6 +546,25 @@ select:not([multiple]):disabled {
 }
 
 /*
+  Remito edit chrome exit: fade action buttons while column width FLIPs shut
+  (useSmoothColumnWidths soft-hides data-col-collapse under auto to measure
+  true content next-widths — not equalized fixed tracks). Per-row weigh/edit
+  panels use admin-late-row-enter/exit. Keep in sync with SEARCH_TABLE_RESIZE_MS.
+*/
+@keyframes remito-edit-chrome-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.remito-edit-chrome-exit {
+  animation: remito-edit-chrome-exit 0.2s ease-in forwards;
+}
+
+/*
   Admin new-quote: customer selected → summary + QuoteBuilder panels.
   Same motion language as draft rows (fade + slight slide, short stagger).
 */
@@ -687,6 +736,19 @@ select:not([multiple]):disabled {
 }
 
 /*
+  Remito weigh/edit panel under a product row: height 0fr↔1fr + opacity only.
+  Do NOT put translateY on the <tr> — transform on table rows paints oddly
+  (looks centered/jumpy) especially on amber weigh-pending expand.
+*/
+.remito-edit-panel-enter .quote-draft-row-cell-shell {
+  animation: quote-unit-banner-open 0.2s ease-out both;
+}
+
+.remito-edit-panel-exit .quote-draft-row-cell-shell {
+  animation: quote-unit-banner-close 0.2s ease-in both;
+}
+
+/*
   Admin mobile drawer: backdrop fade + panel slide from left (~200ms).
   Keep-mount on close until exit ends (useExitPresence).
 */
@@ -845,10 +907,13 @@ select:not([multiple]):disabled {
   .admin-late-row-exit,
   .admin-late-row-enter .quote-draft-row-cell-shell,
   .admin-late-row-exit .quote-draft-row-cell-shell,
+  .remito-edit-panel-enter .quote-draft-row-cell-shell,
+  .remito-edit-panel-exit .quote-draft-row-cell-shell,
   .admin-drawer-backdrop-enter,
   .admin-drawer-backdrop-exit,
   .admin-drawer-panel-enter,
-  .admin-drawer-panel-exit {
+  .admin-drawer-panel-exit,
+  .remito-edit-chrome-exit {
     animation: none;
   }
 
@@ -915,7 +980,10 @@ select:not([multiple]):disabled {
   .admin-late-row-enter,
   .admin-late-row-exit,
   .admin-late-row-enter .quote-draft-row-cell-shell,
-  .admin-late-row-exit .quote-draft-row-cell-shell {
+  .admin-late-row-exit .quote-draft-row-cell-shell,
+  .remito-edit-panel-enter .quote-draft-row-cell-shell,
+  .remito-edit-panel-exit .quote-draft-row-cell-shell,
+  .remito-edit-chrome-exit {
     animation: none !important;
   }
 

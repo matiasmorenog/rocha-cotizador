@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
-import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import {
   effectiveDiscountPriceListId,
   getPriceListUnitPricesByProductId,
@@ -16,13 +14,14 @@ import {
   normalizeRemitoNumberParam,
   remitoPath,
 } from "@/lib/quotes";
-import { cn, formatPrice, formatQty } from "@/lib/utils";
+import { formatPrice, formatQty } from "@/lib/utils";
 import {
   buildQuoteWhatsAppMessage,
   whatsappUrl,
 } from "@/lib/whatsapp";
 import { BrandLogo } from "@/components/brand-logo";
 import { PrintButton } from "@/components/quote/print-button";
+import { RemitoBackButton } from "@/components/quote/remito-back-button";
 import { RemitoAdminTable } from "@/components/quote/remito-admin-table";
 import {
   RemitoEditModeProvider,
@@ -30,6 +29,7 @@ import {
 } from "@/components/quote/remito-edit-mode";
 import { WhatsAppNotifyButton } from "@/components/quote/whatsapp-notify-button";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { TruncatedName } from "@/components/ui/truncated-name";
 import {
   formatDeliveryDateLabel,
 } from "@/lib/delivery-date";
@@ -218,15 +218,9 @@ export default async function RemitoDetailPage({
           ) : null}
         </div>
         <div className="flex flex-wrap justify-end gap-2">
-          <Link
+          <RemitoBackButton
             href={session.user.role === "ADMIN" ? "/admin/cotizaciones" : "/remitos"}
-            className={cn(
-              "inline-flex h-10 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm",
-              FOCUS_BRAND_BORDER,
-            )}
-          >
-            Volver
-          </Link>
+          />
           <PrintButton />
           {isAdmin ? <RemitoEditModeToggle /> : null}
         </div>
@@ -236,7 +230,7 @@ export default async function RemitoDetailPage({
         <WhatsAppNotifyButton whatsappUrl={notifyWhatsappUrl} autoOpen />
       ) : null}
 
-      <article className="print-remito rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+      <article className="print-remito rounded-lg border border-neutral-200 bg-white p-7 shadow-sm">
         <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-4">
           <div>
             <BrandLogo size="md" priority className="print:h-24 print:w-24" />
@@ -309,17 +303,11 @@ export default async function RemitoDetailPage({
                         <span className="text-neutral-500">{measureLabel}</span>
                       </td>
                       <td className="py-2 pr-2 align-middle">
-                        <div
-                          className={cn(
-                            "max-w-[16rem]",
-                            needsWeighPrice
-                              ? "admin-table-name-1l"
-                              : "admin-table-name-2l",
-                          )}
-                          title={item.productName}
-                        >
-                          {item.productName}
-                        </div>
+                        <TruncatedName
+                          name={item.productName}
+                          lines={needsWeighPrice ? 1 : 2}
+                          className="max-w-[16rem]"
+                        />
                         {needsWeighPrice ? (
                           <p className="mt-0.5 text-xs text-amber-800">
                             {UNIT_ORDER_PRICE_WARNING}

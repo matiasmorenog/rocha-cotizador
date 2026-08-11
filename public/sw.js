@@ -1,10 +1,10 @@
 /* Rocha Cotizador — admin Web Push service worker */
-/* v9 — silence OS sound when an open admin tab will chime in-app */
+/* v10 — brand mark v2 (no registration dots) */
 
 const PUSH_CHANNEL = "rocha-admin-push";
 const FALLBACK_TITLE = "Nueva cotización";
 const FALLBACK_URL = "/admin/cotizaciones";
-const ICON_PATH = "/brand/rocha-logo.png";
+const ICON_PATH = "/brand/rocha-mark.png";
 
 function brandIconUrl() {
   return new URL(ICON_PATH, self.location.origin).href;

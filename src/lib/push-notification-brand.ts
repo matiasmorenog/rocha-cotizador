@@ -1,5 +1,5 @@
-/** Square Rocha mark — same asset as {@link BrandLogo} (`public/brand/rocha-logo.png`). */
-export const PUSH_NOTIFICATION_ICON_PATH = "/brand/rocha-logo.png";
+/** Square Rocha mark — same asset as {@link BrandLogo} (`public/brand/rocha-mark.png`). */
+export const PUSH_NOTIFICATION_ICON_PATH = "/brand/rocha-mark.png";
 
 export function pushNotificationIconUrl(origin?: string | null): string {
   const base = origin?.replace(/\/$/, "") ?? "";
