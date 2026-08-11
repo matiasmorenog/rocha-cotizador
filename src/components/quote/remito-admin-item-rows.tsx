@@ -74,7 +74,10 @@ export function RemitoAdminItemRows({
   /** editMode gates panels — stale `editing` while view mode is harmless. */
   const showPanel = editMode && (needsWeighPrice || editing);
 
-  const rowClass = cn("border-b border-neutral-100", showAmber && "bg-amber-50");
+  const rowClass = cn(
+    "border-b border-neutral-100",
+    showAmber && "border-amber-100 bg-amber-50",
+  );
 
   /** Match quote draft table: secondary + red hover on delete. */
   const iconBtnClass = "h-8 shrink-0 px-2";
@@ -168,6 +171,7 @@ export function RemitoAdminItemRows({
       <tr
         {...rowProps}
         tabIndex={0}
+        data-weigh-pending={showAmber ? "true" : undefined}
         className={cn("admin-table-row", rowClass)}
       >
         <td className="py-2 pl-2 pr-2 align-middle font-mono text-xs">
@@ -251,7 +255,10 @@ export function RemitoAdminItemRows({
       </tr>
 
       {showPanel ? (
-        <tr className={`${rowClass} print:hidden`}>
+        <tr
+          className={cn(rowClass, "print:hidden")}
+          data-weigh-pending={showAmber ? "true" : undefined}
+        >
           <td colSpan={colSpan} className="px-2 pb-3 pt-0">
             {needsWeighPrice ? (
               <RemitoWeighPriceEditor
@@ -263,7 +270,14 @@ export function RemitoAdminItemRows({
                 orderedByUnit={orderedByUnit}
               />
             ) : (
-              <form onSubmit={onSave} className="space-y-2">
+              <form
+                onSubmit={onSave}
+                className={cn(
+                  "space-y-2",
+                  showAmber &&
+                    "rounded-md border border-amber-200 bg-amber-100/70 px-2.5 py-2",
+                )}
+              >
                 <p
                   className={
                     showAmber

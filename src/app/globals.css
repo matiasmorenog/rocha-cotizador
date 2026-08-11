@@ -176,6 +176,22 @@ body {
   filter: brightness(0.97);
 }
 
+/*
+  Remito weigh-price pending: amber warning must beat brand-soft selection
+  and gray hover (those rules are more specific than Tailwind bg-amber-50).
+*/
+.admin-table-row[data-weigh-pending="true"],
+.admin-table-row[data-weigh-pending="true"]:hover {
+  background-color: #fffbeb; /* amber-50 */
+  filter: none;
+}
+
+.admin-table-row[data-weigh-pending="true"][data-selected="true"],
+.admin-table-row[data-weigh-pending="true"][data-selected="true"]:hover {
+  background-color: #fef3c7; /* amber-100 — still warning, slightly stronger */
+  filter: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admin-table-row {
     transition: none;
@@ -851,6 +867,11 @@ select:not([multiple]):disabled {
   /* Weigh-pending rows (view mode): amber fill + warning text */
   .print-remito .bg-amber-50 {
     background-color: #fffbeb !important;
+  }
+  .print-remito .bg-amber-100\/70,
+  .print-remito .border-amber-200 {
+    background-color: #fef3c7 !important;
+    border-color: #fde68a !important;
   }
   .print-remito .text-amber-800 {
     color: #92400e !important;
