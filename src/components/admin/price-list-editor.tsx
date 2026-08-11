@@ -4,11 +4,15 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AR_PRICE_FORMAT,
+  ArNumberInput,
+} from "@/components/ui/ar-number-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
-import { formatPrice } from "@/lib/utils";
+import { formatArInput, formatPrice, parseArNumber } from "@/lib/utils";
 import { filterFoldedSearch } from "@/lib/search-fold";
 import {
   INCREMENTAL_REVEAL_INITIAL,
@@ -32,7 +36,7 @@ type ItemRow = {
 function pricesFromItems(items: ItemRow[]): Record<string, string> {
   const init: Record<string, string> = {};
   for (const i of items) {
-    init[i.productId] = String(i.unitPrice);
+    init[i.productId] = formatArInput(i.unitPrice, 2, AR_PRICE_FORMAT);
   }
   return init;
 }
@@ -112,7 +116,7 @@ export function PriceListEditor({
     const items = Object.entries(prices)
       .map(([productId, raw]) => ({
         productId,
-        unitPrice: Number(String(raw).replace(",", ".")),
+        unitPrice: parseArNumber(String(raw)),
       }))
       .filter((i) => Number.isFinite(i.unitPrice) && i.unitPrice >= 0);
 
@@ -298,18 +302,18 @@ export function PriceListEditor({
                     </td>
                   ) : null}
                   <td className="px-3 py-2">
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      className="h-9 w-28"
+                    <ArNumberInput
+                      className="h-9 w-28 font-mono"
                       value={prices[i.productId] ?? ""}
-                      onChange={(e) =>
+                      onValueChange={(raw) =>
                         setPrices((prev) => ({
                           ...prev,
-                          [i.productId]: e.target.value,
+                          [i.productId]: raw,
                         }))
                       }
+                      maxFractionDigits={2}
+                      formatOptions={AR_PRICE_FORMAT}
+                      placeholder="0,00"
                     />
                   </td>
                 </tr>

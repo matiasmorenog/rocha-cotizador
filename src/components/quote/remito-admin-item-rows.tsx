@@ -4,7 +4,10 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  AR_PRICE_FORMAT,
+  ArNumberInput,
+} from "@/components/ui/ar-number-input";
 import { Spinner } from "@/components/ui/spinner";
 import { RemitoWeighPriceEditor } from "@/components/quote/remito-weigh-price-editor";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
@@ -63,7 +66,7 @@ export function RemitoAdminItemRows({
   const [editing, setEditing] = useState(false);
   const [qtyInput, setQtyInput] = useState(() => formatArInput(qty, 3));
   const [unitPriceInput, setUnitPriceInput] = useState(() =>
-    formatArInput(unitPrice, 2),
+    formatArInput(unitPrice, 2, AR_PRICE_FORMAT),
   );
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -94,7 +97,7 @@ export function RemitoAdminItemRows({
 
   function openEdit() {
     setQtyInput(formatArInput(qty, 3));
-    setUnitPriceInput(formatArInput(unitPrice, 2));
+    setUnitPriceInput(formatArInput(unitPrice, 2, AR_PRICE_FORMAT));
     setError(null);
     setEditing(true);
   }
@@ -312,10 +315,10 @@ export function RemitoAdminItemRows({
                     >
                       Cantidad ({measureLabel})
                     </span>
-                    <Input
+                    <ArNumberInput
                       value={qtyInput}
-                      onChange={(e) => setQtyInput(e.target.value)}
-                      inputMode="decimal"
+                      onValueChange={setQtyInput}
+                      maxFractionDigits={3}
                       className="h-8 font-mono text-sm"
                       aria-label="Cantidad"
                       disabled={busy}
@@ -331,10 +334,11 @@ export function RemitoAdminItemRows({
                     >
                       Precio unitario
                     </span>
-                    <Input
+                    <ArNumberInput
                       value={unitPriceInput}
-                      onChange={(e) => setUnitPriceInput(e.target.value)}
-                      inputMode="decimal"
+                      onValueChange={setUnitPriceInput}
+                      maxFractionDigits={2}
+                      formatOptions={AR_PRICE_FORMAT}
                       className="h-8 font-mono text-sm"
                       aria-label="Precio unitario"
                       disabled={busy}

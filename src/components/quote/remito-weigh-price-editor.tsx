@@ -3,7 +3,10 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  AR_PRICE_FORMAT,
+  ArNumberInput,
+} from "@/components/ui/ar-number-input";
 import { Spinner } from "@/components/ui/spinner";
 import { formatArInput, formatPrice, parseArNumber } from "@/lib/utils";
 
@@ -26,8 +29,10 @@ function defaultPriceInput(
   initialUnitPrice: number,
   suggestedKgPrice: number,
 ): string {
-  if (initialUnitPrice > 0) return formatArInput(initialUnitPrice, 2);
-  if (suggestedKgPrice > 0) return formatArInput(suggestedKgPrice, 2);
+  if (initialUnitPrice > 0)
+    return formatArInput(initialUnitPrice, 2, AR_PRICE_FORMAT);
+  if (suggestedKgPrice > 0)
+    return formatArInput(suggestedKgPrice, 2, AR_PRICE_FORMAT);
   return "";
 }
 
@@ -104,10 +109,10 @@ export function RemitoWeighPriceEditor({
       <div className="flex flex-wrap items-end gap-2">
         <label className="block min-w-[5.5rem] flex-1 space-y-0.5">
           <span className="text-[11px] text-neutral-600">Kg pesados</span>
-          <Input
+          <ArNumberInput
             value={qty}
-            onChange={(e) => setQty(e.target.value)}
-            inputMode="decimal"
+            onValueChange={setQty}
+            maxFractionDigits={3}
             placeholder={orderedByUnit ? "ej. 2,35" : undefined}
             className="h-8 font-mono text-sm"
             aria-label="Kg pesados"
@@ -117,10 +122,11 @@ export function RemitoWeighPriceEditor({
         </label>
         <label className="block min-w-[5.5rem] flex-1 space-y-0.5">
           <span className="text-[11px] text-neutral-600">Precio $/kg</span>
-          <Input
+          <ArNumberInput
             value={unitPrice}
-            onChange={(e) => setUnitPrice(e.target.value)}
-            inputMode="decimal"
+            onValueChange={setUnitPrice}
+            maxFractionDigits={2}
+            formatOptions={AR_PRICE_FORMAT}
             placeholder={suggestedKgPrice > 0 ? undefined : "0,00"}
             className="h-8 font-mono text-sm"
             aria-label="Precio por kg"

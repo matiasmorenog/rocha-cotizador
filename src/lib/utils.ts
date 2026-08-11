@@ -34,19 +34,35 @@ export function formatQty(
   return arsQty.format(toNumber(qty));
 }
 
+export type FormatArInputOptions = {
+  /** Thousands separator (`.`). Off by default so mid-edit kg fields stay simple. */
+  useGrouping?: boolean;
+  /** Pad decimals (e.g. prices → `2.300,00`). */
+  minFractionDigits?: number;
+};
+
 /**
- * Format a number for editable kg/price inputs (es-AR comma decimal, no grouping).
+ * Format a number for editable kg/price inputs (es-AR `,` decimal).
  * Prefer this over `String(n)` so fields show `2,35` not `2.35`.
  */
 export function formatArInput(
   amount: number,
   maxFractionDigits = 3,
+  options?: FormatArInputOptions,
 ): string {
   if (!Number.isFinite(amount)) return "";
   return new Intl.NumberFormat("es-AR", {
-    useGrouping: false,
+    useGrouping: options?.useGrouping ?? false,
     maximumFractionDigits: maxFractionDigits,
+    minimumFractionDigits: options?.minFractionDigits,
   }).format(amount);
+}
+
+/** Soft live filter: digits + `,` / `.` + optional leading `-`. */
+export function sanitizeArNumberInput(raw: string): string {
+  const cleaned = String(raw).replace(/[^\d.,\-]/g, "");
+  const minus = cleaned.startsWith("-") ? "-" : "";
+  return minus + cleaned.replace(/-/g, "");
 }
 
 /**

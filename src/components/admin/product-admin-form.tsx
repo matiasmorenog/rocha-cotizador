@@ -3,9 +3,14 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import {
+  AR_PRICE_FORMAT,
+  ArNumberInput,
+} from "@/components/ui/ar-number-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { parseArNumber } from "@/lib/utils";
 
 export type PriceListOption = {
   id: string;
@@ -32,6 +37,13 @@ export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
     setError(null);
     setMessage(null);
 
+    const price = parseArNumber(basePrice);
+    if (!Number.isFinite(price) || price < 0) {
+      setError("Precio base inválido");
+      setLoading(false);
+      return;
+    }
+
     const res = await fetch("/api/admin/products", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -39,7 +51,7 @@ export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
         code,
         name,
         rubro,
-        basePrice: Number(basePrice),
+        basePrice: price,
         active,
         allowsUnitOrder,
       }),
@@ -89,12 +101,12 @@ export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
         </div>
         <div className="space-y-1">
           <Label>Precio base</Label>
-          <Input
-            type="number"
-            min={0}
-            step="0.01"
+          <ArNumberInput
             value={basePrice}
-            onChange={(e) => setBasePrice(e.target.value)}
+            onValueChange={setBasePrice}
+            maxFractionDigits={2}
+            formatOptions={AR_PRICE_FORMAT}
+            placeholder="0,00"
             required
           />
         </div>
