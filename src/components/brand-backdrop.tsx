@@ -1,7 +1,8 @@
 import { cn } from "@/lib/utils";
 
 const LOGIN_PATTERN = {
-  src: "/brand/login-pattern-teal.png",
+  /** 3× tile (1878×939) for crisp retina; CSS size keeps visual density. */
+  src: "/brand/login-pattern-teal-3x.png",
   size: "560px",
   veil: 0.55,
 } as const;
@@ -13,8 +14,8 @@ type BrandBackdropProps = {
 
 /**
  * Full-bleed teal pattern behind auth/landing surfaces.
- * Seamless tile + soft veil keeps forms readable.
- * Legacy coffee beans asset kept at `/brand/bg-pattern-beans.png`.
+ * Seamless 3× tile + soft veil keeps forms readable on retina.
+ * Legacy assets kept: `/brand/bg-pattern-beans.png`, `/brand/login-pattern-teal.png`.
  */
 export function BrandBackdrop({ children, className }: BrandBackdropProps) {
   return (
