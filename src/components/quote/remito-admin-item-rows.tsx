@@ -191,7 +191,7 @@ export function RemitoAdminItemRows({
             {productName}
           </div>
           {needsWeighPrice ? (
-            <p className="mt-0.5 text-xs text-amber-800">
+            <p className="mt-0.5 truncate text-xs text-amber-800">
               {UNIT_ORDER_PRICE_WARNING}
             </p>
           ) : null}

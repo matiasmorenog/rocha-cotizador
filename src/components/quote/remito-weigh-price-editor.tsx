@@ -98,16 +98,10 @@ export function RemitoWeighPriceEditor({
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="mt-2 space-y-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 print:hidden"
-    >
-      <p className="text-xs font-medium text-amber-950">
-        Confirmar precio tras pesaje
-      </p>
+    <form onSubmit={onSubmit} className="mt-2 space-y-2 print:hidden">
       <div className="flex flex-wrap items-end gap-2">
         <label className="block min-w-[5.5rem] flex-1 space-y-0.5">
-          <span className="text-[11px] text-amber-900">Kg pesados</span>
+          <span className="text-[11px] text-neutral-600">Kg pesados</span>
           <Input
             value={qty}
             onChange={(e) => setQty(e.target.value)}
@@ -120,7 +114,7 @@ export function RemitoWeighPriceEditor({
           />
         </label>
         <label className="block min-w-[5.5rem] flex-1 space-y-0.5">
-          <span className="text-[11px] text-amber-900">Precio $/kg</span>
+          <span className="text-[11px] text-neutral-600">Precio $/kg</span>
           <Input
             value={unitPrice}
             onChange={(e) => setUnitPrice(e.target.value)}
@@ -136,7 +130,7 @@ export function RemitoWeighPriceEditor({
         </Button>
       </div>
       {previewTotal !== null ? (
-        <p className="text-[11px] text-amber-900">
+        <p className="text-[11px] text-neutral-600">
           Importe: {formatPrice(previewTotal)}
         </p>
       ) : null}
