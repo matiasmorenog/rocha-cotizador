@@ -4,7 +4,7 @@
 const PUSH_CHANNEL = "rocha-admin-push";
 const FALLBACK_TITLE = "Nueva cotización";
 const FALLBACK_URL = "/admin/cotizaciones";
-const ICON_PATH = "/brand/rocha-mark-v2.png";
+const ICON_PATH = "/brand/rocha-mark-v3.png";
 
 function brandIconUrl() {
   return new URL(ICON_PATH, self.location.origin).href;
