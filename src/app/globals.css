@@ -183,6 +183,10 @@ body {
 
 .admin-table-row[data-selected="true"] {
   background-color: var(--brand-primary-soft);
+  /* Same thick teal edge as keyboard :focus-visible (globals base) —
+     click select otherwise only tints the background. */
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 0;
 }
 
 .admin-table-row[data-selected="true"]:hover {
