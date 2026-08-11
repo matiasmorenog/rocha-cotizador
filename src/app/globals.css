@@ -868,11 +868,6 @@ select:not([multiple]):disabled {
   .print-remito .bg-amber-50 {
     background-color: #fffbeb !important;
   }
-  .print-remito .bg-amber-100\/70,
-  .print-remito .border-amber-200 {
-    background-color: #fef3c7 !important;
-    border-color: #fde68a !important;
-  }
   .print-remito .text-amber-800 {
     color: #92400e !important;
   }
