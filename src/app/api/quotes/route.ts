@@ -215,7 +215,7 @@ export async function POST(req: NextRequest) {
     req.nextUrl.origin ||
     process.env.AUTH_URL?.replace(/\/$/, "") ||
     "";
-  const remitoUrl = `${origin}/remitos/${quote.id}`;
+  const remitoUrl = `${origin}/remitos/${quote.number}`;
   const notifyDigits = await getWhatsAppNotifyDigits();
   const message = buildQuoteWhatsAppMessage({
     quoteNumber: quote.number,

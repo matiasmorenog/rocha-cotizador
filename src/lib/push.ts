@@ -224,7 +224,7 @@ export async function notifyAdminsNewQuote(
 ): Promise<void> {
   const title = `Nueva cotización #${quote.number}`;
   const body = quote.customerName;
-  const url = `/remitos/${quote.id}`;
+  const url = `/remitos/${quote.number}`;
 
   let inboxId: string | undefined;
   try {

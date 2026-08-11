@@ -10,6 +10,10 @@ import {
 import { unitPriceForProduct } from "@/lib/pricing";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import { quoteLineMeasureLabel } from "@/lib/order-measure";
+import {
+  normalizeRemitoNumberParam,
+  remitoPath,
+} from "@/lib/quotes";
 import { formatPrice, formatQty } from "@/lib/utils";
 import {
   buildQuoteWhatsAppMessage,
@@ -32,20 +36,42 @@ import {
 
 export const dynamic = "force-dynamic";
 
+const quoteDetailInclude = {
+  customer: {
+    select: {
+      code: true,
+      name: true,
+      address: true,
+      phone: true,
+      email: true,
+      deliveryHours: true,
+      priceListId: true,
+    },
+  },
+  items: { orderBy: { productCode: "asc" as const } },
+};
+
 export default async function RemitoDetailPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ number: string }>;
   searchParams: Promise<{ whatsapp?: string }>;
 }) {
-  const { id } = await params;
+  const { number: rawParam } = await params;
   const { whatsapp } = await searchParams;
   const session = await auth();
 
+  const canonicalNumber = normalizeRemitoNumberParam(rawParam);
+  const query =
+    whatsapp !== undefined
+      ? `?whatsapp=${encodeURIComponent(whatsapp)}`
+      : "";
+
   // WhatsApp / shared links: never 404 when logged out — choose cliente/admin.
+  // Keep raw segment (number or legacy cuid); canonicalize after login.
   if (!session?.user) {
-    const next = encodeURIComponent(`/remitos/${id}`);
+    const next = encodeURIComponent(`/remitos/${rawParam}${query}`);
     redirect(`/entrar?callbackUrl=${next}`);
   }
 
@@ -53,24 +79,29 @@ export default async function RemitoDetailPage({
     notFound();
   }
 
-  const quote = await db.quote.findUnique({
-    where: { id },
-    include: {
-      customer: {
-        select: {
-          code: true,
-          name: true,
-          address: true,
-          phone: true,
-          email: true,
-          deliveryHours: true,
-          priceListId: true,
-        },
-      },
-      items: { orderBy: { productCode: "asc" } },
-    },
+  const quoteByNumber = await db.quote.findUnique({
+    where: { number: canonicalNumber },
+    include: quoteDetailInclude,
   });
-  if (!quote) notFound();
+
+  // Legacy bookmarks: `/remitos/<cuid>` → redirect to `/remitos/R-XXXXXX`.
+  if (!quoteByNumber) {
+    const byId = await db.quote.findUnique({
+      where: { id: rawParam },
+      select: { number: true },
+    });
+    if (byId) {
+      redirect(`${remitoPath(byId.number)}${query}`);
+    }
+    notFound();
+  }
+
+  const quote = quoteByNumber;
+
+  // Canonicalize case (`r-000018` → `R-000018`).
+  if (rawParam !== quote.number) {
+    redirect(`${remitoPath(quote.number)}${query}`);
+  }
 
   const productIds = quote.items
     .map((item) => item.productId)
@@ -118,7 +149,7 @@ export default async function RemitoDetailPage({
     (host ? `${proto}://${host}` : null) ??
     process.env.AUTH_URL?.replace(/\/$/, "") ??
     "";
-  const remitoUrl = `${origin}/remitos/${quote.id}`;
+  const remitoUrl = `${origin}${remitoPath(quote.number)}`;
   const notifyDigits = await getWhatsAppNotifyDigits();
   const notifyWhatsappUrl = whatsappUrl(
     notifyDigits,

@@ -51,7 +51,7 @@ Abrí [http://localhost:3000](http://localhost:3000).
 
 ## Rutas
 
-- Cliente: `/login`, `/cotizar`, `/remitos`, `/remitos/[id]` (imprimible), `/cuenta/configuracion`
+- Cliente: `/login`, `/cotizar`, `/remitos`, `/remitos/[number]` (imprimible, ej. `R-000018`), `/cuenta/configuracion`
 - Admin: `/admin/login`, `/admin`, `/admin/clientes`, `/admin/productos`, `/admin/cotizaciones`
 
 ## Admin Excel (export / sync)
