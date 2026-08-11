@@ -53,7 +53,14 @@ html {
   background-color: var(--background);
 }
 
-body {
+/*
+  Page atmosphere: soft teal washes only.
+  Do NOT use --brand-latte / wheat in radials — reads as café brown spotlight
+  (especially top-right). Wheat stays on borders/accents via --brand-latte.
+  Shared class so route-pending full-bleed layer matches body (no max-w cut).
+*/
+body,
+.brand-page-atmosphere {
   background-color: var(--background);
   background-image:
     radial-gradient(
@@ -63,10 +70,14 @@ body {
     ),
     radial-gradient(
       ellipse 60% 40% at 100% 0%,
-      color-mix(in srgb, var(--brand-latte) 40%, transparent) 0%,
+      color-mix(in srgb, #c5ddd8 45%, transparent) 0%,
       transparent 50%
     );
   background-repeat: no-repeat;
+}
+
+body {
+  /* Fixed so tall scroll pages do not tile a ~100vh gradient seam. */
   background-attachment: fixed;
   color: var(--foreground);
   font-family: var(--font-source-sans), system-ui, sans-serif;
