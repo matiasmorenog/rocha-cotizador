@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { formatPrice } from "@/lib/utils";
+import { formatArInput, formatPrice, parseArNumber } from "@/lib/utils";
 
 type Props = {
   quoteId: string;
@@ -26,8 +26,8 @@ function defaultPriceInput(
   initialUnitPrice: number,
   suggestedKgPrice: number,
 ): string {
-  if (initialUnitPrice > 0) return String(initialUnitPrice);
-  if (suggestedKgPrice > 0) return String(suggestedKgPrice);
+  if (initialUnitPrice > 0) return formatArInput(initialUnitPrice, 2);
+  if (suggestedKgPrice > 0) return formatArInput(suggestedKgPrice, 2);
   return "";
 }
 
@@ -45,7 +45,9 @@ export function RemitoWeighPriceEditor({
 }: Props) {
   const router = useRouter();
   const [qty, setQty] = useState(
-    orderedByUnit && initialUnitPrice === 0 ? "" : String(initialQty),
+    orderedByUnit && initialUnitPrice === 0
+      ? ""
+      : formatArInput(initialQty, 3),
   );
   const [unitPrice, setUnitPrice] = useState(() =>
     defaultPriceInput(initialUnitPrice, suggestedKgPrice),
@@ -53,8 +55,8 @@ export function RemitoWeighPriceEditor({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const qtyNum = Number(String(qty).replace(",", "."));
-  const priceNum = Number(String(unitPrice).replace(",", "."));
+  const qtyNum = parseArNumber(qty);
+  const priceNum = parseArNumber(unitPrice);
   const previewOk =
     Number.isFinite(qtyNum) &&
     qtyNum > 0 &&
@@ -106,7 +108,7 @@ export function RemitoWeighPriceEditor({
             value={qty}
             onChange={(e) => setQty(e.target.value)}
             inputMode="decimal"
-            placeholder={orderedByUnit ? "ej. 2.35" : undefined}
+            placeholder={orderedByUnit ? "ej. 2,35" : undefined}
             className="h-8 font-mono text-sm"
             aria-label="Kg pesados"
             disabled={loading}
@@ -119,7 +121,7 @@ export function RemitoWeighPriceEditor({
             value={unitPrice}
             onChange={(e) => setUnitPrice(e.target.value)}
             inputMode="decimal"
-            placeholder={suggestedKgPrice > 0 ? undefined : "0.00"}
+            placeholder={suggestedKgPrice > 0 ? undefined : "0,00"}
             className="h-8 font-mono text-sm"
             aria-label="Precio por kg"
             disabled={loading}

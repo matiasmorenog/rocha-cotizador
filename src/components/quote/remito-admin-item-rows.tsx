@@ -8,7 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { RemitoWeighPriceEditor } from "@/components/quote/remito-weigh-price-editor";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
-import { cn, formatPrice, formatQty } from "@/lib/utils";
+import {
+  cn,
+  formatArInput,
+  formatPrice,
+  formatQty,
+  parseArNumber,
+} from "@/lib/utils";
 import type { RowSelectionProps } from "@/hooks/use-selected-row";
 
 export type RemitoAdminItemRowsProps = {
@@ -55,14 +61,16 @@ export function RemitoAdminItemRows({
 }: RemitoAdminItemRowsProps) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
-  const [qtyInput, setQtyInput] = useState(String(qty));
-  const [unitPriceInput, setUnitPriceInput] = useState(String(unitPrice));
+  const [qtyInput, setQtyInput] = useState(() => formatArInput(qty, 3));
+  const [unitPriceInput, setUnitPriceInput] = useState(() =>
+    formatArInput(unitPrice, 2),
+  );
   const [loading, setLoading] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const qtyNum = Number(String(qtyInput).replace(",", "."));
-  const priceNum = Number(String(unitPriceInput).replace(",", "."));
+  const qtyNum = parseArNumber(qtyInput);
+  const priceNum = parseArNumber(unitPriceInput);
   const previewOk =
     Number.isFinite(qtyNum) &&
     qtyNum > 0 &&
@@ -85,8 +93,8 @@ export function RemitoAdminItemRows({
     "h-8 shrink-0 px-2 hover:border-red-400 hover:bg-red-50 hover:text-red-700";
 
   function openEdit() {
-    setQtyInput(String(qty));
-    setUnitPriceInput(String(unitPrice));
+    setQtyInput(formatArInput(qty, 3));
+    setUnitPriceInput(formatArInput(unitPrice, 2));
     setError(null);
     setEditing(true);
   }
