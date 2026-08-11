@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
-import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import {
   effectiveDiscountPriceListId,
   getPriceListUnitPricesByProductId,
@@ -12,13 +10,14 @@ import {
 import { unitPriceForProduct } from "@/lib/pricing";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import { quoteLineMeasureLabel } from "@/lib/order-measure";
-import { cn, formatPrice, formatQty } from "@/lib/utils";
+import { formatPrice, formatQty } from "@/lib/utils";
 import {
   buildQuoteWhatsAppMessage,
   whatsappUrl,
 } from "@/lib/whatsapp";
 import { BrandLogo } from "@/components/brand-logo";
 import { PrintButton } from "@/components/quote/print-button";
+import { RemitoBackButton } from "@/components/quote/remito-back-button";
 import { RemitoAdminTable } from "@/components/quote/remito-admin-table";
 import {
   RemitoEditModeProvider,
@@ -188,15 +187,9 @@ export default async function RemitoDetailPage({
           ) : null}
         </div>
         <div className="flex flex-wrap justify-end gap-2">
-          <Link
+          <RemitoBackButton
             href={session.user.role === "ADMIN" ? "/admin/cotizaciones" : "/remitos"}
-            className={cn(
-              "inline-flex h-10 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm",
-              FOCUS_BRAND_BORDER,
-            )}
-          >
-            Volver
-          </Link>
+          />
           <PrintButton />
           {isAdmin ? <RemitoEditModeToggle /> : null}
         </div>
