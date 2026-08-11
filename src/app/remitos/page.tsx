@@ -46,7 +46,7 @@ export default async function RemitosPage() {
                 <tr key={q.id} className="border-t border-neutral-100">
                   <td className="px-3 py-2">
                     <Link
-                      href={`/remitos/${q.id}`}
+                      href={`/remitos/${q.number}`}
                       className="font-medium text-[var(--brand-primary)] hover:underline"
                     >
                       {q.number}

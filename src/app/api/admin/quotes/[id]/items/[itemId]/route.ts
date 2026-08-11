@@ -40,7 +40,7 @@ async function recalcQuoteTotals(
       subtotal: total.toDecimalPlaces(2),
       total: total.toDecimalPlaces(2),
     },
-    select: { id: true, total: true, subtotal: true },
+    select: { id: true, number: true, total: true, subtotal: true },
   });
 }
 
@@ -99,7 +99,7 @@ export async function PATCH(
     return recalcQuoteTotals(tx, quoteId);
   });
 
-  invalidateAfterQuoteItemPriceUpdate(quoteId);
+  invalidateAfterQuoteItemPriceUpdate(result.number);
 
   return NextResponse.json({
     ok: true,
@@ -152,7 +152,7 @@ export async function DELETE(
     return recalcQuoteTotals(tx, quoteId);
   });
 
-  invalidateAfterQuoteItemPriceUpdate(quoteId);
+  invalidateAfterQuoteItemPriceUpdate(result.number);
 
   return NextResponse.json({
     ok: true,
