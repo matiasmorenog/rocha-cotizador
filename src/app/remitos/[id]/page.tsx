@@ -26,6 +26,7 @@ import {
 } from "@/components/quote/remito-edit-mode";
 import { WhatsAppNotifyButton } from "@/components/quote/whatsapp-notify-button";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { TruncatedName } from "@/components/ui/truncated-name";
 import {
   formatDeliveryDateLabel,
 } from "@/lib/delivery-date";
@@ -278,17 +279,11 @@ export default async function RemitoDetailPage({
                         <span className="text-neutral-500">{measureLabel}</span>
                       </td>
                       <td className="py-2 pr-2 align-middle">
-                        <div
-                          className={cn(
-                            "max-w-[16rem]",
-                            needsWeighPrice
-                              ? "admin-table-name-1l"
-                              : "admin-table-name-2l",
-                          )}
-                          title={item.productName}
-                        >
-                          {item.productName}
-                        </div>
+                        <TruncatedName
+                          name={item.productName}
+                          lines={needsWeighPrice ? 1 : 2}
+                          className="max-w-[16rem]"
+                        />
                         {needsWeighPrice ? (
                           <p className="mt-0.5 text-xs text-amber-800">
                             {UNIT_ORDER_PRICE_WARNING}

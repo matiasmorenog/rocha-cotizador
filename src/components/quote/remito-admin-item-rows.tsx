@@ -9,6 +9,7 @@ import {
   ArNumberInput,
 } from "@/components/ui/ar-number-input";
 import { Spinner } from "@/components/ui/spinner";
+import { TruncatedName } from "@/components/ui/truncated-name";
 import { RemitoWeighPriceEditor } from "@/components/quote/remito-weigh-price-editor";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import {
@@ -34,10 +35,14 @@ export type RemitoAdminItemRowsProps = {
   needsWeighPrice: boolean;
   suggestedKgPrice: number;
   orderedByUnit: boolean;
-  /** Total table columns including the actions column when editMode. */
+  /** Total table columns including the actions column when chrome shown. */
   colSpan: number;
-  /** When false, clean view — no icons / edit panels. */
+  /** Interactive edit — false while chrome is exiting. */
   editMode: boolean;
+  /** Keep actions column / panels mounted through exit FLIP. */
+  showEditChrome: boolean;
+  /** Exit in progress — clip + non-interactive. */
+  editExiting: boolean;
   rowProps?: RowSelectionProps;
 };
 
@@ -60,6 +65,8 @@ export function RemitoAdminItemRows({
   orderedByUnit,
   colSpan,
   editMode,
+  showEditChrome,
+  editExiting,
   rowProps,
 }: RemitoAdminItemRowsProps) {
   const router = useRouter();
@@ -82,8 +89,9 @@ export function RemitoAdminItemRows({
   const previewTotal = previewOk ? qtyNum * priceNum : null;
 
   const showAmber = needsWeighPrice;
-  /** editMode gates panels — stale `editing` while view mode is harmless. */
-  const showPanel = editMode && (needsWeighPrice || editing);
+  /** Chrome gates panels — stale `editing` while view mode is harmless. */
+  const showPanel = showEditChrome && (needsWeighPrice || editing);
+  const chromeInteractive = editMode && !editExiting;
 
   const rowClass = cn(
     "border-b border-neutral-100",
@@ -193,15 +201,11 @@ export function RemitoAdminItemRows({
           <span className="text-neutral-500">{measureLabel}</span>
         </td>
         <td className="py-2 pr-2 align-middle">
-          <div
-            className={cn(
-              "max-w-[16rem]",
-              needsWeighPrice ? "admin-table-name-1l" : "admin-table-name-2l",
-            )}
-            title={productName}
-          >
-            {productName}
-          </div>
+          <TruncatedName
+            name={productName}
+            lines={needsWeighPrice ? 1 : 2}
+            className="max-w-[16rem]"
+          />
           {needsWeighPrice ? (
             <p className="mt-0.5 truncate text-xs text-amber-800">
               {UNIT_ORDER_PRICE_WARNING}
@@ -214,15 +218,26 @@ export function RemitoAdminItemRows({
         <td className="py-2 pr-2 text-right align-middle font-medium">
           {formatPrice(lineTotal)}
         </td>
-        {editMode ? (
-          <td className="w-0 whitespace-nowrap py-2 pl-1 pr-2 align-middle print:hidden">
-            <div className="flex items-center justify-end gap-1">
+        {showEditChrome ? (
+          <td
+            className={cn(
+              "w-0 whitespace-nowrap py-2 pl-1 pr-2 align-middle print:hidden",
+              editExiting && "overflow-hidden",
+            )}
+          >
+            <div
+              className={cn(
+                "flex items-center justify-end gap-1",
+                editExiting && "remito-edit-chrome-exit pointer-events-none",
+              )}
+              aria-hidden={editExiting || undefined}
+            >
               {needsWeighPrice || editing ? (
                 <Button
                   type="button"
                   size="sm"
                   variant="secondary"
-                  disabled={busy || !canDelete}
+                  disabled={busy || !canDelete || !chromeInteractive}
                   className={deleteBtnClass}
                   aria-label={deleteTitle}
                   title={deleteTitle}
@@ -240,7 +255,7 @@ export function RemitoAdminItemRows({
                     type="button"
                     size="sm"
                     variant="secondary"
-                    disabled={busy}
+                    disabled={busy || !chromeInteractive}
                     className={iconBtnClass}
                     aria-label="Editar línea"
                     title="Editar línea"
@@ -252,7 +267,7 @@ export function RemitoAdminItemRows({
                     type="button"
                     size="sm"
                     variant="secondary"
-                    disabled={busy || !canDelete}
+                    disabled={busy || !canDelete || !chromeInteractive}
                     className={deleteBtnClass}
                     aria-label={deleteTitle}
                     title={deleteTitle}
@@ -273,8 +288,13 @@ export function RemitoAdminItemRows({
 
       {showPanel ? (
         <tr
-          className={cn(rowClass, "print:hidden")}
+          className={cn(
+            rowClass,
+            "print:hidden",
+            editExiting && "remito-edit-chrome-exit pointer-events-none",
+          )}
           data-weigh-pending={showAmber ? "true" : undefined}
+          aria-hidden={editExiting || undefined}
         >
           <td colSpan={colSpan} className="px-2 pb-3 pt-0">
             {needsWeighPrice ? (
@@ -321,7 +341,7 @@ export function RemitoAdminItemRows({
                       maxFractionDigits={3}
                       className="h-8 font-mono text-sm"
                       aria-label="Cantidad"
-                      disabled={busy}
+                      disabled={busy || !chromeInteractive}
                     />
                   </label>
                   <label className="block min-w-[5.5rem] flex-1 space-y-0.5">
@@ -341,13 +361,13 @@ export function RemitoAdminItemRows({
                       formatOptions={AR_PRICE_FORMAT}
                       className="h-8 font-mono text-sm"
                       aria-label="Precio unitario"
-                      disabled={busy}
+                      disabled={busy || !chromeInteractive}
                     />
                   </label>
                   <Button
                     type="submit"
                     size="sm"
-                    disabled={busy}
+                    disabled={busy || !chromeInteractive}
                     className="shrink-0"
                   >
                     {loading ? <Spinner className="h-4 w-4" /> : "Guardar"}
@@ -356,7 +376,7 @@ export function RemitoAdminItemRows({
                     type="button"
                     size="sm"
                     variant="outline"
-                    disabled={busy}
+                    disabled={busy || !chromeInteractive}
                     className="shrink-0"
                     onClick={() => {
                       setEditing(false);
@@ -384,8 +404,15 @@ export function RemitoAdminItemRows({
             ) : null}
           </td>
         </tr>
-      ) : editMode && error ? (
-        <tr className={`${rowClass} print:hidden`}>
+      ) : showEditChrome && error ? (
+        <tr
+          className={cn(
+            rowClass,
+            "print:hidden",
+            editExiting && "remito-edit-chrome-exit pointer-events-none",
+          )}
+          aria-hidden={editExiting || undefined}
+        >
           <td colSpan={colSpan} className="px-2 pb-2 pt-0">
             <p className="text-xs text-red-700">{error}</p>
           </td>

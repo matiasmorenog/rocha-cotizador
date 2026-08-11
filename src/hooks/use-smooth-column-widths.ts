@@ -41,6 +41,9 @@ function releaseLock(table: HTMLTableElement, cells: HTMLTableCellElement[]) {
  * read for "prev" silently broke the shrink direction. Releases the lock
  * (back to `table-layout: auto`) once the transition ends so normal
  * content-driven/responsive sizing resumes at rest.
+ *
+ * Header cells with `data-col-collapse` soft-collapse to 0 before measuring
+ * "next" so an exit can FLIP-shut a still-mounted column (remito edit chrome).
  */
 export function useSmoothColumnWidths(
   tableRef: RefObject<HTMLTableElement | null>,
@@ -101,7 +104,22 @@ export function useSmoothColumnWidths(
     );
 
     releaseLock(table, cells);
+
+    // Soft-collapse header cells marked `data-col-collapse` (remito edit-mode
+    // exit) so next rects include a closed actions column while it stays
+    // mounted for clipping. Cleared again before the FLIP write below.
+    const collapsing = cells.filter((c) => c.hasAttribute("data-col-collapse"));
+    for (const cell of collapsing) {
+      cell.style.width = "0px";
+      cell.style.minWidth = "0px";
+      cell.style.overflow = "hidden";
+      cell.style.paddingLeft = "0px";
+      cell.style.paddingRight = "0px";
+    }
+    if (collapsing.length > 0) void table.offsetHeight;
+
     const nextWidths = cells.map((cell) => cell.getBoundingClientRect().width);
+    if (collapsing.length > 0) releaseLock(table, cells);
 
     for (const cell of cells) {
       observerRef.current?.observe(cell);
@@ -115,6 +133,10 @@ export function useSmoothColumnWidths(
     cells.forEach((cell, i) => {
       cell.style.transition = "none";
       cell.style.width = `${prevWidths[i]}px`;
+      if (cell.hasAttribute("data-col-collapse")) {
+        cell.style.overflow = "hidden";
+        cell.style.minWidth = "0px";
+      }
     });
     table.style.tableLayout = "fixed";
     void table.offsetHeight;

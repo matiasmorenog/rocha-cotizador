@@ -535,6 +535,24 @@ select:not([multiple]):disabled {
 }
 
 /*
+  Remito edit chrome exit: fade controls/panels while column width FLIPs shut
+  (useSmoothColumnWidths + data-col-collapse). Keep in sync with
+  SEARCH_TABLE_RESIZE_MS — presence unmounts after that duration.
+*/
+@keyframes remito-edit-chrome-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.remito-edit-chrome-exit {
+  animation: remito-edit-chrome-exit 0.2s ease-in forwards;
+}
+
+/*
   Admin new-quote: customer selected → summary + QuoteBuilder panels.
   Same motion language as draft rows (fade + slight slide, short stagger).
 */
@@ -867,7 +885,8 @@ select:not([multiple]):disabled {
   .admin-drawer-backdrop-enter,
   .admin-drawer-backdrop-exit,
   .admin-drawer-panel-enter,
-  .admin-drawer-panel-exit {
+  .admin-drawer-panel-exit,
+  .remito-edit-chrome-exit {
     animation: none;
   }
 
@@ -934,7 +953,8 @@ select:not([multiple]):disabled {
   .admin-late-row-enter,
   .admin-late-row-exit,
   .admin-late-row-enter .quote-draft-row-cell-shell,
-  .admin-late-row-exit .quote-draft-row-cell-shell {
+  .admin-late-row-exit .quote-draft-row-cell-shell,
+  .remito-edit-chrome-exit {
     animation: none !important;
   }
 
