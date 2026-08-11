@@ -189,17 +189,30 @@ body {
 }
 
 /*
-  Remito weigh-price pending: amber warning must beat brand-soft selection
-  and gray hover (those rules are more specific than Tailwind bg-amber-50).
-  Keep amber-50 for default, hover, and selected so the row matches the
-  "Confirmar precio tras pesaje" panel (also bg-amber-50).
+  Remito weigh-price pending: amber base must beat Tailwind bg-amber-50 and
+  the generic gray hover / brand-soft selected rules (more specific).
+  Hover and selected stay in the amber family but shift so affordances match
+  normal rows — still readable as "needs weigh" next to the amber panel.
 */
-.admin-table-row[data-weigh-pending="true"],
-.admin-table-row[data-weigh-pending="true"]:hover,
-.admin-table-row[data-weigh-pending="true"][data-selected="true"],
-.admin-table-row[data-weigh-pending="true"][data-selected="true"]:hover {
+.admin-table-row[data-weigh-pending="true"] {
   background-color: #fffbeb; /* amber-50 */
-  filter: none;
+}
+
+.admin-table-row[data-weigh-pending="true"]:hover {
+  background-color: #fef3c7; /* amber-100 */
+}
+
+.admin-table-row[data-weigh-pending="true"][data-selected="true"] {
+  /* Sage selection tint mixed with amber so both cues read. */
+  background-color: color-mix(
+    in srgb,
+    var(--brand-primary-soft) 65%,
+    #fef3c7 35%
+  );
+}
+
+.admin-table-row[data-weigh-pending="true"][data-selected="true"]:hover {
+  filter: brightness(0.97);
 }
 
 @media (prefers-reduced-motion: reduce) {
