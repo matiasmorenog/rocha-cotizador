@@ -100,7 +100,7 @@ export function RemitoWeighPriceEditor({
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-2 rounded-md border border-amber-200 bg-amber-100/70 px-2.5 py-2 print:hidden"
+      className="space-y-2 rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 print:hidden"
     >
       <p className="text-xs font-medium text-amber-950">
         Confirmar precio tras pesaje

@@ -179,16 +179,14 @@ body {
 /*
   Remito weigh-price pending: amber warning must beat brand-soft selection
   and gray hover (those rules are more specific than Tailwind bg-amber-50).
+  Keep amber-50 for default, hover, and selected so the row matches the
+  "Confirmar precio tras pesaje" panel (also bg-amber-50).
 */
 .admin-table-row[data-weigh-pending="true"],
-.admin-table-row[data-weigh-pending="true"]:hover {
-  background-color: #fffbeb; /* amber-50 */
-  filter: none;
-}
-
+.admin-table-row[data-weigh-pending="true"]:hover,
 .admin-table-row[data-weigh-pending="true"][data-selected="true"],
 .admin-table-row[data-weigh-pending="true"][data-selected="true"]:hover {
-  background-color: #fef3c7; /* amber-100 — still warning, slightly stronger */
+  background-color: #fffbeb; /* amber-50 */
   filter: none;
 }
 

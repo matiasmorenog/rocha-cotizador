@@ -275,7 +275,7 @@ export function RemitoAdminItemRows({
                 className={cn(
                   "space-y-2",
                   showAmber &&
-                    "rounded-md border border-amber-200 bg-amber-100/70 px-2.5 py-2",
+                    "rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2",
                 )}
               >
                 <p
