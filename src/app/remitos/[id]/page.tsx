@@ -285,6 +285,7 @@ export default async function RemitoDetailPage({
                               ? "admin-table-name-1l"
                               : "admin-table-name-2l",
                           )}
+                          title={item.productName}
                         >
                           {item.productName}
                         </div>

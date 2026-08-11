@@ -150,16 +150,17 @@ body {
 }
 
 /* Fixed 2-line name slot: short names keep the same row height; long names
-   wrap/clip at two lines without ellipsis (text-overflow: clip). */
+   clamp at two lines with ellipsis. */
 .admin-table-name-2l {
-  display: block;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   line-height: 1.25rem;
   min-height: 2.5rem;
   max-height: 2.5rem;
   overflow: hidden;
   overflow-wrap: break-word;
-  white-space: normal;
-  text-overflow: clip;
+  text-overflow: ellipsis;
 }
 
 /* Single-line name slot (e.g. remito when weigh warning takes the 2nd line). */
@@ -171,7 +172,7 @@ body {
   overflow: hidden;
   overflow-wrap: break-word;
   white-space: nowrap;
-  text-overflow: clip;
+  text-overflow: ellipsis;
 }
 
 /* Grayish — deliberately distinct from the sage `--brand-primary-soft`

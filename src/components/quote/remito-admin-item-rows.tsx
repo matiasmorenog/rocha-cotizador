@@ -195,6 +195,7 @@ export function RemitoAdminItemRows({
               "max-w-[16rem]",
               needsWeighPrice ? "admin-table-name-1l" : "admin-table-name-2l",
             )}
+            title={productName}
           >
             {productName}
           </div>
