@@ -278,7 +278,14 @@ export default async function RemitoDetailPage({
                         <span className="text-neutral-500">{measureLabel}</span>
                       </td>
                       <td className="py-2 pr-2 align-middle">
-                        <div className="admin-table-name-2l max-w-[16rem]">
+                        <div
+                          className={cn(
+                            "max-w-[16rem]",
+                            needsWeighPrice
+                              ? "admin-table-name-1l"
+                              : "admin-table-name-2l",
+                          )}
+                        >
                           {item.productName}
                         </div>
                         {needsWeighPrice ? (
