@@ -105,7 +105,7 @@ export function RemitoWeighPriceEditor({
   }
 
   return (
-    <form onSubmit={onSubmit} className="mt-2 space-y-2 print:hidden">
+    <form onSubmit={onSubmit} className="space-y-2 print:hidden">
       <div className="flex flex-wrap items-end gap-2">
         <label className="block min-w-[5.5rem] flex-1 space-y-0.5">
           <span className="text-[11px] text-neutral-600">Kg pesados</span>
@@ -117,7 +117,6 @@ export function RemitoWeighPriceEditor({
             className="h-8 font-mono text-sm"
             aria-label="Kg pesados"
             disabled={loading}
-            autoFocus
           />
         </label>
         <label className="block min-w-[5.5rem] flex-1 space-y-0.5">

@@ -736,6 +736,19 @@ select:not([multiple]):disabled {
 }
 
 /*
+  Remito weigh/edit panel under a product row: height 0fr↔1fr + opacity only.
+  Do NOT put translateY on the <tr> — transform on table rows paints oddly
+  (looks centered/jumpy) especially on amber weigh-pending expand.
+*/
+.remito-edit-panel-enter .quote-draft-row-cell-shell {
+  animation: quote-unit-banner-open 0.2s ease-out both;
+}
+
+.remito-edit-panel-exit .quote-draft-row-cell-shell {
+  animation: quote-unit-banner-close 0.2s ease-in both;
+}
+
+/*
   Admin mobile drawer: backdrop fade + panel slide from left (~200ms).
   Keep-mount on close until exit ends (useExitPresence).
 */
@@ -894,6 +907,8 @@ select:not([multiple]):disabled {
   .admin-late-row-exit,
   .admin-late-row-enter .quote-draft-row-cell-shell,
   .admin-late-row-exit .quote-draft-row-cell-shell,
+  .remito-edit-panel-enter .quote-draft-row-cell-shell,
+  .remito-edit-panel-exit .quote-draft-row-cell-shell,
   .admin-drawer-backdrop-enter,
   .admin-drawer-backdrop-exit,
   .admin-drawer-panel-enter,
@@ -966,6 +981,8 @@ select:not([multiple]):disabled {
   .admin-late-row-exit,
   .admin-late-row-enter .quote-draft-row-cell-shell,
   .admin-late-row-exit .quote-draft-row-cell-shell,
+  .remito-edit-panel-enter .quote-draft-row-cell-shell,
+  .remito-edit-panel-exit .quote-draft-row-cell-shell,
   .remito-edit-chrome-exit {
     animation: none !important;
   }

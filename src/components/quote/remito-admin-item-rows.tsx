@@ -307,8 +307,8 @@ export function RemitoAdminItemRows({
             rowClass,
             "print:hidden",
             panelExiting
-              ? "admin-late-row-exit pointer-events-none"
-              : "admin-late-row-enter",
+              ? "remito-edit-panel-exit pointer-events-none"
+              : "remito-edit-panel-enter",
           )}
           data-weigh-pending={showAmber ? "true" : undefined}
           aria-hidden={panelExiting || undefined}
@@ -316,7 +316,7 @@ export function RemitoAdminItemRows({
           <td colSpan={colSpan} className="quote-draft-row-td">
             <div className="quote-draft-row-cell-shell">
               <div className="quote-draft-row-cell-clip">
-                <div className="px-2 pb-3 pt-0">
+                <div className="px-2 pb-3 pt-1">
                   {needsWeighPrice ? (
                     <RemitoWeighPriceEditor
                       quoteId={quoteId}
