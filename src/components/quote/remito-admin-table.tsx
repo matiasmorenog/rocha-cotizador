@@ -45,7 +45,12 @@ export function RemitoAdminTable({ quoteId, lines, canDeleteLine }: Props) {
   const colSpan = showEditChrome ? 6 : 5;
 
   const tableRef = useRef<HTMLTableElement>(null);
-  useSmoothColumnWidths(tableRef, `${lines.length}|${editLayoutOpen}`);
+  // Include showEditChrome so unmount after exit FLIP can releaseLock cleanly
+  // (exit keeps a fixed-width lock until the actions column is gone).
+  useSmoothColumnWidths(
+    tableRef,
+    `${lines.length}|${editLayoutOpen}|${showEditChrome}`,
+  );
   const { rowProps } = useSelectedRow(lines.map((line) => line.itemId));
 
   return (

@@ -31,7 +31,40 @@ function releaseLock(table: HTMLTableElement, cells: HTMLTableCellElement[]) {
     cell.style.overflow = "";
     cell.style.paddingLeft = "";
     cell.style.paddingRight = "";
+    cell.style.display = "";
   }
+}
+
+/**
+ * Hide every cell in columns marked `data-col-collapse` so auto-layout
+ * measures the true post-exit widths (content-sized). Measuring under
+ * `table-layout: fixed` with only the header at 0px equalizes the remaining
+ * columns — then releaseLock snaps them to content. `display: none` matches
+ * unmount for intrinsic sizing.
+ */
+function softHideCollapseColumns(
+  table: HTMLTableElement,
+  header: HTMLTableCellElement[],
+): () => void {
+  const collapseIdx = header
+    .map((cell, i) => (cell.hasAttribute("data-col-collapse") ? i : -1))
+    .filter((i) => i >= 0);
+  if (collapseIdx.length === 0) return () => undefined;
+
+  const hidden: HTMLTableCellElement[] = [];
+  for (const row of Array.from(table.rows)) {
+    for (const i of collapseIdx) {
+      const cell = row.cells[i];
+      if (!cell) continue;
+      cell.style.display = "none";
+      hidden.push(cell);
+    }
+  }
+  void table.offsetHeight;
+
+  return () => {
+    for (const cell of hidden) cell.style.display = "";
+  };
 }
 
 /**
@@ -46,8 +79,9 @@ function releaseLock(table: HTMLTableElement, cells: HTMLTableCellElement[]) {
  * (back to `table-layout: auto`) once the transition ends so normal
  * content-driven/responsive sizing resumes at rest.
  *
- * Header cells with `data-col-collapse` soft-collapse to 0 before measuring
- * "next" so an exit can FLIP-shut a still-mounted column (remito edit chrome).
+ * Header cells with `data-col-collapse` are soft-hidden (`display: none` on
+ * the whole column) before measuring "next" under auto layout, so exit FLIP
+ * targets content widths — not equalized fixed tracks.
  */
 export function useSmoothColumnWidths(
   tableRef: RefObject<HTMLTableElement | null>,
@@ -109,29 +143,14 @@ export function useSmoothColumnWidths(
 
     releaseLock(table, cells);
 
-    // Soft-collapse header cells marked `data-col-collapse` (remito edit-mode
-    // exit) so next rects include a closed actions column while it stays
-    // mounted for clipping. Must use `table-layout: fixed` — under `auto`,
-    // body cells with buttons keep the column open and next≈prev (no FLIP,
-    // then snap on unmount). Cleared again before the FLIP write below.
-    const collapsing = cells.filter((c) => c.hasAttribute("data-col-collapse"));
-    if (collapsing.length > 0) {
-      table.style.tableLayout = "fixed";
-      for (const cell of collapsing) {
-        cell.style.width = "0px";
-        cell.style.minWidth = "0px";
-        cell.style.overflow = "hidden";
-        cell.style.paddingLeft = "0px";
-        cell.style.paddingRight = "0px";
-      }
-      void table.offsetHeight;
-    }
-
+    const restoreCollapse = softHideCollapseColumns(table, cells);
     const nextWidths = cells.map((cell) => {
       if (cell.hasAttribute("data-col-collapse")) return 0;
       return cell.getBoundingClientRect().width;
     });
-    if (collapsing.length > 0) releaseLock(table, cells);
+    restoreCollapse();
+
+    const collapsing = cells.filter((c) => c.hasAttribute("data-col-collapse"));
 
     for (const cell of cells) {
       observerRef.current?.observe(cell);
@@ -169,6 +188,23 @@ export function useSmoothColumnWidths(
 
     const clear = () => {
       if (tableRef.current !== table) return;
+      if (collapsing.length > 0) {
+        // Keep final pixel lock until the column unmounts — releasing to auto
+        // while faded action buttons still exist would re-expand that column
+        // and snap the rest. A later resizeKey bump (chrome unmount) clears.
+        table.style.tableLayout = "fixed";
+        cells.forEach((cell, i) => {
+          cell.style.transition = "";
+          cell.style.width = `${nextWidths[i]}px`;
+          if (cell.hasAttribute("data-col-collapse") || nextWidths[i] < 0.5) {
+            cell.style.overflow = "hidden";
+            cell.style.minWidth = "0px";
+            cell.style.paddingLeft = "0px";
+            cell.style.paddingRight = "0px";
+          }
+        });
+        return;
+      }
       releaseLock(table, cells);
     };
 
