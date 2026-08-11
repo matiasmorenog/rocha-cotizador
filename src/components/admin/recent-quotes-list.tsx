@@ -40,7 +40,7 @@ export function RecentQuotesList({
         >
           <div>
             <Link
-              href={`/remitos/${q.id}`}
+              href={`/remitos/${q.number}`}
               className="font-medium text-[var(--brand-primary)] hover:underline"
             >
               {q.number}

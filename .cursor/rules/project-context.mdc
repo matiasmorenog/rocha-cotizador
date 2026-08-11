@@ -28,7 +28,7 @@ Descuento por cliente: **lista de precios fijos** (`Customer.priceListId` → `P
 | Auth | `src/lib/auth.ts`, `src/lib/session.ts` |
 | Pricing | `src/lib/pricing.ts` |
 | Cotizar UI | `src/components/quote/quote-builder.tsx` |
-| Remito | `src/app/remitos/[id]/page.tsx` |
+| Remito | `src/app/remitos/[number]/page.tsx` |
 | Admin | `src/app/admin/(protected)/` |
 
 ## Convenciones

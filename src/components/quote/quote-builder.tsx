@@ -231,10 +231,10 @@ export function QuoteBuilder({
 
     // Prefer remito + ?whatsapp=1 so a blocked popup still leaves a clear CTA.
     if (typeof data.whatsappUrl === "string" && data.whatsappUrl) {
-      router.push(`/remitos/${data.id}?whatsapp=1`);
+      router.push(`/remitos/${data.number}?whatsapp=1`);
       return;
     }
-    router.push(`/remitos/${data.id}`);
+    router.push(`/remitos/${data.number}`);
   }
 
   return (
