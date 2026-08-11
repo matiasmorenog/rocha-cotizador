@@ -535,9 +535,10 @@ select:not([multiple]):disabled {
 }
 
 /*
-  Remito edit chrome exit: fade controls/panels while column width FLIPs shut
-  (useSmoothColumnWidths + data-col-collapse). Keep in sync with
-  SEARCH_TABLE_RESIZE_MS — presence unmounts after that duration.
+  Remito edit chrome exit: fade action buttons while column width FLIPs shut
+  (useSmoothColumnWidths + data-col-collapse). Per-row weigh/edit panels use
+  admin-late-row-enter/exit instead. Keep in sync with SEARCH_TABLE_RESIZE_MS
+  — presence unmounts after that duration.
 */
 @keyframes remito-edit-chrome-exit {
   from {

@@ -27,6 +27,10 @@ function releaseLock(table: HTMLTableElement, cells: HTMLTableCellElement[]) {
   for (const cell of cells) {
     cell.style.width = "";
     cell.style.transition = "";
+    cell.style.minWidth = "";
+    cell.style.overflow = "";
+    cell.style.paddingLeft = "";
+    cell.style.paddingRight = "";
   }
 }
 
@@ -96,29 +100,37 @@ export function useSmoothColumnWidths(
     // "prev": widths recorded before this commit — the observer's own
     // notification for *this* commit's resize hasn't been delivered yet
     // (see `useSmoothListHeight`), so the map still holds the pre-update
-    // values. A cell the observer never saw (e.g. a brand new column from
-    // an `editMode` toggle) falls back to its current rect.
+    // values. A brand-new header cell (remito edit enter) has no map entry
+    // → treat as 0 so the actions column FLIP-grows instead of appearing
+    // already at full width.
     const prevWidths = cells.map(
-      (cell) =>
-        lastWidthsRef.current.get(cell) ?? cell.getBoundingClientRect().width,
+      (cell) => lastWidthsRef.current.get(cell) ?? 0,
     );
 
     releaseLock(table, cells);
 
     // Soft-collapse header cells marked `data-col-collapse` (remito edit-mode
     // exit) so next rects include a closed actions column while it stays
-    // mounted for clipping. Cleared again before the FLIP write below.
+    // mounted for clipping. Must use `table-layout: fixed` — under `auto`,
+    // body cells with buttons keep the column open and next≈prev (no FLIP,
+    // then snap on unmount). Cleared again before the FLIP write below.
     const collapsing = cells.filter((c) => c.hasAttribute("data-col-collapse"));
-    for (const cell of collapsing) {
-      cell.style.width = "0px";
-      cell.style.minWidth = "0px";
-      cell.style.overflow = "hidden";
-      cell.style.paddingLeft = "0px";
-      cell.style.paddingRight = "0px";
+    if (collapsing.length > 0) {
+      table.style.tableLayout = "fixed";
+      for (const cell of collapsing) {
+        cell.style.width = "0px";
+        cell.style.minWidth = "0px";
+        cell.style.overflow = "hidden";
+        cell.style.paddingLeft = "0px";
+        cell.style.paddingRight = "0px";
+      }
+      void table.offsetHeight;
     }
-    if (collapsing.length > 0) void table.offsetHeight;
 
-    const nextWidths = cells.map((cell) => cell.getBoundingClientRect().width);
+    const nextWidths = cells.map((cell) => {
+      if (cell.hasAttribute("data-col-collapse")) return 0;
+      return cell.getBoundingClientRect().width;
+    });
     if (collapsing.length > 0) releaseLock(table, cells);
 
     for (const cell of cells) {
@@ -133,9 +145,19 @@ export function useSmoothColumnWidths(
     cells.forEach((cell, i) => {
       cell.style.transition = "none";
       cell.style.width = `${prevWidths[i]}px`;
-      if (cell.hasAttribute("data-col-collapse")) {
+      // Clip while growing from 0 or collapsing to 0 so button chrome doesn't
+      // paint outside the shrinking/growing track.
+      if (
+        cell.hasAttribute("data-col-collapse") ||
+        prevWidths[i] < 0.5 ||
+        nextWidths[i] < 0.5
+      ) {
         cell.style.overflow = "hidden";
         cell.style.minWidth = "0px";
+      }
+      if (cell.hasAttribute("data-col-collapse") || nextWidths[i] < 0.5) {
+        cell.style.paddingLeft = "0px";
+        cell.style.paddingRight = "0px";
       }
     });
     table.style.tableLayout = "fixed";

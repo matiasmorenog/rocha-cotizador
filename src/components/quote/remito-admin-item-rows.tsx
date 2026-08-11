@@ -13,6 +13,10 @@ import { TruncatedName } from "@/components/ui/truncated-name";
 import { RemitoWeighPriceEditor } from "@/components/quote/remito-weigh-price-editor";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import {
+  useExitPresence,
+  QUOTE_PICKER_FLOAT_MS,
+} from "@/hooks/use-exit-presence";
+import {
   cn,
   formatArInput,
   formatPrice,
@@ -89,9 +93,19 @@ export function RemitoAdminItemRows({
   const previewTotal = previewOk ? qtyNum * priceNum : null;
 
   const showAmber = needsWeighPrice;
-  /** Chrome gates panels — stale `editing` while view mode is harmless. */
-  const showPanel = showEditChrome && (needsWeighPrice || editing);
-  const chromeInteractive = editMode && !editExiting;
+  /**
+   * Panel open while edit chrome live and not globally exiting. Keep-mount via
+   * useExitPresence so cancel / leave edit can play late-row exit (fade +
+   * 0fr height) — same family as admin after-cutoff rows.
+   */
+  const wantPanel =
+    showEditChrome && !editExiting && (needsWeighPrice || editing);
+  const {
+    present: showPanel,
+    exiting: panelExiting,
+    animKey: panelAnimKey,
+  } = useExitPresence(wantPanel, QUOTE_PICKER_FLOAT_MS);
+  const chromeInteractive = editMode && !editExiting && !panelExiting;
 
   const rowClass = cn(
     "border-b border-neutral-100",
@@ -288,131 +302,133 @@ export function RemitoAdminItemRows({
 
       {showPanel ? (
         <tr
+          key={panelAnimKey}
           className={cn(
             rowClass,
             "print:hidden",
-            editExiting && "remito-edit-chrome-exit pointer-events-none",
+            panelExiting
+              ? "admin-late-row-exit pointer-events-none"
+              : "admin-late-row-enter",
           )}
           data-weigh-pending={showAmber ? "true" : undefined}
-          aria-hidden={editExiting || undefined}
+          aria-hidden={panelExiting || undefined}
         >
-          <td colSpan={colSpan} className="px-2 pb-3 pt-0">
-            {needsWeighPrice ? (
-              <RemitoWeighPriceEditor
-                quoteId={quoteId}
-                itemId={itemId}
-                initialQty={qty}
-                initialUnitPrice={unitPrice}
-                suggestedKgPrice={suggestedKgPrice}
-                orderedByUnit={orderedByUnit}
-              />
-            ) : (
-              <form
-                onSubmit={onSave}
-                className={cn(
-                  "space-y-2",
-                  showAmber &&
-                    "rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2",
-                )}
-              >
-                <p
-                  className={
-                    showAmber
-                      ? "text-xs font-medium text-amber-950"
-                      : "text-xs font-medium text-neutral-800"
-                  }
-                >
-                  Editar línea
-                </p>
-                <div className="flex flex-wrap items-end gap-2">
-                  <label className="block min-w-[5.5rem] flex-1 space-y-0.5">
-                    <span
-                      className={
-                        showAmber
-                          ? "text-[11px] text-amber-900"
-                          : "text-[11px] text-neutral-600"
-                      }
-                    >
-                      Cantidad ({measureLabel})
-                    </span>
-                    <ArNumberInput
-                      value={qtyInput}
-                      onValueChange={setQtyInput}
-                      maxFractionDigits={3}
-                      className="h-8 font-mono text-sm"
-                      aria-label="Cantidad"
-                      disabled={busy || !chromeInteractive}
+          <td colSpan={colSpan} className="quote-draft-row-td">
+            <div className="quote-draft-row-cell-shell">
+              <div className="quote-draft-row-cell-clip">
+                <div className="px-2 pb-3 pt-0">
+                  {needsWeighPrice ? (
+                    <RemitoWeighPriceEditor
+                      quoteId={quoteId}
+                      itemId={itemId}
+                      initialQty={qty}
+                      initialUnitPrice={unitPrice}
+                      suggestedKgPrice={suggestedKgPrice}
+                      orderedByUnit={orderedByUnit}
                     />
-                  </label>
-                  <label className="block min-w-[5.5rem] flex-1 space-y-0.5">
-                    <span
-                      className={
-                        showAmber
-                          ? "text-[11px] text-amber-900"
-                          : "text-[11px] text-neutral-600"
-                      }
+                  ) : (
+                    <form
+                      onSubmit={onSave}
+                      className={cn(
+                        "space-y-2",
+                        showAmber &&
+                          "rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2",
+                      )}
                     >
-                      Precio unitario
-                    </span>
-                    <ArNumberInput
-                      value={unitPriceInput}
-                      onValueChange={setUnitPriceInput}
-                      maxFractionDigits={2}
-                      formatOptions={AR_PRICE_FORMAT}
-                      className="h-8 font-mono text-sm"
-                      aria-label="Precio unitario"
-                      disabled={busy || !chromeInteractive}
-                    />
-                  </label>
-                  <Button
-                    type="submit"
-                    size="sm"
-                    disabled={busy || !chromeInteractive}
-                    className="shrink-0"
-                  >
-                    {loading ? <Spinner className="h-4 w-4" /> : "Guardar"}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={busy || !chromeInteractive}
-                    className="shrink-0"
-                    onClick={() => {
-                      setEditing(false);
-                      setError(null);
-                    }}
-                  >
-                    Cancelar
-                  </Button>
+                      <p
+                        className={
+                          showAmber
+                            ? "text-xs font-medium text-amber-950"
+                            : "text-xs font-medium text-neutral-800"
+                        }
+                      >
+                        Editar línea
+                      </p>
+                      <div className="flex flex-wrap items-end gap-2">
+                        <label className="block min-w-[5.5rem] flex-1 space-y-0.5">
+                          <span
+                            className={
+                              showAmber
+                                ? "text-[11px] text-amber-900"
+                                : "text-[11px] text-neutral-600"
+                            }
+                          >
+                            Cantidad ({measureLabel})
+                          </span>
+                          <ArNumberInput
+                            value={qtyInput}
+                            onValueChange={setQtyInput}
+                            maxFractionDigits={3}
+                            className="h-8 font-mono text-sm"
+                            aria-label="Cantidad"
+                            disabled={busy || !chromeInteractive}
+                          />
+                        </label>
+                        <label className="block min-w-[5.5rem] flex-1 space-y-0.5">
+                          <span
+                            className={
+                              showAmber
+                                ? "text-[11px] text-amber-900"
+                                : "text-[11px] text-neutral-600"
+                            }
+                          >
+                            Precio unitario
+                          </span>
+                          <ArNumberInput
+                            value={unitPriceInput}
+                            onValueChange={setUnitPriceInput}
+                            maxFractionDigits={2}
+                            formatOptions={AR_PRICE_FORMAT}
+                            className="h-8 font-mono text-sm"
+                            aria-label="Precio unitario"
+                            disabled={busy || !chromeInteractive}
+                          />
+                        </label>
+                        <Button
+                          type="submit"
+                          size="sm"
+                          disabled={busy || !chromeInteractive}
+                          className="shrink-0"
+                        >
+                          {loading ? <Spinner className="h-4 w-4" /> : "Guardar"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={busy || !chromeInteractive}
+                          className="shrink-0"
+                          onClick={() => {
+                            setEditing(false);
+                            setError(null);
+                          }}
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                      {previewTotal !== null ? (
+                        <p
+                          className={
+                            showAmber
+                              ? "text-[11px] text-amber-900"
+                              : "text-[11px] text-neutral-600"
+                          }
+                        >
+                          Importe: {formatPrice(previewTotal)}
+                        </p>
+                      ) : null}
+                    </form>
+                  )}
+                  {error ? (
+                    <p className="mt-1 text-xs text-red-700">{error}</p>
+                  ) : null}
                 </div>
-                {previewTotal !== null ? (
-                  <p
-                    className={
-                      showAmber
-                        ? "text-[11px] text-amber-900"
-                        : "text-[11px] text-neutral-600"
-                    }
-                  >
-                    Importe: {formatPrice(previewTotal)}
-                  </p>
-                ) : null}
-              </form>
-            )}
-            {error ? (
-              <p className="mt-1 text-xs text-red-700">{error}</p>
-            ) : null}
+              </div>
+            </div>
           </td>
         </tr>
-      ) : showEditChrome && error ? (
-        <tr
-          className={cn(
-            rowClass,
-            "print:hidden",
-            editExiting && "remito-edit-chrome-exit pointer-events-none",
-          )}
-          aria-hidden={editExiting || undefined}
-        >
+      ) : showEditChrome && !editExiting && error ? (
+        <tr className={cn(rowClass, "print:hidden")}>
           <td colSpan={colSpan} className="px-2 pb-2 pt-0">
             <p className="text-xs text-red-700">{error}</p>
           </td>
