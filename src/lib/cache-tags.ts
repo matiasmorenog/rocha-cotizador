@@ -1,6 +1,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 
-/** Shared cache tags — never put per-customer unitPrice or auth under these. */
+/** Shared cache tags — never put per-customer unitPrice or auth under these.
+ *  Keep `scripts/post-deploy-cache.sh` TAGS in sync when adding one. */
 export const CACHE_TAGS = {
   products: "products",
   priceLists: "price-lists",
