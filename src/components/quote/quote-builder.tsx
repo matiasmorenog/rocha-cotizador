@@ -16,7 +16,7 @@ import {
   quoteLineMeasureLabel,
   quoteLineQtyAriaLabel,
 } from "@/lib/order-measure";
-import { cn, formatPrice } from "@/lib/utils";
+import { cn, formatPrice, parseArNumber } from "@/lib/utils";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import {
   effectiveLineTotal,
@@ -40,6 +40,10 @@ import {
   useExitPresence,
   QUOTE_PICKER_FLOAT_MS,
 } from "@/hooks/use-exit-presence";
+import {
+  ArNumberInput,
+  ArNumberValueInput,
+} from "@/components/ui/ar-number-input";
 
 /** Keep in sync with `.quote-panel-enter` duration in globals.css */
 const QUOTE_PANEL_ENTER_MS = 200;
@@ -147,7 +151,7 @@ export function QuoteBuilder({
 
   function addLine() {
     if (!selected) return;
-    const n = Number(qty.replace(",", "."));
+    const n = parseArNumber(qty);
     if (!Number.isFinite(n) || n <= 0) {
       setError("Cantidad inválida");
       return;
@@ -231,10 +235,10 @@ export function QuoteBuilder({
 
     // Prefer remito + ?whatsapp=1 so a blocked popup still leaves a clear CTA.
     if (typeof data.whatsappUrl === "string" && data.whatsappUrl) {
-      router.push(`/remitos/${data.id}?whatsapp=1`);
+      router.push(`/remitos/${data.number}?whatsapp=1`);
       return;
     }
-    router.push(`/remitos/${data.id}`);
+    router.push(`/remitos/${data.number}`);
   }
 
   return (
@@ -264,11 +268,12 @@ export function QuoteBuilder({
           <div className="flex flex-wrap items-end gap-2">
             <div className="w-[120px] min-w-[6rem] flex-1 sm:flex-none">
               <Label htmlFor="qty">Cantidad</Label>
-              <Input
+              <ArNumberInput
                 id="qty"
-                inputMode="decimal"
                 value={qty}
-                onChange={(e) => setLocalQty(e.target.value)}
+                onValueChange={setLocalQty}
+                maxFractionDigits={3}
+                placeholder="1"
               />
             </div>
             {selectedAllowsUnit ? (
@@ -397,13 +402,12 @@ export function QuoteBuilder({
                     ) : null}
                   </td>
                   <td className="px-3 py-2">
-                    <Input
-                      className="h-8 w-24"
-                      type="number"
-                      min={0.001}
-                      step="any"
+                    <ArNumberValueInput
+                      className="h-8 w-24 font-mono"
                       value={l.qty}
-                      onChange={(e) => setQty(l.id, Number(e.target.value))}
+                      onValueChange={(n) => setQty(l.id, n)}
+                      maxFractionDigits={3}
+                      min={0.001}
                       aria-label={quoteLineQtyAriaLabel(
                         l.orderByUnit,
                         l.allowsUnitOrder,

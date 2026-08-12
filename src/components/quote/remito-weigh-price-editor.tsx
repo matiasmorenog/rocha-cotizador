@@ -3,9 +3,12 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  AR_PRICE_FORMAT,
+  ArNumberInput,
+} from "@/components/ui/ar-number-input";
 import { Spinner } from "@/components/ui/spinner";
-import { formatPrice } from "@/lib/utils";
+import { formatArInput, formatPrice, parseArNumber } from "@/lib/utils";
 
 type Props = {
   quoteId: string;
@@ -26,8 +29,10 @@ function defaultPriceInput(
   initialUnitPrice: number,
   suggestedKgPrice: number,
 ): string {
-  if (initialUnitPrice > 0) return String(initialUnitPrice);
-  if (suggestedKgPrice > 0) return String(suggestedKgPrice);
+  if (initialUnitPrice > 0)
+    return formatArInput(initialUnitPrice, 2, AR_PRICE_FORMAT);
+  if (suggestedKgPrice > 0)
+    return formatArInput(suggestedKgPrice, 2, AR_PRICE_FORMAT);
   return "";
 }
 
@@ -45,7 +50,9 @@ export function RemitoWeighPriceEditor({
 }: Props) {
   const router = useRouter();
   const [qty, setQty] = useState(
-    orderedByUnit && initialUnitPrice === 0 ? "" : String(initialQty),
+    orderedByUnit && initialUnitPrice === 0
+      ? ""
+      : formatArInput(initialQty, 3),
   );
   const [unitPrice, setUnitPrice] = useState(() =>
     defaultPriceInput(initialUnitPrice, suggestedKgPrice),
@@ -53,8 +60,8 @@ export function RemitoWeighPriceEditor({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const qtyNum = Number(String(qty).replace(",", "."));
-  const priceNum = Number(String(unitPrice).replace(",", "."));
+  const qtyNum = parseArNumber(qty);
+  const priceNum = parseArNumber(unitPrice);
   const previewOk =
     Number.isFinite(qtyNum) &&
     qtyNum > 0 &&
@@ -99,30 +106,27 @@ export function RemitoWeighPriceEditor({
 
   return (
     <form onSubmit={onSubmit} className="space-y-2 print:hidden">
-      <p className="text-xs font-medium text-amber-950">
-        Confirmar precio tras pesaje
-      </p>
       <div className="flex flex-wrap items-end gap-2">
         <label className="block min-w-[5.5rem] flex-1 space-y-0.5">
-          <span className="text-[11px] text-amber-900">Kg pesados</span>
-          <Input
+          <span className="text-[11px] text-neutral-600">Kg pesados</span>
+          <ArNumberInput
             value={qty}
-            onChange={(e) => setQty(e.target.value)}
-            inputMode="decimal"
-            placeholder={orderedByUnit ? "ej. 2.35" : undefined}
+            onValueChange={setQty}
+            maxFractionDigits={3}
+            placeholder={orderedByUnit ? "ej. 2,35" : undefined}
             className="h-8 font-mono text-sm"
             aria-label="Kg pesados"
             disabled={loading}
-            autoFocus
           />
         </label>
         <label className="block min-w-[5.5rem] flex-1 space-y-0.5">
-          <span className="text-[11px] text-amber-900">Precio $/kg</span>
-          <Input
+          <span className="text-[11px] text-neutral-600">Precio $/kg</span>
+          <ArNumberInput
             value={unitPrice}
-            onChange={(e) => setUnitPrice(e.target.value)}
-            inputMode="decimal"
-            placeholder={suggestedKgPrice > 0 ? undefined : "0.00"}
+            onValueChange={setUnitPrice}
+            maxFractionDigits={2}
+            formatOptions={AR_PRICE_FORMAT}
+            placeholder={suggestedKgPrice > 0 ? undefined : "0,00"}
             className="h-8 font-mono text-sm"
             aria-label="Precio por kg"
             disabled={loading}
@@ -133,7 +137,7 @@ export function RemitoWeighPriceEditor({
         </Button>
       </div>
       {previewTotal !== null ? (
-        <p className="text-[11px] text-amber-900">
+        <p className="text-[11px] text-neutral-600">
           Importe: {formatPrice(previewTotal)}
         </p>
       ) : null}

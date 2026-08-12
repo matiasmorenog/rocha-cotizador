@@ -17,10 +17,14 @@ import {
 } from "@/lib/order-measure";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  AR_PRICE_FORMAT,
+  ArNumberInput,
+} from "@/components/ui/ar-number-input";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
-import { cn, formatPrice } from "@/lib/utils";
+import { cn, formatArInput, formatPrice, parseArNumber } from "@/lib/utils";
 import { filterFoldedSearch } from "@/lib/search-fold";
 import {
   INCREMENTAL_REVEAL_INITIAL,
@@ -60,7 +64,7 @@ function buildListPricePayload(
     }
     return {
       priceListId: l.id,
-      unitPrice: Number(raw.replace(",", ".")),
+      unitPrice: parseArNumber(raw),
     };
   });
 }
@@ -80,12 +84,15 @@ function ProductEditRow({
   const formId = `product-edit-${product.id}`;
   const [name, setName] = useState(product.name);
   const [rubro, setRubro] = useState(product.rubro ?? "");
-  const [basePrice, setBasePrice] = useState(String(product.basePrice));
+  const [basePrice, setBasePrice] = useState(() =>
+    formatArInput(product.basePrice, 2, AR_PRICE_FORMAT),
+  );
   const [listPrices, setListPrices] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     for (const l of activeLists) {
       const v = product.listPrices[l.id];
-      init[l.id] = v != null ? String(v) : "";
+      init[l.id] =
+        v != null ? formatArInput(v, 2, AR_PRICE_FORMAT) : "";
     }
     return init;
   });
@@ -112,7 +119,7 @@ function ProductEditRow({
       }
     }
 
-    const base = Number(basePrice.replace(",", "."));
+    const base = parseArNumber(basePrice);
     if (!Number.isFinite(base) || base < 0) {
       setError("Precio base inválido");
       setLoading(false);
@@ -181,14 +188,13 @@ function ProductEditRow({
         />
       </td>
       <td className="px-3 py-2">
-        <Input
+        <ArNumberInput
           form={formId}
-          type="number"
-          min={0}
-          step="0.01"
-          className={cn(cellInputClass, "min-w-[6rem]")}
+          className={cn(cellInputClass, "min-w-[6rem] font-mono")}
           value={basePrice}
-          onChange={(e) => setBasePrice(e.target.value)}
+          onValueChange={setBasePrice}
+          maxFractionDigits={2}
+          formatOptions={AR_PRICE_FORMAT}
           required
           disabled={loading}
           aria-label="Precio base"
@@ -196,16 +202,15 @@ function ProductEditRow({
       </td>
       {activeLists.map((l) => (
         <td key={l.id} className="px-3 py-2">
-          <Input
+          <ArNumberInput
             form={formId}
-            type="number"
-            min={0}
-            step="0.01"
-            className={cn(cellInputClass, "min-w-[6rem]")}
+            className={cn(cellInputClass, "min-w-[6rem] font-mono")}
             value={listPrices[l.id] ?? ""}
-            onChange={(e) =>
-              setListPrices((prev) => ({ ...prev, [l.id]: e.target.value }))
+            onValueChange={(raw) =>
+              setListPrices((prev) => ({ ...prev, [l.id]: raw }))
             }
+            maxFractionDigits={2}
+            formatOptions={AR_PRICE_FORMAT}
             placeholder="—"
             disabled={loading}
             aria-label={`Precio ${l.name}`}

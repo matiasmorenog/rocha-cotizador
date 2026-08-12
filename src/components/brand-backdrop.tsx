@@ -1,9 +1,10 @@
 import { cn } from "@/lib/utils";
 
-const BEANS_PATTERN = {
-  src: "/brand/bg-pattern-beans.png",
-  size: "560px",
-  veil: 0.55,
+const LOGIN_PATTERN = {
+  /** Single teal coffee/bakery tile (1024×512). */
+  src: "/brand/login-pattern-teal.png",
+  size: "520px",
+  veil: 0.52,
 } as const;
 
 type BrandBackdropProps = {
@@ -12,8 +13,8 @@ type BrandBackdropProps = {
 };
 
 /**
- * Full-bleed coffee backdrop behind auth/landing surfaces.
- * Beans seamless tile + soft latte veil keeps forms readable.
+ * Full-bleed teal pattern behind auth/landing surfaces.
+ * Soft veil keeps form text readable over the busy stamp.
  */
 export function BrandBackdrop({ children, className }: BrandBackdropProps) {
   return (
@@ -22,9 +23,9 @@ export function BrandBackdrop({ children, className }: BrandBackdropProps) {
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10 select-none"
         style={{
-          backgroundImage: `url(${BEANS_PATTERN.src})`,
+          backgroundImage: `url(${LOGIN_PATTERN.src})`,
           backgroundRepeat: "repeat",
-          backgroundSize: BEANS_PATTERN.size,
+          backgroundSize: LOGIN_PATTERN.size,
           backgroundPosition: "center center",
         }}
       />
@@ -32,7 +33,7 @@ export function BrandBackdrop({ children, className }: BrandBackdropProps) {
         aria-hidden
         className="pointer-events-none fixed inset-0 -z-10 select-none"
         style={{
-          backgroundColor: `color-mix(in srgb, var(--background) ${Math.round(BEANS_PATTERN.veil * 100)}%, transparent)`,
+          backgroundColor: `color-mix(in srgb, var(--background) ${Math.round(LOGIN_PATTERN.veil * 100)}%, transparent)`,
         }}
       />
       {children}

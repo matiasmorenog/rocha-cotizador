@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { BrandBackdrop } from "@/components/brand-backdrop";
+import { RemitoBackButton } from "@/components/quote/remito-back-button";
 import { cn } from "@/lib/utils";
 
 type SkeletonProps = {
@@ -36,19 +37,20 @@ export function SkeletonRegion({
 
 /** Soft auth/landing card — matches BrandBackdrop surfaces. */
 const AUTH_CARD =
-  "w-full space-y-6 rounded-xl border border-[var(--brand-latte)]/50 bg-[var(--brand-primary-soft)]/95 p-6 shadow-sm backdrop-blur-[2px]";
+  "w-full space-y-6 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary-soft)]/95 p-6 shadow-sm backdrop-blur-[2px]";
 
 function SkeletonLogo({
   size = "xl",
 }: {
   size?: "md" | "xl" | "2xl";
 }) {
+  // Square bones — matches circular brand mark + BrandLogo height tokens.
   const sizeClass =
     size === "2xl"
-      ? "h-52 w-64 sm:h-64 sm:w-80"
+      ? "h-52 w-52 sm:h-64 sm:w-64"
       : size === "md"
-        ? "h-20 w-48"
-        : "h-44 w-56 sm:h-52 sm:w-64";
+        ? "h-20 w-20 sm:h-24 sm:w-24"
+        : "h-44 w-44 sm:h-52 sm:w-52";
   return <Skeleton className={cn("rounded-2xl", sizeClass)} />;
 }
 
@@ -112,7 +114,7 @@ function SkeletonExcelSyncPanel() {
   );
 }
 
-/** Home `/` — logo hero + primary CTA + subtle admin link. */
+/** Home `/` — logo + short copy + primary CTA + admin text link. */
 export function SkeletonHomePage() {
   return (
     <SkeletonRegion label="Cargando">
@@ -120,12 +122,14 @@ export function SkeletonHomePage() {
         <div className={AUTH_CARD}>
           <div className="flex flex-col items-center gap-4 text-center">
             <SkeletonLogo size="2xl" />
-            <Skeleton className="h-4 w-64 max-w-full" />
-            <Skeleton className="h-4 w-52 max-w-full" />
+            <div className="flex w-full max-w-sm flex-col items-center gap-1.5">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-52 max-w-full" />
+            </div>
           </div>
           <div className="flex flex-col items-center gap-3">
             <Skeleton className="h-11 w-full rounded-md" />
-            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-4 w-56" />
           </div>
         </div>
       </BrandBackdrop>
@@ -133,7 +137,7 @@ export function SkeletonHomePage() {
   );
 }
 
-/** `/entrar` — chooser with logo + CTAs (admin link subtle). */
+/** `/entrar` — logo + title/copy + primary CTA + admin text link. */
 export function SkeletonChooserPage() {
   return (
     <SkeletonRegion label="Cargando acceso">
@@ -141,14 +145,18 @@ export function SkeletonChooserPage() {
         <div className={AUTH_CARD}>
           <div className="flex flex-col items-center gap-4 text-center">
             <SkeletonLogo size="xl" />
-            <div className="flex w-full flex-col items-center gap-2">
-              <Skeleton className="h-6 w-28" />
-              <Skeleton className="h-4 w-48" />
+            <div className="w-full space-y-1">
+              <div className="flex justify-center">
+                <Skeleton className="h-7 w-28" />
+              </div>
+              <div className="flex justify-center">
+                <Skeleton className="h-4 w-48" />
+              </div>
             </div>
           </div>
           <div className="flex flex-col items-center gap-3">
             <Skeleton className="h-11 w-full rounded-md" />
-            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-4 w-56" />
           </div>
         </div>
       </BrandBackdrop>
@@ -238,9 +246,11 @@ export function SkeletonRemitoDetailPage() {
     <SkeletonRegion label="Cargando remito" className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-36" />
-        <div className="flex gap-2">
-          <Skeleton className="h-10 w-20 rounded-md" />
+        <div className="flex flex-wrap justify-end gap-2">
+          {/* Real Volver — works during route pending / loading shell */}
+          <RemitoBackButton />
           <Skeleton className="h-10 w-32 rounded-md" />
+          <Skeleton className="h-10 w-28 rounded-md" />
         </div>
       </div>
       <div className="rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">

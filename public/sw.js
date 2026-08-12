@@ -1,10 +1,10 @@
 /* Rocha Cotizador — admin Web Push service worker */
-/* v9 — silence OS sound when an open admin tab will chime in-app */
+/* v11 — drop any leftover Cache Storage from older SW builds */
 
 const PUSH_CHANNEL = "rocha-admin-push";
 const FALLBACK_TITLE = "Nueva cotización";
 const FALLBACK_URL = "/admin/cotizaciones";
-const ICON_PATH = "/brand/rocha-logo.png";
+const ICON_PATH = "/brand/rocha-mark.png";
 
 function brandIconUrl() {
   return new URL(ICON_PATH, self.location.origin).href;
@@ -28,7 +28,17 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   console.log("[push-sw] activate");
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    (async () => {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      } catch (err) {
+        console.warn("[push-sw] cache cleanup failed", err);
+      }
+      await self.clients.claim();
+    })(),
+  );
 });
 
 function parsePushData(event) {

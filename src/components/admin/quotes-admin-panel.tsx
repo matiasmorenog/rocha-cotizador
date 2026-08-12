@@ -87,7 +87,7 @@ function QuoteDataRow({
 }) {
   const numberCell = (
     <Link
-      href={`/remitos/${qrow.id}`}
+      href={`/remitos/${qrow.number}`}
       className="font-medium text-[var(--brand-primary)] hover:underline"
     >
       {qrow.number}

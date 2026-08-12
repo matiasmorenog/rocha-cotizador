@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
-import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import {
   effectiveDiscountPriceListId,
   getPriceListUnitPricesByProductId,
@@ -12,13 +10,18 @@ import {
 import { unitPriceForProduct } from "@/lib/pricing";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import { quoteLineMeasureLabel } from "@/lib/order-measure";
-import { cn, formatPrice, formatQty } from "@/lib/utils";
+import {
+  normalizeRemitoNumberParam,
+  remitoPath,
+} from "@/lib/quotes";
+import { formatPrice, formatQty } from "@/lib/utils";
 import {
   buildQuoteWhatsAppMessage,
   whatsappUrl,
 } from "@/lib/whatsapp";
 import { BrandLogo } from "@/components/brand-logo";
 import { PrintButton } from "@/components/quote/print-button";
+import { RemitoBackButton } from "@/components/quote/remito-back-button";
 import { RemitoAdminTable } from "@/components/quote/remito-admin-table";
 import {
   RemitoEditModeProvider,
@@ -26,26 +29,49 @@ import {
 } from "@/components/quote/remito-edit-mode";
 import { WhatsAppNotifyButton } from "@/components/quote/whatsapp-notify-button";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { TruncatedName } from "@/components/ui/truncated-name";
 import {
   formatDeliveryDateLabel,
 } from "@/lib/delivery-date";
 
 export const dynamic = "force-dynamic";
 
+const quoteDetailInclude = {
+  customer: {
+    select: {
+      code: true,
+      name: true,
+      address: true,
+      phone: true,
+      email: true,
+      deliveryHours: true,
+      priceListId: true,
+    },
+  },
+  items: { orderBy: { productCode: "asc" as const } },
+};
+
 export default async function RemitoDetailPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ number: string }>;
   searchParams: Promise<{ whatsapp?: string }>;
 }) {
-  const { id } = await params;
+  const { number: rawParam } = await params;
   const { whatsapp } = await searchParams;
   const session = await auth();
 
+  const canonicalNumber = normalizeRemitoNumberParam(rawParam);
+  const query =
+    whatsapp !== undefined
+      ? `?whatsapp=${encodeURIComponent(whatsapp)}`
+      : "";
+
   // WhatsApp / shared links: never 404 when logged out — choose cliente/admin.
+  // Keep raw segment (number or legacy cuid); canonicalize after login.
   if (!session?.user) {
-    const next = encodeURIComponent(`/remitos/${id}`);
+    const next = encodeURIComponent(`/remitos/${rawParam}${query}`);
     redirect(`/entrar?callbackUrl=${next}`);
   }
 
@@ -53,24 +79,29 @@ export default async function RemitoDetailPage({
     notFound();
   }
 
-  const quote = await db.quote.findUnique({
-    where: { id },
-    include: {
-      customer: {
-        select: {
-          code: true,
-          name: true,
-          address: true,
-          phone: true,
-          email: true,
-          deliveryHours: true,
-          priceListId: true,
-        },
-      },
-      items: { orderBy: { productCode: "asc" } },
-    },
+  const quoteByNumber = await db.quote.findUnique({
+    where: { number: canonicalNumber },
+    include: quoteDetailInclude,
   });
-  if (!quote) notFound();
+
+  // Legacy bookmarks: `/remitos/<cuid>` → redirect to `/remitos/R-XXXXXX`.
+  if (!quoteByNumber) {
+    const byId = await db.quote.findUnique({
+      where: { id: rawParam },
+      select: { number: true },
+    });
+    if (byId) {
+      redirect(`${remitoPath(byId.number)}${query}`);
+    }
+    notFound();
+  }
+
+  const quote = quoteByNumber;
+
+  // Canonicalize case (`r-000018` → `R-000018`).
+  if (rawParam !== quote.number) {
+    redirect(`${remitoPath(quote.number)}${query}`);
+  }
 
   const productIds = quote.items
     .map((item) => item.productId)
@@ -118,7 +149,7 @@ export default async function RemitoDetailPage({
     (host ? `${proto}://${host}` : null) ??
     process.env.AUTH_URL?.replace(/\/$/, "") ??
     "";
-  const remitoUrl = `${origin}/remitos/${quote.id}`;
+  const remitoUrl = `${origin}${remitoPath(quote.number)}`;
   const notifyDigits = await getWhatsAppNotifyDigits();
   const notifyWhatsappUrl = whatsappUrl(
     notifyDigits,
@@ -179,7 +210,7 @@ export default async function RemitoDetailPage({
             Entrega: {deliveryLabel}
           </p>
           {isAdmin && pendingWeighCount > 0 ? (
-            <p className="mt-1 text-sm text-amber-800">
+            <p className="mt-1 inline-block rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-sm text-amber-800">
               {pendingWeighCount === 1
                 ? "1 línea pendiente de precio tras pesaje"
                 : `${pendingWeighCount} líneas pendientes de precio tras pesaje`}
@@ -187,15 +218,9 @@ export default async function RemitoDetailPage({
           ) : null}
         </div>
         <div className="flex flex-wrap justify-end gap-2">
-          <Link
+          <RemitoBackButton
             href={session.user.role === "ADMIN" ? "/admin/cotizaciones" : "/remitos"}
-            className={cn(
-              "inline-flex h-10 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm",
-              FOCUS_BRAND_BORDER,
-            )}
-          >
-            Volver
-          </Link>
+          />
           <PrintButton />
           {isAdmin ? <RemitoEditModeToggle /> : null}
         </div>
@@ -205,10 +230,10 @@ export default async function RemitoDetailPage({
         <WhatsAppNotifyButton whatsappUrl={notifyWhatsappUrl} autoOpen />
       ) : null}
 
-      <article className="print-remito rounded-lg border border-neutral-200 bg-white p-6 shadow-sm">
+      <article className="print-remito rounded-lg border border-neutral-200 bg-white p-7 shadow-sm">
         <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-4">
           <div>
-            <BrandLogo size="md" className="h-20 w-auto print:h-24" />
+            <BrandLogo size="md" priority className="print:h-24 print:w-24" />
             <h2 className="mt-3 text-xl font-semibold">Remito {quote.number}</h2>
             <p className="text-sm text-neutral-600">
               Fecha: {quote.createdAt.toLocaleDateString("es-AR")}
@@ -264,7 +289,11 @@ export default async function RemitoDetailPage({
                   return (
                     <tr
                       key={item.id}
-                      className={`border-b border-neutral-100${showAmber ? " bg-amber-50" : ""}`}
+                      className={
+                        showAmber
+                          ? "border-b border-amber-100 bg-amber-50"
+                          : "border-b border-neutral-100"
+                      }
                     >
                       <td className="py-2 pl-2 pr-2 align-middle font-mono text-xs">
                         {item.productCode}
@@ -274,9 +303,11 @@ export default async function RemitoDetailPage({
                         <span className="text-neutral-500">{measureLabel}</span>
                       </td>
                       <td className="py-2 pr-2 align-middle">
-                        <div className="admin-table-name-2l max-w-[16rem]">
-                          {item.productName}
-                        </div>
+                        <TruncatedName
+                          name={item.productName}
+                          lines={needsWeighPrice ? 1 : 2}
+                          className="max-w-[16rem]"
+                        />
                         {needsWeighPrice ? (
                           <p className="mt-0.5 text-xs text-amber-800">
                             {UNIT_ORDER_PRICE_WARNING}

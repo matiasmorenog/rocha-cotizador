@@ -1,6 +1,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 
-/** Shared cache tags — never put per-customer unitPrice or auth under these. */
+/** Shared cache tags — never put per-customer unitPrice or auth under these.
+ *  Keep `scripts/post-deploy-cache.sh` TAGS in sync when adding one. */
 export const CACHE_TAGS = {
   products: "products",
   priceLists: "price-lists",
@@ -89,10 +90,10 @@ export function invalidateAfterQuoteWipe() {
 }
 
 /** Admin confirms weigh price on a remito line — refresh detail + lists. */
-export function invalidateAfterQuoteItemPriceUpdate(quoteId: string) {
+export function invalidateAfterQuoteItemPriceUpdate(quoteNumber: string) {
   invalidateAdminDashboardCache();
   revalidatePath("/admin");
   revalidatePath("/admin/cotizaciones");
   revalidatePath("/remitos");
-  revalidatePath(`/remitos/${quoteId}`);
+  revalidatePath(`/remitos/${quoteNumber}`);
 }

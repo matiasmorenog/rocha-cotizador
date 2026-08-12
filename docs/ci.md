@@ -41,10 +41,14 @@ Solo en **push a `main`**, y **solo si** `lint-and-typecheck` pasó:
 5. **Post-deploy smoke** — `npm run ci:post-deploy-smoke`:
    - `GET /api/health` → 200 `{ ok: true }` (503/`schema_drift` si faltan columnas/tablas)
    - `GET /` (homepage) → 200
-6. **Post-deploy cache revalidate** — `vercel cache purge --type data` + `vercel cache invalidate` de **todas** las tags en `src/lib/cache-tags.ts` (`products`, `price-lists`, `customers`, `admin-dashboard`). Obliga Data Cache fresca tras cada release.
+6. **Post-deploy cache revalidate** — [`scripts/post-deploy-cache.sh`](../scripts/post-deploy-cache.sh): purge CDN + Data Cache, `vercel cache invalidate` de **todas** las tags en `src/lib/cache-tags.ts` (`products`, `price-lists`, `customers`, `admin-dashboard`), Image Optimization de `/brand/*`, y `POST /api/revalidate` si existe `REVALIDATE_SECRET`.
 
 `vercel.json` desactiva auto-deploy de Vercel en `main` → no hay carrera paralela.
 Previews (`development` / feature branches **ready**) siguen con el Git integration de Vercel; draft = skip (ver arriba).
+
+### Job `post-deploy-cache-development`
+
+En **push a `development`**: espera a que el Git integration de **`rocha-cotizador-dev`** (`prj_Oagw7Pq3Tg9MpBaQSWSuH7IOhD5O`) deje el SHA en `READY`, y corre el mismo `post-deploy-cache.sh` contra ese proyecto (alias `https://rocha-cotizador-dev.vercel.app`). No usa `vercel --prod` del proyecto de producción.
 
 ### Schema gate: de dónde sale `DATABASE_URL`
 
@@ -73,6 +77,7 @@ Repo → Settings → Secrets and variables → Actions:
 | `VERCEL_ORG_ID` | `team_QxlnpSeR7a1AsZiXtKSsqWFJ` (team tutemorenos-projects) |
 | `VERCEL_PROJECT_ID` | `prj_q87cwzCd7xVN7eDPzm81fDmjLKNz` |
 | `DATABASE_URL_PRODUCTION` (opcional, recomendado) | Neon `main` connection string (prefer **direct**, no pooler) |
+| `REVALIDATE_SECRET` (opcional) | Mismo secret que `POST /api/revalidate` en Vercel env — post-deploy HTTP tag/path bust |
 
 Sin `VERCEL_*`, el push a `main` falla en el job de deploy (lint igual corre).
 Sin `DATABASE_URL_PRODUCTION`, el gate intenta leer `DATABASE_URL` del `vercel pull`; si tampoco está, el job falla en el schema gate (no deploya).
