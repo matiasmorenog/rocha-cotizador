@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { BrandBackdrop } from "@/components/brand-backdrop";
-import { RemitoBackButton } from "@/components/quote/remito-back-button";
 import { cn } from "@/lib/utils";
 
 type SkeletonProps = {
@@ -247,8 +246,7 @@ export function SkeletonRemitoDetailPage() {
       <div className="flex items-center justify-between gap-3">
         <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-36" />
         <div className="flex flex-wrap justify-end gap-2">
-          {/* Real Volver — works during route pending / loading shell */}
-          <RemitoBackButton />
+          <Skeleton className="h-10 w-20 rounded-md" />
           <Skeleton className="h-10 w-32 rounded-md" />
           <Skeleton className="h-10 w-28 rounded-md" />
         </div>
