@@ -43,7 +43,7 @@ export default async function LoginPage({
 
   return (
     <BrandBackdrop className="mx-auto flex min-h-[60vh] max-w-md items-center py-4">
-      <div className="w-full space-y-6 rounded-xl border border-[var(--brand-latte)]/50 bg-[var(--brand-primary-soft)]/95 p-6 shadow-sm backdrop-blur-[2px]">
+      <div className="w-full space-y-6 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary-soft)]/95 p-6 shadow-sm backdrop-blur-[2px]">
         <div className="flex flex-col items-center gap-4 text-center">
           <BrandLogo size="xl" priority />
           <div className="space-y-1">

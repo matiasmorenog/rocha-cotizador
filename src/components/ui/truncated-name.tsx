@@ -115,7 +115,7 @@ export function TruncatedName({ name, lines = 2, className }: Props) {
             <div
               id={tipId}
               role="tooltip"
-              className="pointer-events-none fixed z-[200] max-w-[20rem] rounded-md border border-[color-mix(in_srgb,var(--brand-latte)_65%,transparent)] bg-[var(--brand-primary-soft)] px-2.5 py-1.5 text-xs leading-snug text-[var(--brand-primary)] shadow-md print:hidden"
+              className="pointer-events-none fixed z-[200] max-w-[20rem] rounded-md border border-[var(--brand-primary)]/20 bg-[var(--brand-primary-soft)] px-2.5 py-1.5 text-xs leading-snug text-[var(--brand-primary)] shadow-md print:hidden"
               style={{
                 left: pos.left,
                 top: pos.top,

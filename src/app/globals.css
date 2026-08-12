@@ -28,11 +28,12 @@
 }
 
 :root {
-  /* Surfaces from ROCHA tienda de pan mark: sage circle, forest green, wheat. */
+  /* Surfaces from ROCHA tienda de pan mark: sage circle, forest green. */
   --background: #f3f6f5;
   --foreground: #1a2e2c;
   --brand-primary: #046c5d;
   --brand-primary-soft: #e4f0ee;
+  /* Wheat from the mark — keep for logo/assets only, never UI chrome. */
   --brand-latte: #d6bd9b;
 }
 
@@ -55,8 +56,8 @@ html {
 
 /*
   Page atmosphere: soft teal washes only.
-  Do NOT use --brand-latte / wheat in radials — reads as café brown spotlight
-  (especially top-right). Wheat stays on borders/accents via --brand-latte.
+  Do NOT use --brand-latte / wheat in radials or chrome — reads as café brown
+  (especially top-right). Card/header borders use --brand-primary at low opacity.
   Shared class so route-pending full-bleed layer matches body (no max-w cut).
 */
 body,
@@ -113,7 +114,7 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 9999px;
-  border: 1px solid var(--brand-latte);
+  border: 1px solid color-mix(in srgb, var(--brand-primary) 20%, transparent);
   background-color: var(--brand-primary-soft);
   color: var(--brand-primary);
   box-shadow:
@@ -127,7 +128,7 @@ body {
 
 .data-table-scroll-btn:hover {
   border-color: var(--brand-primary);
-  background-color: var(--brand-latte);
+  background-color: color-mix(in srgb, var(--brand-primary) 12%, var(--brand-primary-soft));
   color: var(--brand-primary);
 }
 

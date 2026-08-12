@@ -37,7 +37,7 @@ export function SkeletonRegion({
 
 /** Soft auth/landing card — matches BrandBackdrop surfaces. */
 const AUTH_CARD =
-  "w-full space-y-6 rounded-xl border border-[var(--brand-latte)]/50 bg-[var(--brand-primary-soft)]/95 p-6 shadow-sm backdrop-blur-[2px]";
+  "w-full space-y-6 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary-soft)]/95 p-6 shadow-sm backdrop-blur-[2px]";
 
 function SkeletonLogo({
   size = "xl",

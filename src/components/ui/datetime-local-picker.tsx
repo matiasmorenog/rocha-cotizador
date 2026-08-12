@@ -267,7 +267,7 @@ export function DatetimeLocalPicker({
           aria-label="Elegir fecha y hora"
           aria-hidden={exiting || undefined}
           className={cn(
-            "absolute left-0 z-50 mt-1 w-[min(100vw-2rem,22.5rem)] overflow-hidden rounded-lg border border-[var(--brand-latte)]/70 bg-white shadow-lg",
+            "absolute left-0 z-50 mt-1 w-[min(100vw-2rem,22.5rem)] overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-lg",
             exiting
               ? "quote-picker-float-exit pointer-events-none"
               : "quote-picker-float-enter",
@@ -350,7 +350,7 @@ export function DatetimeLocalPicker({
               </div>
             </div>
 
-            <div className="relative w-[4.75rem] shrink-0 border-l border-[var(--brand-latte)]/60">
+            <div className="relative w-[4.75rem] shrink-0 border-l border-neutral-200">
               <div
                 ref={hourListRef}
                 className="absolute inset-0 overflow-y-auto overscroll-contain py-3 pl-2 pr-1 [scrollbar-gutter:stable]"
@@ -380,7 +380,7 @@ export function DatetimeLocalPicker({
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-[var(--brand-latte)]/60 bg-[var(--brand-primary-soft)]/40 px-3 py-2">
+          <div className="flex items-center justify-between border-t border-neutral-200 bg-[var(--brand-primary-soft)]/40 px-3 py-2">
             <button
               type="button"
               onClick={onClear}
