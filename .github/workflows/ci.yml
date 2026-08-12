@@ -118,9 +118,48 @@ jobs:
           chmod +x scripts/post-deploy-smoke.sh
           npm run ci:post-deploy-smoke
 
-      # Bust Next.js Data Cache after every prod deploy (tags in src/lib/cache-tags.ts).
+      # Bust CDN + Data Cache + Image Optimization after every prod deploy.
+      - name: Post-deploy cache revalidate
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          APP_URL: https://rocha-cotizador.vercel.app
+          REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+        run: |
+          chmod +x scripts/post-deploy-cache.sh
+          bash scripts/post-deploy-cache.sh
+
+  # Development demo (rocha-cotizador-dev): Git integration deploys on push.
+  # Wait until that production alias is READY, then purge the same caches.
+  post-deploy-cache-development:
+    name: post-deploy-cache-development
+    if: github.event_name == 'push' && github.ref == 'refs/heads/development'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: prj_Oagw7Pq3Tg9MpBaQSWSuH7IOhD5O
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      APP_URL: https://rocha-cotizador-dev.vercel.app
+      REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Wait for Vercel development deploy
+        run: |
+          chmod +x scripts/wait-vercel-ready.sh
+          bash scripts/wait-vercel-ready.sh
+
       - name: Post-deploy cache revalidate
         run: |
-          set -euo pipefail
-          vercel cache purge --type data --yes --token=${{ secrets.VERCEL_TOKEN }}
-          vercel cache invalidate --tag products,price-lists,customers,admin-dashboard --yes --token=${{ secrets.VERCEL_TOKEN }}
+          chmod +x scripts/post-deploy-cache.sh
+          bash scripts/post-deploy-cache.sh

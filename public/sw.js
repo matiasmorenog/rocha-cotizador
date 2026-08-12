@@ -1,5 +1,5 @@
 /* Rocha Cotizador — admin Web Push service worker */
-/* v10 — brand mark v2 (no registration dots) */
+/* v11 — drop any leftover Cache Storage from older SW builds */
 
 const PUSH_CHANNEL = "rocha-admin-push";
 const FALLBACK_TITLE = "Nueva cotización";
@@ -28,7 +28,17 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   console.log("[push-sw] activate");
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    (async () => {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      } catch (err) {
+        console.warn("[push-sw] cache cleanup failed", err);
+      }
+      await self.clients.claim();
+    })(),
+  );
 });
 
 function parsePushData(event) {
