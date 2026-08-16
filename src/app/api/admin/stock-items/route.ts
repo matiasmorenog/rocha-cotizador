@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
+import { DEFAULT_STOCK_UNIT, STOCK_UNITS } from "@/lib/stock-units";
 
 const kindSchema = z.enum(["RAW_MATERIAL", "BREAD", "CONSUMABLE"]);
+const unitSchema = z.enum(STOCK_UNITS);
 
 const upsertSchema = z.object({
   id: z.string().min(1).optional(),
   code: z.string().trim().min(1).max(40),
   name: z.string().trim().min(1).max(200),
   kind: kindSchema,
-  unit: z.string().trim().min(1).max(40).default("unid."),
+  unit: unitSchema.default(DEFAULT_STOCK_UNIT),
   active: z.boolean().optional().default(true),
   sortOrder: z.number().int().optional().default(0),
 });
@@ -71,7 +73,7 @@ export async function POST(req: NextRequest) {
         code,
         name: parsed.data.name.trim(),
         kind: parsed.data.kind,
-        unit: parsed.data.unit.trim(),
+        unit: parsed.data.unit,
         active: parsed.data.active,
         sortOrder: parsed.data.sortOrder,
       },
@@ -92,7 +94,7 @@ export async function POST(req: NextRequest) {
       code,
       name: parsed.data.name.trim(),
       kind: parsed.data.kind,
-      unit: parsed.data.unit.trim(),
+      unit: parsed.data.unit,
       active: parsed.data.active,
       sortOrder: parsed.data.sortOrder,
     },

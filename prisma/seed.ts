@@ -20,6 +20,7 @@ import {
 } from "../src/lib/unit-order-products";
 import { padCustomerCode, pinFromCustomerCode } from "../src/lib/utils";
 import { seedCustomerModuleAccess } from "../src/lib/customer-modules";
+import { seedStockSampleData } from "../src/lib/stock-seed";
 import { assertSafeDestructiveDb } from "./assert-safe-db";
 
 const db = new PrismaClient();
@@ -430,12 +431,20 @@ async function main() {
     console.log(
       `Customer modules: Mermas=${modules.mermas}, Consumibles=${modules.consumables}`,
     );
+    const stock = await seedStockSampleData();
+    console.log(
+      `Stock sample: catalog=${stock.catalog}, merma=${stock.mermaCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
+    );
     return;
   }
   await seedFromExcel(xlsxPath);
   const modules = await seedCustomerModuleAccess();
   console.log(
     `Customer modules: Mermas=${modules.mermas}, Consumibles=${modules.consumables}`,
+  );
+  const stock = await seedStockSampleData();
+  console.log(
+    `Stock sample: catalog=${stock.catalog}, merma=${stock.mermaCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
   );
 }
 

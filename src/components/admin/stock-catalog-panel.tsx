@@ -7,6 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
+import {
+  DEFAULT_STOCK_UNIT,
+  STOCK_UNITS,
+  coerceStockUnit,
+  type StockUnit,
+} from "@/lib/stock-units";
 import { cn } from "@/lib/utils";
 import type { StockItemKind } from "@prisma/client";
 
@@ -157,7 +163,9 @@ function StockItemForm({
   const [code, setCode] = useState(item?.code ?? "");
   const [name, setName] = useState(item?.name ?? "");
   const [kind, setKind] = useState<StockItemKind>(item?.kind ?? defaultKind);
-  const [unit, setUnit] = useState(item?.unit ?? "unid.");
+  const [unit, setUnit] = useState<StockUnit>(
+    coerceStockUnit(item?.unit ?? DEFAULT_STOCK_UNIT),
+  );
   const [sortOrder, setSortOrder] = useState(String(item?.sortOrder ?? 0));
   const [active, setActive] = useState(item?.active ?? true);
   const [error, setError] = useState<string | null>(null);
@@ -225,7 +233,21 @@ function StockItemForm({
         </div>
         <div className="space-y-1">
           <Label>Unidad</Label>
-          <Input value={unit} onChange={(e) => setUnit(e.target.value)} required />
+          <select
+            className={cn(
+              "h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm",
+              FOCUS_BRAND_BORDER,
+            )}
+            value={unit}
+            onChange={(e) => setUnit(e.target.value as StockUnit)}
+            required
+          >
+            {STOCK_UNITS.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="space-y-1">
           <Label>Orden</Label>
@@ -233,6 +255,7 @@ function StockItemForm({
             type="number"
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
+            title="Menor número aparece primero dentro del mismo tipo"
           />
         </div>
       </div>
