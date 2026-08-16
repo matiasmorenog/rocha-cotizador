@@ -9,19 +9,21 @@ Save CI/Vercel until the PR is ready for review.
 
 ## Rule
 
-| PR state | GitHub Actions | Vercel preview |
-|----------|----------------|----------------|
-| **draft** | Jobs skipped (`ci.yml` `if`) | Ignored via `scripts/vercel-ignore-draft-pr.sh` |
-| **ready** | Runs normally | Preview builds |
-| **push** to `development` / `main` | Always runs (not a PR event) | `main` auto-deploy off; `development` builds |
+| PR state | GitHub Actions | Vercel Git |
+|----------|----------------|------------|
+| **draft** | Jobs skipped (`ci.yml` `if`) | No feature-branch deploy (`vercel.json` `**`: false) |
+| **ready** | Runs lint/typecheck | Still no feature-branch deploy — preview = `development` / local |
+| **push** to `development` | Always runs | `rocha-cotizador-dev` builds; prod project ignore-skips |
+| **push** to `main` | Always runs | Auto-deploy off; Actions ships prod |
+
+Belt: `scripts/vercel-ignore-draft-pr.sh` cancels draft / prod-project preview if a deploy still starts.
 
 ## Agent behavior
 
 - **Always** open feature/fix PRs as **draft** (`gh pr create --draft`). Default forever unless the user explicitly asks for ready.
-- **Never** mark Ready for review yourself — only the user does that manually (triggers CI + Vercel).
+- **Never** mark Ready for review yourself — only the user does that manually (triggers CI).
 - Do **not** run `gh pr ready` / convert out of draft unless the user ordered it in chat.
-- Do **not** add branch-only `deploymentEnabled` hacks for draft pause — use this global rule.
-- After merge of draft-skip tooling: rebase open draft feature PRs onto `development` so they pick up `ci.yml` / `vercel.json`.
+- Do **not** add branch-only `deploymentEnabled` hacks that re-enable feature previews without asking.
 - While PR is draft: no need to wait on `gh pr checks` (CI/preview skipped).
 
 ## Vercel token

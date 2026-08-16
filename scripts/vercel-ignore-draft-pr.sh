@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Vercel Ignored Build Step — skip preview builds for GitHub draft PRs.
+# Vercel Ignored Build Step — cancel builds we do not want to pay for.
 # Exit 0 = cancel build; exit 1 = proceed.
 # Docs: https://vercel.com/docs/project-configuration/vercel-json#ignorecommand
 #
@@ -8,6 +8,10 @@
 # Missing token or API errors on feature branches → fail closed (cancel build).
 
 set -u
+
+# Production Vercel project — ship only via GitHub Actions (`vercel deploy --prod`).
+# Never spend preview minutes here (PRs / development / feature branches).
+PROD_PROJECT_ID="prj_q87cwzCd7xVN7eDPzm81fDmjLKNz"
 
 proceed() {
   echo "✅ $1 — build proceeds"
@@ -19,16 +23,25 @@ skip() {
   exit 0
 }
 
-# Production ship is Actions-only (deploymentEnabled.main=false), but never
-# draft-skip a production build if one is triggered another way.
+# True production builds (Actions / rare hooks).
 if [[ "${VERCEL_ENV:-}" == "production" ]]; then
   proceed "production"
 fi
 
-# Integration / prod branches always build when Vercel is allowed to deploy them.
+# Prod project must not Git-build Preview/development — saves duplicate checks.
+if [[ "${VERCEL_PROJECT_ID:-}" == "$PROD_PROJECT_ID" ]]; then
+  skip "prod project non-production git deploy (Actions-only)"
+fi
+
+# Integration branch always builds on the *dev* project when Vercel is allowed.
 ref="${VERCEL_GIT_COMMIT_REF:-}"
-if [[ "$ref" == "development" || "$ref" == "main" ]]; then
+if [[ "$ref" == "development" ]]; then
   proceed "branch ${ref}"
+fi
+
+# main auto-deploy is off in vercel.json; if something still hits ignore, cancel.
+if [[ "$ref" == "main" ]]; then
+  skip "main (Actions-only ship)"
 fi
 
 owner="${VERCEL_GIT_REPO_OWNER:-}"
@@ -43,8 +56,6 @@ fi
 if [[ -z "$token" ]]; then
   # Without a token we cannot see draft status on a private repo. Fail closed
   # on feature branches so missing Preview env does not burn preview minutes.
-  # Set GITHUB_TOKEN (or GH_TOKEN) in Vercel → Project → Env → Preview
-  # (PAT or gh OAuth with pull_requests:read / repo).
   echo "⚠️ GITHUB_TOKEN/GH_TOKEN unset — cannot detect draft; fail closed"
   skip "no GitHub token (fail closed)"
 fi
@@ -53,8 +64,6 @@ api="https://api.github.com"
 auth=(-H "Authorization: Bearer ${token}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28")
 
 json_is_draft() {
-  # stdin: GitHub PR JSON object → echo "true" or "false"
-  # Prefer python; fall back to grep for minimal images.
   if command -v python3 >/dev/null 2>&1; then
     python3 -c 'import json,sys; d=json.load(sys.stdin); print("true" if d.get("draft") is True else "false")' 2>/dev/null || echo "false"
   else
@@ -71,7 +80,6 @@ fetch_pr_by_number() {
 }
 
 fetch_open_prs_for_head() {
-  # head filter is owner:branch
   local encoded_ref
   encoded_ref=$(python3 -c "import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=''))" "$ref" 2>/dev/null || echo "$ref")
   curl -fsS "${auth[@]}" \
@@ -87,7 +95,7 @@ if [[ -n "$pr_id" ]]; then
   proceed "ready PR #${pr_id}"
 fi
 
-# Branch push with no PR id yet (or first deploy before id is wired): look up open PRs.
+# Branch push with no PR id yet: look up open PRs for this head.
 prs="$(fetch_open_prs_for_head)" || skip "GitHub API list error (fail closed)"
 
 if command -v python3 >/dev/null 2>&1; then
@@ -118,5 +126,5 @@ fi
 case "$result" in
   draft) skip "open draft PR for ${ref}" ;;
   ready) proceed "open ready PR for ${ref}" ;;
-  *) proceed "no open PR for ${ref}" ;;
+  *) skip "no open ready PR for ${ref} (fail closed)" ;;
 esac

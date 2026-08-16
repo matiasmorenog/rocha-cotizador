@@ -4,19 +4,24 @@ Workflow: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
 
 ## Draft PRs (sin checks)
 
-Los PRs en **draft** no consumen CI ni previews:
+Los PRs en **draft** no deben consumir CI ni previews:
 
 | Superficie | Comportamiento |
 |------------|----------------|
 | GitHub Actions | Job `lint-and-typecheck` con `if: … draft == false`. También escucha `ready_for_review`. |
-| Vercel preview | `ignoreCommand` → [`scripts/vercel-ignore-draft-pr.sh`](../scripts/vercel-ignore-draft-pr.sh) cancela el build si el PR abierto de la branch es draft. |
-| Push a `development` / `main` | Sigue corriendo CI (evento `push`, no PR). |
+| Vercel Git | `git.deploymentEnabled`: solo `development` auto-deploy; `main` y `**` (feature branches) off — **no** dispara deploy Git en PRs. |
+| Vercel ignore | Belt-and-suspenders: [`scripts/vercel-ignore-draft-pr.sh`](../scripts/vercel-ignore-draft-pr.sh) cancela si algo igual dispara (draft, proyecto prod en preview, sin token). |
+| Push a `development` / `main` | CI sigue en push. Preview Git solo en **`rocha-cotizador-dev`** para `development`. Prod = Actions. |
 
-`vercel.json` ya no usa hacks por branch (`deploymentEnabled` solo apaga auto-deploy de `main`).
+`vercel.json` no usa hacks por branch de feature: el catch-all `**` apaga PRs; `development: true` gana por “cualquier regla true ⇒ deploy”.
 
-**Vercel:** en Project → Environment Variables (Preview) hace falta `GITHUB_TOKEN` o `GH_TOKEN` (PAT / token con `repo` o `pull_requests: read`). Sin token el script hace **fail-closed** en feature branches (cancela el build) para no quemar previews. System env vars de Vercel (`VERCEL_GIT_*`) deben estar expuestas (default).
+**Proyecto prod** (`prj_q87cwzCd…`): el ignore cancela **todo** Git no-`production` (PRs / `development`). Ship solo vía Actions.
 
-WIP → abrí draft. Cuando quieras checks/preview → **Ready for review**.
+**Vercel:** Preview env en **`rocha-cotizador-dev`** necesita `GITHUB_TOKEN` o `GH_TOKEN` (`repo` / `pull_requests: read`) por si un deploy llega al ignore con PR. Sin token → fail-closed en feature.
+
+WIP → abrí **draft** (`gh pr create --draft`). Checks/preview: el usuario marca **Ready for review** (y, con `deploymentEnabled`, el preview de feature branch sigue off — validá en local o mergeá a `development`).
+
+> Nota: con `**` false, **no hay preview URL de feature branch** ni en ready. Preview de integración = push/merge a `development` → `rocha-cotizador-dev`. Ahorra los 2–3 checks Vercel por push de PR.
 
 ## Job `lint-and-typecheck`
 
@@ -44,7 +49,7 @@ Solo en **push a `main`**, y **solo si** `lint-and-typecheck` pasó:
 6. **Post-deploy cache revalidate** — [`scripts/post-deploy-cache.sh`](../scripts/post-deploy-cache.sh): purge CDN + Data Cache, `vercel cache invalidate` de **todas** las tags en `src/lib/cache-tags.ts` (`products`, `price-lists`, `customers`, `admin-dashboard`), Image Optimization de `/brand/*`, y `POST /api/revalidate` si existe `REVALIDATE_SECRET`.
 
 `vercel.json` desactiva auto-deploy de Vercel en `main` → no hay carrera paralela.
-Previews (`development` / feature branches **ready**) siguen con el Git integration de Vercel; draft = skip (ver arriba).
+Previews (`development` branch → **`rocha-cotizador-dev`**) usan Git integration. Feature-branch PRs **no** auto-deploy (`vercel.json` `**`: false) — draft o ready da igual para Vercel; ready solo dispara Actions. Prod = Actions.
 
 ### Job `post-deploy-cache-development`
 
