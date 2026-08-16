@@ -1,27 +1,19 @@
 ---
-description: Aplicar cambios de Prisma (db push) con criterio seguro y reiniciar dev server
-alwaysApply: true
+description: Prisma db push — restart dev server; prefer push over migrate
+globs: prisma/**,**/schema.prisma
+alwaysApply: false
 ---
 
-# Prisma: db push y reinicio de consola
+# Prisma: db push (Rocha)
 
-Cuando un cambio incluya `prisma/schema.prisma` (o requiera sincronizar la DB):
+Global safety (`prisma-caution.mdc`) still applies. Here = repo ops.
+
+When schema sync needed:
 
 1. `npx prisma generate`
-2. Evaluar el tipo de cambio:
-   - **Aditivo/seguro** (nueva tabla, columna nullable o con default, índice): `npx prisma db push` **sin preguntar**.
-   - **Con posible pérdida de datos** (drop/rename, tipo incompatible, `NOT NULL` sin default sobre filas): **frenar y confirmar** antes de `db push --accept-data-loss`.
-3. **Reiniciar el dev server** si estaba corriendo.
+2. Additive/safe → `npx prisma db push` without asking. Lossy (`--accept-data-loss`) → confirm first
+3. Restart: kill project `next dev`, then `npm run dev`
 
-## Reinicio del dev server
+Do not only tell user to run push — execute safe pushes and report. Habitual flow = `db push` (not `migrate dev`) unless task asks migrations.
 
-- Matar procesos `next dev` del proyecto antes de levantar de nuevo.
-- Usar `npm run dev`.
-
-## No delegar al usuario
-
-Para cambios seguros, ejecutar el push y confirmar éxito o el error concreto.
-
-## Migraciones vs push
-
-En este repo el flujo habitual es `db push` (no `migrate dev`), salvo que la tarea pida migraciones explícitas.
+Local `.env` = Neon **development** only. Prod schema is separate — see `DEPLOY.md` (and `neon-prod-parity.mdc` when present).

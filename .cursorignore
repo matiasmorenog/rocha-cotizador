@@ -1,0 +1,47 @@
+# Dependencies & build artifacts (huge; never needed in agent context)
+node_modules/
+.next/
+out/
+dist/
+build/
+coverage/
+src/generated/
+
+# Logs & caches
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+*.tsbuildinfo
+
+# Env / secrets / Vercel pull artifacts
+.env
+.env.*
+!.env.example
+.vercel/
+.vercel/.env*.local
+
+# Seed secrets & large binary seed data
+prisma/data/seed-pins.csv
+prisma/data/*.xlsx
+
+# Brand / media binaries (paths stay known; pixels burn tokens)
+public/brand/**
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.ico
+*.pdf
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# OS / misc
+.DS_Store
+*.pem
+
+# Keep package-lock.json (version truth) — do NOT ignore
