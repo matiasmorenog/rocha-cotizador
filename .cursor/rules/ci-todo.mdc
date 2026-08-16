@@ -1,34 +1,22 @@
 ---
-description: CI/CD backlog — lint, typecheck, branch protection
-alwaysApply: true
+description: CI/CD backlog — branch protection, deploy secrets, schema gate
+globs: .github/**,vercel.json,docs/ci.md,DEPLOY.md,scripts/check-schema-sync.sh,scripts/vercel-ignore-draft-pr.sh
+alwaysApply: false
 ---
 
 # CI / CD
 
-Estado: workflow `.github/workflows/ci.yml`.
+Workflow: `.github/workflows/ci.yml`. Details: `docs/ci.md`, `DEPLOY.md`.
 
-## Hecho
+## Done (short)
 
-- GitHub Actions en PRs/push a `development` y `main` — job `lint-and-typecheck`
-- **Draft PRs:** CI + Vercel preview skipped (`draft-pr-checks.mdc`, `scripts/vercel-ignore-draft-pr.sh`)
-- Job `deploy-production` en push a `main` **después** de lint/typecheck
-- Pre-deploy **schema sync gate** (`scripts/check-schema-sync.sh`) + post-deploy `GET /api/health`
-- `vercel.json`: auto-deploy OFF en `main` (prod solo vía Actions); draft skip vía `ignoreCommand`
-- `prisma generate` con `DATABASE_URL` dummy en CI
-- Node 24
-- Docs: `docs/ci.md`, checklist go-live + schema warning en `DEPLOY.md`
+- Actions `lint-and-typecheck` on PRs/push to `development`/`main`; draft PRs skip CI + preview (`draft-pr-checks.mdc`)
+- Prod deploy on `main` after lint + schema sync gate + `/api/health`; `vercel.json` auto-deploy OFF on `main`
+- Node 24; `prisma generate` with dummy `DATABASE_URL` in CI
 
-## Pendiente / bloqueos
+## Blockers / next
 
-- **Branch protection** GitHub: requiere **Pro** en repo privado Free (403). Alternativa: repo público o upgrade. Hasta entonces: no mergear CI rojo.
-- Secrets GitHub para deploy prod: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (cargar antes del primer release con el gate).
-- Opcional recomendado: `DATABASE_URL_PRODUCTION` (Neon main direct) para el schema gate.
-- Deployment Checks en Vercel dashboard = opcional (el gate de Actions ya cubre prod). UI:
-  [Deployment Checks](https://vercel.com/tutemorenos-projects/rocha-cotizador/settings/deployment-checks)
-  → Add Checks → GitHub → `lint-and-typecheck`.
-- Fase 2 opcional: `npm run build` en Actions (hoy lo hace Vercel).
-
-## Referencias
-
-- `docs/ci.md`
-- `DEPLOY.md`
+- Branch protection needs GitHub Pro on private Free (403) — until then: no merge on red CI
+- Secrets before gated prod release: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+- Optional: `DATABASE_URL_PRODUCTION` (Neon main direct) for schema gate
+- Optional: Vercel Deployment Checks → `lint-and-typecheck`; Phase 2 `npm run build` in Actions
