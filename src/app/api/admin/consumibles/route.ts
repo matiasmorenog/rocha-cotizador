@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
+import {
+  serializeStockItemReport,
+  stockItemReportSelect,
+} from "@/lib/stock-item-serialize";
 
 export async function GET(req: NextRequest) {
   if (!(await requireStaffApi("stockReports"))) {
@@ -34,7 +38,7 @@ export async function GET(req: NextRequest) {
       lines: {
         include: {
           stockItem: {
-            select: { code: true, name: true, kind: true, unit: true },
+            select: stockItemReportSelect,
           },
         },
       },
@@ -51,7 +55,7 @@ export async function GET(req: NextRequest) {
       lines: e.lines.map((l) => ({
         stockItemId: l.stockItemId,
         qty: Number(l.qty),
-        stockItem: l.stockItem,
+        stockItem: serializeStockItemReport(l.stockItem),
       })),
     })),
   });

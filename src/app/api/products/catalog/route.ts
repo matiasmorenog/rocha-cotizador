@@ -29,17 +29,32 @@ export async function GET(req: NextRequest) {
     priceListId = customer?.priceListId ?? null;
   } else if (staffHasPermission(session.user.role, "quotes")) {
     const customerId = (req.nextUrl.searchParams.get("customerId") ?? "").trim();
-    if (!customerId) {
+    if (customerId) {
+      const customer = await getCachedCustomerPricingContext(customerId);
+      if (!customer) {
+        return NextResponse.json(
+          { error: "Cliente no encontrado" },
+          { status: 404 },
+        );
+      }
+      priceListId = customer.priceListId;
+    } else if (
+      staffHasPermission(session.user.role, "stockCatalog") ||
+      staffHasPermission(session.user.role, "products")
+    ) {
+      // Base catalog (no customer list) — stock picker / product tools.
+      priceListId = null;
+    } else {
       return NextResponse.json(
         { error: "customerId requerido para precios de cliente" },
         { status: 400 },
       );
     }
-    const customer = await getCachedCustomerPricingContext(customerId);
-    if (!customer) {
-      return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
-    }
-    priceListId = customer.priceListId;
+  } else if (
+    staffHasPermission(session.user.role, "stockCatalog") ||
+    staffHasPermission(session.user.role, "products")
+  ) {
+    priceListId = null;
   } else {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }

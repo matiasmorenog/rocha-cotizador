@@ -2,6 +2,10 @@ import { requireStaffPermission } from "@/lib/session";
 import { db } from "@/lib/db";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
 import { AdminStockReports } from "@/components/admin/admin-stock-reports";
+import {
+  serializeStockItemReport,
+  stockItemReportSelect,
+} from "@/lib/stock-item-serialize";
 
 export default async function AdminMermasPage({
   searchParams,
@@ -37,9 +41,7 @@ export default async function AdminMermasPage({
         select: {
           stockItemId: true,
           qty: true,
-          stockItem: {
-            select: { code: true, name: true, kind: true, unit: true },
-          },
+          stockItem: { select: stockItemReportSelect },
         },
       },
     },
@@ -54,7 +56,7 @@ export default async function AdminMermasPage({
     lines: e.lines.map((l) => ({
       stockItemId: l.stockItemId,
       qty: Number(l.qty),
-      stockItem: l.stockItem,
+      stockItem: serializeStockItemReport(l.stockItem),
     })),
   }));
 

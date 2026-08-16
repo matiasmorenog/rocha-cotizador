@@ -5,6 +5,10 @@ import { auth } from "@/lib/auth";
 import { customerHasModule } from "@/lib/customer-modules";
 import { db } from "@/lib/db";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
+import {
+  serializeStockItem,
+  stockItemListSelect,
+} from "@/lib/stock-item-serialize";
 
 const lineSchema = z.object({
   stockItemId: z.string().min(1),
@@ -42,14 +46,8 @@ export async function GET(req: NextRequest) {
       ? Promise.resolve([])
       : db.stockItem.findMany({
           where: { active: true, kind: "CONSUMABLE" },
-          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-          select: {
-            id: true,
-            code: true,
-            name: true,
-            kind: true,
-            unit: true,
-          },
+          orderBy: [{ sortOrder: "asc" }, { product: { name: "asc" } }],
+          select: stockItemListSelect,
         }),
     entryDate
       ? db.consumableCount.findUnique({
@@ -74,13 +72,16 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     items: entryOnly
       ? undefined
-      : items.map((i) => ({
-          id: i.id,
-          code: i.code,
-          name: i.name,
-          kind: i.kind,
-          unit: i.unit,
-        })),
+      : items.map((i) => {
+          const row = serializeStockItem(i);
+          return {
+            id: row.id,
+            code: row.code,
+            name: row.name,
+            kind: row.kind,
+            unit: row.unit,
+          };
+        }),
     entry: count
       ? {
           id: count.id,

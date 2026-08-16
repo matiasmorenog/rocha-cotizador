@@ -7,113 +7,115 @@ import {
 import type { StockUnit } from "@/lib/stock-units";
 import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
 
-type SeedStockItem = {
-  code: string;
-  name: string;
+type SeedStockSpec = {
+  /** Prefer exact Product.code when present. */
+  code?: string;
+  /** Fallback: name contains (case-insensitive). */
+  nameIncludes?: string;
   kind: StockItemKind;
   unit: StockUnit;
   sortOrder: number;
 };
 
-/** Sample catalog for UI testing — idempotent upserts by code. */
-export const SAMPLE_STOCK_ITEMS: SeedStockItem[] = [
+/**
+ * Real Product rows from Rocha catalog (dev Neon), not invented SKUs.
+ * Consumables: no napkin/film SKUs — packaging/regalo stand-ins for demo.
+ */
+export const SAMPLE_STOCK_FROM_PRODUCTS: SeedStockSpec[] = [
+  // RAW — insumos + masa cruda
   {
-    code: "HARINA",
-    name: "Harina 000",
+    code: "1902",
+    nameIncludes: "LEVADURA",
     kind: "RAW_MATERIAL",
     unit: "kg",
     sortOrder: 10,
   },
   {
-    code: "ACEITE",
-    name: "Aceite",
+    code: "2401",
+    nameIncludes: "BAGUETTE (CRUDO)",
     kind: "RAW_MATERIAL",
-    unit: "litro",
+    unit: "unid.",
     sortOrder: 20,
   },
   {
-    code: "LEVADURA",
-    name: "Levadura fresca",
+    code: "2403",
+    nameIncludes: "FLAUTITA (CRUDO)",
     kind: "RAW_MATERIAL",
-    unit: "kg",
+    unit: "unid.",
     sortOrder: 30,
   },
   {
-    code: "AZUCAR",
-    name: "Azúcar",
+    code: "2409",
+    nameIncludes: "CHIPS (CRUDO)",
     kind: "RAW_MATERIAL",
-    unit: "kg",
+    unit: "unid.",
     sortOrder: 40,
   },
+  // BREAD
   {
-    code: "FLG",
-    name: "Flauta grande",
+    code: "0021",
+    nameIncludes: "FLAUTA",
     kind: "BREAD",
     unit: "unid.",
     sortOrder: 10,
   },
   {
-    code: "FIG",
-    name: "Figazza",
+    code: "0020",
+    nameIncludes: "FIGASA",
     kind: "BREAD",
     unit: "unid.",
     sortOrder: 20,
   },
   {
-    code: "PANH",
-    name: "Pan hamburguesa",
+    code: "0064",
+    nameIncludes: "HAMBURGUESA",
     kind: "BREAD",
-    unit: "pack",
+    unit: "unid.",
     sortOrder: 30,
   },
   {
-    code: "FACT",
-    name: "Facturas surtidas",
+    code: "0502",
+    nameIncludes: "FACTURAS DOCENA",
     kind: "BREAD",
     unit: "docena",
     sortOrder: 40,
   },
   {
-    code: "PREPIZ",
-    name: "Prepizza",
+    code: "0405",
+    nameIncludes: "PREPIZZA INDIVIDUAL",
     kind: "BREAD",
     unit: "unid.",
     sortOrder: 50,
   },
   {
-    code: "SERV",
-    name: "Servilletas",
+    code: "0129",
+    nameIncludes: "FLAUTON",
+    kind: "BREAD",
+    unit: "unid.",
+    sortOrder: 60,
+  },
+  // CONSUMABLE — no napkin/film SKUs in catalog; packaging/regalo stand-ins.
+  // Admin can replace via product search.
+  {
+    code: "1801",
+    nameIncludes: "BOX CUMPLE GRANDE",
     kind: "CONSUMABLE",
-    unit: "pack",
+    unit: "unid.",
     sortOrder: 10,
   },
   {
-    code: "VASO",
-    name: "Vasos descartables",
+    code: "1802",
+    nameIncludes: "BOX CUMPLE CHICO",
     kind: "CONSUMABLE",
-    unit: "pack",
+    unit: "unid.",
     sortOrder: 20,
   },
   {
-    code: "BOLSA",
-    name: "Bolsas",
+    code: "1210",
+    nameIncludes: "BANDEJAS MASAS",
     kind: "CONSUMABLE",
-    unit: "unid.",
+    unit: "bandeja",
     sortOrder: 30,
-  },
-  {
-    code: "FILM",
-    name: "Film plástico",
-    kind: "CONSUMABLE",
-    unit: "rollo",
-    sortOrder: 40,
-  },
-  {
-    code: "GUANTE",
-    name: "Guantes",
-    kind: "CONSUMABLE",
-    unit: "caja",
-    sortOrder: 50,
   },
 ];
 
@@ -125,25 +127,57 @@ function parseYmdToDate(ymd: string): Date {
   return new Date(`${ymd}T12:00:00.000Z`);
 }
 
+async function resolveProductId(spec: SeedStockSpec): Promise<string | null> {
+  if (spec.code) {
+    const byCode = await db.product.findFirst({
+      where: { code: spec.code, active: true },
+      select: { id: true },
+    });
+    if (byCode) return byCode.id;
+  }
+  if (spec.nameIncludes) {
+    const byName = await db.product.findFirst({
+      where: {
+        active: true,
+        name: { contains: spec.nameIncludes, mode: "insensitive" },
+      },
+      orderBy: { code: "asc" },
+      select: { id: true },
+    });
+    if (byName) return byName.id;
+  }
+  return null;
+}
+
+/** Wipe sample merma/consumible lines + all stock memberships (dev seed only). */
+export async function clearStockSampleData(): Promise<void> {
+  await db.mermaLine.deleteMany({});
+  await db.consumableCountLine.deleteMany({});
+  await db.mermaEntry.deleteMany({});
+  await db.consumableCount.deleteMany({});
+  await db.stockItem.deleteMany({});
+}
+
 export async function seedStockCatalog(): Promise<{ upserted: number }> {
   let upserted = 0;
-  for (const item of SAMPLE_STOCK_ITEMS) {
+  for (const spec of SAMPLE_STOCK_FROM_PRODUCTS) {
+    const productId = await resolveProductId(spec);
+    if (!productId) continue;
+
     await db.stockItem.upsert({
-      where: { code: item.code },
+      where: { productId },
       create: {
-        code: item.code,
-        name: item.name,
-        kind: item.kind,
-        unit: item.unit,
+        productId,
+        kind: spec.kind,
+        unit: spec.unit,
         active: true,
-        sortOrder: item.sortOrder,
+        sortOrder: spec.sortOrder,
       },
       update: {
-        name: item.name,
-        kind: item.kind,
-        unit: item.unit,
+        kind: spec.kind,
+        unit: spec.unit,
         active: true,
-        sortOrder: item.sortOrder,
+        sortOrder: spec.sortOrder,
       },
     });
     upserted += 1;
@@ -164,7 +198,7 @@ async function findFirstCustomerWithCode(
   return null;
 }
 
-/** Seed 1 sample MermaEntry + 1 ConsumableCount if customers exist. Idempotent. */
+/** Seed 1 sample MermaEntry + 1 ConsumableCount if customers/items exist. Idempotent. */
 export async function seedSampleStockEntries(): Promise<{
   merma: string | null;
   consumable: string | null;
@@ -179,33 +213,20 @@ export async function seedSampleStockEntries(): Promise<{
       where: { active: true, kind: { in: ["RAW_MATERIAL", "BREAD"] } },
       orderBy: [{ kind: "asc" }, { sortOrder: "asc" }],
       take: 6,
+      select: { id: true },
     });
     if (rawBread.length > 0) {
       const qtys = [1.5, 0.5, 3, 2, 1, 0.25];
-      await db.mermaEntry.upsert({
-        where: {
-          customerId_entryDate: {
-            customerId: mermaCustomer.id,
-            entryDate,
-          },
-        },
-        create: {
+      await db.mermaEntry.deleteMany({
+        where: { customerId: mermaCustomer.id, entryDate },
+      });
+      await db.mermaEntry.create({
+        data: {
           customerId: mermaCustomer.id,
           entryDate,
           notes: "Carga de prueba (seed)",
           submittedBy: "seed",
           lines: {
-            create: rawBread.map((item, i) => ({
-              stockItemId: item.id,
-              qty: qtys[i % qtys.length]!,
-            })),
-          },
-        },
-        update: {
-          notes: "Carga de prueba (seed)",
-          submittedBy: "seed",
-          lines: {
-            deleteMany: {},
             create: rawBread.map((item, i) => ({
               stockItemId: item.id,
               qty: qtys[i % qtys.length]!,
@@ -225,33 +246,20 @@ export async function seedSampleStockEntries(): Promise<{
       where: { active: true, kind: "CONSUMABLE" },
       orderBy: [{ sortOrder: "asc" }],
       take: 5,
+      select: { id: true },
     });
     if (consumables.length > 0) {
       const qtys = [12, 8, 40, 2, 1];
-      await db.consumableCount.upsert({
-        where: {
-          customerId_entryDate: {
-            customerId: consumableCustomer.id,
-            entryDate,
-          },
-        },
-        create: {
+      await db.consumableCount.deleteMany({
+        where: { customerId: consumableCustomer.id, entryDate },
+      });
+      await db.consumableCount.create({
+        data: {
           customerId: consumableCustomer.id,
           entryDate,
           notes: "Conteo de prueba (seed)",
           submittedBy: "seed",
           lines: {
-            create: consumables.map((item, i) => ({
-              stockItemId: item.id,
-              qty: qtys[i % qtys.length]!,
-            })),
-          },
-        },
-        update: {
-          notes: "Conteo de prueba (seed)",
-          submittedBy: "seed",
-          lines: {
-            deleteMany: {},
             create: consumables.map((item, i) => ({
               stockItemId: item.id,
               qty: qtys[i % qtys.length]!,
@@ -271,6 +279,8 @@ export async function seedStockSampleData(): Promise<{
   mermaCustomer: string | null;
   consumableCustomer: string | null;
 }> {
+  // Replace legacy free-text catalog + sample entries with Product-linked rows.
+  await clearStockSampleData();
   const { upserted } = await seedStockCatalog();
   const entries = await seedSampleStockEntries();
   return {

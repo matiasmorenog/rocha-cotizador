@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  AdminProductPicker,
+  type PickedProduct,
+} from "@/components/admin/admin-product-picker";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import {
   DEFAULT_STOCK_UNIT,
@@ -18,8 +22,10 @@ import type { StockItemKind } from "@prisma/client";
 
 type StockItem = {
   id: string;
+  productId: string;
   code: string;
   name: string;
+  rubro: string | null;
   kind: StockItemKind;
   unit: string;
   active: boolean;
@@ -78,7 +84,7 @@ export function StockCatalogPanel({ items: initial }: { items: StockItem[] }) {
             setEditingId(null);
           }}
         >
-          Nuevo ítem
+          Agregar producto
         </Button>
       </div>
 
@@ -121,27 +127,44 @@ export function StockCatalogPanel({ items: initial }: { items: StockItem[] }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((i) => (
-              <tr key={i.id} className="border-b border-neutral-100 last:border-0">
-                <td className="px-3 py-2 font-mono text-xs">{i.code}</td>
-                <td className="px-3 py-2">{i.name}</td>
-                <td className="px-3 py-2">{KIND_LABELS[i.kind]}</td>
-                <td className="px-3 py-2">{i.unit}</td>
-                <td className="px-3 py-2">{i.active ? "Activo" : "Inactivo"}</td>
-                <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    className="text-[var(--brand-primary)] hover:underline"
-                    onClick={() => {
-                      setCreating(false);
-                      setEditingId(i.id);
-                    }}
-                  >
-                    Editar
-                  </button>
+            {filtered.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-3 py-6 text-center text-sm text-neutral-500"
+                >
+                  Sin productos en el catálogo de stock. Agregá desde el listado
+                  de productos.
                 </td>
               </tr>
-            ))}
+            ) : (
+              filtered.map((i) => (
+                <tr
+                  key={i.id}
+                  className="border-b border-neutral-100 last:border-0"
+                >
+                  <td className="px-3 py-2 font-mono text-xs">{i.code}</td>
+                  <td className="px-3 py-2">{i.name}</td>
+                  <td className="px-3 py-2">{KIND_LABELS[i.kind]}</td>
+                  <td className="px-3 py-2">{i.unit}</td>
+                  <td className="px-3 py-2">
+                    {i.active ? "Activo" : "Inactivo"}
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <button
+                      type="button"
+                      className="text-[var(--brand-primary)] hover:underline"
+                      onClick={() => {
+                        setCreating(false);
+                        setEditingId(i.id);
+                      }}
+                    >
+                      Editar
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -160,8 +183,16 @@ function StockItemForm({
   onCancel: () => void;
   onSaved: (item: StockItem) => void;
 }) {
-  const [code, setCode] = useState(item?.code ?? "");
-  const [name, setName] = useState(item?.name ?? "");
+  const [product, setProduct] = useState<PickedProduct | null>(
+    item
+      ? {
+          id: item.productId,
+          code: item.code,
+          name: item.name,
+          rubro: item.rubro,
+        }
+      : null,
+  );
   const [kind, setKind] = useState<StockItemKind>(item?.kind ?? defaultKind);
   const [unit, setUnit] = useState<StockUnit>(
     coerceStockUnit(item?.unit ?? DEFAULT_STOCK_UNIT),
@@ -173,6 +204,10 @@ function StockItemForm({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!product) {
+      setError("Elegí un producto del catálogo");
+      return;
+    }
     setLoading(true);
     setError(null);
     const res = await fetch("/api/admin/stock-items", {
@@ -180,8 +215,7 @@ function StockItemForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         id: item?.id,
-        code,
-        name,
+        productId: product.id,
         kind,
         unit,
         active,
@@ -203,17 +237,20 @@ function StockItemForm({
       className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
     >
       <p className="text-sm font-medium text-neutral-800">
-        {item ? "Editar ítem" : "Nuevo ítem"}
+        {item ? "Editar membresía de stock" : "Agregar producto al stock"}
       </p>
+      <AdminProductPicker
+        value={product}
+        onChange={setProduct}
+        disabled={Boolean(item)}
+      />
+      {item ? (
+        <p className="text-xs text-neutral-500">
+          El producto no se cambia al editar. Para otro SKU, creá una membresía
+          nueva.
+        </p>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label>Código</Label>
-          <Input value={code} onChange={(e) => setCode(e.target.value)} required />
-        </div>
-        <div className="space-y-1">
-          <Label>Nombre</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} required />
-        </div>
         <div className="space-y-1">
           <Label>Tipo</Label>
           <select

@@ -131,6 +131,7 @@ model Product {
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
   priceListItems  PriceListItem[]
+  stockItems      StockItem[]
 
   @@index([active, code])
 }
@@ -217,10 +218,11 @@ model BusinessSettings {
 }
 
 /// Catalog for mermas (RAW/BREAD) and consumables stock counts.
+/// Code/name come from linked Product (admin picks via product search).
 model StockItem {
   id        String        @id @default(cuid())
-  code      String        @unique
-  name      String
+  productId String        @unique
+  product   Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
   kind      StockItemKind
   /// Display unit: kg, unid., lata, etc.
   unit      String        @default("unid.")

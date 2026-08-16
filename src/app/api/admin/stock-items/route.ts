@@ -3,14 +3,17 @@ import { z } from "zod";
 import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { DEFAULT_STOCK_UNIT, STOCK_UNITS } from "@/lib/stock-units";
+import {
+  serializeStockItem,
+  stockItemListSelect,
+} from "@/lib/stock-item-serialize";
 
 const kindSchema = z.enum(["RAW_MATERIAL", "BREAD", "CONSUMABLE"]);
 const unitSchema = z.enum(STOCK_UNITS);
 
 const upsertSchema = z.object({
   id: z.string().min(1).optional(),
-  code: z.string().trim().min(1).max(40),
-  name: z.string().trim().min(1).max(200),
+  productId: z.string().min(1),
   kind: kindSchema,
   unit: unitSchema.default(DEFAULT_STOCK_UNIT),
   active: z.boolean().optional().default(true),
@@ -30,19 +33,16 @@ export async function GET(req: NextRequest) {
 
   const items = await db.stockItem.findMany({
     where: kindFilter ? { kind: kindFilter } : undefined,
-    orderBy: [{ kind: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+    orderBy: [
+      { kind: "asc" },
+      { sortOrder: "asc" },
+      { product: { name: "asc" } },
+    ],
+    select: stockItemListSelect,
   });
 
   return NextResponse.json({
-    items: items.map((i) => ({
-      id: i.id,
-      code: i.code,
-      name: i.name,
-      kind: i.kind,
-      unit: i.unit,
-      active: i.active,
-      sortOrder: i.sortOrder,
-    })),
+    items: items.map(serializeStockItem),
   });
 }
 
@@ -57,47 +57,67 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
   }
 
-  const code = parsed.data.code.trim().toUpperCase();
+  const product = await db.product.findUnique({
+    where: { id: parsed.data.productId },
+    select: { id: true, active: true },
+  });
+  if (!product) {
+    return NextResponse.json(
+      { error: "Producto no encontrado" },
+      { status: 404 },
+    );
+  }
 
   if (parsed.data.id) {
-    const taken = await db.stockItem.findFirst({
-      where: { code, NOT: { id: parsed.data.id } },
-      select: { id: true },
+    const existing = await db.stockItem.findUnique({
+      where: { id: parsed.data.id },
+      select: { id: true, productId: true },
     });
-    if (taken) {
-      return NextResponse.json({ error: "Código ya en uso" }, { status: 409 });
+    if (!existing) {
+      return NextResponse.json({ error: "Ítem no encontrado" }, { status: 404 });
+    }
+    if (existing.productId !== parsed.data.productId) {
+      return NextResponse.json(
+        { error: "No se puede cambiar el producto de una membresía existente" },
+        { status: 400 },
+      );
     }
     const item = await db.stockItem.update({
       where: { id: parsed.data.id },
       data: {
-        code,
-        name: parsed.data.name.trim(),
         kind: parsed.data.kind,
         unit: parsed.data.unit,
         active: parsed.data.active,
         sortOrder: parsed.data.sortOrder,
       },
+      select: stockItemListSelect,
     });
-    return NextResponse.json({ item });
+    return NextResponse.json({ item: serializeStockItem(item) });
   }
 
   const taken = await db.stockItem.findUnique({
-    where: { code },
+    where: { productId: parsed.data.productId },
     select: { id: true },
   });
   if (taken) {
-    return NextResponse.json({ error: "Código ya en uso" }, { status: 409 });
+    return NextResponse.json(
+      { error: "Ese producto ya está en el catálogo de stock" },
+      { status: 409 },
+    );
   }
 
   const item = await db.stockItem.create({
     data: {
-      code,
-      name: parsed.data.name.trim(),
+      productId: parsed.data.productId,
       kind: parsed.data.kind,
       unit: parsed.data.unit,
       active: parsed.data.active,
       sortOrder: parsed.data.sortOrder,
     },
+    select: stockItemListSelect,
   });
-  return NextResponse.json({ item }, { status: 201 });
+  return NextResponse.json(
+    { item: serializeStockItem(item) },
+    { status: 201 },
+  );
 }

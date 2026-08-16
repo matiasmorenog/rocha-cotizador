@@ -3,6 +3,10 @@ import { requireCustomerSession } from "@/lib/session";
 import { db } from "@/lib/db";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
 import { StockCountForm } from "@/components/stock/stock-count-form";
+import {
+  serializeStockItem,
+  stockItemListSelect,
+} from "@/lib/stock-item-serialize";
 
 function todayYmd() {
   const d = new Date();
@@ -23,17 +27,11 @@ export default async function CustomerConsumiblesPage() {
   const date = todayYmd();
   const entryDate = parseDateOnlyYmd(date);
 
-  const [items, entry] = await Promise.all([
+  const [rows, entry] = await Promise.all([
     db.stockItem.findMany({
       where: { active: true, kind: "CONSUMABLE" },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        kind: true,
-        unit: true,
-      },
+      orderBy: [{ sortOrder: "asc" }, { product: { name: "asc" } }],
+      select: stockItemListSelect,
     }),
     entryDate
       ? db.consumableCount.findUnique({
@@ -45,6 +43,8 @@ export default async function CustomerConsumiblesPage() {
         })
       : Promise.resolve(null),
   ]);
+
+  const items = rows.map(serializeStockItem);
 
   return (
     <div className="mx-auto max-w-2xl py-4">
