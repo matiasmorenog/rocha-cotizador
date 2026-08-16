@@ -5,33 +5,22 @@ alwaysApply: true
 
 # Draft PRs = no checks
 
-Save CI/Vercel until the PR is ready for review.
+| State | Actions | Vercel |
+|-------|---------|--------|
+| **draft** | Skipped (`ci.yml` `if`) | No feature-branch deploy; belt `scripts/vercel-ignore-draft-pr.sh` |
+| **ready** | lint/typecheck | Still no feature-branch deploy — preview = `development` / local |
+| push `development` | Runs | `rocha-cotizador-dev` builds |
+| push `main` | Runs | Auto-deploy off; Actions ships prod |
 
-## Rule
+## Agent
 
-| PR state | GitHub Actions | Vercel Git |
-|----------|----------------|------------|
-| **draft** | Jobs skipped (`ci.yml` `if`) | No feature-branch deploy (`vercel.json` `**`: false) |
-| **ready** | Runs lint/typecheck | Still no feature-branch deploy — preview = `development` / local |
-| **push** to `development` | Always runs | `rocha-cotizador-dev` builds; prod project ignore-skips |
-| **push** to `main` | Always runs | Auto-deploy off; Actions ships prod |
-
-Belt: `scripts/vercel-ignore-draft-pr.sh` cancels draft / prod-project preview if a deploy still starts.
-
-## Agent behavior
-
-- **Always** open feature/fix PRs as **draft** (`gh pr create --draft`). Default forever unless the user explicitly asks for ready.
-- **Never** mark Ready for review yourself — only the user does that manually (triggers CI).
-- Do **not** run `gh pr ready` / convert out of draft unless the user ordered it in chat.
-- Do **not** add branch-only `deploymentEnabled` hacks that re-enable feature previews without asking.
-- While PR is draft: no need to wait on `gh pr checks` (CI/preview skipped).
+- Always `gh pr create --draft` unless user says otherwise in that message
+- Never `gh pr ready` / undraft unless user ordered it
+- Draft: do not wait on `gh pr checks` (skipped on purpose)
+- No branch-only `deploymentEnabled` hacks
 
 ## Vercel token
 
-Preview env needs `GITHUB_TOKEN` (or `GH_TOKEN`) with `repo` / `pull_requests: read` so the ignore script can see draft status on this private repo. Without it, script **fails closed** (cancels feature-branch builds).
+Preview needs `GITHUB_TOKEN`/`GH_TOKEN` (`repo` / `pull_requests: read`) or ignore script fails closed.
 
-## Refs
-
-- `.github/workflows/ci.yml`
-- `scripts/vercel-ignore-draft-pr.sh`
-- `docs/ci.md`
+Refs: `.github/workflows/ci.yml`, `scripts/vercel-ignore-draft-pr.sh`, `docs/ci.md`
