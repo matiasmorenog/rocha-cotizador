@@ -78,7 +78,7 @@ export const ADMIN_NAV_PERMISSION: Record<string, StaffPermission> = {
   "/admin/productos": "products",
   "/admin/listas-precios": "priceLists",
   "/admin/cotizaciones": "quotes",
-  "/admin/configuracion": "settings",
+  "/admin/configuracion": "account",
   "/admin/usuarios": "users",
   "/admin/modulos": "customerModules",
   "/admin/stock": "stockCatalog",

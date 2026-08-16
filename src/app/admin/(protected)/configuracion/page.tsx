@@ -1,22 +1,24 @@
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { requireStaffPermission } from "@/lib/session";
+import { staffHasPermission } from "@/lib/staff-permissions";
 import { PushNotificationsSettings } from "@/components/admin/push-notifications-settings";
 import { WhatsAppSettingsForm } from "@/components/admin/whatsapp-settings-form";
 import { AdminChangeEmailForm } from "@/components/account/admin-change-email-form";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 
 export default async function AdminConfigPage() {
-  const [whatsappNotifyPhone, session] = await Promise.all([
-    getWhatsAppNotifyDigits(),
-    requireStaffPermission("settings"),
-  ]);
+  const session = await requireStaffPermission("account");
+  const canEditAppSettings = staffHasPermission(session.user.role, "settings");
+  const whatsappNotifyPhone = canEditAppSettings
+    ? await getWhatsAppNotifyDigits()
+    : null;
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-neutral-900">Configuración</h1>
         <p className="text-sm text-neutral-600">
-          Ajustes generales del cotizador y de tu cuenta.
+          Ajustes del cotizador y de tu cuenta.
         </p>
       </div>
 
@@ -25,16 +27,18 @@ export default async function AdminConfigPage() {
           Notificaciones
         </h2>
         <div className="space-y-4">
-          <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-800">
-            <p className="font-semibold text-neutral-900">WhatsApp</p>
-            <p className="mt-1 text-neutral-600">
-              Número para abrir WhatsApp (wa.me) al confirmar una cotización de
-              cliente.
-            </p>
-            <div className="mt-3">
-              <WhatsAppSettingsForm initialPhone={whatsappNotifyPhone} />
+          {canEditAppSettings && whatsappNotifyPhone !== null ? (
+            <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-800">
+              <p className="font-semibold text-neutral-900">WhatsApp</p>
+              <p className="mt-1 text-neutral-600">
+                Número para abrir WhatsApp (wa.me) al confirmar una cotización de
+                cliente.
+              </p>
+              <div className="mt-3">
+                <WhatsAppSettingsForm initialPhone={whatsappNotifyPhone} />
+              </div>
             </div>
-          </div>
+          ) : null}
           <PushNotificationsSettings />
         </div>
       </section>
@@ -47,14 +51,14 @@ export default async function AdminConfigPage() {
           Mi cuenta
         </h2>
         <p className="mb-4 text-sm text-neutral-600">
-          {session.user.name ?? "Admin"}
+          {session.user.name ?? "Usuario"}
           {session.user.email ? ` · ${session.user.email}` : null}
         </p>
         <div className="space-y-4">
           <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-800">
             <p className="font-semibold text-neutral-900">Cambiar email</p>
             <p className="mt-1 text-neutral-600">
-              Actualizá el email con el que ingresás al panel de administración.
+              Actualizá el email con el que ingresás al panel.
             </p>
             <div className="mt-3">
               {session.user.email ? (
@@ -69,7 +73,7 @@ export default async function AdminConfigPage() {
           <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-800">
             <p className="font-semibold text-neutral-900">Cambiar contraseña</p>
             <p className="mt-1 text-neutral-600">
-              Elegí una contraseña segura para proteger tu cuenta de admin.
+              Elegí una contraseña segura para proteger tu cuenta.
             </p>
             <div className="mt-3">
               <ChangePasswordForm

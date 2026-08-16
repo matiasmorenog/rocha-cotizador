@@ -44,9 +44,8 @@ const links: Array<{
   {
     href: "/admin/configuracion",
     label: "Configuración",
-    permission: "settings",
+    permission: "account",
   },
-  { href: "/admin/cuenta", label: "Mi cuenta", permission: "account" },
 ];
 
 function isActive(pathname: string, href: string, exact?: boolean) {
