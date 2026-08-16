@@ -8,6 +8,7 @@ import {
   getCachedCustomerPricingContext,
   getCachedUnitPricesForCatalog,
 } from "@/lib/price-list-resolve";
+import { staffHasPermission } from "@/lib/staff-permissions";
 
 /**
  * Shared base catalog + per-customer unitPrices map.
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
       session.user.customerId,
     );
     priceListId = customer?.priceListId ?? null;
-  } else if (session.user.role === "ADMIN") {
+  } else if (staffHasPermission(session.user.role, "quotes")) {
     const customerId = (req.nextUrl.searchParams.get("customerId") ?? "").trim();
     if (!customerId) {
       return NextResponse.json(

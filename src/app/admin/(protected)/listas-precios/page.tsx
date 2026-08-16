@@ -1,3 +1,4 @@
+import { requireStaffPermission } from "@/lib/session";
 import { db } from "@/lib/db";
 import { Badge } from "@/components/ui/badge";
 import { DataTableScroll } from "@/components/ui/data-table";
@@ -6,6 +7,7 @@ import { PriceListRowActions } from "@/components/admin/price-list-row-actions";
 import { sortPriceListsForDisplay } from "@/lib/pricing";
 
 export default async function AdminListasPreciosPage() {
+  await requireStaffPermission("priceLists");
   const lists = sortPriceListsForDisplay(
     await db.priceList.findMany({
       include: {

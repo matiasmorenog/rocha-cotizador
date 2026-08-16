@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
+import { isStaffRole } from "@/lib/staff-permissions";
 import { db } from "@/lib/db";
 
 const schema = z.object({
@@ -17,7 +18,7 @@ const schema = z.object({
 
 export async function PATCH(req: NextRequest) {
   const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN" || !session.user.id) {
+  if (!session?.user || !isStaffRole(session.user.role) || !session.user.id) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -34,7 +35,7 @@ export async function PATCH(req: NextRequest) {
     where: { id: session.user.id },
     select: { id: true, email: true, passwordHash: true, role: true },
   });
-  if (!user?.passwordHash || user.role !== "ADMIN") {
+  if (!user?.passwordHash || !isStaffRole(user.role)) {
     return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
   }
 

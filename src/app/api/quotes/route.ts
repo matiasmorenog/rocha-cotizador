@@ -17,6 +17,7 @@ import {
   validateDeliveryDateYmd,
 } from "@/lib/delivery-date";
 import { nextQuoteNumber } from "@/lib/quotes";
+import { staffHasPermission } from "@/lib/staff-permissions";
 import { formatPrice } from "@/lib/utils";
 import { buildQuoteWhatsAppMessage, whatsappUrl } from "@/lib/whatsapp";
 
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
     customerId = session.user.customerId;
-  } else if (session.user.role === "ADMIN") {
+  } else if (staffHasPermission(session.user.role, "quotes")) {
     if (!parsed.data.customerId) {
       return NextResponse.json({ error: "customerId requerido" }, { status: 400 });
     }

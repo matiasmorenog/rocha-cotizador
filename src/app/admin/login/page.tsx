@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { auth } from "@/lib/auth";
+import { isStaffRole } from "@/lib/staff-permissions";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { AdminLoginForm } from "@/components/auth/admin-login-form";
@@ -32,7 +33,7 @@ export default async function AdminLoginPage({
   const { callbackUrl: rawCallback } = await searchParams;
   const callbackUrl = safeCallbackUrl(rawCallback, "/admin");
   const session = await auth();
-  if (session?.user?.role === "ADMIN") redirect(callbackUrl);
+  if (isStaffRole(session?.user?.role)) redirect(callbackUrl);
 
   const customerLoginHref =
     callbackUrl !== "/admin"

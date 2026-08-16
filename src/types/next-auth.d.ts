@@ -1,4 +1,5 @@
-import type { AppRole } from "./auth";
+import type { AppRole, CustomerModuleSession } from "./auth";
+import type { StaffPermission } from "@/lib/staff-permissions";
 
 declare module "next-auth" {
   interface User {
@@ -10,6 +11,10 @@ declare module "next-auth" {
     mustChangePassword?: boolean;
     /** Admin only — account-level in-app toast/poll preference. */
     inAppNotificationsEnabled?: boolean;
+    /** Customer: enabled product modules. */
+    modules?: CustomerModuleSession[];
+    /** Staff: derived from role for nav/gates. */
+    permissions?: StaffPermission[];
   }
 
   interface Session {
@@ -23,6 +28,8 @@ declare module "next-auth" {
       mustChangePassword?: boolean;
       /** Admin only — from JWT (no DB on each page). Default true. */
       inAppNotificationsEnabled?: boolean;
+      modules?: CustomerModuleSession[];
+      permissions?: StaffPermission[];
     };
   }
 }
@@ -34,5 +41,7 @@ declare module "next-auth/jwt" {
     customerCode?: string | null;
     mustChangePassword?: boolean;
     inAppNotificationsEnabled?: boolean;
+    modules?: CustomerModuleSession[];
+    permissions?: StaffPermission[];
   }
 }

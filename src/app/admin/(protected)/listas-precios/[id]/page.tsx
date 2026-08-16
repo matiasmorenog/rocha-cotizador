@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { requireStaffPermission } from "@/lib/session";
 import { db } from "@/lib/db";
 import { PriceListEditor } from "@/components/admin/price-list-editor";
 
@@ -8,6 +9,7 @@ export default async function AdminListaPrecioDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireStaffPermission("priceLists");
   const { id } = await params;
   const list = await db.priceList.findUnique({
     where: { id },

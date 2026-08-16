@@ -5,6 +5,7 @@ import {
   getCachedCustomerPricingContext,
   resolveUnitPricesForList,
 } from "@/lib/price-list-resolve";
+import { staffHasPermission } from "@/lib/staff-permissions";
 
 /** Fallback search API — quote UI prefers local catalog filter. */
 export async function GET(req: NextRequest) {
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
       session.user.customerId,
     );
     priceListId = customer?.priceListId ?? null;
-  } else if (session.user.role === "ADMIN") {
+  } else if (staffHasPermission(session.user.role, "quotes")) {
     const customerId = (req.nextUrl.searchParams.get("customerId") ?? "").trim();
     if (!customerId) {
       return NextResponse.json(

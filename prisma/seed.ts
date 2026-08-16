@@ -19,6 +19,7 @@ import {
   productAllowsUnitOrderByCode,
 } from "../src/lib/unit-order-products";
 import { padCustomerCode, pinFromCustomerCode } from "../src/lib/utils";
+import { seedCustomerModuleAccess } from "../src/lib/customer-modules";
 import { assertSafeDestructiveDb } from "./assert-safe-db";
 
 const db = new PrismaClient();
@@ -425,9 +426,17 @@ async function main() {
   if (!fs.existsSync(xlsxPath)) {
     console.warn(`Excel not found at ${xlsxPath} — skipping catalog seed`);
     await seedUnitOrderFlags();
+    const modules = await seedCustomerModuleAccess();
+    console.log(
+      `Customer modules: Mermas=${modules.mermas}, Consumibles=${modules.consumables}`,
+    );
     return;
   }
   await seedFromExcel(xlsxPath);
+  const modules = await seedCustomerModuleAccess();
+  console.log(
+    `Customer modules: Mermas=${modules.mermas}, Consumibles=${modules.consumables}`,
+  );
 }
 
 main()

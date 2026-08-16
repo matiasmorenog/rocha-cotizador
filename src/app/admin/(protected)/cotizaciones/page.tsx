@@ -1,3 +1,4 @@
+import { requireStaffPermission } from "@/lib/session";
 import { db } from "@/lib/db";
 import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-route-transition";
 import { QuotesAdminPanel } from "@/components/admin/quotes-admin-panel";
@@ -14,6 +15,7 @@ export default async function AdminCotizacionesPage({
 }: {
   searchParams: Promise<{ from?: string; to?: string }>;
 }) {
+  await requireStaffPermission("quotes");
   const { from: fromParam, to: toParam } = await searchParams;
   const { from, to, fromLocal, toLocal } = resolveQuotesExportRange(
     fromParam,

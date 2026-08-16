@@ -9,17 +9,45 @@ import {
   QUOTE_PICKER_FLOAT_MS,
 } from "@/hooks/use-exit-presence";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
+import type { StaffPermission } from "@/lib/staff-permissions";
 import { cn } from "@/lib/utils";
 import { useAdminNavStore } from "@/stores/admin-nav-store";
 
-const links = [
-  { href: "/admin", label: "Dashboard", exact: true },
-  { href: "/admin/clientes", label: "Clientes" },
-  { href: "/admin/productos", label: "Productos" },
-  { href: "/admin/listas-precios", label: "Listas de precios" },
-  { href: "/admin/cotizaciones", label: "Cotizaciones" },
-  { href: "/admin/configuracion", label: "Configuración" },
-] as const;
+const links: Array<{
+  href: string;
+  label: string;
+  exact?: boolean;
+  permission: StaffPermission;
+}> = [
+  { href: "/admin", label: "Dashboard", exact: true, permission: "dashboard" },
+  { href: "/admin/clientes", label: "Clientes", permission: "customers" },
+  { href: "/admin/productos", label: "Productos", permission: "products" },
+  {
+    href: "/admin/listas-precios",
+    label: "Listas de precios",
+    permission: "priceLists",
+  },
+  {
+    href: "/admin/cotizaciones",
+    label: "Cotizaciones",
+    permission: "quotes",
+  },
+  { href: "/admin/stock", label: "Catálogo stock", permission: "stockCatalog" },
+  { href: "/admin/mermas", label: "Mermas", permission: "stockReports" },
+  {
+    href: "/admin/consumibles",
+    label: "Consumibles",
+    permission: "stockReports",
+  },
+  { href: "/admin/modulos", label: "Módulos", permission: "customerModules" },
+  { href: "/admin/usuarios", label: "Usuarios", permission: "users" },
+  {
+    href: "/admin/configuracion",
+    label: "Configuración",
+    permission: "settings",
+  },
+  { href: "/admin/cuenta", label: "Mi cuenta", permission: "account" },
+];
 
 function isActive(pathname: string, href: string, exact?: boolean) {
   if (exact) return pathname === href;
@@ -29,14 +57,25 @@ function isActive(pathname: string, href: string, exact?: boolean) {
 function NavLinks({
   pathname,
   onNavigate,
+  permissions,
 }: {
   pathname: string;
   onNavigate?: () => void;
+  permissions: StaffPermission[];
 }) {
+  const filtered = links.filter((l) => permissions.includes(l.permission));
+
   return (
-    <nav aria-label="Navegación de administración" className="flex flex-col gap-1 text-sm">
-      {links.map((l) => {
-        const active = isActive(pathname, l.href, "exact" in l ? l.exact : false);
+    <nav
+      aria-label="Navegación de administración"
+      className="flex flex-col gap-1 text-sm"
+    >
+      {filtered.map((l) => {
+        const active = isActive(
+          pathname,
+          l.href,
+          "exact" in l ? l.exact : false,
+        );
         return (
           <Link
             key={l.href}
@@ -63,11 +102,13 @@ function AdminSidebarPanel({
   onNavigate,
   showCloseButton = false,
   onClose,
+  permissions,
 }: {
   pathname: string;
   onNavigate?: () => void;
   showCloseButton?: boolean;
   onClose?: () => void;
+  permissions: StaffPermission[];
 }) {
   return (
     <div className="flex h-auto flex-col">
@@ -89,15 +130,24 @@ function AdminSidebarPanel({
           </button>
         ) : null}
       </div>
-      <NavLinks pathname={pathname} onNavigate={onNavigate} />
+      <NavLinks
+        pathname={pathname}
+        onNavigate={onNavigate}
+        permissions={permissions}
+      />
     </div>
   );
 }
 
-function AdminMobileDrawer({ pathname }: { pathname: string }) {
+function AdminMobileDrawer({
+  pathname,
+  permissions,
+}: {
+  pathname: string;
+  permissions: StaffPermission[];
+}) {
   const open = useAdminNavStore((s) => s.open);
   const setOpen = useAdminNavStore((s) => s.setOpen);
-  /** Skip exit keep-mount so route skeleton isn't hidden under z-50 overlay. */
   const [skipExit, setSkipExit] = useState(false);
   if (open && skipExit) {
     setSkipExit(false);
@@ -122,9 +172,7 @@ function AdminMobileDrawer({ pathname }: { pathname: string }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, setOpen]);
 
-  /** Animated dismiss (X, backdrop, Escape). */
   const close = () => setOpen(false);
-  /** Nav: unmount instantly; Link still starts route transition same click. */
   const closeForNavigate = () => {
     setSkipExit(true);
     setOpen(false);
@@ -165,23 +213,27 @@ function AdminMobileDrawer({ pathname }: { pathname: string }) {
           onNavigate={closeForNavigate}
           showCloseButton
           onClose={close}
+          permissions={permissions}
         />
       </aside>
     </div>
   );
 }
 
-export function AdminNav() {
+export function AdminNav({
+  permissions,
+}: {
+  permissions: StaffPermission[];
+}) {
   const pathname = usePathname();
 
   return (
     <>
-      {/* Visibility via globals.css `.admin-desktop-sidebar` — not Tailwind `hidden lg:block`. */}
       <aside className="admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 print:hidden">
-        <AdminSidebarPanel pathname={pathname} />
+        <AdminSidebarPanel pathname={pathname} permissions={permissions} />
       </aside>
 
-      <AdminMobileDrawer pathname={pathname} />
+      <AdminMobileDrawer pathname={pathname} permissions={permissions} />
     </>
   );
 }

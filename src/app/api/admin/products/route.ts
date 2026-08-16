@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { invalidateAfterProductMutation } from "@/lib/cache-tags";
 import { syncBaseListItemForProduct } from "@/lib/price-list-resolve";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") return null;
-  return session;
-}
 
 const schema = z.object({
   id: z.string().optional(),
@@ -30,7 +24,7 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaffApi("products"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

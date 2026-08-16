@@ -1,3 +1,4 @@
+import { requireStaffPermission } from "@/lib/session";
 import { db } from "@/lib/db";
 import { ExcelSyncPanel } from "@/components/admin/excel-sync-panel";
 import { CustomersAdminPanel } from "@/components/admin/customers-admin-panel";
@@ -8,6 +9,7 @@ export default async function AdminClientesPage({
 }: {
   searchParams: Promise<{ edit?: string }>;
 }) {
+  await requireStaffPermission("customers");
   const { edit } = await searchParams;
 
   const [customers, priceListsRaw] = await Promise.all([

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { invalidateAfterCustomerMutation } from "@/lib/cache-tags";
 import { normalizePhone } from "@/lib/phone-contact";
@@ -19,14 +19,8 @@ import { getBasePriceList } from "@/lib/price-list-resolve";
 
 export const runtime = "nodejs";
 
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") return null;
-  return session;
-}
-
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaffApi("customers"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

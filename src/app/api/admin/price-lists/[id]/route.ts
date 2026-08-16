@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { invalidateAfterPriceListMutation } from "@/lib/cache-tags";
 import { getBasePriceList } from "@/lib/price-list-resolve";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") return null;
-  return session;
-}
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -19,7 +13,7 @@ const patchSchema = z.object({
 });
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaffApi("priceLists"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -76,7 +70,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 }
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaffApi("priceLists"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -104,7 +98,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 }
 
 export async function DELETE(_req: NextRequest, ctx: Ctx) {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaffApi("priceLists"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

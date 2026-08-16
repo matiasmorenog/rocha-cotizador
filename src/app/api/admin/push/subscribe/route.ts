@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") return null;
-  return session;
-}
 
 const subscribeSchema = z.object({
   endpoint: z.string().url(),
@@ -20,7 +14,7 @@ const subscribeSchema = z.object({
 
 /** List this admin's stored endpoints (for client ↔ DB match after Activar). */
 export async function GET() {
-  const session = await requireAdmin();
+  const session = await requireStaffApi();
   if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
@@ -39,7 +33,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireStaffApi();
   if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
@@ -75,7 +69,7 @@ const deleteSchema = z.object({
 });
 
 export async function DELETE(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireStaffApi();
   if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }

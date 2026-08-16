@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { staffHasPermission } from "@/lib/staff-permissions";
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
 import {
@@ -75,7 +76,10 @@ export default async function RemitoDetailPage({
     redirect(`/entrar?callbackUrl=${next}`);
   }
 
-  if (session.user.role !== "CUSTOMER" && session.user.role !== "ADMIN") {
+  if (
+    session.user.role !== "CUSTOMER" &&
+    !staffHasPermission(session.user.role, "quotes")
+  ) {
     notFound();
   }
 
@@ -165,7 +169,7 @@ export default async function RemitoDetailPage({
   );
   const showWhatsappCta = whatsapp === "1" && Boolean(notifyWhatsappUrl);
   const deliveryLabel = formatDeliveryDateLabel(quote.deliveryDate);
-  const isAdmin = session.user.role === "ADMIN";
+  const isAdmin = staffHasPermission(session.user.role, "quotes");
   const pendingWeighCount = quote.items.filter(
     (item) => item.orderByUnit || Number(item.unitPrice) === 0,
   ).length;
@@ -219,7 +223,11 @@ export default async function RemitoDetailPage({
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           <RemitoBackButton
-            href={session.user.role === "ADMIN" ? "/admin/cotizaciones" : "/remitos"}
+            href={
+              staffHasPermission(session.user.role, "quotes")
+                ? "/admin/cotizaciones"
+                : "/remitos"
+            }
           />
           <PrintButton />
           {isAdmin ? <RemitoEditModeToggle /> : null}

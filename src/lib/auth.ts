@@ -2,8 +2,13 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { getEnabledModulesForCustomer } from "@/lib/customer-modules";
+import {
+  isStaffRole,
+  permissionsForRole,
+} from "@/lib/staff-permissions";
 import { padCustomerCode } from "@/lib/utils";
-import type { AppRole } from "@/types/auth";
+import type { AppRole, CustomerModuleSession, StaffRole } from "@/types/auth";
 
 export type { AppRole };
 
@@ -46,9 +51,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!email || !password) return null;
 
         try {
-          // Explicit select — omit newer columns so schema drift (e.g. missing
-          // inAppNotificationsEnabled on Neon main) cannot throw and surface as
-          // Auth.js "Configuration" (UI shows as wrong email/password).
           const user = await db.user.findUnique({
             where: { email },
             select: {
@@ -57,12 +59,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               name: true,
               passwordHash: true,
               role: true,
+              active: true,
             },
           });
-          if (!user?.passwordHash || user.role !== "ADMIN") return null;
+          if (!user?.passwordHash || !user.active || !isStaffRole(user.role)) {
+            return null;
+          }
 
           const valid = await bcrypt.compare(password, user.passwordHash);
           if (!valid) return null;
+
+          const staffRole = user.role as StaffRole;
 
           let inAppNotificationsEnabled = true;
           try {
@@ -81,11 +88,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             id: user.id,
             email: user.email,
             name: user.name,
-            role: "ADMIN" as const,
+            role: staffRole,
             customerId: null,
             customerCode: null,
             mustChangePassword: false,
             inAppNotificationsEnabled,
+            modules: [],
+            permissions: permissionsForRole(staffRole),
           };
         } catch (err) {
           console.error("[auth] admin authorize failed", err);
@@ -111,6 +120,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await bcrypt.compare(password, customer.passwordHash);
         if (!valid) return null;
 
+        let modules: CustomerModuleSession[] = [];
+        try {
+          modules = (await getEnabledModulesForCustomer(
+            customer.id,
+          )) as CustomerModuleSession[];
+        } catch {
+          modules = [];
+        }
+
         return {
           id: customer.id,
           email: null,
@@ -119,6 +137,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           customerId: customer.id,
           customerCode: customer.code,
           mustChangePassword: customer.mustChangePassword,
+          modules,
+          permissions: [],
         };
       },
     }),
@@ -132,6 +152,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.mustChangePassword = user.mustChangePassword ?? false;
         token.inAppNotificationsEnabled =
           user.inAppNotificationsEnabled ?? true;
+        token.modules = user.modules ?? [];
+        token.permissions = user.permissions ?? [];
         token.sub = user.id;
         token.email = user.email;
         token.name = user.name;
@@ -143,8 +165,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             select: { mustChangePassword: true },
           });
           token.mustChangePassword = customer?.mustChangePassword ?? false;
+          try {
+            token.modules = (await getEnabledModulesForCustomer(
+              String(token.customerId),
+            )) as CustomerModuleSession[];
+          } catch {
+            // keep existing
+          }
         }
-        // After PATCH: client passes value — refresh JWT without another DB read.
+        if (token.role && isStaffRole(String(token.role))) {
+          token.permissions = permissionsForRole(token.role as StaffRole);
+        }
         if (
           session &&
           typeof (session as { inAppNotificationsEnabled?: unknown })
@@ -164,21 +195,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     async session({ session, token }) {
+      const role = (token.role as AppRole) ?? "CUSTOMER";
       return {
         ...session,
         user: {
           ...session.user,
           id: token.sub ?? "",
-          role: (token.role as AppRole) ?? "CUSTOMER",
+          role,
           customerId:
             typeof token.customerId === "string" ? token.customerId : null,
           customerCode:
             typeof token.customerCode === "string" ? token.customerCode : null,
           mustChangePassword: Boolean(token.mustChangePassword),
-          // Missing on old JWTs → default true (matches DB default).
           inAppNotificationsEnabled: token.inAppNotificationsEnabled !== false,
           email: typeof token.email === "string" ? token.email : null,
           name: typeof token.name === "string" ? token.name : null,
+          modules: Array.isArray(token.modules)
+            ? (token.modules as CustomerModuleSession[])
+            : [],
+          permissions: isStaffRole(role)
+            ? permissionsForRole(role)
+            : Array.isArray(token.permissions)
+              ? token.permissions
+              : [],
         },
       };
     },

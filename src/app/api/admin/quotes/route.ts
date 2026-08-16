@@ -1,21 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { resolveQuotesExportRange } from "@/lib/argentina-time";
 import { formatDateOnlyYmd } from "@/lib/delivery-date";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") return null;
-  return session;
-}
 
 /**
  * GET /api/admin/quotes?from=&to=
  * List quotes in range for the admin table (no full page reload).
  */
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaffApi("quotes"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

@@ -1,5 +1,5 @@
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
-import { requireAdminSession } from "@/lib/session";
+import { requireStaffPermission } from "@/lib/session";
 import { PushNotificationsSettings } from "@/components/admin/push-notifications-settings";
 import { WhatsAppSettingsForm } from "@/components/admin/whatsapp-settings-form";
 import { AdminChangeEmailForm } from "@/components/account/admin-change-email-form";
@@ -8,7 +8,7 @@ import { ChangePasswordForm } from "@/components/account/change-password-form";
 export default async function AdminConfigPage() {
   const [whatsappNotifyPhone, session] = await Promise.all([
     getWhatsAppNotifyDigits(),
-    requireAdminSession(),
+    requireStaffPermission("settings"),
   ]);
 
   return (

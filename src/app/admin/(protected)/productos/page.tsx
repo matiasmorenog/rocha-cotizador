@@ -1,9 +1,11 @@
+import { requireStaffPermission } from "@/lib/session";
 import { db } from "@/lib/db";
 import { ProductAdminTable } from "@/components/admin/product-admin-table";
 import { ExcelSyncPanel } from "@/components/admin/excel-sync-panel";
 import { sortPriceListsForDisplay } from "@/lib/pricing";
 
 export default async function AdminProductosPage() {
+  await requireStaffPermission("products");
   const [products, priceLists] = await Promise.all([
     db.product.findMany({
       include: {

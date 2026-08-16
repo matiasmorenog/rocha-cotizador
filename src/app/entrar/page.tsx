@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { auth } from "@/lib/auth";
+import { isStaffRole } from "@/lib/staff-permissions";
 import { safeCallbackUrl } from "@/lib/callback-url";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,7 @@ export default async function EntrarPage({
   const callbackUrl = safeCallbackUrl(rawCallback, "/");
   const session = await auth();
 
-  if (session?.user?.role === "ADMIN") {
+  if (isStaffRole(session?.user?.role)) {
     redirect(callbackUrl === "/" ? "/admin" : callbackUrl);
   }
   if (session?.user?.role === "CUSTOMER") {

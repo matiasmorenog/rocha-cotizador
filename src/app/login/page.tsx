@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { auth } from "@/lib/auth";
+import { isStaffRole } from "@/lib/staff-permissions";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { CustomerLoginForm } from "@/components/auth/customer-login-form";
@@ -33,7 +34,7 @@ export default async function LoginPage({
   const callbackUrl = safeCallbackUrl(rawCallback, "/cotizar");
   const session = await auth();
   if (session?.user?.role === "CUSTOMER") redirect(callbackUrl);
-  if (session?.user?.role === "ADMIN") {
+  if (isStaffRole(session?.user?.role)) {
     redirect(safeCallbackUrl(rawCallback, "/admin"));
   }
 
