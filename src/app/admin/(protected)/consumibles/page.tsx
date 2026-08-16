@@ -27,10 +27,16 @@ export default async function AdminConsumiblesPage({
         : undefined,
     orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
     take: 200,
-    include: {
+    select: {
+      id: true,
+      entryDate: true,
+      notes: true,
+      submittedBy: true,
       customer: { select: { code: true, name: true } },
       lines: {
-        include: {
+        select: {
+          stockItemId: true,
+          qty: true,
           stockItem: {
             select: { code: true, name: true, kind: true, unit: true },
           },

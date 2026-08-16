@@ -18,6 +18,14 @@ export default async function RemitosPage() {
     where: { customerId: session.user.customerId! },
     orderBy: { createdAt: "desc" },
     take: 50,
+    select: {
+      id: true,
+      number: true,
+      status: true,
+      total: true,
+      createdAt: true,
+      deliveryDate: true,
+    },
   });
 
   return (

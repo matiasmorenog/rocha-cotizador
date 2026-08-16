@@ -28,44 +28,62 @@ export async function GET(req: NextRequest) {
   }
 
   const customerId = session.user.customerId;
-  if (!(await customerHasModule(customerId, "MERMAS"))) {
+  const dateParam = req.nextUrl.searchParams.get("date");
+  const entryOnly = req.nextUrl.searchParams.get("entryOnly") === "1";
+
+  const entryDate =
+    dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
+      ? parseDateOnlyYmd(dateParam)
+      : null;
+
+  const [hasModule, items, entry] = await Promise.all([
+    customerHasModule(customerId, "MERMAS"),
+    entryOnly
+      ? Promise.resolve([])
+      : db.stockItem.findMany({
+          where: {
+            active: true,
+            kind: { in: ["RAW_MATERIAL", "BREAD"] },
+          },
+          orderBy: [{ kind: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            kind: true,
+            unit: true,
+          },
+        }),
+    entryDate
+      ? db.mermaEntry.findUnique({
+          where: {
+            customerId_entryDate: { customerId, entryDate },
+          },
+          select: {
+            id: true,
+            notes: true,
+            lines: {
+              select: { stockItemId: true, qty: true },
+            },
+          },
+        })
+      : Promise.resolve(null),
+  ]);
+
+  if (!hasModule) {
     return NextResponse.json({ error: "Módulo no habilitado" }, { status: 403 });
   }
 
-  const dateParam = req.nextUrl.searchParams.get("date");
-  const items = await db.stockItem.findMany({
-    where: {
-      active: true,
-      kind: { in: ["RAW_MATERIAL", "BREAD"] },
-    },
-    orderBy: [{ kind: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
-  });
-
-  let entry = null;
-  if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
-    const entryDate = parseDateOnlyYmd(dateParam);
-    if (entryDate) {
-      entry = await db.mermaEntry.findUnique({
-        where: {
-          customerId_entryDate: { customerId, entryDate },
-        },
-        include: {
-          lines: {
-            select: { stockItemId: true, qty: true },
-          },
-        },
-      });
-    }
-  }
-
   return NextResponse.json({
-    items: items.map((i) => ({
-      id: i.id,
-      code: i.code,
-      name: i.name,
-      kind: i.kind,
-      unit: i.unit,
-    })),
+    items: entryOnly
+      ? undefined
+      : items.map((i) => ({
+          id: i.id,
+          code: i.code,
+          name: i.name,
+          kind: i.kind,
+          unit: i.unit,
+        })),
     entry: entry
       ? {
           id: entry.id,

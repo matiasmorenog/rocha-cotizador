@@ -8,12 +8,19 @@ export default async function AdminProductosPage() {
   await requireStaffPermission("products");
   const [products, priceLists] = await Promise.all([
     db.product.findMany({
-      include: {
+      orderBy: { code: "asc" },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        rubro: true,
+        basePrice: true,
+        active: true,
+        allowsUnitOrder: true,
         priceListItems: {
           select: { priceListId: true, unitPrice: true },
         },
       },
-      orderBy: { code: "asc" },
     }),
     db.priceList.findMany({
       select: { id: true, name: true, active: true, excelKey: true, isBase: true },

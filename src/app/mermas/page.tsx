@@ -1,6 +1,5 @@
 import { notFound } from "next/navigation";
 import { requireCustomerSession } from "@/lib/session";
-import { customerHasModule } from "@/lib/customer-modules";
 import { db } from "@/lib/db";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
 import { StockCountForm } from "@/components/stock/stock-count-form";
@@ -16,7 +15,8 @@ function todayYmd() {
 export default async function CustomerMermasPage() {
   const session = await requireCustomerSession();
   const customerId = session.user.customerId!;
-  if (!(await customerHasModule(customerId, "MERMAS"))) {
+  // Modules already on JWT — skip extra DB round-trip to Neon.
+  if (!session.user.modules?.includes("MERMAS")) {
     notFound();
   }
 
@@ -30,11 +30,21 @@ export default async function CustomerMermasPage() {
         kind: { in: ["RAW_MATERIAL", "BREAD"] },
       },
       orderBy: [{ kind: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        kind: true,
+        unit: true,
+      },
     }),
     entryDate
       ? db.mermaEntry.findUnique({
           where: { customerId_entryDate: { customerId, entryDate } },
-          include: { lines: { select: { stockItemId: true, qty: true } } },
+          select: {
+            notes: true,
+            lines: { select: { stockItemId: true, qty: true } },
+          },
         })
       : Promise.resolve(null),
   ]);

@@ -7,6 +7,15 @@ export default async function AdminStockPage() {
 
   const items = await db.stockItem.findMany({
     orderBy: [{ kind: "asc" }, { sortOrder: "asc" }, { name: "asc" }],
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      kind: true,
+      unit: true,
+      active: true,
+      sortOrder: true,
+    },
   });
 
   return (

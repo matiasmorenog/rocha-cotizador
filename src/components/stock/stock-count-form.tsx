@@ -77,7 +77,9 @@ export function StockCountForm({
     setLoadingDate(true);
     setError(null);
     setMessage(null);
-    const res = await fetch(`${apiPath}?date=${encodeURIComponent(nextDate)}`);
+    const res = await fetch(
+      `${apiPath}?date=${encodeURIComponent(nextDate)}&entryOnly=1`,
+    );
     const data = await res.json().catch(() => ({}));
     setLoadingDate(false);
     if (!res.ok) {

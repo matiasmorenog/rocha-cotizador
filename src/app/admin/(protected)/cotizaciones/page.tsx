@@ -24,8 +24,16 @@ export default async function AdminCotizacionesPage({
 
   const quotes = await db.quote.findMany({
     where: { createdAt: { gte: from, lt: to } },
-    include: { customer: { select: { code: true, name: true } } },
     orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      number: true,
+      status: true,
+      total: true,
+      createdAt: true,
+      deliveryDate: true,
+      customer: { select: { code: true, name: true } },
+    },
   });
 
   const rows = quotes.map((q) => ({

@@ -14,8 +14,21 @@ export default async function AdminClientesPage({
 
   const [customers, priceListsRaw] = await Promise.all([
     db.customer.findMany({
-      include: { priceList: { select: { id: true, name: true } } },
       orderBy: { code: "asc" },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        priceListId: true,
+        priceList: { select: { id: true, name: true } },
+        address: true,
+        phone: true,
+        email: true,
+        notes: true,
+        paymentTerms: true,
+        deliveryHours: true,
+        active: true,
+      },
     }),
     db.priceList.findMany({
       select: { id: true, name: true, active: true, excelKey: true, isBase: true },

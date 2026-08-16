@@ -53,9 +53,14 @@ export async function GET(req: NextRequest) {
     req.headers.get("If-None-Match")?.replaceAll('"', "").trim() ||
     "";
 
-  const unitPrices = await getCachedUnitPricesForCatalog(priceListId, version);
+  const unchanged = Boolean(clientVersion && clientVersion === catalogKey);
 
-  if (clientVersion && clientVersion === catalogKey) {
+  const [unitPrices, products] = await Promise.all([
+    getCachedUnitPricesForCatalog(priceListId, version),
+    unchanged ? Promise.resolve([]) : getActiveProductsBase(),
+  ]);
+
+  if (unchanged) {
     return NextResponse.json(
       {
         unchanged: true,
@@ -72,8 +77,6 @@ export async function GET(req: NextRequest) {
       },
     );
   }
-
-  const products = await getActiveProductsBase();
 
   return NextResponse.json(
     {
