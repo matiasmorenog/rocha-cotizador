@@ -11,6 +11,7 @@ import {
 import { sortPriceListsForDisplay } from "@/lib/pricing";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function GET() {
   if (!(await requireStaffApi("products"))) {

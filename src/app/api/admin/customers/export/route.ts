@@ -10,6 +10,7 @@ import {
 } from "@/lib/admin-excel";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function GET() {
   if (!(await requireStaffApi("customers"))) {

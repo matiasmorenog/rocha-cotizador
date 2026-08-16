@@ -8,6 +8,8 @@ import {
 } from "@/lib/quotes-export-pdf";
 
 export const runtime = "nodejs";
+/** Multi-remito PDF over date range — Neon cold + pdfkit. */
+export const maxDuration = 60;
 
 /**
  * GET /api/admin/quotes/export?from=&to=

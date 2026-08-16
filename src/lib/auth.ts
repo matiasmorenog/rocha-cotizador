@@ -51,6 +51,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!email || !password) return null;
 
         try {
+          // Single round-trip: cold Neon + bcrypt already tight vs Vercel default maxDuration.
           const user = await db.user.findUnique({
             where: { email },
             select: {
@@ -60,6 +61,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               passwordHash: true,
               role: true,
               active: true,
+              inAppNotificationsEnabled: true,
             },
           });
           if (!user?.passwordHash || !user.active || !isStaffRole(user.role)) {
@@ -71,19 +73,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           const staffRole = user.role as StaffRole;
 
-          let inAppNotificationsEnabled = true;
-          try {
-            const pref = await db.user.findUnique({
-              where: { id: user.id },
-              select: { inAppNotificationsEnabled: true },
-            });
-            if (typeof pref?.inAppNotificationsEnabled === "boolean") {
-              inAppNotificationsEnabled = pref.inAppNotificationsEnabled;
-            }
-          } catch {
-            // Column/client drift — keep default true; login must still succeed.
-          }
-
           return {
             id: user.id,
             email: user.email,
@@ -92,7 +81,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             customerId: null,
             customerCode: null,
             mustChangePassword: false,
-            inAppNotificationsEnabled,
+            inAppNotificationsEnabled: user.inAppNotificationsEnabled !== false,
             modules: [],
             permissions: permissionsForRole(staffRole),
           };
@@ -114,20 +103,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = String(credentials?.password ?? "");
         if (!/^\d{3}$/.test(code) || password.length < 1) return null;
 
-        const customer = await db.customer.findUnique({ where: { code } });
+        // One round-trip: customer + enabled modules (Neon cold + bcrypt budget).
+        const customer = await db.customer.findUnique({
+          where: { code },
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            active: true,
+            passwordHash: true,
+            mustChangePassword: true,
+            moduleAccess: {
+              where: { enabled: true },
+              select: { module: true },
+            },
+          },
+        });
         if (!customer || !customer.active) return null;
 
         const valid = await bcrypt.compare(password, customer.passwordHash);
         if (!valid) return null;
 
-        let modules: CustomerModuleSession[] = [];
-        try {
-          modules = (await getEnabledModulesForCustomer(
-            customer.id,
-          )) as CustomerModuleSession[];
-        } catch {
-          modules = [];
-        }
+        const modules = customer.moduleAccess.map(
+          (r) => r.module,
+        ) as CustomerModuleSession[];
 
         return {
           id: customer.id,

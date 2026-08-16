@@ -61,6 +61,7 @@ Hosts (password en dashboard / `vercel env`; no commitear):
 
 ```bash
 # Vercel: Neon pooled + pgbouncer=true&connection_limit=1 (Prisma + serverless = 1 conn/instance)
+# Optional: &connect_timeout=15 if cold connects flake (Neon us-west-2 from Vercel).
 DATABASE_URL=postgresql://...-pooler...?sslmode=require&pgbouncer=true&connection_limit=1
 AUTH_SECRET=                    # openssl rand -base64 32
 AUTH_URL=https://rocha-cotizador.vercel.app
@@ -105,6 +106,18 @@ DATABASE_URL="postgresql://...@ep-noisy-darkness-a6ms81wq.us-west-2.aws.neon.tec
 ```
 
 Dashboard admin serializa queries en `$transaction` (no `Promise.all` de 4 counts) para no abrir 4 conexiones a la vez.
+
+### Timeouts (Vercel / Neon)
+
+Neon `us-west-2` cold ~3–4s. Default serverless `maxDuration` (~15s Pro) deja poco margen para export PDF/XLSX, create cotización + Web Push, o login (bcrypt + DB).
+
+Segment config en rutas pesadas (`export const maxDuration = 60` en import/export/quotes; `30` en auth/remito; `15` en health). No hace falta `maxDuration` global en `vercel.json`.
+
+| Runtime `DATABASE_URL` (Vercel) | Schema gate / `db push` |
+|--------------------------------|-------------------------|
+| Neon **`-pooler`** + `pgbouncer=true&connection_limit=1` | Neon **direct** (sin `-pooler`) — secret `DATABASE_URL_PRODUCTION` o URL direct al push |
+
+Si Production runtime usa host **sin** `-pooler`: riesgo de agotar conexiones bajo concurrencia + cold más caro. Corregí a pooler en Vercel **Production** (y Preview/Development al pooler de `development`). No tocar secrets sin confirmación.
 
 ### Cache (Next.js)
 

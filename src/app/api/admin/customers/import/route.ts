@@ -18,6 +18,7 @@ import { isBasePriceListLabel } from "@/lib/pricing";
 import { getBasePriceList } from "@/lib/price-list-resolve";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   if (!(await requireStaffApi("customers"))) {

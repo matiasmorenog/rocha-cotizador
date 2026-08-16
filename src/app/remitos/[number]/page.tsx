@@ -34,8 +34,11 @@ import { TruncatedName } from "@/components/ui/truncated-name";
 import {
   formatDeliveryDateLabel,
 } from "@/lib/delivery-date";
+import type { Decimal } from "@prisma/client/runtime/library";
 
 export const dynamic = "force-dynamic";
+/** Remito detail: quote + products + price list; Neon cold needs headroom. */
+export const maxDuration = 30;
 
 const quoteDetailInclude = {
   customer: {
@@ -107,24 +110,40 @@ export default async function RemitoDetailPage({
     redirect(`${remitoPath(quote.number)}${query}`);
   }
 
+  if (
+    session.user.role === "CUSTOMER" &&
+    quote.customerId !== session.user.customerId
+  ) {
+    notFound();
+  }
+
   const productIds = quote.items
     .map((item) => item.productId)
     .filter((id): id is string => Boolean(id));
-  const products =
+
+  // Parallel after ownership check: products + list id + WhatsApp digits.
+  const [products, discountListId, notifyDigits, hdrs] = await Promise.all([
     productIds.length > 0
-      ? await db.product.findMany({
+      ? db.product.findMany({
           where: { id: { in: productIds } },
           select: { id: true, allowsUnitOrder: true, basePrice: true },
         })
-      : [];
+      : Promise.resolve(
+          [] as {
+            id: string;
+            allowsUnitOrder: boolean;
+            basePrice: Decimal;
+          }[],
+        ),
+    effectiveDiscountPriceListId(quote.customer.priceListId),
+    getWhatsAppNotifyDigits(),
+    headers(),
+  ]);
   const allowsUnitOrderByProductId = new Map(
     products.map((p) => [p.id, p.allowsUnitOrder]),
   );
 
   // Same $/kg as ordering by kg (customer list override → basePrice).
-  const discountListId = await effectiveDiscountPriceListId(
-    quote.customer.priceListId,
-  );
   const listOverrides =
     discountListId != null
       ? await getPriceListUnitPricesByProductId(discountListId)
@@ -139,14 +158,6 @@ export default async function RemitoDetailPage({
     );
   }
 
-  if (
-    session.user.role === "CUSTOMER" &&
-    quote.customerId !== session.user.customerId
-  ) {
-    notFound();
-  }
-
-  const hdrs = await headers();
   const host = hdrs.get("x-forwarded-host") ?? hdrs.get("host");
   const proto = hdrs.get("x-forwarded-proto") ?? "https";
   const origin =
@@ -154,7 +165,6 @@ export default async function RemitoDetailPage({
     process.env.AUTH_URL?.replace(/\/$/, "") ??
     "";
   const remitoUrl = `${origin}${remitoPath(quote.number)}`;
-  const notifyDigits = await getWhatsAppNotifyDigits();
   const notifyWhatsappUrl = whatsappUrl(
     notifyDigits,
     buildQuoteWhatsAppMessage({

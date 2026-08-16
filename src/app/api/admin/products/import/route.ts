@@ -15,6 +15,7 @@ import {
 } from "@/lib/admin-excel";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
   if (!(await requireStaffApi("products"))) {
