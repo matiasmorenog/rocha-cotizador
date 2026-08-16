@@ -17,10 +17,12 @@ Save CI/Vercel until the PR is ready for review.
 
 ## Agent behavior
 
-- Open WIP as **draft** when checks/previews not needed yet.
-- Mark **Ready for review** when you want lint/typecheck + preview (triggers `ready_for_review`).
+- **Always** open feature/fix PRs as **draft** (`gh pr create --draft`). Default forever unless the user explicitly asks for ready.
+- **Never** mark Ready for review yourself — only the user does that manually (triggers CI + Vercel).
+- Do **not** run `gh pr ready` / convert out of draft unless the user ordered it in chat.
 - Do **not** add branch-only `deploymentEnabled` hacks for draft pause — use this global rule.
 - After merge of draft-skip tooling: rebase open draft feature PRs onto `development` so they pick up `ci.yml` / `vercel.json`.
+- While PR is draft: no need to wait on `gh pr checks` (CI/preview skipped).
 
 ## Vercel token
 

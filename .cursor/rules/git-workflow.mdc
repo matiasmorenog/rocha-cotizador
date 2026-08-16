@@ -22,9 +22,10 @@ feat|fix|refactor|chore|docs/*  ──PR──►  development  ──PR──�
 ### Hacer sin preguntar
 - Comandos de rutina: `npm install`, `prisma generate`, reiniciar dev server, `tsc`, `lint`, `build`.
 - `prisma db push` **aditivo/seguro** — ver `prisma-db-push.mdc`.
-- Al terminar tarea (si el flujo lo pide): commit EN + push + `gh pr create --base development`.
+- Al terminar tarea (si el flujo lo pide): commit EN + push + `gh pr create --draft --base development`.
 - Validar: `npx tsc --noEmit` + `npm run lint`.
 - Crear/`pop`/limpiar stashes (no acumular).
+- **No** marcar PR ready — solo el usuario a mano.
 
 ### Pedir confirmación explícita
 - **Merge a `development` o `main`** — nunca mergear sin sí explícito del usuario.
@@ -36,7 +37,8 @@ feat|fix|refactor|chore|docs/*  ──PR──►  development  ──PR──�
 
 ### CI y merge
 - GitHub Actions: job **`lint-and-typecheck`** en PRs/push a `development` y `main`.
-- **Draft PRs:** sin CI ni preview Vercel — ver `draft-pr-checks.mdc`. Marcar ready para disparar checks.
+- **Draft PRs (default):** `gh pr create --draft` siempre. Sin CI ni preview hasta que el usuario marque Ready — ver `draft-pr-checks.mdc`.
+- Agent **nunca** pasa a ready salvo pedido explícito.
 - Build = responsabilidad de Vercel (no en Actions por ahora).
 - Merge estándar: **squash** + borrado de branch.
 
