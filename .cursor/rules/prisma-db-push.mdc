@@ -25,3 +25,7 @@ Para cambios seguros, ejecutar el push y confirmar éxito o el error concreto.
 ## Migraciones vs push
 
 En este repo el flujo habitual es `db push` (no `migrate dev`), salvo que la tarea pida migraciones explícitas.
+
+## Neon Production
+
+`db push` local = Neon **development** solamente. Schema / `DATABASE_URL` / pooler también deben quedar alineados en Neon **main** + Vercel Production — ver `.cursor/rules/neon-prod-parity.mdc` y `DEPLOY.md`.

@@ -25,7 +25,7 @@ Solo **dos** branches Neon. Preview **no** crea branch Neon por deploy.
 
 ### Schema drift / wrong DB (léelo antes de un release)
 
-**Local DB ≠ production.** Son dos bases Neon distintas.
+**Local DB ≠ production.** Son dos bases Neon distintas. Agentes: cualquier cambio Neon (schema, pooler/`DATABASE_URL`, branches) también en Production — ver `.cursor/rules/neon-prod-parity.mdc`.
 
 | Dónde | Neon branch | Cómo lo reconocés (host prefix) |
 |-------|-------------|----------------------------------|

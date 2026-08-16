@@ -64,7 +64,7 @@ El check **debe** apuntar a Neon **main** (prod), nunca a local/development.
 | Recomendado | GitHub Actions secret **`DATABASE_URL_PRODUCTION`** (Neon `main`, URL **direct** `ep-cool-mud…` sin pooler) |
 | Fallback | `DATABASE_URL` dentro de `.vercel/.env.production.local` tras `vercel pull` |
 
-**Local `.env` = Neon development** (`ep-noisy-darkness…`). Un `db push` local **no** actualiza producción. Ver warning en [`DEPLOY.md`](../DEPLOY.md) § Schema drift / wrong DB.
+**Local `.env` = Neon development** (`ep-noisy-darkness…`). Un `db push` local **no** actualiza producción. Ver [`DEPLOY.md`](../DEPLOY.md) § Schema drift y `.cursor/rules/neon-prod-parity.mdc`.
 
 Local / manual:
 
