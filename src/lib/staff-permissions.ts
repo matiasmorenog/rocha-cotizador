@@ -10,7 +10,6 @@ export type StaffPermission =
   | "settings"
   | "users"
   | "customerModules"
-  | "stockCatalog"
   | "stockReports"
   | "account";
 
@@ -23,7 +22,6 @@ const ALL_PERMISSIONS: StaffPermission[] = [
   "settings",
   "users",
   "customerModules",
-  "stockCatalog",
   "stockReports",
   "account",
 ];
@@ -38,13 +36,7 @@ const ROLE_PERMISSIONS: Record<StaffRole, readonly StaffPermission[]> = {
     "quotes",
     "account",
   ],
-  STOCK: [
-    "dashboard",
-    "customers",
-    "stockCatalog",
-    "stockReports",
-    "account",
-  ],
+  STOCK: ["dashboard", "customers", "stockReports", "account"],
 };
 
 export const STAFF_ROLES: readonly StaffRole[] = ["ADMIN", "QUOTES", "STOCK"];
@@ -81,7 +73,6 @@ export const ADMIN_NAV_PERMISSION: Record<string, StaffPermission> = {
   "/admin/configuracion": "account",
   "/admin/usuarios": "users",
   "/admin/modulos": "customerModules",
-  "/admin/stock": "stockCatalog",
   "/admin/mermas": "stockReports",
   "/admin/consumibles": "stockReports",
   "/admin/cuenta": "account",

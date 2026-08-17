@@ -10,9 +10,6 @@ export async function AppHeader() {
   const session = await auth();
   const isCustomer = session?.user?.role === "CUSTOMER";
   const isStaff = isStaffRole(session?.user?.role);
-  const modules = session?.user?.modules ?? [];
-  const hasMermas = modules.includes("MERMAS");
-  const hasConsumables = modules.includes("CONSUMABLES");
   /** From JWT — updated via session.update() after password change. No Neon hit. */
   const mustChangePassword = Boolean(session?.user?.mustChangePassword);
 
@@ -39,22 +36,6 @@ export async function AppHeader() {
                   <Link href="/remitos" className="text-neutral-700 hover:text-neutral-900">
                     Remitos
                   </Link>
-                  {hasMermas ? (
-                    <Link
-                      href="/mermas"
-                      className="text-neutral-700 hover:text-neutral-900"
-                    >
-                      Mermas
-                    </Link>
-                  ) : null}
-                  {hasConsumables ? (
-                    <Link
-                      href="/consumibles"
-                      className="text-neutral-700 hover:text-neutral-900"
-                    >
-                      Consumibles
-                    </Link>
-                  ) : null}
                   <Link
                     href="/cuenta/configuracion"
                     className="text-neutral-700 hover:text-neutral-900"

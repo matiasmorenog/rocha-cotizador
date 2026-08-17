@@ -2,10 +2,22 @@ import { requireStaffPermission } from "@/lib/session";
 import { db } from "@/lib/db";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
 import { AdminStockReports } from "@/components/admin/admin-stock-reports";
+import { StockRecountForm } from "@/components/admin/stock-recount-form";
 import {
-  serializeStockItemReport,
-  stockItemReportSelect,
-} from "@/lib/stock-item-serialize";
+  serializeStockLine,
+  stockLineSelect,
+} from "@/lib/stock-line-serialize";
+
+async function moduleCustomers(module: "MERMAS" | "CONSUMABLES") {
+  return db.customer.findMany({
+    where: {
+      active: true,
+      moduleAccess: { some: { module, enabled: true } },
+    },
+    orderBy: { code: "asc" },
+    select: { id: true, code: true, name: true },
+  });
+}
 
 export default async function AdminConsumiblesPage({
   searchParams,
@@ -19,33 +31,30 @@ export default async function AdminConsumiblesPage({
   const fromDate = from ? parseDateOnlyYmd(from) : null;
   const toDate = to ? parseDateOnlyYmd(to) : null;
 
-  const rows = await db.consumableCount.findMany({
-    where:
-      fromDate || toDate
-        ? {
-            entryDate: {
-              ...(fromDate ? { gte: fromDate } : {}),
-              ...(toDate ? { lte: toDate } : {}),
-            },
-          }
-        : undefined,
-    orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
-    take: 200,
-    select: {
-      id: true,
-      entryDate: true,
-      notes: true,
-      submittedBy: true,
-      customer: { select: { code: true, name: true } },
-      lines: {
-        select: {
-          stockItemId: true,
-          qty: true,
-          stockItem: { select: stockItemReportSelect },
-        },
+  const [customers, rows] = await Promise.all([
+    moduleCustomers("CONSUMABLES"),
+    db.consumableCount.findMany({
+      where:
+        fromDate || toDate
+          ? {
+              entryDate: {
+                ...(fromDate ? { gte: fromDate } : {}),
+                ...(toDate ? { lte: toDate } : {}),
+              },
+            }
+          : undefined,
+      orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
+      take: 200,
+      select: {
+        id: true,
+        entryDate: true,
+        notes: true,
+        submittedBy: true,
+        customer: { select: { code: true, name: true } },
+        lines: { select: stockLineSelect },
       },
-    },
-  });
+    }),
+  ]);
 
   const entries = rows.map((e) => ({
     id: e.id,
@@ -53,28 +62,32 @@ export default async function AdminConsumiblesPage({
     notes: e.notes,
     submittedBy: e.submittedBy,
     customer: e.customer,
-    lines: e.lines.map((l) => ({
-      stockItemId: l.stockItemId,
-      qty: Number(l.qty),
-      stockItem: serializeStockItemReport(l.stockItem),
-    })),
+    lines: e.lines.map(serializeStockLine),
   }));
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold text-neutral-900">Consumibles</h1>
-        <p className="text-sm text-neutral-600">
-          Recuentos de consumibles enviados por clientes con el módulo
-          habilitado.
-        </p>
-      </div>
-      <AdminStockReports
-        entries={entries}
-        kindLabel="Recuento"
-        from={from}
-        to={to}
+    <div className="space-y-8">
+      <StockRecountForm
+        title="Recuento de consumibles"
+        description="Stock invertido (gaseosas, insumos, etc.) por sucursal. No son mermas diarias."
+        apiPath="/api/admin/consumibles"
+        customers={customers}
       />
+
+      <div className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-neutral-900">Historial</h2>
+          <p className="text-sm text-neutral-600">
+            Recuentos guardados por sucursal (módulo Consumibles).
+          </p>
+        </div>
+        <AdminStockReports
+          entries={entries}
+          kindLabel="Recuento"
+          from={from}
+          to={to}
+        />
+      </div>
     </div>
   );
 }

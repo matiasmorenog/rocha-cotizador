@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       priceListId = customer.priceListId;
     } else if (
       !(
-        staffHasPermission(session.user.role, "stockCatalog") ||
+        staffHasPermission(session.user.role, "stockReports") ||
         staffHasPermission(session.user.role, "products")
       )
     ) {
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     }
   } else if (
     !(
-      staffHasPermission(session.user.role, "stockCatalog") ||
+      staffHasPermission(session.user.role, "stockReports") ||
       staffHasPermission(session.user.role, "products")
     )
   ) {

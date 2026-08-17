@@ -1,14 +1,12 @@
 /**
- * Stock “Tipo” = Product.rubro.
- * Prefer deriving options with uniqRubrosFromProducts when a full product list
- * is already loaded — no separate DISTINCT query in that case.
- * Fallback listDistinctProductRubros uses the cached active-products catalog.
+ * Stock module split by Product.rubro.
+ * Mermas = panes/masas (waste). Consumibles = inventory (gaseosas, insumos, etc.).
  */
 
 import type { Prisma } from "@prisma/client";
 import { getActiveProductsBase } from "@/lib/products-cache";
 
-/** Rubros that appear on /consumibles (rest of stock → /mermas). */
+/** Rubros that appear in consumibles recount (rest → mermas). */
 export const CONSUMABLE_RUBROS = ["INSUMOS", "REGALO"] as const;
 
 export function normalizeRubro(rubro: string | null | undefined): string | null {
@@ -40,47 +38,37 @@ export function uniqRubrosFromProducts(
   );
 }
 
-/**
- * Fallback when the page does not already have a full product list.
- * Derives from cached active products — no Prisma DISTINCT.
- */
 export async function listDistinctProductRubros(): Promise<string[]> {
   const products = await getActiveProductsBase();
   return uniqRubrosFromProducts(products);
 }
 
-export function stockItemWhereForModule(
+export function productWhereForModule(
   module: "MERMAS" | "CONSUMABLES",
-): Prisma.StockItemWhereInput {
+): Prisma.ProductWhereInput {
   if (module === "CONSUMABLES") {
     return {
       active: true,
-      product: {
-        active: true,
-        OR: CONSUMABLE_RUBROS.map((rubro) => ({
-          rubro: { equals: rubro, mode: "insensitive" as const },
-        })),
-      },
+      OR: CONSUMABLE_RUBROS.map((rubro) => ({
+        rubro: { equals: rubro, mode: "insensitive" as const },
+      })),
     };
   }
   return {
     active: true,
-    product: {
-      active: true,
-      AND: [
-        {
-          OR: [
-            { rubro: null },
-            {
-              NOT: {
-                OR: CONSUMABLE_RUBROS.map((rubro) => ({
-                  rubro: { equals: rubro, mode: "insensitive" as const },
-                })),
-              },
+    AND: [
+      {
+        OR: [
+          { rubro: null },
+          {
+            NOT: {
+              OR: CONSUMABLE_RUBROS.map((rubro) => ({
+                rubro: { equals: rubro, mode: "insensitive" as const },
+              })),
             },
-          ],
-        },
-      ],
-    },
+          },
+        ],
+      },
+    ],
   };
 }

@@ -13,13 +13,13 @@ export type StockReportEntry = {
   submittedBy: string | null;
   customer: { code: string; name: string };
   lines: Array<{
-    stockItemId: string;
+    productId: string;
     qty: number;
-    stockItem: {
+    unit: string;
+    product: {
       code: string;
       name: string;
       rubro: string | null;
-      unit: string;
     };
   }>;
 };
@@ -110,17 +110,17 @@ export function AdminStockReports({
                     <ul className="space-y-1 text-sm">
                       {e.lines.map((l) => (
                         <li
-                          key={l.stockItemId}
+                          key={l.productId}
                           className="flex justify-between gap-3"
                         >
                           <span className="min-w-0 truncate">
-                            {l.stockItem.name}{" "}
+                            {l.product.name}{" "}
                             <span className="text-neutral-500">
-                              ({l.stockItem.code})
+                              ({l.product.code})
                             </span>
                           </span>
                           <span className="shrink-0 font-medium">
-                            {l.qty} {l.stockItem.unit}
+                            {l.qty} {l.unit}
                           </span>
                         </li>
                       ))}

@@ -434,7 +434,7 @@ async function main() {
     );
     const stock = await seedStockSampleData();
     console.log(
-      `Stock sample: catalog=${stock.catalog}, merma=${stock.mermaCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
+      `Stock sample: merma lines=${stock.mermaLines}, consumibles lines=${stock.consumableLines}, merma=${stock.mermaCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
     );
     return;
   }
@@ -445,7 +445,7 @@ async function main() {
   );
   const stock = await seedStockSampleData();
   console.log(
-    `Stock sample: catalog=${stock.catalog}, merma=${stock.mermaCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
+    `Stock sample: merma lines=${stock.mermaLines}, consumibles lines=${stock.consumableLines}, merma=${stock.mermaCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
   );
 }
 

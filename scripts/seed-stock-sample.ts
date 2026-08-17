@@ -19,7 +19,7 @@ async function main() {
   );
   const stock = await seedStockSampleData();
   console.log(
-    `Stock sample: catalog=${stock.catalog}, merma customer=${stock.mermaCustomer ?? "n/a"}, consumibles customer=${stock.consumableCustomer ?? "n/a"}`,
+    `Stock sample: merma lines=${stock.mermaLines}, consumibles lines=${stock.consumableLines}, merma customer=${stock.mermaCustomer ?? "n/a"}, consumibles customer=${stock.consumableCustomer ?? "n/a"}`,
   );
 }
 

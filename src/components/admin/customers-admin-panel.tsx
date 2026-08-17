@@ -122,7 +122,10 @@ export function CustomersAdminPanel({
         <CustomerAdminForm
           key={editing?.id ?? "new"}
           priceLists={priceLists}
-          onCancel={creating ? () => setCreating(false) : undefined}
+          onCancel={() => {
+            setCreating(false);
+            setEditingId(null);
+          }}
           customer={
             editing
               ? {

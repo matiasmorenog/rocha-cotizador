@@ -34,7 +34,7 @@ export async function resolveCatalogAccess(
       return { ok: true, priceListId: customer.priceListId };
     }
     if (
-      staffHasPermission(session.user.role, "stockCatalog") ||
+      staffHasPermission(session.user.role, "stockReports") ||
       staffHasPermission(session.user.role, "products")
     ) {
       return { ok: true, priceListId: null };
@@ -47,7 +47,7 @@ export async function resolveCatalogAccess(
   }
 
   if (
-    staffHasPermission(session.user.role, "stockCatalog") ||
+    staffHasPermission(session.user.role, "stockReports") ||
     staffHasPermission(session.user.role, "products")
   ) {
     return { ok: true, priceListId: null };

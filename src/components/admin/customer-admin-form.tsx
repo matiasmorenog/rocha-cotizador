@@ -37,7 +37,7 @@ export function CustomerAdminForm({
 }: {
   customer?: CustomerRow;
   priceLists: PriceListOption[];
-  /** Create mode: dismiss form without saving. */
+  /** Dismiss form without saving (create or edit). */
   onCancel?: () => void;
 }) {
   const router = useRouter();
@@ -246,7 +246,7 @@ export function CustomerAdminForm({
         <Button type="submit" disabled={loading}>
           {loading ? "Guardando…" : customer ? "Actualizar cliente" : "Crear cliente"}
         </Button>
-        {!isEdit && onCancel ? (
+        {onCancel ? (
           <Button
             type="button"
             variant="outline"

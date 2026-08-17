@@ -1,0 +1,160 @@
+import { Decimal } from "@prisma/client/runtime/library";
+import type { CustomerModule } from "@prisma/client";
+import { z } from "zod";
+import { customerHasModule } from "@/lib/customer-modules";
+import { db } from "@/lib/db";
+import { parseDateOnlyYmd } from "@/lib/delivery-date";
+import { productWhereForModule } from "@/lib/stock-rubros";
+import { coerceStockUnit } from "@/lib/stock-units";
+
+export const stockEntryLineSchema = z.object({
+  productId: z.string().min(1),
+  qty: z.number().positive(),
+  unit: z.string().min(1).max(32).optional(),
+});
+
+export const stockEntryBodySchema = z.object({
+  customerId: z.string().min(1),
+  entryDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  notes: z.string().max(500).optional(),
+  lines: z.array(stockEntryLineSchema).min(1),
+});
+
+export async function loadStockEntryForDate(
+  module: CustomerModule,
+  customerId: string,
+  entryDateYmd: string,
+) {
+  const entryDate = parseDateOnlyYmd(entryDateYmd);
+  if (!entryDate) return null;
+
+  if (module === "MERMAS") {
+    return db.mermaEntry.findUnique({
+      where: { customerId_entryDate: { customerId, entryDate } },
+      select: {
+        id: true,
+        notes: true,
+        lines: {
+          select: {
+            productId: true,
+            unit: true,
+            qty: true,
+            product: { select: { code: true, name: true, rubro: true } },
+          },
+        },
+      },
+    });
+  }
+
+  return db.consumableCount.findUnique({
+    where: { customerId_entryDate: { customerId, entryDate } },
+    select: {
+      id: true,
+      notes: true,
+      lines: {
+        select: {
+          productId: true,
+          unit: true,
+          qty: true,
+          product: { select: { code: true, name: true, rubro: true } },
+        },
+      },
+    },
+  });
+}
+
+export async function upsertStockEntry(
+  module: CustomerModule,
+  customerId: string,
+  body: z.infer<typeof stockEntryBodySchema>,
+  submittedBy: string | null,
+) {
+  if (!(await customerHasModule(customerId, module))) {
+    return { error: "Cliente sin módulo habilitado", status: 403 as const };
+  }
+
+  const entryDate = parseDateOnlyYmd(body.entryDate);
+  if (!entryDate) {
+    return { error: "Fecha inválida", status: 400 as const };
+  }
+
+  const productIds = body.lines.map((l) => l.productId);
+  const moduleFilter = productWhereForModule(
+    module === "MERMAS" ? "MERMAS" : "CONSUMABLES",
+  );
+  const validProducts = await db.product.findMany({
+    where: { id: { in: productIds }, ...moduleFilter },
+    select: { id: true },
+  });
+  if (validProducts.length !== productIds.length) {
+    return { error: "Hay productos inválidos en la carga", status: 400 as const };
+  }
+
+  const lineCreates = body.lines.map((l) => ({
+    productId: l.productId,
+    unit: coerceStockUnit(l.unit),
+    qty: new Decimal(l.qty),
+  }));
+
+  if (module === "MERMAS") {
+    const entry = await db.$transaction(async (tx) => {
+      const existing = await tx.mermaEntry.findUnique({
+        where: { customerId_entryDate: { customerId, entryDate } },
+        select: { id: true },
+      });
+      if (existing) {
+        await tx.mermaLine.deleteMany({ where: { entryId: existing.id } });
+        return tx.mermaEntry.update({
+          where: { id: existing.id },
+          data: {
+            notes: body.notes?.trim() || null,
+            submittedBy,
+            lines: { create: lineCreates },
+          },
+          select: { id: true },
+        });
+      }
+      return tx.mermaEntry.create({
+        data: {
+          customerId,
+          entryDate,
+          notes: body.notes?.trim() || null,
+          submittedBy,
+          lines: { create: lineCreates },
+        },
+        select: { id: true },
+      });
+    });
+    return { id: entry.id, ok: true as const };
+  }
+
+  const entry = await db.$transaction(async (tx) => {
+    const existing = await tx.consumableCount.findUnique({
+      where: { customerId_entryDate: { customerId, entryDate } },
+      select: { id: true },
+    });
+    if (existing) {
+      await tx.consumableCountLine.deleteMany({ where: { countId: existing.id } });
+      return tx.consumableCount.update({
+        where: { id: existing.id },
+        data: {
+          notes: body.notes?.trim() || null,
+          submittedBy,
+          lines: { create: lineCreates },
+        },
+        select: { id: true },
+      });
+    }
+    return tx.consumableCount.create({
+      data: {
+        customerId,
+        entryDate,
+        notes: body.notes?.trim() || null,
+        submittedBy,
+        lines: { create: lineCreates },
+      },
+      select: { id: true },
+    });
+  });
+  return { id: entry.id, ok: true as const };
+}

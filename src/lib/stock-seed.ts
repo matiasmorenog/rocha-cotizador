@@ -5,7 +5,7 @@ import {
 } from "@/lib/customer-modules";
 import type { StockUnit } from "@/lib/stock-units";
 import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
-import { stockItemWhereForModule } from "@/lib/stock-rubros";
+import { productWhereForModule } from "@/lib/stock-rubros";
 
 type SeedStockSpec = {
   /** Prefer exact Product.code when present. */
@@ -13,92 +13,77 @@ type SeedStockSpec = {
   /** Fallback: name contains (case-insensitive). */
   nameIncludes?: string;
   unit: StockUnit;
-  sortOrder: number;
 };
 
 /**
  * Real Product rows from Rocha catalog (dev Neon), not invented SKUs.
- * Module split (mermas vs consumibles) uses Product.rubro via stockItemWhereForModule.
+ * Module split (mermas vs consumibles) uses Product.rubro via productWhereForModule.
  */
 export const SAMPLE_STOCK_FROM_PRODUCTS: SeedStockSpec[] = [
   {
     code: "1902",
     nameIncludes: "LEVADURA",
     unit: "kg",
-    sortOrder: 10,
   },
   {
     code: "2401",
     nameIncludes: "BAGUETTE (CRUDO)",
     unit: "unid.",
-    sortOrder: 20,
   },
   {
     code: "2403",
     nameIncludes: "FLAUTITA (CRUDO)",
     unit: "unid.",
-    sortOrder: 30,
   },
   {
     code: "2409",
     nameIncludes: "CHIPS (CRUDO)",
     unit: "unid.",
-    sortOrder: 40,
   },
   {
     code: "0021",
     nameIncludes: "FLAUTA",
     unit: "unid.",
-    sortOrder: 10,
   },
   {
     code: "0020",
     nameIncludes: "FIGASA",
     unit: "unid.",
-    sortOrder: 20,
   },
   {
     code: "0064",
     nameIncludes: "HAMBURGUESA",
     unit: "unid.",
-    sortOrder: 30,
   },
   {
     code: "0502",
     nameIncludes: "FACTURAS DOCENA",
     unit: "docena",
-    sortOrder: 40,
   },
   {
     code: "0405",
     nameIncludes: "PREPIZZA INDIVIDUAL",
     unit: "unid.",
-    sortOrder: 50,
   },
   {
     code: "0129",
     nameIncludes: "FLAUTON",
     unit: "unid.",
-    sortOrder: 60,
   },
-  // Consumables stand-ins (INSUMOS / REGALO rubros preferred when present).
   {
     code: "1801",
     nameIncludes: "BOX CUMPLE GRANDE",
     unit: "unid.",
-    sortOrder: 10,
   },
   {
     code: "1802",
     nameIncludes: "BOX CUMPLE CHICO",
     unit: "unid.",
-    sortOrder: 20,
   },
   {
     code: "1210",
     nameIncludes: "BANDEJAS MASAS",
     unit: "bandeja",
-    sortOrder: 30,
   },
 ];
 
@@ -132,38 +117,50 @@ async function resolveProductId(spec: SeedStockSpec): Promise<string | null> {
   return null;
 }
 
-/** Wipe sample merma/consumible lines + all stock memberships (dev seed only). */
+async function resolveProductsForModule(
+  module: "MERMAS" | "CONSUMABLES",
+  limit: number,
+): Promise<Array<{ id: string; unit: StockUnit }>> {
+  const out: Array<{ id: string; unit: StockUnit }> = [];
+  const moduleFilter = productWhereForModule(module);
+
+  for (const spec of SAMPLE_STOCK_FROM_PRODUCTS) {
+    if (out.length >= limit) break;
+    const productId = await resolveProductId(spec);
+    if (!productId) continue;
+
+    const product = await db.product.findFirst({
+      where: { id: productId, ...moduleFilter },
+      select: { id: true },
+    });
+    if (!product) continue;
+
+    out.push({ id: product.id, unit: spec.unit });
+  }
+
+  if (out.length >= limit) return out;
+
+  const extras = await db.product.findMany({
+    where: moduleFilter,
+    orderBy: [{ rubro: "asc" }, { name: "asc" }],
+    take: limit - out.length,
+    select: { id: true },
+  });
+  for (const p of extras) {
+    if (out.some((row) => row.id === p.id)) continue;
+    out.push({ id: p.id, unit: "unid." });
+    if (out.length >= limit) break;
+  }
+
+  return out;
+}
+
+/** Wipe sample merma/consumible entries (dev seed only). */
 export async function clearStockSampleData(): Promise<void> {
   await db.mermaLine.deleteMany({});
   await db.consumableCountLine.deleteMany({});
   await db.mermaEntry.deleteMany({});
   await db.consumableCount.deleteMany({});
-  await db.stockItem.deleteMany({});
-}
-
-export async function seedStockCatalog(): Promise<{ upserted: number }> {
-  let upserted = 0;
-  for (const spec of SAMPLE_STOCK_FROM_PRODUCTS) {
-    const productId = await resolveProductId(spec);
-    if (!productId) continue;
-
-    await db.stockItem.upsert({
-      where: { productId },
-      create: {
-        productId,
-        unit: spec.unit,
-        active: true,
-        sortOrder: spec.sortOrder,
-      },
-      update: {
-        unit: spec.unit,
-        active: true,
-        sortOrder: spec.sortOrder,
-      },
-    });
-    upserted += 1;
-  }
-  return { upserted };
 }
 
 async function findFirstCustomerWithCode(
@@ -179,24 +176,23 @@ async function findFirstCustomerWithCode(
   return null;
 }
 
-/** Seed 1 sample MermaEntry + 1 ConsumableCount if customers/items exist. Idempotent. */
+/** Seed 1 sample MermaEntry + 1 ConsumableCount if customers/products exist. Idempotent. */
 export async function seedSampleStockEntries(): Promise<{
   merma: string | null;
   consumable: string | null;
+  mermaLines: number;
+  consumableLines: number;
 }> {
   const entryDate = parseYmdToDate(todayYmdAr());
   let merma: string | null = null;
   let consumable: string | null = null;
+  let mermaLines = 0;
+  let consumableLines = 0;
 
   const mermaCustomer = await findFirstCustomerWithCode(MERMAS_SEED_CODES);
   if (mermaCustomer) {
-    const mermaItems = await db.stockItem.findMany({
-      where: stockItemWhereForModule("MERMAS"),
-      orderBy: [{ sortOrder: "asc" }, { product: { name: "asc" } }],
-      take: 6,
-      select: { id: true },
-    });
-    if (mermaItems.length > 0) {
+    const products = await resolveProductsForModule("MERMAS", 6);
+    if (products.length > 0) {
       const qtys = [1.5, 0.5, 3, 2, 1, 0.25];
       await db.mermaEntry.deleteMany({
         where: { customerId: mermaCustomer.id, entryDate },
@@ -208,14 +204,16 @@ export async function seedSampleStockEntries(): Promise<{
           notes: "Carga de prueba (seed)",
           submittedBy: "seed",
           lines: {
-            create: mermaItems.map((item, i) => ({
-              stockItemId: item.id,
+            create: products.map((item, i) => ({
+              productId: item.id,
+              unit: item.unit,
               qty: qtys[i % qtys.length]!,
             })),
           },
         },
       });
       merma = mermaCustomer.code;
+      mermaLines = products.length;
     }
   }
 
@@ -223,13 +221,8 @@ export async function seedSampleStockEntries(): Promise<{
     CONSUMABLES_SEED_CODES,
   );
   if (consumableCustomer) {
-    const consumables = await db.stockItem.findMany({
-      where: stockItemWhereForModule("CONSUMABLES"),
-      orderBy: [{ sortOrder: "asc" }],
-      take: 5,
-      select: { id: true },
-    });
-    if (consumables.length > 0) {
+    const products = await resolveProductsForModule("CONSUMABLES", 5);
+    if (products.length > 0) {
       const qtys = [12, 8, 40, 2, 1];
       await db.consumableCount.deleteMany({
         where: { customerId: consumableCustomer.id, entryDate },
@@ -241,31 +234,33 @@ export async function seedSampleStockEntries(): Promise<{
           notes: "Conteo de prueba (seed)",
           submittedBy: "seed",
           lines: {
-            create: consumables.map((item, i) => ({
-              stockItemId: item.id,
+            create: products.map((item, i) => ({
+              productId: item.id,
+              unit: item.unit,
               qty: qtys[i % qtys.length]!,
             })),
           },
         },
       });
       consumable = consumableCustomer.code;
+      consumableLines = products.length;
     }
   }
 
-  return { merma, consumable };
+  return { merma, consumable, mermaLines, consumableLines };
 }
 
 export async function seedStockSampleData(): Promise<{
-  catalog: number;
+  mermaLines: number;
+  consumableLines: number;
   mermaCustomer: string | null;
   consumableCustomer: string | null;
 }> {
-  // Replace legacy free-text catalog + sample entries with Product-linked rows.
   await clearStockSampleData();
-  const { upserted } = await seedStockCatalog();
   const entries = await seedSampleStockEntries();
   return {
-    catalog: upserted,
+    mermaLines: entries.mermaLines,
+    consumableLines: entries.consumableLines,
     mermaCustomer: entries.merma,
     consumableCustomer: entries.consumable,
   };
