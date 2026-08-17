@@ -53,7 +53,8 @@ type CatalogSnapshot = {
   ready: boolean;
 };
 
-const CATALOG_REVALIDATE_MS = 60_000;
+/** Background ping while tab stays visible — version only, then full catalog if stale. */
+const CATALOG_VERSION_POLL_MS = 5 * 60 * 1000;
 
 function customerKey(customerId?: string): string {
   return customerId?.trim() || "self";
@@ -136,6 +137,20 @@ async function fetchCatalogJson(params: URLSearchParams) {
     version?: string;
     unitPrices?: Record<string, number>;
     products?: ProductBase[];
+  };
+  return { res, data };
+}
+
+async function fetchCatalogVersion(customerId?: string) {
+  const params = new URLSearchParams();
+  if (customerId) params.set("customerId", customerId);
+  const qs = params.toString();
+  const res = await fetch(
+    qs ? `/api/products/catalog/version?${qs}` : "/api/products/catalog/version",
+  );
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    version?: string;
   };
   return { res, data };
 }
@@ -410,10 +425,10 @@ export function useProductCatalog(
     }
 
     /** Coalesce concurrent kicks (visibility + focus, interval overlap). */
-    function kickRevalidate() {
+    function kick(task: () => Promise<void>) {
       if (cancelled) return;
       if (loadPromiseRef.current) return;
-      const run = revalidate().then(
+      const run = task().then(
         () => undefined,
         () => undefined,
       );
@@ -423,6 +438,35 @@ export function useProductCatalog(
           loadPromiseRef.current = null;
         }
       });
+    }
+
+    async function pingVersionThenRefresh() {
+      const cached = readCachedCatalog();
+      const known =
+        snapshotRef.current.version ??
+        (cached && cached.products.length > 0 ? cached.version : null);
+      if (!known) {
+        await revalidate();
+        return;
+      }
+      try {
+        const { res, data } = await fetchCatalogVersion(opts.customerId);
+        if (cancelled) return;
+        if (!res.ok || !data.version) return;
+        if (data.version !== known) {
+          await revalidate();
+        }
+      } catch {
+        // Keep serving local catalog.
+      }
+    }
+
+    function kickRevalidate() {
+      kick(revalidate);
+    }
+
+    function kickVersionCheck() {
+      kick(pingVersionThenRefresh);
     }
 
     function stopInterval() {
@@ -436,14 +480,14 @@ export function useProductCatalog(
       if (intervalId != null) return;
       intervalId = setInterval(() => {
         if (typeof document !== "undefined" && document.hidden) return;
-        kickRevalidate();
-      }, CATALOG_REVALIDATE_MS);
+        kickVersionCheck();
+      }, CATALOG_VERSION_POLL_MS);
     }
 
     function onVisibilityChange() {
       if (typeof document === "undefined") return;
       if (document.visibilityState === "visible") {
-        kickRevalidate();
+        kickVersionCheck();
         startInterval();
       } else {
         stopInterval();
@@ -451,14 +495,12 @@ export function useProductCatalog(
     }
 
     function onFocus() {
-      // Dedupe with visibilitychange via loadPromiseRef coalesce.
-      kickRevalidate();
+      kickVersionCheck();
     }
 
     function onPageShow(event: PageTransitionEvent) {
-      // bfcache restore (and any pageshow) — mount effect may not re-run.
       if (event.persisted) {
-        kickRevalidate();
+        kickVersionCheck();
       }
     }
 
