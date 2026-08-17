@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { ProductAdminTable } from "@/components/admin/product-admin-table";
 import { ExcelSyncPanel } from "@/components/admin/excel-sync-panel";
 import { sortPriceListsForDisplay } from "@/lib/pricing";
+import { uniqRubrosFromProducts } from "@/lib/stock-rubros";
 
 export default async function AdminProductosPage() {
   await requireStaffPermission("products");
@@ -44,6 +45,9 @@ export default async function AdminProductosPage() {
     ),
   }));
 
+  // Tipo options = uniq from the same product list (no extra DISTINCT query).
+  const rubros = uniqRubrosFromProducts(products);
+
   return (
     <div className="space-y-6">
       <div>
@@ -61,7 +65,11 @@ export default async function AdminProductosPage() {
         entityLabel="productos"
       />
 
-      <ProductAdminTable products={tableRows} priceLists={orderedLists} />
+      <ProductAdminTable
+        products={tableRows}
+        priceLists={orderedLists}
+        rubros={rubros}
+      />
     </div>
   );
 }

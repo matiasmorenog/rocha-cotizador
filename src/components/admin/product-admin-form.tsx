@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { ProductTipoField } from "@/components/admin/product-tipo-field";
 import { parseArNumber } from "@/lib/utils";
 
 export type PriceListOption = {
@@ -19,7 +20,13 @@ export type PriceListOption = {
 };
 
 /** Compact create-only form. Edits (incl. list prices) happen inline in ProductAdminTable. */
-export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
+export function ProductAdminForm({
+  rubros,
+  onCancel,
+}: {
+  rubros: string[];
+  onCancel: () => void;
+}) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -51,6 +58,7 @@ export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
         code,
         name,
         rubro,
+        knownRubros: rubros,
         basePrice: price,
         active,
         allowsUnitOrder,
@@ -95,10 +103,7 @@ export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
             required
           />
         </div>
-        <div className="space-y-1">
-          <Label>Rubro</Label>
-          <Input value={rubro} onChange={(e) => setRubro(e.target.value)} />
-        </div>
+        <ProductTipoField rubros={rubros} value={rubro} onChange={setRubro} />
         <div className="space-y-1">
           <Label>Precio base</Label>
           <ArNumberInput

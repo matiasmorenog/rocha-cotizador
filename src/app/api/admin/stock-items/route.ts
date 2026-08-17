@@ -7,14 +7,13 @@ import {
   serializeStockItem,
   stockItemListSelect,
 } from "@/lib/stock-item-serialize";
+import { listDistinctProductRubros } from "@/lib/stock-rubros";
 
-const kindSchema = z.enum(["RAW_MATERIAL", "BREAD", "CONSUMABLE"]);
 const unitSchema = z.enum(STOCK_UNITS);
 
 const upsertSchema = z.object({
   id: z.string().min(1).optional(),
   productId: z.string().min(1),
-  kind: kindSchema,
   unit: unitSchema.default(DEFAULT_STOCK_UNIT),
   active: z.boolean().optional().default(true),
   sortOrder: z.number().int().optional().default(0),
@@ -25,24 +24,30 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const kind = req.nextUrl.searchParams.get("kind");
-  const kindFilter =
-    kind && kindSchema.safeParse(kind).success
-      ? (kind as z.infer<typeof kindSchema>)
-      : undefined;
+  const rubro = (req.nextUrl.searchParams.get("rubro") ?? "").trim();
 
-  const items = await db.stockItem.findMany({
-    where: kindFilter ? { kind: kindFilter } : undefined,
-    orderBy: [
-      { kind: "asc" },
-      { sortOrder: "asc" },
-      { product: { name: "asc" } },
-    ],
-    select: stockItemListSelect,
-  });
+  const [items, rubros] = await Promise.all([
+    db.stockItem.findMany({
+      where: rubro
+        ? {
+            product: {
+              rubro: { equals: rubro, mode: "insensitive" },
+            },
+          }
+        : undefined,
+      orderBy: [
+        { product: { rubro: "asc" } },
+        { sortOrder: "asc" },
+        { product: { name: "asc" } },
+      ],
+      select: stockItemListSelect,
+    }),
+    listDistinctProductRubros(),
+  ]);
 
   return NextResponse.json({
     items: items.map(serializeStockItem),
+    rubros,
   });
 }
 
@@ -85,7 +90,6 @@ export async function POST(req: NextRequest) {
     const item = await db.stockItem.update({
       where: { id: parsed.data.id },
       data: {
-        kind: parsed.data.kind,
         unit: parsed.data.unit,
         active: parsed.data.active,
         sortOrder: parsed.data.sortOrder,
@@ -109,7 +113,6 @@ export async function POST(req: NextRequest) {
   const item = await db.stockItem.create({
     data: {
       productId: parsed.data.productId,
-      kind: parsed.data.kind,
       unit: parsed.data.unit,
       active: parsed.data.active,
       sortOrder: parsed.data.sortOrder,

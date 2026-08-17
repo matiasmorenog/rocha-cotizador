@@ -10,7 +10,7 @@ type CatalogItem = {
   id: string;
   code: string;
   name: string;
-  kind: string;
+  rubro: string | null;
   unit: string;
 };
 
@@ -62,12 +62,13 @@ export function StockCountForm({
   const [message, setMessage] = useState<string | null>(null);
   const [loadingDate, setLoadingDate] = useState(false);
 
-  const kindGroups = useMemo(() => {
+  const rubroGroups = useMemo(() => {
     const map = new Map<string, CatalogItem[]>();
     for (const item of items) {
-      const list = map.get(item.kind) ?? [];
+      const key = (item.rubro ?? "").trim() || "Sin tipo";
+      const list = map.get(key) ?? [];
       list.push(item);
-      map.set(item.kind, list);
+      map.set(key, list);
     }
     return [...map.entries()];
   }, [items]);
@@ -146,14 +147,10 @@ export function StockCountForm({
           listado.
         </p>
       ) : (
-        kindGroups.map(([kind, group]) => (
-          <section key={kind} className="space-y-2">
+        rubroGroups.map(([rubro, group]) => (
+          <section key={rubro} className="space-y-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-neutral-500">
-              {kind === "RAW_MATERIAL"
-                ? "Materia prima"
-                : kind === "BREAD"
-                  ? "Pan"
-                  : "Ítems"}
+              {rubro}
             </h2>
             <div className="divide-y divide-neutral-100 rounded-lg border border-neutral-200 bg-white">
               {group.map((item) => (

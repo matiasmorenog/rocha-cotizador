@@ -9,6 +9,7 @@ import {
   serializeStockItem,
   stockItemListSelect,
 } from "@/lib/stock-item-serialize";
+import { stockItemWhereForModule } from "@/lib/stock-rubros";
 
 const lineSchema = z.object({
   stockItemId: z.string().min(1),
@@ -45,12 +46,9 @@ export async function GET(req: NextRequest) {
     entryOnly
       ? Promise.resolve([])
       : db.stockItem.findMany({
-          where: {
-            active: true,
-            kind: { in: ["RAW_MATERIAL", "BREAD"] },
-          },
+          where: stockItemWhereForModule("MERMAS"),
           orderBy: [
-            { kind: "asc" },
+            { product: { rubro: "asc" } },
             { sortOrder: "asc" },
             { product: { name: "asc" } },
           ],
@@ -85,7 +83,7 @@ export async function GET(req: NextRequest) {
             id: row.id,
             code: row.code,
             name: row.name,
-            kind: row.kind,
+            rubro: row.rubro,
             unit: row.unit,
           };
         }),
@@ -140,8 +138,7 @@ export async function POST(req: NextRequest) {
   const validItems = await db.stockItem.findMany({
     where: {
       id: { in: itemIds },
-      active: true,
-      kind: { in: ["RAW_MATERIAL", "BREAD"] },
+      ...stockItemWhereForModule("MERMAS"),
     },
     select: { id: true },
   });

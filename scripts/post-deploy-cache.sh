@@ -14,7 +14,7 @@ if [[ -z "${VERCEL_ORG_ID:-}" || -z "${VERCEL_PROJECT_ID:-}" ]]; then
 fi
 
 # Keep in sync with src/lib/cache-tags.ts CACHE_TAGS.
-TAGS="products,price-lists,customers,admin-dashboard"
+TAGS="products,price-lists,customers,admin-dashboard,product-rubros"
 # New mark + leftover optimizer entries from the old path.
 SRCIMGS=(
   /brand/rocha-mark.png

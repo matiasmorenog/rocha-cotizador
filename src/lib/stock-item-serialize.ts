@@ -1,11 +1,8 @@
 /** Shared StockItem ↔ Product projection for APIs and admin/customer UI. */
 
-import type { StockItemKind } from "@prisma/client";
-
 export const stockItemListSelect = {
   id: true,
   productId: true,
-  kind: true,
   unit: true,
   active: true,
   sortOrder: true,
@@ -21,15 +18,13 @@ export const stockItemListSelect = {
 } as const;
 
 export const stockItemReportSelect = {
-  kind: true,
   unit: true,
-  product: { select: { code: true, name: true } },
+  product: { select: { code: true, name: true, rubro: true } },
 } as const;
 
 type StockItemListRow = {
   id: string;
   productId: string;
-  kind: StockItemKind;
   unit: string;
   active: boolean;
   sortOrder: number;
@@ -43,9 +38,8 @@ type StockItemListRow = {
 };
 
 type StockItemReportRow = {
-  kind: StockItemKind;
   unit: string;
-  product: { code: string; name: string };
+  product: { code: string; name: string; rubro: string | null };
 };
 
 export function serializeStockItem(item: StockItemListRow): {
@@ -53,8 +47,8 @@ export function serializeStockItem(item: StockItemListRow): {
   productId: string;
   code: string;
   name: string;
+  /** Tipo = Product.rubro */
   rubro: string | null;
-  kind: StockItemKind;
   unit: string;
   active: boolean;
   sortOrder: number;
@@ -72,7 +66,6 @@ export function serializeStockItem(item: StockItemListRow): {
     code: item.product.code,
     name: item.product.name,
     rubro: item.product.rubro,
-    kind: item.kind,
     unit: item.unit,
     active: item.active,
     sortOrder: item.sortOrder,
@@ -90,7 +83,7 @@ export function serializeStockItemReport(item: StockItemReportRow) {
   return {
     code: item.product.code,
     name: item.product.name,
-    kind: item.kind,
+    rubro: item.product.rubro,
     unit: item.unit,
   };
 }

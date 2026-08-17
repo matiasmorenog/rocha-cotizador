@@ -19,7 +19,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ products: [] });
   }
 
-  const products = await searchActiveProductsBase(q, 30);
+  const productsRaw = await searchActiveProductsBase(q, 40);
+  const rubroFilter = (req.nextUrl.searchParams.get("rubro") ?? "").trim();
+  const products = rubroFilter
+    ? productsRaw.filter(
+        (p) =>
+          (p.rubro ?? "").trim().toLowerCase() === rubroFilter.toLowerCase(),
+      )
+    : productsRaw;
 
   let priceListId: string | null = null;
 

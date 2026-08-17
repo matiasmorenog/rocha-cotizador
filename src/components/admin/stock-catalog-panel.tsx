@@ -18,7 +18,6 @@ import {
   type StockUnit,
 } from "@/lib/stock-units";
 import { cn } from "@/lib/utils";
-import type { StockItemKind } from "@prisma/client";
 
 type StockItem = {
   id: string;
@@ -26,34 +25,33 @@ type StockItem = {
   code: string;
   name: string;
   rubro: string | null;
-  kind: StockItemKind;
   unit: string;
   active: boolean;
   sortOrder: number;
 };
 
-const KIND_LABELS: Record<StockItemKind, string> = {
-  RAW_MATERIAL: "Materia prima",
-  BREAD: "Pan",
-  CONSUMABLE: "Consumible",
-};
-
-const KINDS: StockItemKind[] = ["RAW_MATERIAL", "BREAD", "CONSUMABLE"];
-
-export function StockCatalogPanel({ items: initial }: { items: StockItem[] }) {
+export function StockCatalogPanel({
+  items: initial,
+  rubros: rubrosProp,
+}: {
+  items: StockItem[];
+  /** Tipo options — kept in memory for this mount; no client refetch. */
+  rubros: string[];
+}) {
   const router = useRouter();
   const [items, setItems] = useState(initial);
-  const [kindFilter, setKindFilter] = useState<StockItemKind | "ALL">("ALL");
+  const [rubros] = useState(rubrosProp);
+  const [rubroFilter, setRubroFilter] = useState<string>("ALL");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
 
-  const filtered = useMemo(
-    () =>
-      kindFilter === "ALL"
-        ? items
-        : items.filter((i) => i.kind === kindFilter),
-    [items, kindFilter],
-  );
+  const filtered = useMemo(() => {
+    if (rubroFilter === "ALL") return items;
+    return items.filter(
+      (i) =>
+        (i.rubro ?? "").trim().toLowerCase() === rubroFilter.toLowerCase(),
+    );
+  }, [items, rubroFilter]);
 
   const editing = items.find((i) => i.id === editingId);
 
@@ -65,15 +63,14 @@ export function StockCatalogPanel({ items: initial }: { items: StockItem[] }) {
             "h-10 rounded-md border border-neutral-200 bg-white px-3 text-sm",
             FOCUS_BRAND_BORDER,
           )}
-          value={kindFilter}
-          onChange={(e) =>
-            setKindFilter(e.target.value as StockItemKind | "ALL")
-          }
+          value={rubroFilter}
+          onChange={(e) => setRubroFilter(e.target.value)}
+          aria-label="Filtrar por tipo"
         >
-          <option value="ALL">Todos</option>
-          {KINDS.map((k) => (
-            <option key={k} value={k}>
-              {KIND_LABELS[k]}
+          <option value="ALL">Todos los tipos</option>
+          {rubros.map((r) => (
+            <option key={r} value={r}>
+              {r}
             </option>
           ))}
         </select>
@@ -92,7 +89,8 @@ export function StockCatalogPanel({ items: initial }: { items: StockItem[] }) {
         <StockItemForm
           key={editing?.id ?? "new"}
           item={editing}
-          defaultKind={kindFilter === "ALL" ? "BREAD" : kindFilter}
+          rubros={rubros}
+          defaultRubro={rubroFilter === "ALL" ? "" : rubroFilter}
           onCancel={() => {
             setCreating(false);
             setEditingId(null);
@@ -145,7 +143,7 @@ export function StockCatalogPanel({ items: initial }: { items: StockItem[] }) {
                 >
                   <td className="px-3 py-2 font-mono text-xs">{i.code}</td>
                   <td className="px-3 py-2">{i.name}</td>
-                  <td className="px-3 py-2">{KIND_LABELS[i.kind]}</td>
+                  <td className="px-3 py-2">{i.rubro ?? "—"}</td>
                   <td className="px-3 py-2">{i.unit}</td>
                   <td className="px-3 py-2">
                     {i.active ? "Activo" : "Inactivo"}
@@ -174,15 +172,20 @@ export function StockCatalogPanel({ items: initial }: { items: StockItem[] }) {
 
 function StockItemForm({
   item,
-  defaultKind,
+  rubros,
+  defaultRubro,
   onCancel,
   onSaved,
 }: {
   item?: StockItem;
-  defaultKind: StockItemKind;
+  rubros: string[];
+  defaultRubro: string;
   onCancel: () => void;
   onSaved: (item: StockItem) => void;
 }) {
+  const [tipo, setTipo] = useState(
+    item?.rubro ?? defaultRubro ?? rubros[0] ?? "",
+  );
   const [product, setProduct] = useState<PickedProduct | null>(
     item
       ? {
@@ -193,7 +196,6 @@ function StockItemForm({
         }
       : null,
   );
-  const [kind, setKind] = useState<StockItemKind>(item?.kind ?? defaultKind);
   const [unit, setUnit] = useState<StockUnit>(
     coerceStockUnit(item?.unit ?? DEFAULT_STOCK_UNIT),
   );
@@ -201,6 +203,18 @@ function StockItemForm({
   const [active, setActive] = useState(item?.active ?? true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function onTipoChange(next: string) {
+    setTipo(next);
+    if (product && (product.rubro ?? "") !== next) {
+      setProduct(null);
+    }
+  }
+
+  function onProductChange(p: PickedProduct | null) {
+    setProduct(p);
+    if (p?.rubro) setTipo(p.rubro);
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -216,7 +230,6 @@ function StockItemForm({
       body: JSON.stringify({
         id: item?.id,
         productId: product.id,
-        kind,
         unit,
         active,
         sortOrder: Number(sortOrder) || 0,
@@ -239,10 +252,37 @@ function StockItemForm({
       <p className="text-sm font-medium text-neutral-800">
         {item ? "Editar membresía de stock" : "Agregar producto al stock"}
       </p>
+      <div className="space-y-1">
+        <Label>Tipo</Label>
+        <select
+          className={cn(
+            "h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm",
+            FOCUS_BRAND_BORDER,
+          )}
+          value={tipo}
+          onChange={(e) => onTipoChange(e.target.value)}
+          disabled={Boolean(item)}
+          required={!item}
+        >
+          <option value="" disabled>
+            Elegí un tipo…
+          </option>
+          {rubros.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+        <p className="text-xs text-neutral-500">
+          Tipos = valores únicos de la columna tipo/rubro del catálogo de
+          productos.
+        </p>
+      </div>
       <AdminProductPicker
         value={product}
-        onChange={setProduct}
+        onChange={onProductChange}
         disabled={Boolean(item)}
+        rubroFilter={item ? null : tipo || null}
       />
       {item ? (
         <p className="text-xs text-neutral-500">
@@ -251,23 +291,6 @@ function StockItemForm({
         </p>
       ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label>Tipo</Label>
-          <select
-            className={cn(
-              "h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm",
-              FOCUS_BRAND_BORDER,
-            )}
-            value={kind}
-            onChange={(e) => setKind(e.target.value as StockItemKind)}
-          >
-            {KINDS.map((k) => (
-              <option key={k} value={k}>
-                {KIND_LABELS[k]}
-              </option>
-            ))}
-          </select>
-        </div>
         <div className="space-y-1">
           <Label>Unidad</Label>
           <select

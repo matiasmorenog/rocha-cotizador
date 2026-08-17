@@ -18,7 +18,7 @@ export type StockReportEntry = {
     stockItem: {
       code: string;
       name: string;
-      kind: string;
+      rubro: string | null;
       unit: string;
     };
   }>;

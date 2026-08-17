@@ -1,4 +1,3 @@
-import type { StockItemKind } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
   CONSUMABLES_SEED_CODES,
@@ -6,114 +5,98 @@ import {
 } from "@/lib/customer-modules";
 import type { StockUnit } from "@/lib/stock-units";
 import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
+import { stockItemWhereForModule } from "@/lib/stock-rubros";
 
 type SeedStockSpec = {
   /** Prefer exact Product.code when present. */
   code?: string;
   /** Fallback: name contains (case-insensitive). */
   nameIncludes?: string;
-  kind: StockItemKind;
   unit: StockUnit;
   sortOrder: number;
 };
 
 /**
  * Real Product rows from Rocha catalog (dev Neon), not invented SKUs.
- * Consumables: no napkin/film SKUs — packaging/regalo stand-ins for demo.
+ * Module split (mermas vs consumibles) uses Product.rubro via stockItemWhereForModule.
  */
 export const SAMPLE_STOCK_FROM_PRODUCTS: SeedStockSpec[] = [
-  // RAW — insumos + masa cruda
   {
     code: "1902",
     nameIncludes: "LEVADURA",
-    kind: "RAW_MATERIAL",
     unit: "kg",
     sortOrder: 10,
   },
   {
     code: "2401",
     nameIncludes: "BAGUETTE (CRUDO)",
-    kind: "RAW_MATERIAL",
     unit: "unid.",
     sortOrder: 20,
   },
   {
     code: "2403",
     nameIncludes: "FLAUTITA (CRUDO)",
-    kind: "RAW_MATERIAL",
     unit: "unid.",
     sortOrder: 30,
   },
   {
     code: "2409",
     nameIncludes: "CHIPS (CRUDO)",
-    kind: "RAW_MATERIAL",
     unit: "unid.",
     sortOrder: 40,
   },
-  // BREAD
   {
     code: "0021",
     nameIncludes: "FLAUTA",
-    kind: "BREAD",
     unit: "unid.",
     sortOrder: 10,
   },
   {
     code: "0020",
     nameIncludes: "FIGASA",
-    kind: "BREAD",
     unit: "unid.",
     sortOrder: 20,
   },
   {
     code: "0064",
     nameIncludes: "HAMBURGUESA",
-    kind: "BREAD",
     unit: "unid.",
     sortOrder: 30,
   },
   {
     code: "0502",
     nameIncludes: "FACTURAS DOCENA",
-    kind: "BREAD",
     unit: "docena",
     sortOrder: 40,
   },
   {
     code: "0405",
     nameIncludes: "PREPIZZA INDIVIDUAL",
-    kind: "BREAD",
     unit: "unid.",
     sortOrder: 50,
   },
   {
     code: "0129",
     nameIncludes: "FLAUTON",
-    kind: "BREAD",
     unit: "unid.",
     sortOrder: 60,
   },
-  // CONSUMABLE — no napkin/film SKUs in catalog; packaging/regalo stand-ins.
-  // Admin can replace via product search.
+  // Consumables stand-ins (INSUMOS / REGALO rubros preferred when present).
   {
     code: "1801",
     nameIncludes: "BOX CUMPLE GRANDE",
-    kind: "CONSUMABLE",
     unit: "unid.",
     sortOrder: 10,
   },
   {
     code: "1802",
     nameIncludes: "BOX CUMPLE CHICO",
-    kind: "CONSUMABLE",
     unit: "unid.",
     sortOrder: 20,
   },
   {
     code: "1210",
     nameIncludes: "BANDEJAS MASAS",
-    kind: "CONSUMABLE",
     unit: "bandeja",
     sortOrder: 30,
   },
@@ -168,13 +151,11 @@ export async function seedStockCatalog(): Promise<{ upserted: number }> {
       where: { productId },
       create: {
         productId,
-        kind: spec.kind,
         unit: spec.unit,
         active: true,
         sortOrder: spec.sortOrder,
       },
       update: {
-        kind: spec.kind,
         unit: spec.unit,
         active: true,
         sortOrder: spec.sortOrder,
@@ -209,13 +190,13 @@ export async function seedSampleStockEntries(): Promise<{
 
   const mermaCustomer = await findFirstCustomerWithCode(MERMAS_SEED_CODES);
   if (mermaCustomer) {
-    const rawBread = await db.stockItem.findMany({
-      where: { active: true, kind: { in: ["RAW_MATERIAL", "BREAD"] } },
-      orderBy: [{ kind: "asc" }, { sortOrder: "asc" }],
+    const mermaItems = await db.stockItem.findMany({
+      where: stockItemWhereForModule("MERMAS"),
+      orderBy: [{ sortOrder: "asc" }, { product: { name: "asc" } }],
       take: 6,
       select: { id: true },
     });
-    if (rawBread.length > 0) {
+    if (mermaItems.length > 0) {
       const qtys = [1.5, 0.5, 3, 2, 1, 0.25];
       await db.mermaEntry.deleteMany({
         where: { customerId: mermaCustomer.id, entryDate },
@@ -227,7 +208,7 @@ export async function seedSampleStockEntries(): Promise<{
           notes: "Carga de prueba (seed)",
           submittedBy: "seed",
           lines: {
-            create: rawBread.map((item, i) => ({
+            create: mermaItems.map((item, i) => ({
               stockItemId: item.id,
               qty: qtys[i % qtys.length]!,
             })),
@@ -243,7 +224,7 @@ export async function seedSampleStockEntries(): Promise<{
   );
   if (consumableCustomer) {
     const consumables = await db.stockItem.findMany({
-      where: { active: true, kind: "CONSUMABLE" },
+      where: stockItemWhereForModule("CONSUMABLES"),
       orderBy: [{ sortOrder: "asc" }],
       take: 5,
       select: { id: true },

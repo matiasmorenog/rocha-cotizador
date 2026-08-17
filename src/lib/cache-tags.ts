@@ -8,6 +8,8 @@ export const CACHE_TAGS = {
   /** customerId → priceListId mapping (not unit prices). */
   customers: "customers",
   adminDashboard: "admin-dashboard",
+  /** DISTINCT Product.rubro (Tipo). Expire only when a new rubro string is saved. */
+  productRubros: "product-rubros",
 } as const;
 
 /**
@@ -32,6 +34,11 @@ export function invalidateCustomersCache() {
 
 export function invalidateAdminDashboardCache() {
   expireTag(CACHE_TAGS.adminDashboard);
+}
+
+/** Only after a brand-new Product.rubro value is persisted (not every product mutate). */
+export function invalidateProductRubrosCache() {
+  expireTag(CACHE_TAGS.productRubros);
 }
 
 /**

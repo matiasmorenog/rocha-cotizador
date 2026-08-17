@@ -5,18 +5,22 @@ import {
   serializeStockItem,
   stockItemListSelect,
 } from "@/lib/stock-item-serialize";
+import { listDistinctProductRubros } from "@/lib/stock-rubros";
 
 export default async function AdminStockPage() {
   await requireStaffPermission("stockCatalog");
 
-  const rows = await db.stockItem.findMany({
-    orderBy: [
-      { kind: "asc" },
-      { sortOrder: "asc" },
-      { product: { name: "asc" } },
-    ],
-    select: stockItemListSelect,
-  });
+  const [rows, rubros] = await Promise.all([
+    db.stockItem.findMany({
+      orderBy: [
+        { product: { rubro: "asc" } },
+        { sortOrder: "asc" },
+        { product: { name: "asc" } },
+      ],
+      select: stockItemListSelect,
+    }),
+    listDistinctProductRubros(),
+  ]);
 
   const items = rows.map(serializeStockItem);
 
@@ -27,11 +31,11 @@ export default async function AdminStockPage() {
           Catálogo de stock
         </h1>
         <p className="text-sm text-neutral-600">
-          Ítems del catálogo de productos para mermas (pan / materia prima) y
-          recuento de consumibles. Buscá por código o nombre.
+          Productos del catálogo para mermas y consumibles. Tipo = rubro del
+          producto. Buscá por código o nombre.
         </p>
       </div>
-      <StockCatalogPanel items={items} />
+      <StockCatalogPanel items={items} rubros={rubros} />
     </div>
   );
 }

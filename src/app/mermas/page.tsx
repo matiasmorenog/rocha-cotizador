@@ -7,6 +7,7 @@ import {
   serializeStockItem,
   stockItemListSelect,
 } from "@/lib/stock-item-serialize";
+import { stockItemWhereForModule } from "@/lib/stock-rubros";
 
 function todayYmd() {
   const d = new Date();
@@ -29,12 +30,9 @@ export default async function CustomerMermasPage() {
 
   const [rows, entry] = await Promise.all([
     db.stockItem.findMany({
-      where: {
-        active: true,
-        kind: { in: ["RAW_MATERIAL", "BREAD"] },
-      },
+      where: stockItemWhereForModule("MERMAS"),
       orderBy: [
-        { kind: "asc" },
+        { product: { rubro: "asc" } },
         { sortOrder: "asc" },
         { product: { name: "asc" } },
       ],
@@ -63,7 +61,7 @@ export default async function CustomerMermasPage() {
           id: i.id,
           code: i.code,
           name: i.name,
-          kind: i.kind,
+          rubro: i.rubro,
           unit: i.unit,
         }))}
         initialDate={date}

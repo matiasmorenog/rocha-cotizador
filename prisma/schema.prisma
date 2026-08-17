@@ -16,22 +16,16 @@ enum UserRole {
   CUSTOMER
 }
 
-enum QuoteStatus {
-  DRAFT
-  SUBMITTED
-  CONFIRMED
-}
-
 /// Opt-in product modules per customer / branch.
 enum CustomerModule {
   MERMAS
   CONSUMABLES
 }
 
-enum StockItemKind {
-  RAW_MATERIAL
-  BREAD
-  CONSUMABLE
+enum QuoteStatus {
+  DRAFT
+  SUBMITTED
+  CONFIRMED
 }
 
 model User {
@@ -217,23 +211,22 @@ model BusinessSettings {
   updatedAt           DateTime @updatedAt
 }
 
-/// Catalog for mermas (RAW/BREAD) and consumables stock counts.
-/// Code/name come from linked Product (admin picks via product search).
+/// Catalog membership: Product SKUs used in mermas / consumibles forms.
+/// Tipo = Product.rubro (distinct values from the product list).
 model StockItem {
-  id        String        @id @default(cuid())
-  productId String        @unique
-  product   Product       @relation(fields: [productId], references: [id], onDelete: Restrict)
-  kind      StockItemKind
+  id        String   @id @default(cuid())
+  productId String   @unique
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
   /// Display unit: kg, unid., lata, etc.
-  unit      String        @default("unid.")
-  active    Boolean       @default(true)
-  sortOrder Int           @default(0)
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  mermaLines            MermaLine[]
-  consumableCountLines  ConsumableCountLine[]
+  unit      String   @default("unid.")
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  mermaLines           MermaLine[]
+  consumableCountLines ConsumableCountLine[]
 
-  @@index([kind, active, sortOrder])
+  @@index([active, sortOrder])
 }
 
 /// End-of-day waste / merma submission per customer.

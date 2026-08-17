@@ -31,6 +31,8 @@ type AdminProductPickerProps = {
   onChange: (product: PickedProduct | null) => void;
   /** Disable when editing an existing stock membership (product is fixed). */
   disabled?: boolean;
+  /** Limit search hits to this Product.rubro (Tipo). */
+  rubroFilter?: string | null;
   label?: string;
   id?: string;
 };
@@ -43,6 +45,7 @@ export function AdminProductPicker({
   value,
   onChange,
   disabled = false,
+  rubroFilter = null,
   label = "Producto",
   id = "admin-product-search",
 }: AdminProductPickerProps) {
@@ -125,9 +128,16 @@ export function AdminProductPicker({
     debounceRef.current = setTimeout(() => {
       const ac = new AbortController();
       abortRef.current = ac;
-      void fetch(`/api/products/search?q=${encodeURIComponent(q)}`, {
-        signal: ac.signal,
-      })
+      void fetch(
+        `/api/products/search?q=${encodeURIComponent(q)}${
+          rubroFilter
+            ? `&rubro=${encodeURIComponent(rubroFilter)}`
+            : ""
+        }`,
+        {
+          signal: ac.signal,
+        },
+      )
         .then(async (res) => {
           const data = await res.json().catch(() => ({}));
           if (idNow !== requestId.current) return;
