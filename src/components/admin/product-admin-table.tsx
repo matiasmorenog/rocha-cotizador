@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { cn, formatArInput, formatPrice, parseArNumber } from "@/lib/utils";
+import { notifyCatalogStale } from "@/lib/client-catalog-cache";
 import { filterFoldedSearch } from "@/lib/search-fold";
 import {
   INCREMENTAL_REVEAL_INITIAL,
@@ -152,6 +153,7 @@ function ProductEditRow({
       setError(data.error ?? "Error al guardar");
       return;
     }
+    notifyCatalogStale();
     onCancel();
     router.refresh();
   }
