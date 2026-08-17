@@ -5,7 +5,10 @@ import { customerHasModule } from "@/lib/customer-modules";
 import { db } from "@/lib/db";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
 import { productWhereForModule } from "@/lib/stock-rubros";
-import { coerceStockUnit } from "@/lib/stock-units";
+import {
+  coerceStockUnitForProduct,
+  isValidStockUnitForProduct,
+} from "@/lib/stock-units";
 
 export const stockEntryLineSchema = z.object({
   productId: z.string().min(1),
@@ -39,7 +42,14 @@ export async function loadStockEntryForDate(
             productId: true,
             unit: true,
             qty: true,
-            product: { select: { code: true, name: true, rubro: true } },
+            product: {
+              select: {
+                code: true,
+                name: true,
+                rubro: true,
+                allowsUnitOrder: true,
+              },
+            },
           },
         },
       },
@@ -56,7 +66,14 @@ export async function loadStockEntryForDate(
           productId: true,
           unit: true,
           qty: true,
-          product: { select: { code: true, name: true, rubro: true } },
+          product: {
+            select: {
+              code: true,
+              name: true,
+              rubro: true,
+              allowsUnitOrder: true,
+            },
+          },
         },
       },
     },
@@ -84,17 +101,31 @@ export async function upsertStockEntry(
   );
   const validProducts = await db.product.findMany({
     where: { id: { in: productIds }, ...moduleFilter },
-    select: { id: true },
+    select: { id: true, allowsUnitOrder: true },
   });
   if (validProducts.length !== productIds.length) {
     return { error: "Hay productos inválidos en la carga", status: 400 as const };
   }
 
-  const lineCreates = body.lines.map((l) => ({
-    productId: l.productId,
-    unit: coerceStockUnit(l.unit),
-    qty: new Decimal(l.qty),
-  }));
+  const productById = new Map(validProducts.map((p) => [p.id, p]));
+  const lineCreates: Array<{
+    productId: string;
+    unit: string;
+    qty: Decimal;
+  }> = [];
+  for (const l of body.lines) {
+    const product = productById.get(l.productId);
+    if (!product) continue;
+    const unit = coerceStockUnitForProduct(l.unit, product.allowsUnitOrder);
+    if (!isValidStockUnitForProduct(unit, product.allowsUnitOrder)) {
+      return { error: "Unidad inválida para un producto", status: 400 as const };
+    }
+    lineCreates.push({
+      productId: l.productId,
+      unit,
+      qty: new Decimal(l.qty),
+    });
+  }
 
   if (module === "MERMAS") {
     const entry = await db.$transaction(async (tx) => {

@@ -11,10 +11,10 @@ import { Label } from "@/components/ui/label";
 import { ArNumberValueInput } from "@/components/ui/ar-number-input";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import {
-  DEFAULT_STOCK_UNIT,
-  STOCK_UNITS,
-  coerceStockUnit,
-  type StockUnit,
+  coerceStockUnitForProduct,
+  defaultStockUnitForProduct,
+  stockUnitsForProduct,
+  type ProductMeasureUnit,
 } from "@/lib/stock-units";
 import { cn } from "@/lib/utils";
 import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
@@ -30,7 +30,8 @@ type RecountLine = {
   code: string;
   name: string;
   rubro: string | null;
-  unit: StockUnit;
+  allowsUnitOrder: boolean;
+  unit: ProductMeasureUnit;
   qty: number;
 };
 
@@ -83,7 +84,7 @@ export function StockRecountForm({
             productId: string;
             unit: string;
             qty: number;
-            product: { code: string; name: string; rubro: string | null };
+            product: { code: string; name: string; rubro: string | null; allowsUnitOrder: boolean };
           }>;
         } | null;
       };
@@ -100,7 +101,8 @@ export function StockRecountForm({
           code: l.product.code,
           name: l.product.name,
           rubro: l.product.rubro,
-          unit: coerceStockUnit(l.unit),
+          allowsUnitOrder: l.product.allowsUnitOrder,
+          unit: coerceStockUnitForProduct(l.unit, l.product.allowsUnitOrder),
           qty: l.qty,
         })),
       );
@@ -140,7 +142,8 @@ export function StockRecountForm({
         code: product.code,
         name: product.name,
         rubro: product.rubro,
-        unit: product.allowsUnitOrder ? "kg" : DEFAULT_STOCK_UNIT,
+        allowsUnitOrder: product.allowsUnitOrder === true,
+        unit: defaultStockUnitForProduct(product.allowsUnitOrder === true),
         qty: 0,
       },
     ]);
@@ -298,24 +301,29 @@ export function StockRecountForm({
                     {l.rubro ?? "—"}
                   </td>
                   <td className="px-3 py-2">
-                    <select
-                      className={cn(
-                        "h-9 rounded-md border border-neutral-200 bg-white px-2 text-sm",
-                        FOCUS_BRAND_BORDER,
-                      )}
-                      value={l.unit}
-                      onChange={(e) =>
-                        updateLine(l.productId, {
-                          unit: e.target.value as StockUnit,
-                        })
-                      }
-                    >
-                      {STOCK_UNITS.map((u) => (
-                        <option key={u} value={u}>
-                          {u}
-                        </option>
-                      ))}
-                    </select>
+                    {l.allowsUnitOrder ? (
+                      <select
+                        className={cn(
+                          "h-9 rounded-md border border-neutral-200 bg-white px-2 text-sm",
+                          FOCUS_BRAND_BORDER,
+                        )}
+                        value={l.unit}
+                        onChange={(e) =>
+                          updateLine(l.productId, {
+                            unit: e.target.value as ProductMeasureUnit,
+                          })
+                        }
+                        aria-label={`Unidad de ${l.name}`}
+                      >
+                        {stockUnitsForProduct(l.allowsUnitOrder).map((u) => (
+                          <option key={u} value={u}>
+                            {u === "kg" ? "Kg" : "Unidades"}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-neutral-700">unid.</span>
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     <ArNumberValueInput

@@ -36,7 +36,12 @@ export async function GET(req: NextRequest) {
               productId: l.productId,
               unit: l.unit,
               qty: Number(l.qty),
-              product: l.product,
+              product: {
+                code: l.product.code,
+                name: l.product.name,
+                rubro: l.product.rubro,
+                allowsUnitOrder: l.product.allowsUnitOrder,
+              },
             })),
           }
         : null,

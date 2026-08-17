@@ -3,16 +3,15 @@ import {
   CONSUMABLES_SEED_CODES,
   MERMAS_SEED_CODES,
 } from "@/lib/customer-modules";
-import type { StockUnit } from "@/lib/stock-units";
 import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
 import { productWhereForModule } from "@/lib/stock-rubros";
+import { defaultStockUnitForProduct } from "@/lib/stock-units";
 
 type SeedStockSpec = {
   /** Prefer exact Product.code when present. */
   code?: string;
   /** Fallback: name contains (case-insensitive). */
   nameIncludes?: string;
-  unit: StockUnit;
 };
 
 /**
@@ -20,71 +19,19 @@ type SeedStockSpec = {
  * Module split (mermas vs consumibles) uses Product.rubro via productWhereForModule.
  */
 export const SAMPLE_STOCK_FROM_PRODUCTS: SeedStockSpec[] = [
-  {
-    code: "1902",
-    nameIncludes: "LEVADURA",
-    unit: "kg",
-  },
-  {
-    code: "2401",
-    nameIncludes: "BAGUETTE (CRUDO)",
-    unit: "unid.",
-  },
-  {
-    code: "2403",
-    nameIncludes: "FLAUTITA (CRUDO)",
-    unit: "unid.",
-  },
-  {
-    code: "2409",
-    nameIncludes: "CHIPS (CRUDO)",
-    unit: "unid.",
-  },
-  {
-    code: "0021",
-    nameIncludes: "FLAUTA",
-    unit: "unid.",
-  },
-  {
-    code: "0020",
-    nameIncludes: "FIGASA",
-    unit: "unid.",
-  },
-  {
-    code: "0064",
-    nameIncludes: "HAMBURGUESA",
-    unit: "unid.",
-  },
-  {
-    code: "0502",
-    nameIncludes: "FACTURAS DOCENA",
-    unit: "docena",
-  },
-  {
-    code: "0405",
-    nameIncludes: "PREPIZZA INDIVIDUAL",
-    unit: "unid.",
-  },
-  {
-    code: "0129",
-    nameIncludes: "FLAUTON",
-    unit: "unid.",
-  },
-  {
-    code: "1801",
-    nameIncludes: "BOX CUMPLE GRANDE",
-    unit: "unid.",
-  },
-  {
-    code: "1802",
-    nameIncludes: "BOX CUMPLE CHICO",
-    unit: "unid.",
-  },
-  {
-    code: "1210",
-    nameIncludes: "BANDEJAS MASAS",
-    unit: "bandeja",
-  },
+  { code: "1902", nameIncludes: "LEVADURA" },
+  { code: "2401", nameIncludes: "BAGUETTE (CRUDO)" },
+  { code: "2403", nameIncludes: "FLAUTITA (CRUDO)" },
+  { code: "2409", nameIncludes: "CHIPS (CRUDO)" },
+  { code: "0021", nameIncludes: "FLAUTA" },
+  { code: "0020", nameIncludes: "FIGASA" },
+  { code: "0064", nameIncludes: "HAMBURGUESA" },
+  { code: "0502", nameIncludes: "FACTURAS DOCENA" },
+  { code: "0405", nameIncludes: "PREPIZZA INDIVIDUAL" },
+  { code: "0129", nameIncludes: "FLAUTON" },
+  { code: "1801", nameIncludes: "BOX CUMPLE GRANDE" },
+  { code: "1802", nameIncludes: "BOX CUMPLE CHICO" },
+  { code: "1210", nameIncludes: "BANDEJAS MASAS" },
 ];
 
 function todayYmdAr(): string {
@@ -120,8 +67,8 @@ async function resolveProductId(spec: SeedStockSpec): Promise<string | null> {
 async function resolveProductsForModule(
   module: "MERMAS" | "CONSUMABLES",
   limit: number,
-): Promise<Array<{ id: string; unit: StockUnit }>> {
-  const out: Array<{ id: string; unit: StockUnit }> = [];
+): Promise<Array<{ id: string; unit: string }>> {
+  const out: Array<{ id: string; unit: string }> = [];
   const moduleFilter = productWhereForModule(module);
 
   for (const spec of SAMPLE_STOCK_FROM_PRODUCTS) {
@@ -131,11 +78,14 @@ async function resolveProductsForModule(
 
     const product = await db.product.findFirst({
       where: { id: productId, ...moduleFilter },
-      select: { id: true },
+      select: { id: true, allowsUnitOrder: true },
     });
     if (!product) continue;
 
-    out.push({ id: product.id, unit: spec.unit });
+    out.push({
+      id: product.id,
+      unit: defaultStockUnitForProduct(product.allowsUnitOrder),
+    });
   }
 
   if (out.length >= limit) return out;
@@ -144,11 +94,14 @@ async function resolveProductsForModule(
     where: moduleFilter,
     orderBy: [{ rubro: "asc" }, { name: "asc" }],
     take: limit - out.length,
-    select: { id: true },
+    select: { id: true, allowsUnitOrder: true },
   });
   for (const p of extras) {
     if (out.some((row) => row.id === p.id)) continue;
-    out.push({ id: p.id, unit: "unid." });
+    out.push({
+      id: p.id,
+      unit: defaultStockUnitForProduct(p.allowsUnitOrder),
+    });
     if (out.length >= limit) break;
   }
 

@@ -4,6 +4,7 @@ export const stockProductReportSelect = {
   code: true,
   name: true,
   rubro: true,
+  allowsUnitOrder: true,
 } as const;
 
 export const stockLineSelect = {
@@ -17,6 +18,7 @@ type ProductReportRow = {
   code: string;
   name: string;
   rubro: string | null;
+  allowsUnitOrder: boolean;
 };
 
 export function serializeStockProductReport(product: ProductReportRow) {
@@ -24,6 +26,7 @@ export function serializeStockProductReport(product: ProductReportRow) {
     code: product.code,
     name: product.name,
     rubro: product.rubro,
+    allowsUnitOrder: product.allowsUnitOrder,
   };
 }
 

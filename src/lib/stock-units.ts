@@ -1,34 +1,53 @@
 /**
- * Display units for stock catalog (mermas / consumibles).
- * Bakery + wholesale LatAm common set — extend here when needed.
+ * Stock recount units — same measure model as quotes/remitos per product.
+ *
+ * - allowsUnitOrder: kg or unid.
+ * - otherwise: unid. only
  */
-export const STOCK_UNITS = [
-  "kg",
-  "g",
-  "unid.",
-  "caja",
-  "pack",
-  "bolsa",
-  "lata",
-  "botella",
-  "litro",
-  "ml",
-  "docena",
-  "bandeja",
-  "rollo",
-  "paquete",
-] as const;
+export const PRODUCT_MEASURE_UNITS = ["kg", "unid."] as const;
 
-export type StockUnit = (typeof STOCK_UNITS)[number];
+export type ProductMeasureUnit = (typeof PRODUCT_MEASURE_UNITS)[number];
 
-export const DEFAULT_STOCK_UNIT: StockUnit = "unid.";
+export const DEFAULT_STOCK_UNIT: ProductMeasureUnit = "unid.";
 
-export function isStockUnit(value: string): value is StockUnit {
-  return (STOCK_UNITS as readonly string[]).includes(value);
+export function stockUnitsForProduct(
+  allowsUnitOrder: boolean,
+): ProductMeasureUnit[] {
+  return allowsUnitOrder ? ["kg", "unid."] : ["unid."];
 }
 
-/** Prefer known unit; otherwise default (legacy free-text). */
-export function coerceStockUnit(value: string | null | undefined): StockUnit {
-  if (value && isStockUnit(value)) return value;
-  return DEFAULT_STOCK_UNIT;
+export function defaultStockUnitForProduct(
+  allowsUnitOrder: boolean,
+): ProductMeasureUnit {
+  return allowsUnitOrder ? "kg" : "unid.";
+}
+
+export function isProductMeasureUnit(
+  value: string,
+): value is ProductMeasureUnit {
+  return (PRODUCT_MEASURE_UNITS as readonly string[]).includes(value);
+}
+
+/** Normalize saved/API unit to what the product allows. */
+export function coerceStockUnitForProduct(
+  value: string | null | undefined,
+  allowsUnitOrder: boolean,
+): ProductMeasureUnit {
+  if (value === "kg" && allowsUnitOrder) return "kg";
+  if (
+    value === "unid." ||
+    value === "unidades" ||
+    value === "unit" ||
+    !allowsUnitOrder
+  ) {
+    return "unid.";
+  }
+  return defaultStockUnitForProduct(allowsUnitOrder);
+}
+
+export function isValidStockUnitForProduct(
+  unit: string,
+  allowsUnitOrder: boolean,
+): boolean {
+  return stockUnitsForProduct(allowsUnitOrder).includes(unit as ProductMeasureUnit);
 }
