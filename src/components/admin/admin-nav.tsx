@@ -38,7 +38,6 @@ const links: Array<{
     label: "Consumibles",
     permission: "stockReports",
   },
-  { href: "/admin/modulos", label: "Módulos", permission: "customerModules" },
   { href: "/admin/usuarios", label: "Usuarios", permission: "users" },
   {
     href: "/admin/configuracion",

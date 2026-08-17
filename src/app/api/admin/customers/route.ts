@@ -6,7 +6,17 @@ import { db } from "@/lib/db";
 import { invalidateAfterCustomerMutation } from "@/lib/cache-tags";
 import { normalizePhone } from "@/lib/phone-contact";
 import { getBasePriceList } from "@/lib/price-list-resolve";
+import {
+  DEFAULT_CUSTOMER_MODULE_FLAGS,
+  syncCustomerModuleFlags,
+  type CustomerModuleFlags,
+} from "@/lib/customer-modules";
 import { padCustomerCode, pinFromCustomerCode } from "@/lib/utils";
+
+const moduleFlagsSchema = z.object({
+  MERMAS: z.boolean(),
+  CONSUMABLES: z.boolean(),
+});
 
 export async function GET(req: NextRequest) {
   if (!(await requireStaffApi("customers"))) {
@@ -55,6 +65,7 @@ const upsertSchema = z.object({
   paymentTerms: z.string().optional().nullable(),
   deliveryHours: z.string().optional().nullable(),
   active: z.boolean().optional(),
+  modules: moduleFlagsSchema.optional(),
   resetPin: z.boolean().optional(),
 });
 
@@ -129,6 +140,9 @@ export async function POST(req: NextRequest) {
           : {}),
       },
     });
+    const moduleFlags: CustomerModuleFlags =
+      parsed.data.modules ?? DEFAULT_CUSTOMER_MODULE_FLAGS;
+    await syncCustomerModuleFlags(customer.id, moduleFlags);
     invalidateAfterCustomerMutation();
     return NextResponse.json({ customer, pin: pin ?? null });
   }
@@ -159,6 +173,10 @@ export async function POST(req: NextRequest) {
       active: parsed.data.active ?? true,
     },
   });
+
+  const moduleFlags: CustomerModuleFlags =
+    parsed.data.modules ?? DEFAULT_CUSTOMER_MODULE_FLAGS;
+  await syncCustomerModuleFlags(customer.id, moduleFlags);
 
   invalidateAfterCustomerMutation();
   return NextResponse.json({ customer, pin });

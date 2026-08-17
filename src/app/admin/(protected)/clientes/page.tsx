@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { ExcelSyncPanel } from "@/components/admin/excel-sync-panel";
 import { CustomersAdminPanel } from "@/components/admin/customers-admin-panel";
 import { sortPriceListsForDisplay } from "@/lib/pricing";
+import { modulesFromAccess } from "@/lib/customer-modules";
 
 export default async function AdminClientesPage({
   searchParams,
@@ -28,6 +29,7 @@ export default async function AdminClientesPage({
         paymentTerms: true,
         deliveryHours: true,
         active: true,
+        moduleAccess: { select: { module: true, enabled: true } },
       },
     }),
     db.priceList.findMany({
@@ -52,6 +54,7 @@ export default async function AdminClientesPage({
     paymentTerms: c.paymentTerms,
     deliveryHours: c.deliveryHours,
     active: c.active,
+    modules: modulesFromAccess(c.moduleAccess),
   }));
 
   return (

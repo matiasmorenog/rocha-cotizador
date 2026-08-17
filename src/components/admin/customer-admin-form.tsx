@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  CUSTOMER_MODULE_LABELS,
+  CUSTOMER_MODULES,
+  DEFAULT_CUSTOMER_MODULE_FLAGS,
+  type CustomerModuleFlags,
+} from "@/lib/customer-modules";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +34,7 @@ type CustomerRow = {
   paymentTerms: string | null;
   deliveryHours: string | null;
   active: boolean;
+  modules?: CustomerModuleFlags;
 };
 
 export function CustomerAdminForm({
@@ -55,6 +62,9 @@ export function CustomerAdminForm({
   const [deliveryHours, setDeliveryHours] = useState(customer?.deliveryHours ?? "");
   const [notes, setNotes] = useState(customer?.notes ?? "");
   const [active, setActive] = useState(customer?.active ?? true);
+  const [modules, setModules] = useState<CustomerModuleFlags>(
+    customer?.modules ?? DEFAULT_CUSTOMER_MODULE_FLAGS,
+  );
   const [resetPin, setResetPin] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +91,7 @@ export function CustomerAdminForm({
         deliveryHours,
         notes,
         active,
+        modules,
         resetPin: customer ? resetPin : true,
       }),
     });
@@ -212,6 +223,33 @@ export function CustomerAdminForm({
             FOCUS_BRAND_BORDER,
           )}
         />
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+          Módulos
+        </p>
+        <div className="flex flex-col gap-2">
+          {CUSTOMER_MODULES.map((module) => (
+            <label
+              key={module}
+              htmlFor={`customer-module-${module}`}
+              className="flex cursor-pointer items-center gap-2.5 text-sm"
+            >
+              <Switch
+                id={`customer-module-${module}`}
+                checked={modules[module]}
+                onChange={(e) =>
+                  setModules((prev) => ({
+                    ...prev,
+                    [module]: e.target.checked,
+                  }))
+                }
+              />
+              {CUSTOMER_MODULE_LABELS[module]}
+            </label>
+          ))}
+        </div>
       </div>
 
       <label

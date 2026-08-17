@@ -8,6 +8,47 @@ export const CUSTOMER_MODULE_LABELS: Record<CustomerModule, string> = {
   CONSUMABLES: "Consumibles",
 };
 
+export const CUSTOMER_MODULES: CustomerModule[] = ["MERMAS", "CONSUMABLES"];
+
+export type CustomerModuleFlags = Record<CustomerModule, boolean>;
+
+export const DEFAULT_CUSTOMER_MODULE_FLAGS: CustomerModuleFlags = {
+  MERMAS: false,
+  CONSUMABLES: false,
+};
+
+export function modulesFromAccess(
+  rows: { module: CustomerModule; enabled: boolean }[],
+): CustomerModuleFlags {
+  return {
+    MERMAS: Boolean(
+      rows.find((m) => m.module === "MERMAS" && m.enabled),
+    ),
+    CONSUMABLES: Boolean(
+      rows.find((m) => m.module === "CONSUMABLES" && m.enabled),
+    ),
+  };
+}
+
+export async function syncCustomerModuleFlags(
+  customerId: string,
+  flags: CustomerModuleFlags,
+): Promise<void> {
+  for (const customerModule of CUSTOMER_MODULES) {
+    await db.customerModuleAccess.upsert({
+      where: {
+        customerId_module: { customerId, module: customerModule },
+      },
+      create: {
+        customerId,
+        module: customerModule,
+        enabled: flags[customerModule],
+      },
+      update: { enabled: flags[customerModule] },
+    });
+  }
+}
+
 /** Seed codes that should have Mermas enabled. */
 export const MERMAS_SEED_CODES = [
   "007",

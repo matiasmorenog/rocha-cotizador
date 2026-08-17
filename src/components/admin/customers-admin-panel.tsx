@@ -22,6 +22,7 @@ import {
 import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
 import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
 import { useSelectedRow } from "@/hooks/use-selected-row";
+import type { CustomerModuleFlags } from "@/lib/customer-modules";
 
 export type CustomerListRow = {
   id: string;
@@ -36,6 +37,7 @@ export type CustomerListRow = {
   paymentTerms: string | null;
   deliveryHours: string | null;
   active: boolean;
+  modules: CustomerModuleFlags;
 };
 
 export type PriceListOption = {
@@ -140,6 +142,7 @@ export function CustomersAdminPanel({
                   paymentTerms: editing.paymentTerms,
                   deliveryHours: editing.deliveryHours,
                   active: editing.active,
+                  modules: editing.modules,
                 }
               : undefined
           }
