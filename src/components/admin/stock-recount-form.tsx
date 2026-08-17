@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { ProductPicker } from "@/components/quote/product-picker";
@@ -18,6 +18,7 @@ import {
 } from "@/lib/stock-units";
 import { cn } from "@/lib/utils";
 import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
+import { productMatchesStockModule } from "@/lib/stock-rubros";
 
 export type StockRecountCustomer = {
   id: string;
@@ -44,11 +45,13 @@ export function StockRecountForm({
   description,
   apiPath,
   customers,
+  stockModule,
 }: {
   title: string;
   description: string;
   apiPath: string;
   customers: StockRecountCustomer[];
+  stockModule: "MERMAS" | "CONSUMABLES";
 }) {
   const router = useRouter();
   const [customerId, setCustomerId] = useState(customers[0]?.id ?? "");
@@ -129,7 +132,22 @@ export function StockRecountForm({
     [lines],
   );
 
+  const filterProduct = useCallback(
+    (product: CatalogSearchProduct) =>
+      productMatchesStockModule(product.rubro, stockModule),
+    [stockModule],
+  );
+
+  const moduleMismatchMessage =
+    stockModule === "MERMAS"
+      ? "Ese producto es insumo/consumible — cargalo en Consumibles"
+      : "Ese producto no es insumo/consumible — cargalo en Mermas";
+
   function addProduct(product: CatalogSearchProduct) {
+    if (!productMatchesStockModule(product.rubro, stockModule)) {
+      setError(moduleMismatchMessage);
+      return;
+    }
     if (lines.some((l) => l.productId === product.id)) {
       setError("Ese producto ya está en la lista");
       return;
@@ -262,11 +280,17 @@ export function StockRecountForm({
         <Label>Agregar producto</Label>
         <ProductPicker
           value={picked}
+          filterProduct={filterProduct}
           onChange={(p) => {
             if (p) addProduct(p);
             else setPicked(null);
           }}
         />
+        <p className="text-xs text-neutral-500">
+          {stockModule === "MERMAS"
+            ? "Solo panes, masas y rubros de merma (no insumos ni regalo)."
+            : "Solo rubros Insumos y Regalo."}
+        </p>
       </div>
 
       {loadingEntry ? (

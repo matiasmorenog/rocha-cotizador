@@ -22,6 +22,16 @@ export function isConsumableRubro(rubro: string | null | undefined): boolean {
   );
 }
 
+/** Client/server guard: product rubro allowed in mermas vs consumibles recount. */
+export function productMatchesStockModule(
+  rubro: string | null | undefined,
+  module: "MERMAS" | "CONSUMABLES",
+): boolean {
+  return module === "CONSUMABLES"
+    ? isConsumableRubro(rubro)
+    : !isConsumableRubro(rubro);
+}
+
 /** Unique sorted non-empty rubro values from an in-memory product list. */
 export function uniqRubrosFromProducts(
   products: Array<{ rubro?: string | null }>,

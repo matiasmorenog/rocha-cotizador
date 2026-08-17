@@ -95,16 +95,32 @@ export async function upsertStockEntry(
     return { error: "Fecha inválida", status: 400 as const };
   }
 
-  const productIds = body.lines.map((l) => l.productId);
-  const moduleFilter = productWhereForModule(
-    module === "MERMAS" ? "MERMAS" : "CONSUMABLES",
-  );
+  const productIds = [...new Set(body.lines.map((l) => l.productId))];
+  const moduleKey = module === "MERMAS" ? "MERMAS" : "CONSUMABLES";
+  const moduleFilter = productWhereForModule(moduleKey);
   const validProducts = await db.product.findMany({
     where: { id: { in: productIds }, ...moduleFilter },
-    select: { id: true, allowsUnitOrder: true },
+    select: { id: true, allowsUnitOrder: true, code: true },
   });
   if (validProducts.length !== productIds.length) {
-    return { error: "Hay productos inválidos en la carga", status: 400 as const };
+    const validSet = new Set(validProducts.map((p) => p.id));
+    const invalidIds = productIds.filter((id) => !validSet.has(id));
+    const invalidRows =
+      invalidIds.length > 0
+        ? await db.product.findMany({
+            where: { id: { in: invalidIds } },
+            select: { code: true },
+          })
+        : [];
+    const codes = invalidRows.map((p) => p.code).join(", ");
+    const moduleLabel = module === "MERMAS" ? "mermas" : "consumibles";
+    return {
+      error:
+        codes.length > 0
+          ? `Productos no válidos para ${moduleLabel}: ${codes}`
+          : "Hay productos inválidos en la carga",
+      status: 400 as const,
+    };
   }
 
   const productById = new Map(validProducts.map((p) => [p.id, p]));

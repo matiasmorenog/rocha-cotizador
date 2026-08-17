@@ -72,6 +72,7 @@ export default async function AdminMermasPage({
         description="Recuento fin de día de panes y masas por sucursal. Buscá productos y cargá cantidades a tirar."
         apiPath="/api/admin/mermas"
         customers={customers}
+        stockModule="MERMAS"
       />
 
       <div className="space-y-4">

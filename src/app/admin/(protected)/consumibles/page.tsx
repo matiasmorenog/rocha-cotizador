@@ -72,6 +72,7 @@ export default async function AdminConsumiblesPage({
         description="Stock invertido (gaseosas, insumos, etc.) por sucursal. No son mermas diarias."
         apiPath="/api/admin/consumibles"
         customers={customers}
+        stockModule="CONSUMABLES"
       />
 
       <div className="space-y-4">
