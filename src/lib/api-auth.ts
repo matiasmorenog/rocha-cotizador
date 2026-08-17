@@ -12,7 +12,7 @@ export async function requireStaffApi(
 ): Promise<Session | null> {
   const session = await auth();
   if (!session?.user || !isStaffRole(session.user.role)) return null;
-  if (permission && !staffHasPermission(session.user.role, permission)) {
+  if (permission && !staffHasPermission(session.user.permissions, permission)) {
     return null;
   }
   return session;

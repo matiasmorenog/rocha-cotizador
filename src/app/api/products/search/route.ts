@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
       session.user.customerId,
     );
     priceListId = customer?.priceListId ?? null;
-  } else if (staffHasPermission(session.user.role, "quotes")) {
+  } else if (staffHasPermission(session.user.permissions, "quotes")) {
     const customerId = (req.nextUrl.searchParams.get("customerId") ?? "").trim();
     if (customerId) {
       const customer = await getCachedCustomerPricingContext(customerId);
@@ -48,8 +48,8 @@ export async function GET(req: NextRequest) {
       priceListId = customer.priceListId;
     } else if (
       !(
-        staffHasPermission(session.user.role, "stockReports") ||
-        staffHasPermission(session.user.role, "products")
+        staffHasPermission(session.user.permissions, "stockReports") ||
+        staffHasPermission(session.user.permissions, "products")
       )
     ) {
       return NextResponse.json(
@@ -59,8 +59,8 @@ export async function GET(req: NextRequest) {
     }
   } else if (
     !(
-      staffHasPermission(session.user.role, "stockReports") ||
-      staffHasPermission(session.user.role, "products")
+      staffHasPermission(session.user.permissions, "stockReports") ||
+      staffHasPermission(session.user.permissions, "products")
     )
   ) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });

@@ -5,7 +5,8 @@ import { db } from "@/lib/db";
 import { getEnabledModulesForCustomer } from "@/lib/customer-modules";
 import {
   isStaffRole,
-  permissionsForRole,
+  staffPermissionsFromProfile,
+  type StaffPermission,
 } from "@/lib/staff-permissions";
 import { padCustomerCode } from "@/lib/utils";
 import type { AppRole, CustomerModuleSession, StaffRole } from "@/types/auth";
@@ -60,6 +61,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               name: true,
               passwordHash: true,
               role: true,
+              canQuotes: true,
+              canStock: true,
               active: true,
               inAppNotificationsEnabled: true,
             },
@@ -72,6 +75,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!valid) return null;
 
           const staffRole = user.role as StaffRole;
+          const permissions = staffPermissionsFromProfile({
+            role: staffRole,
+            canQuotes: user.canQuotes,
+            canStock: user.canStock,
+          });
 
           return {
             id: user.id,
@@ -83,7 +91,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             mustChangePassword: false,
             inAppNotificationsEnabled: user.inAppNotificationsEnabled !== false,
             modules: [],
-            permissions: permissionsForRole(staffRole),
+            permissions,
           };
         } catch (err) {
           console.error("[auth] admin authorize failed", err);
@@ -173,7 +181,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         }
         if (token.role && isStaffRole(String(token.role))) {
-          token.permissions = permissionsForRole(token.role as StaffRole);
+          const dbUser = await db.user.findUnique({
+            where: { id: String(token.sub) },
+            select: { role: true, canQuotes: true, canStock: true },
+          });
+          if (dbUser && isStaffRole(dbUser.role)) {
+            token.permissions = staffPermissionsFromProfile({
+              role: dbUser.role,
+              canQuotes: dbUser.canQuotes,
+              canStock: dbUser.canStock,
+            });
+          }
         }
         if (
           session &&
@@ -213,7 +231,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             ? (token.modules as CustomerModuleSession[])
             : [],
           permissions: isStaffRole(role)
-            ? permissionsForRole(role)
+            ? Array.isArray(token.permissions)
+              ? (token.permissions as StaffPermission[])
+              : staffPermissionsFromProfile({
+                  role,
+                  canQuotes: false,
+                  canStock: false,
+                })
             : Array.isArray(token.permissions)
               ? token.permissions
               : [],

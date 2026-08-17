@@ -34,7 +34,7 @@ export async function requireAdminSession() {
 
 export async function requireStaffPermission(permission: StaffPermission) {
   const session = await requireStaffSession();
-  if (!staffHasPermission(session.user.role, permission)) {
+  if (!staffHasPermission(session.user.permissions, permission)) {
     redirect("/admin");
   }
   return session;

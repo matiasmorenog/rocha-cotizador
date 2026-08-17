@@ -8,22 +8,39 @@ import {
   MIN_PASSWORD_LENGTH,
   passwordErrorMessage,
 } from "@/lib/password";
-import { STAFF_ROLES } from "@/lib/staff-permissions";
+import {
+  STAFF_ROLES,
+  staffFieldsFromSwitches,
+} from "@/lib/staff-permissions";
 
-const roleSchema = z.enum(["ADMIN", "QUOTES", "STOCK"]);
+const upsertSchema = z
+  .object({
+    id: z.string().min(1).optional(),
+    email: z.string().email(),
+    name: z.string().trim().min(1).max(120).nullable().optional(),
+    isAdmin: z.boolean(),
+    canQuotes: z.boolean(),
+    canStock: z.boolean(),
+    active: z.boolean().optional().default(true),
+    password: z
+      .string()
+      .min(MIN_PASSWORD_LENGTH)
+      .max(MAX_PASSWORD_LENGTH)
+      .optional(),
+  })
+  .refine((data) => data.isAdmin || data.canQuotes || data.canStock, {
+    message: "Elegí al menos un permiso (Cotización o Stock)",
+  });
 
-const upsertSchema = z.object({
-  id: z.string().min(1).optional(),
-  email: z.string().email(),
-  name: z.string().trim().min(1).max(120).nullable().optional(),
-  role: roleSchema,
-  active: z.boolean().optional().default(true),
-  password: z
-    .string()
-    .min(MIN_PASSWORD_LENGTH)
-    .max(MAX_PASSWORD_LENGTH)
-    .optional(),
-});
+const userSelect = {
+  id: true,
+  email: true,
+  name: true,
+  role: true,
+  canQuotes: true,
+  canStock: true,
+  active: true,
+} as const;
 
 export async function GET() {
   if (!(await requireStaffApi("users"))) {
@@ -34,11 +51,7 @@ export async function GET() {
     where: { role: { in: [...STAFF_ROLES] } },
     orderBy: [{ active: "desc" }, { email: "asc" }],
     select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      active: true,
+      ...userSelect,
       createdAt: true,
       updatedAt: true,
     },
@@ -58,14 +71,20 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     const pwd = body && typeof body.password === "string" ? body.password : "";
     const pwdErr = pwd ? passwordErrorMessage(pwd) : null;
+    const refineErr = parsed.error.issues.find((i) => i.path.length === 0);
     return NextResponse.json(
-      { error: pwdErr ?? "Datos inválidos" },
+      { error: pwdErr ?? refineErr?.message ?? "Datos inválidos" },
       { status: 400 },
     );
   }
 
   const email = parsed.data.email.trim().toLowerCase();
   const name = parsed.data.name?.trim() || null;
+  const staffFields = staffFieldsFromSwitches({
+    isAdmin: parsed.data.isAdmin,
+    canQuotes: parsed.data.canQuotes,
+    canStock: parsed.data.canStock,
+  });
 
   if (parsed.data.id) {
     const existing = await db.user.findUnique({
@@ -76,7 +95,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
 
-    // Prevent self-lockout: cannot deactivate own account.
     if (
       parsed.data.id === session.user.id &&
       parsed.data.active === false
@@ -99,12 +117,16 @@ export async function POST(req: NextRequest) {
       email: string;
       name: string | null;
       role: "ADMIN" | "QUOTES" | "STOCK";
+      canQuotes: boolean;
+      canStock: boolean;
       active: boolean;
       passwordHash?: string;
     } = {
       email,
       name,
-      role: parsed.data.role,
+      role: staffFields.role,
+      canQuotes: staffFields.canQuotes,
+      canStock: staffFields.canStock,
       active: parsed.data.active,
     };
     if (parsed.data.password) {
@@ -114,13 +136,7 @@ export async function POST(req: NextRequest) {
     const user = await db.user.update({
       where: { id: parsed.data.id },
       data,
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        active: true,
-      },
+      select: userSelect,
     });
     return NextResponse.json({ user });
   }
@@ -145,17 +161,13 @@ export async function POST(req: NextRequest) {
     data: {
       email,
       name,
-      role: parsed.data.role,
+      role: staffFields.role,
+      canQuotes: staffFields.canQuotes,
+      canStock: staffFields.canStock,
       active: parsed.data.active,
       passwordHash,
     },
-    select: {
-      id: true,
-      email: true,
-      name: true,
-      role: true,
-      active: true,
-    },
+    select: userSelect,
   });
 
   return NextResponse.json({ user }, { status: 201 });

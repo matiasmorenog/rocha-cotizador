@@ -8,7 +8,7 @@ import { ChangePasswordForm } from "@/components/account/change-password-form";
 
 export default async function AdminConfigPage() {
   const session = await requireStaffPermission("account");
-  const canEditAppSettings = staffHasPermission(session.user.role, "settings");
+  const canEditAppSettings = staffHasPermission(session.user.permissions, "settings");
   const whatsappNotifyPhone = canEditAppSettings
     ? await getWhatsAppNotifyDigits()
     : null;

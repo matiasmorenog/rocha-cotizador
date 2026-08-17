@@ -34,6 +34,10 @@ model User {
   name                      String?
   passwordHash              String?
   role                      UserRole           @default(ADMIN)
+  /// Staff capability: cotización (productos, listas, cotizaciones). ADMIN ignores flags.
+  canQuotes                 Boolean            @default(false)
+  /// Staff capability: stock (mermas, consumibles). ADMIN ignores flags.
+  canStock                  Boolean            @default(false)
   active                    Boolean            @default(true)
   /// Account-level: in-app toast/poll while admin is open (default on).
   inAppNotificationsEnabled Boolean            @default(true)

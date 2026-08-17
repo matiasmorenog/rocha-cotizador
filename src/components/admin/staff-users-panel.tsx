@@ -7,21 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
-  STAFF_ROLE_LABELS,
+  formatStaffPermissionLabels,
+  staffSwitchesFromProfile,
 } from "@/lib/staff-permissions";
 import type { StaffRole } from "@/types/auth";
-import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
-import { cn } from "@/lib/utils";
 
 type StaffUser = {
   id: string;
   email: string;
   name: string | null;
   role: StaffRole;
+  canQuotes: boolean;
+  canStock: boolean;
   active: boolean;
 };
-
-const ROLES: StaffRole[] = ["ADMIN", "QUOTES", "STOCK"];
 
 export function StaffUsersPanel({
   users: initial,
@@ -43,7 +42,7 @@ export function StaffUsersPanel({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-neutral-600">
-          Usuarios internos con email y rol (Administración / Cotización / Stock).
+          Usuarios internos con email y permisos (Administración, Cotización, Stock).
         </p>
         <Button
           type="button"
@@ -88,7 +87,7 @@ export function StaffUsersPanel({
             <tr>
               <th className="px-3 py-2 font-medium">Email</th>
               <th className="px-3 py-2 font-medium">Nombre</th>
-              <th className="px-3 py-2 font-medium">Rol</th>
+              <th className="px-3 py-2 font-medium">Permisos</th>
               <th className="px-3 py-2 font-medium">Estado</th>
               <th className="px-3 py-2 font-medium" />
             </tr>
@@ -98,7 +97,9 @@ export function StaffUsersPanel({
               <tr key={u.id} className="border-b border-neutral-100 last:border-0">
                 <td className="px-3 py-2">{u.email}</td>
                 <td className="px-3 py-2">{u.name ?? "—"}</td>
-                <td className="px-3 py-2">{STAFF_ROLE_LABELS[u.role]}</td>
+                <td className="px-3 py-2">
+                  {formatStaffPermissionLabels(u)}
+                </td>
                 <td className="px-3 py-2">
                   {u.active ? "Activo" : "Inactivo"}
                 </td>
@@ -123,6 +124,34 @@ export function StaffUsersPanel({
   );
 }
 
+function PermissionSwitch({
+  label,
+  description,
+  checked,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 px-3 py-2">
+      <div>
+        <p className="text-sm font-medium text-neutral-800">{label}</p>
+        <p className="text-xs text-neutral-500">{description}</p>
+      </div>
+      <Switch
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        disabled={disabled}
+      />
+    </div>
+  );
+}
+
 function StaffUserForm({
   user,
   currentUserId,
@@ -135,16 +164,34 @@ function StaffUserForm({
   onSaved: (user: StaffUser) => void;
 }) {
   const isEdit = Boolean(user);
+  const initialSwitches = user
+    ? staffSwitchesFromProfile(user)
+    : { isAdmin: false, canQuotes: true, canStock: false };
+
   const [email, setEmail] = useState(user?.email ?? "");
   const [name, setName] = useState(user?.name ?? "");
-  const [role, setRole] = useState<StaffRole>(user?.role ?? "QUOTES");
+  const [isAdmin, setIsAdmin] = useState(initialSwitches.isAdmin);
+  const [canQuotes, setCanQuotes] = useState(initialSwitches.canQuotes);
+  const [canStock, setCanStock] = useState(initialSwitches.canStock);
   const [active, setActive] = useState(user?.active ?? true);
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  function onAdminChange(checked: boolean) {
+    setIsAdmin(checked);
+    if (checked) {
+      setCanQuotes(true);
+      setCanStock(true);
+    }
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!isAdmin && !canQuotes && !canStock) {
+      setError("Elegí al menos un permiso (Cotización o Stock)");
+      return;
+    }
     setLoading(true);
     setError(null);
     const res = await fetch("/api/admin/users", {
@@ -154,7 +201,9 @@ function StaffUserForm({
         id: user?.id,
         email,
         name: name || null,
-        role,
+        isAdmin,
+        canQuotes: isAdmin ? true : canQuotes,
+        canStock: isAdmin ? true : canStock,
         active,
         ...(password ? { password } : {}),
       }),
@@ -190,24 +239,7 @@ function StaffUserForm({
           <Label>Nombre</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} />
         </div>
-        <div className="space-y-1">
-          <Label>Rol</Label>
-          <select
-            className={cn(
-              "h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm",
-              FOCUS_BRAND_BORDER,
-            )}
-            value={role}
-            onChange={(e) => setRole(e.target.value as StaffRole)}
-          >
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {STAFF_ROLE_LABELS[r]}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="space-y-1">
+        <div className="space-y-1 sm:col-span-2">
           <Label>
             {isEdit ? "Nueva contraseña (opcional)" : "Contraseña"}
           </Label>
@@ -220,6 +252,31 @@ function StaffUserForm({
           />
         </div>
       </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-neutral-800">Permisos</p>
+        <PermissionSwitch
+          label="Administración"
+          description="Acceso completo al panel (usuarios, configuración, etc.)"
+          checked={isAdmin}
+          onChange={onAdminChange}
+        />
+        <PermissionSwitch
+          label="Cotización"
+          description="Productos, listas de precios y cotizaciones"
+          checked={canQuotes}
+          onChange={setCanQuotes}
+          disabled={isAdmin}
+        />
+        <PermissionSwitch
+          label="Stock"
+          description="Mermas y consumibles"
+          checked={canStock}
+          onChange={setCanStock}
+          disabled={isAdmin}
+        />
+      </div>
+
       <div className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 px-3 py-2">
         <div>
           <p className="text-sm font-medium text-neutral-800">Activo</p>

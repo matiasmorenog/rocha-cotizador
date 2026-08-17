@@ -68,10 +68,14 @@ async function seedAdmin() {
       name: "Administrador",
       passwordHash,
       role: "ADMIN",
+      canQuotes: true,
+      canStock: true,
     },
     update: {
       passwordHash,
       role: "ADMIN",
+      canQuotes: true,
+      canStock: true,
     },
   });
 

@@ -81,7 +81,7 @@ export default async function RemitoDetailPage({
 
   if (
     session.user.role !== "CUSTOMER" &&
-    !staffHasPermission(session.user.role, "quotes")
+    !staffHasPermission(session.user.permissions, "quotes")
   ) {
     notFound();
   }
@@ -179,7 +179,7 @@ export default async function RemitoDetailPage({
   );
   const showWhatsappCta = whatsapp === "1" && Boolean(notifyWhatsappUrl);
   const deliveryLabel = formatDeliveryDateLabel(quote.deliveryDate);
-  const isAdmin = staffHasPermission(session.user.role, "quotes");
+  const isAdmin = staffHasPermission(session.user.permissions, "quotes");
   const pendingWeighCount = quote.items.filter(
     (item) => item.orderByUnit || Number(item.unitPrice) === 0,
   ).length;
@@ -234,7 +234,7 @@ export default async function RemitoDetailPage({
         <div className="flex flex-wrap justify-end gap-2">
           <RemitoBackButton
             href={
-              staffHasPermission(session.user.role, "quotes")
+              staffHasPermission(session.user.permissions, "quotes")
                 ? "/admin/cotizaciones"
                 : "/remitos"
             }
