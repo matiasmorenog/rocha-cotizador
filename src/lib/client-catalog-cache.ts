@@ -179,6 +179,45 @@ export function filterCatalog(
   });
 }
 
+const CATALOG_STALE_CHANNEL = "rocha:catalog-stale";
+const CATALOG_STALE_STORAGE_KEY = "rocha:catalog-stale";
+
+/** Other same-origin tabs: product mutate → refresh quote catalog. Same tab does not hear this. */
+export function notifyCatalogStale(): void {
+  if (typeof window === "undefined") return;
+  try {
+    const ch = new BroadcastChannel(CATALOG_STALE_CHANNEL);
+    ch.postMessage({ t: Date.now() });
+    ch.close();
+  } catch {
+    // ignore
+  }
+  try {
+    localStorage.setItem(CATALOG_STALE_STORAGE_KEY, String(Date.now()));
+  } catch {
+    // ignore
+  }
+}
+
+export function subscribeCatalogStale(onStale: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  let ch: BroadcastChannel | null = null;
+  try {
+    ch = new BroadcastChannel(CATALOG_STALE_CHANNEL);
+    ch.onmessage = () => onStale();
+  } catch {
+    ch = null;
+  }
+  function onStorage(e: StorageEvent) {
+    if (e.key === CATALOG_STALE_STORAGE_KEY) onStale();
+  }
+  window.addEventListener("storage", onStorage);
+  return () => {
+    ch?.close();
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
 export function unitPriceFromMap(
   code: string,
   basePrice: number,

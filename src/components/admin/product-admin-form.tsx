@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { notifyCatalogStale } from "@/lib/client-catalog-cache";
 import { parseArNumber } from "@/lib/utils";
 
 export type PriceListOption = {
@@ -62,6 +63,7 @@ export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
       setError(data.error ?? "Error al guardar");
       return;
     }
+    notifyCatalogStale();
     setMessage("Producto creado");
     setCode("");
     setName("");

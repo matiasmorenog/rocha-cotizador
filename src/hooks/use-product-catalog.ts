@@ -10,6 +10,7 @@ import {
   clearCachedCatalog,
   readCachedCatalog,
   readCachedUnitPrices,
+  subscribeCatalogStale,
   unitPriceFromMap,
   writeCachedCatalog,
   writeCachedUnitPrices,
@@ -514,10 +515,14 @@ export function useProductCatalog(
       window.addEventListener("focus", onFocus);
       window.addEventListener("pageshow", onPageShow);
     }
+    const unsubscribeStale = subscribeCatalogStale(() => {
+      kickRevalidate();
+    });
 
     return () => {
       cancelled = true;
       stopInterval();
+      unsubscribeStale();
       if (typeof document !== "undefined") {
         document.removeEventListener("visibilitychange", onVisibilityChange);
       }
