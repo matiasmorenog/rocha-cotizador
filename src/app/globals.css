@@ -361,19 +361,6 @@ select:not([multiple]):disabled {
   animation: admin-toast-enter 0.28s ease-out both;
 }
 
-@keyframes admin-theme-hint-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.admin-theme-hint-tooltip {
-  animation: admin-theme-hint-in 0.15s ease-out both;
-}
-
 @keyframes admin-toast-exit {
   from {
     opacity: 1;
@@ -1130,7 +1117,6 @@ html[data-admin-theme="dark"] .border-neutral-200\/80 {
 
   .admin-toast-enter,
   .admin-toast-exit,
-  .admin-theme-hint-tooltip,
   .admin-stat-landed,
   .admin-chart-dot-enter {
     animation: none;
