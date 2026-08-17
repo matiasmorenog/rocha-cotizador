@@ -143,7 +143,6 @@ function ProductEditRow({
         code: product.code,
         name,
         rubro,
-        knownRubros: rubros,
         basePrice: base,
         active,
         allowsUnitOrder,

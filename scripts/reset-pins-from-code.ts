@@ -10,6 +10,7 @@ import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import { assertSafeDestructiveDb } from "../prisma/assert-safe-db";
 import { pinFromCustomerCode } from "../src/lib/utils";
+import { revalidateAppCache } from "./revalidate-app-cache";
 
 const db = new PrismaClient();
 
@@ -66,6 +67,7 @@ async function main() {
   console.log(`Rule: PIN = code digits padStart(4, "0")`);
   console.log("Examples:", examples.map((e) => `${e.code}→${e.pin}`).join(", "));
   console.log(`CSV: ${csvPath}`);
+  await revalidateAppCache();
 }
 
 main()

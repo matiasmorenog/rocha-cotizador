@@ -7,7 +7,6 @@
 
 import type { Prisma } from "@prisma/client";
 import { getActiveProductsBase } from "@/lib/products-cache";
-import { invalidateProductRubrosCache } from "@/lib/cache-tags";
 
 /** Rubros that appear on /consumibles (rest of stock → /mermas). */
 export const CONSUMABLE_RUBROS = ["INSUMOS", "REGALO"] as const;
@@ -48,23 +47,6 @@ export function uniqRubrosFromProducts(
 export async function listDistinctProductRubros(): Promise<string[]> {
   const products = await getActiveProductsBase();
   return uniqRubrosFromProducts(products);
-}
-
-/**
- * Expire product-rubros tag only when saved rubro is not already known.
- * Pass `knownRubros` from the in-memory list when available to avoid a fetch.
- */
-export async function maybeInvalidateProductRubrosCache(
-  savedRubro: string | null | undefined,
-  knownRubros?: string[],
-): Promise<boolean> {
-  const next = normalizeRubro(savedRubro);
-  if (!next) return false;
-  const known = knownRubros ?? (await listDistinctProductRubros());
-  const exists = known.some((r) => r.toLowerCase() === next.toLowerCase());
-  if (exists) return false;
-  invalidateProductRubrosCache();
-  return true;
 }
 
 export function stockItemWhereForModule(

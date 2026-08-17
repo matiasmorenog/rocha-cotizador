@@ -4,10 +4,6 @@ import { db } from "@/lib/db";
 import { invalidateAfterProductMutation } from "@/lib/cache-tags";
 import { syncBaseListItemForProduct } from "@/lib/price-list-resolve";
 import {
-  listDistinctProductRubros,
-  maybeInvalidateProductRubrosCache,
-} from "@/lib/stock-rubros";
-import {
   cellNumber,
   cellText,
   emptyToNull,
@@ -102,9 +98,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const knownRubros = await listDistinctProductRubros();
-  const importedRubros = new Set<string>();
-
   for (let r = 2; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r);
     const codeRaw = cellText(getCellByHeader(row, headers, "código"));
@@ -155,8 +148,6 @@ export async function POST(req: NextRequest) {
         ? await db.product.update({ where: { code }, data })
         : await db.product.create({ data });
 
-      if (rubro) importedRubros.add(rubro);
-
       await syncBaseListItemForProduct(product.id, product.basePrice);
 
       if (existing) summary.updated += 1;
@@ -205,9 +196,6 @@ export async function POST(req: NextRequest) {
 
   if (summary.created > 0 || summary.updated > 0) {
     invalidateAfterProductMutation();
-    for (const r of importedRubros) {
-      await maybeInvalidateProductRubrosCache(r, knownRubros);
-    }
   }
 
   return NextResponse.json(summary);

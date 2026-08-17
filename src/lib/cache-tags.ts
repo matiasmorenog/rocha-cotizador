@@ -8,8 +8,6 @@ export const CACHE_TAGS = {
   /** customerId → priceListId mapping (not unit prices). */
   customers: "customers",
   adminDashboard: "admin-dashboard",
-  /** DISTINCT Product.rubro (Tipo). Expire only when a new rubro string is saved. */
-  productRubros: "product-rubros",
 } as const;
 
 /**
@@ -36,11 +34,6 @@ export function invalidateAdminDashboardCache() {
   expireTag(CACHE_TAGS.adminDashboard);
 }
 
-/** Only after a brand-new Product.rubro value is persisted (not every product mutate). */
-export function invalidateProductRubrosCache() {
-  expireTag(CACHE_TAGS.productRubros);
-}
-
 /**
  * Expire every shared Data Cache tag (products, price-lists, customers,
  * admin-dashboard). Used by wipe / DB scripts via POST /api/revalidate.
@@ -53,8 +46,8 @@ export function invalidateAllDataCaches() {
 
 /**
  * Ops / wipe / DB scripts: bust all tagged Data Cache + admin/remitos list paths.
- * Prefer HTTP POST /api/revalidate from scripts (out-of-process). Call in-process
- * only when the script runs inside the Next.js runtime.
+ * Prefer HTTP POST /api/revalidate via `scripts/revalidate-app-cache.ts`
+ * (out-of-process). Call in-process only inside the Next.js runtime.
  */
 export function invalidateAfterDbScript() {
   invalidateAllDataCaches();

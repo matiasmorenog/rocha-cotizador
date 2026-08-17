@@ -22,6 +22,7 @@ import { padCustomerCode, pinFromCustomerCode } from "../src/lib/utils";
 import { seedCustomerModuleAccess } from "../src/lib/customer-modules";
 import { seedStockSampleData } from "../src/lib/stock-seed";
 import { assertSafeDestructiveDb } from "./assert-safe-db";
+import { revalidateAppCache } from "../scripts/revalidate-app-cache";
 
 const db = new PrismaClient();
 
@@ -450,6 +451,7 @@ async function main() {
 
 main()
   .then(async () => {
+    await revalidateAppCache();
     await db.$disconnect();
   })
   .catch(async (err) => {

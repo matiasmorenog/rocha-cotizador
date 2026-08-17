@@ -9,6 +9,7 @@ import { assertSafeDestructiveDb } from "../prisma/assert-safe-db";
 import { seedCustomerModuleAccess } from "../src/lib/customer-modules";
 import { db } from "../src/lib/db";
 import { seedStockSampleData } from "../src/lib/stock-seed";
+import { revalidateAppCache } from "./revalidate-app-cache";
 
 async function main() {
   assertSafeDestructiveDb();
@@ -24,6 +25,7 @@ async function main() {
 
 main()
   .then(async () => {
+    await revalidateAppCache();
     await db.$disconnect();
   })
   .catch(async (err) => {

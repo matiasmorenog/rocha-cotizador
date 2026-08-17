@@ -7,6 +7,7 @@ import {
   effectiveDiscountPriceListId,
   getPriceListUnitPricesByProductId,
 } from "../src/lib/price-list-resolve";
+import { revalidateAppCache } from "./revalidate-app-cache";
 
 const db = new PrismaClient();
 assertSafeDestructiveDb();
@@ -98,6 +99,9 @@ async function main() {
 }
 
 main()
+  .then(async () => {
+    await revalidateAppCache();
+  })
   .catch((e) => {
     console.error(e);
     process.exit(1);

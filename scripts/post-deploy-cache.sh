@@ -14,7 +14,7 @@ if [[ -z "${VERCEL_ORG_ID:-}" || -z "${VERCEL_PROJECT_ID:-}" ]]; then
 fi
 
 # Keep in sync with src/lib/cache-tags.ts CACHE_TAGS.
-TAGS="products,price-lists,customers,admin-dashboard,product-rubros"
+TAGS="products,price-lists,customers,admin-dashboard"
 # New mark + leftover optimizer entries from the old path.
 SRCIMGS=(
   /brand/rocha-mark.png
@@ -59,25 +59,32 @@ for src in "${SRCIMGS[@]}"; do
   vc cache invalidate --srcimg "$src"
 done
 
-base="${APP_URL:-${AUTH_URL:-}}"
-base="${base%/}"
-if [[ -n "${REVALIDATE_SECRET:-}" && -n "$base" ]]; then
-  echo "POST ${base}/api/revalidate"
-  code="$(
-    curl -sS -o /tmp/revalidate.json -w "%{http_code}" \
-      -X POST "${base}/api/revalidate" \
-      -H "Authorization: Bearer ${REVALIDATE_SECRET}" \
-      -H "Content-Type: application/json" \
-      || echo 000
-  )"
-  echo "  HTTP ${code}"
-  cat /tmp/revalidate.json 2>/dev/null || true
-  echo
-  if [[ "$code" != "200" ]]; then
-    echo "warn: /api/revalidate returned ${code} (CDN/tag purge still ran)." >&2
-  fi
+# HTTP path/tag bust — same helper as seed/DB scripts.
+if [[ -x "$ROOT/node_modules/.bin/tsx" ]]; then
+  echo "POST /api/revalidate via scripts/revalidate-app-cache.ts"
+  "$ROOT/node_modules/.bin/tsx" "$ROOT/scripts/revalidate-app-cache.ts" || \
+    echo "warn: revalidate helper failed to start (CDN/tag purge still ran)." >&2
 else
-  echo "Skip POST /api/revalidate (set REVALIDATE_SECRET and APP_URL to enable)."
+  base="${APP_URL:-${AUTH_URL:-}}"
+  base="${base%/}"
+  if [[ -n "${REVALIDATE_SECRET:-}" && -n "$base" ]]; then
+    echo "POST ${base}/api/revalidate"
+    code="$(
+      curl -sS -o /tmp/revalidate.json -w "%{http_code}" \
+        -X POST "${base}/api/revalidate" \
+        -H "Authorization: Bearer ${REVALIDATE_SECRET}" \
+        -H "Content-Type: application/json" \
+        || echo 000
+    )"
+    echo "  HTTP ${code}"
+    cat /tmp/revalidate.json 2>/dev/null || true
+    echo
+    if [[ "$code" != "200" ]]; then
+      echo "warn: /api/revalidate returned ${code} (CDN/tag purge still ran)." >&2
+    fi
+  else
+    echo "Skip POST /api/revalidate (set REVALIDATE_SECRET and APP_URL to enable)."
+  fi
 fi
 
 echo "ok: post-deploy cache purge finished"

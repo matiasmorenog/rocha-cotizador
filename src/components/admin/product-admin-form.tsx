@@ -58,7 +58,6 @@ export function ProductAdminForm({
         code,
         name,
         rubro,
-        knownRubros: rubros,
         basePrice: price,
         active,
         allowsUnitOrder,

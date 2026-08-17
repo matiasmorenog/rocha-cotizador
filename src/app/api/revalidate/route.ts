@@ -6,7 +6,8 @@ import { CACHE_TAGS, invalidateAfterDbScript } from "@/lib/cache-tags";
  * Secured hook for ops / wipe / DB scripts to bust Vercel Data Cache after
  * out-of-band DB mutations. Expires **every** CACHE_TAGS entry + list paths.
  *
- * Scripts: set REVALIDATE_SECRET + AUTH_URL (or APP_URL), then POST here.
+ * Scripts: `revalidateAppCache()` in `scripts/revalidate-app-cache.ts`
+ * (REVALIDATE_SECRET + AUTH_URL or APP_URL), then POST here.
  * See `invalidateAfterDbScript` in `src/lib/cache-tags.ts`.
  *
  * Header: Authorization: Bearer $REVALIDATE_SECRET
