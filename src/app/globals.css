@@ -857,6 +857,216 @@ select:not([multiple]):disabled {
   }
 }
 
+/*
+  Admin dark mode trial — scoped via data-admin-theme on <html>, set only while
+  the protected admin layout is mounted. Customer routes never set the attribute.
+*/
+html[data-admin-theme="dark"] {
+  --background: #0c1413;
+  --foreground: #e4edeb;
+  --brand-primary-soft: #1a3d37;
+  color-scheme: dark;
+}
+
+html[data-admin-theme="dark"] body {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(
+      ellipse 80% 50% at 10% -10%,
+      color-mix(in srgb, #1a3d37 55%, transparent) 0%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 100% 0%,
+      color-mix(in srgb, #163832 40%, transparent) 0%,
+      transparent 50%
+    );
+  color: var(--foreground);
+}
+
+html[data-admin-theme="dark"] header {
+  border-bottom-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
+  background-color: color-mix(in srgb, var(--brand-primary-soft) 85%, #0c1413);
+}
+
+html[data-admin-theme="dark"] .bg-white {
+  background-color: #1e2826;
+}
+
+html[data-admin-theme="dark"] .bg-neutral-50 {
+  background-color: #222d2b;
+}
+
+html[data-admin-theme="dark"] .bg-neutral-50\/60 {
+  background-color: color-mix(in srgb, #222d2b 60%, transparent);
+}
+
+html[data-admin-theme="dark"] .bg-neutral-50\/40,
+html[data-admin-theme="dark"] .bg-amber-50\/40,
+html[data-admin-theme="dark"] .bg-amber-50\/50 {
+  background-color: color-mix(in srgb, #3d3520 45%, #222d2b);
+}
+
+html[data-admin-theme="dark"] .bg-neutral-100 {
+  background-color: #2a3533;
+}
+
+html[data-admin-theme="dark"] .bg-amber-50 {
+  background-color: #3d3520;
+}
+
+html[data-admin-theme="dark"] .hover\:bg-neutral-50:hover {
+  background-color: #2a3533;
+}
+
+html[data-admin-theme="dark"] .hover\:bg-neutral-100:hover {
+  background-color: #323e3c;
+}
+
+html[data-admin-theme="dark"] .hover\:bg-amber-50\/80:hover {
+  background-color: color-mix(in srgb, #4a4028 80%, #222d2b);
+}
+
+html[data-admin-theme="dark"] .border-neutral-100 {
+  border-color: #2a3533;
+}
+
+html[data-admin-theme="dark"] .border-neutral-200 {
+  border-color: #354240;
+}
+
+html[data-admin-theme="dark"] .border-neutral-300 {
+  border-color: #455550;
+}
+
+html[data-admin-theme="dark"] .text-neutral-400 {
+  color: #8a9694;
+}
+
+html[data-admin-theme="dark"] .text-neutral-500 {
+  color: #9aa8a5;
+}
+
+html[data-admin-theme="dark"] .text-neutral-600 {
+  color: #b0bbb9;
+}
+
+html[data-admin-theme="dark"] .text-neutral-700 {
+  color: #c5cfcd;
+}
+
+html[data-admin-theme="dark"] .text-neutral-800 {
+  color: #d8e0de;
+}
+
+html[data-admin-theme="dark"] .text-neutral-900 {
+  color: #ecf2f0;
+}
+
+html[data-admin-theme="dark"] .text-amber-950 {
+  color: #fde68a;
+}
+
+html[data-admin-theme="dark"] .text-amber-900 {
+  color: #fcd34d;
+}
+
+html[data-admin-theme="dark"] .text-amber-800 {
+  color: #fbbf24;
+}
+
+html[data-admin-theme="dark"] .hover\:text-neutral-900:hover {
+  color: #ecf2f0;
+}
+
+html[data-admin-theme="dark"] .hover\:text-neutral-800:hover {
+  color: #d8e0de;
+}
+
+html[data-admin-theme="dark"] .placeholder\:text-neutral-400::placeholder {
+  color: #8a9694;
+}
+
+html[data-admin-theme="dark"] .shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+
+html[data-admin-theme="dark"] .shadow-xl {
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.45),
+    0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+html[data-admin-theme="dark"] .admin-table-row:hover {
+  background-color: #2a3533;
+}
+
+html[data-admin-theme="dark"] .admin-table-row[data-weigh-pending="true"] {
+  background-color: #3d3520;
+}
+
+html[data-admin-theme="dark"] .admin-table-row[data-weigh-pending="true"]:hover {
+  background-color: #4a4028;
+}
+
+html[data-admin-theme="dark"]
+  .admin-table-row[data-weigh-pending="true"][data-selected="true"] {
+  background-color: color-mix(
+    in srgb,
+    var(--brand-primary-soft) 65%,
+    #4a4028 35%
+  );
+}
+
+html[data-admin-theme="dark"] .rocha-skeleton {
+  background: linear-gradient(
+    90deg,
+    #2a3533 0%,
+    #354240 45%,
+    #2a3533 100%
+  );
+}
+
+html[data-admin-theme="dark"] select:not([multiple]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b0bbb9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+
+html[data-admin-theme="dark"] input[type="date"],
+html[data-admin-theme="dark"] input[type="datetime-local"],
+html[data-admin-theme="dark"] input[type="time"],
+html[data-admin-theme="dark"] input[type="month"],
+html[data-admin-theme="dark"] input[type="week"] {
+  color-scheme: dark;
+}
+
+html[data-admin-theme="dark"] .data-table-scroll-btn {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+html[data-admin-theme="dark"] .bg-amber-300 {
+  background-color: #b45309;
+}
+
+html[data-admin-theme="dark"] .hover\:bg-white\/70:hover {
+  background-color: color-mix(in srgb, #1e2826 70%, transparent);
+}
+
+html[data-admin-theme="dark"] .stroke-neutral-100 {
+  stroke: #354240;
+}
+
+html[data-admin-theme="dark"] .border-neutral-200\/80 {
+  border-color: color-mix(in srgb, #354240 80%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-admin-theme="dark"] .rocha-skeleton {
+    background: #354240;
+  }
+}
+
 .route-loading-fill {
   transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
