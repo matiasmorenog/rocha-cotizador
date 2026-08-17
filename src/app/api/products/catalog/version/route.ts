@@ -6,7 +6,7 @@ import {
 
 /**
  * Tiny freshness ping — no products, no unitPrices.
- * Client polls this (minutes) and only GET /catalog when version differs.
+ * Client polls this hourly and only GET /catalog when version differs.
  */
 export async function GET(req: NextRequest) {
   const access = await resolveCatalogAccess(req);

@@ -54,7 +54,7 @@ type CatalogSnapshot = {
 };
 
 /** Background ping while tab stays visible — version only, then full catalog if stale. */
-const CATALOG_VERSION_POLL_MS = 5 * 60 * 1000;
+const CATALOG_VERSION_POLL_MS = 60 * 60 * 1000;
 
 function customerKey(customerId?: string): string {
   return customerId?.trim() || "self";
