@@ -6,7 +6,7 @@ import { getAdminQuoteActivity, parseQuoteActivityPeriod } from "@/lib/admin-quo
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn, formatPrice } from "@/lib/utils";
 
-/** Dynamic shell; dashboard payload uses tagged Data Cache (TTL 1h, bust on quote create / wipe). */
+/** Dynamic shell; dashboard payload uses tagged Data Cache (TTL 24h, bust on quote create / wipe). */
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage({

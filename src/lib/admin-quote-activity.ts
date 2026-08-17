@@ -197,7 +197,7 @@ const getCachedQuoteActivity = unstable_cache(
     return fillBuckets(buckets, rows, period);
   },
   ["admin-quote-activity"],
-  { tags: [CACHE_TAGS.adminDashboard], revalidate: 3600 },
+  { tags: [CACHE_TAGS.adminDashboard], revalidate: 86400 },
 );
 
 export function getAdminQuoteActivity(

@@ -126,7 +126,7 @@ Si Production runtime usa host **sin** `-pooler`: riesgo de agotar conexiones ba
 | `products` | Catálogo base activos (`basePrice`, sin `unitPrice`) | Admin producto create/update + import Excel |
 | `price-lists` | Precios por lista | Price list mutate; product import |
 | `customers` | Mapping customerId → priceListId | Customer mutate; price list delete |
-| `admin-dashboard` | Counts + últimas cotizaciones (TTL 1h) | Quote create/wipe; product/customer mutate |
+| `admin-dashboard` | Counts + últimas cotizaciones (TTL 24h) | Quote create/wipe; product/customer mutate |
 
 Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateAfterCustomerMutation`, `invalidateAfterQuoteCreate`, `invalidateAllDataCaches`, `invalidateAfterDbScript`).
 
