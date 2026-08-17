@@ -945,10 +945,13 @@ html[data-admin-theme="dark"] .border-neutral-300 {
   border-color: #374955;
 }
 
+/* Tailwind v4 divide-y targets :not(:last-child); v3 used sibling combinator. */
+html[data-admin-theme="dark"] .divide-neutral-100 > :not(:last-child),
 html[data-admin-theme="dark"] .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
   border-color: #2a3942;
 }
 
+html[data-admin-theme="dark"] .divide-neutral-200 > :not(:last-child),
 html[data-admin-theme="dark"] .divide-neutral-200 > :not([hidden]) ~ :not([hidden]) {
   border-color: #2a3942;
 }
@@ -1022,6 +1025,14 @@ html[data-admin-theme="dark"] .admin-table-row[data-selected="true"] {
 html[data-admin-theme="dark"] .admin-table-row[data-selected="true"]:hover {
   filter: none;
   background-color: color-mix(in srgb, #00a884 22%, #202c33);
+}
+
+/* Selection inset rules use light-mode brand colors; tone down in dark lists/tables. */
+html[data-admin-theme="dark"] .admin-table-row:focus-visible,
+html[data-admin-theme="dark"] .admin-table-row[data-selected="true"] {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #00a884 55%, #2a3942),
+    inset 0 -1px 0 color-mix(in srgb, #00a884 55%, #2a3942);
 }
 
 html[data-admin-theme="dark"] .admin-table-row[data-weigh-pending="true"] {
