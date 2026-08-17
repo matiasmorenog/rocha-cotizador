@@ -3,6 +3,7 @@ import { LogOut } from "lucide-react";
 import { auth, signOut } from "@/lib/auth";
 import { PinChangeHint } from "@/components/account/pin-change-hint";
 import { AdminMenuButton } from "@/components/admin/admin-menu-button";
+import { AdminThemeToggle } from "@/components/admin/admin-theme-toggle";
 import { HeaderProgressLine } from "@/components/header-progress-line";
 import { isStaffRole } from "@/lib/staff-permissions";
 
@@ -59,21 +60,28 @@ export async function AppHeader() {
                   </form>
                 </>
               ) : (
-                <form
-                  action={async () => {
-                    "use server";
-                    await signOut({ redirectTo: "/admin/login" });
-                  }}
-                >
-                  <button
-                    type="submit"
-                    aria-label="Salir"
-                    title="Salir"
-                    className="cursor-pointer rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
+                <div className="flex items-center gap-4">
+                  <AdminThemeToggle />
+                  <span
+                    className="h-5 w-px shrink-0 bg-neutral-300/70"
+                    aria-hidden
+                  />
+                  <form
+                    action={async () => {
+                      "use server";
+                      await signOut({ redirectTo: "/admin/login" });
+                    }}
                   >
-                    <LogOut className="h-4 w-4" aria-hidden />
-                  </button>
-                </form>
+                    <button
+                      type="submit"
+                      aria-label="Salir"
+                      title="Salir"
+                      className="cursor-pointer rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
+                    >
+                      <LogOut className="h-4 w-4" aria-hidden />
+                    </button>
+                  </form>
+                </div>
               )}
             </nav>
           ) : null}

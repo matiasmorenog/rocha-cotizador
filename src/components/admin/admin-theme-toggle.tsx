@@ -2,35 +2,29 @@
 
 import { Moon, Sun } from "lucide-react";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
+import { toggleAdminTheme, useAdminThemeStore } from "@/lib/admin-theme-store";
 import { cn } from "@/lib/utils";
-import { useAdminTheme } from "@/components/admin/admin-theme-provider";
 
 export function AdminThemeToggle({ className }: { className?: string }) {
-  const { theme, toggleTheme } = useAdminTheme();
+  const theme = useAdminThemeStore();
   const isDark = theme === "dark";
 
   return (
     <button
       type="button"
-      onClick={toggleTheme}
+      onClick={toggleAdminTheme}
       aria-label={isDark ? "Modo claro" : "Modo oscuro"}
       title={isDark ? "Modo claro" : "Modo oscuro"}
       className={cn(
-        "inline-flex w-full items-center justify-center gap-2 rounded-md border border-neutral-200 px-2 py-1.5 text-sm text-neutral-700 transition-colors hover:bg-neutral-50 hover:text-neutral-900",
+        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800",
         FOCUS_BRAND_OUTLINE,
         className,
       )}
     >
       {isDark ? (
-        <>
-          <Sun className="h-4 w-4 shrink-0" aria-hidden />
-          <span>Modo claro</span>
-        </>
+        <Sun className="h-4 w-4" aria-hidden />
       ) : (
-        <>
-          <Moon className="h-4 w-4 shrink-0" aria-hidden />
-          <span>Modo oscuro</span>
-        </>
+        <Moon className="h-4 w-4" aria-hidden />
       )}
     </button>
   );

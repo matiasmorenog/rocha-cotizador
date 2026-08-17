@@ -11,7 +11,6 @@ import {
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import type { StaffPermission } from "@/lib/staff-permissions";
 import { cn } from "@/lib/utils";
-import { AdminThemeToggle } from "@/components/admin/admin-theme-toggle";
 import { useAdminNavStore } from "@/stores/admin-nav-store";
 
 const links: Array<{
@@ -133,9 +132,6 @@ function AdminSidebarPanel({
         onNavigate={onNavigate}
         permissions={permissions}
       />
-      <div className="mt-4 border-t border-neutral-200 pt-3">
-        <AdminThemeToggle />
-      </div>
     </div>
   );
 }

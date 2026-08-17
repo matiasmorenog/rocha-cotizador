@@ -858,13 +858,15 @@ select:not([multiple]):disabled {
 }
 
 /*
-  Admin dark mode trial — scoped via data-admin-theme on <html>, set only while
+  Admin dark mode — scoped via data-admin-theme on <html>, set only while
   the protected admin layout is mounted. Customer routes never set the attribute.
+  Palette tuned toward WhatsApp dark (#111b21 / #202c33 / #00a884 accent).
 */
 html[data-admin-theme="dark"] {
-  --background: #0c1413;
-  --foreground: #e4edeb;
-  --brand-primary-soft: #1a3d37;
+  --background: #111b21;
+  --foreground: #e9edef;
+  --brand-primary: #00a884;
+  --brand-primary-soft: #202c33;
   color-scheme: dark;
 }
 
@@ -873,42 +875,46 @@ html[data-admin-theme="dark"] body {
   background-image:
     radial-gradient(
       ellipse 80% 50% at 10% -10%,
-      color-mix(in srgb, #1a3d37 55%, transparent) 0%,
+      color-mix(in srgb, #00a884 12%, transparent) 0%,
       transparent 55%
     ),
     radial-gradient(
       ellipse 60% 40% at 100% 0%,
-      color-mix(in srgb, #163832 40%, transparent) 0%,
+      color-mix(in srgb, #005c4b 18%, transparent) 0%,
       transparent 50%
     );
   color: var(--foreground);
 }
 
 html[data-admin-theme="dark"] header {
-  border-bottom-color: color-mix(in srgb, var(--brand-primary) 35%, transparent);
-  background-color: color-mix(in srgb, var(--brand-primary-soft) 85%, #0c1413);
+  border-bottom-color: color-mix(in srgb, #00a884 28%, transparent);
+  background-color: #202c33;
+}
+
+html[data-admin-theme="dark"] .bg-neutral-300\/70 {
+  background-color: color-mix(in srgb, #8696a0 40%, transparent);
 }
 
 html[data-admin-theme="dark"] .bg-white {
-  background-color: #1e2826;
+  background-color: #202c33;
 }
 
 html[data-admin-theme="dark"] .bg-neutral-50 {
-  background-color: #222d2b;
+  background-color: #1a252d;
 }
 
 html[data-admin-theme="dark"] .bg-neutral-50\/60 {
-  background-color: color-mix(in srgb, #222d2b 60%, transparent);
+  background-color: color-mix(in srgb, #1a252d 60%, transparent);
 }
 
 html[data-admin-theme="dark"] .bg-neutral-50\/40,
 html[data-admin-theme="dark"] .bg-amber-50\/40,
 html[data-admin-theme="dark"] .bg-amber-50\/50 {
-  background-color: color-mix(in srgb, #3d3520 45%, #222d2b);
+  background-color: color-mix(in srgb, #3d3520 45%, #1a252d);
 }
 
 html[data-admin-theme="dark"] .bg-neutral-100 {
-  background-color: #2a3533;
+  background-color: #2a3942;
 }
 
 html[data-admin-theme="dark"] .bg-amber-50 {
@@ -916,51 +922,59 @@ html[data-admin-theme="dark"] .bg-amber-50 {
 }
 
 html[data-admin-theme="dark"] .hover\:bg-neutral-50:hover {
-  background-color: #2a3533;
+  background-color: #2a3942;
 }
 
 html[data-admin-theme="dark"] .hover\:bg-neutral-100:hover {
-  background-color: #323e3c;
+  background-color: #374955;
 }
 
 html[data-admin-theme="dark"] .hover\:bg-amber-50\/80:hover {
-  background-color: color-mix(in srgb, #4a4028 80%, #222d2b);
+  background-color: color-mix(in srgb, #4a4028 80%, #1a252d);
 }
 
 html[data-admin-theme="dark"] .border-neutral-100 {
-  border-color: #2a3533;
+  border-color: #2a3942;
 }
 
 html[data-admin-theme="dark"] .border-neutral-200 {
-  border-color: #354240;
+  border-color: #2a3942;
 }
 
 html[data-admin-theme="dark"] .border-neutral-300 {
-  border-color: #455550;
+  border-color: #374955;
+}
+
+html[data-admin-theme="dark"] .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #2a3942;
+}
+
+html[data-admin-theme="dark"] .divide-neutral-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #2a3942;
 }
 
 html[data-admin-theme="dark"] .text-neutral-400 {
-  color: #8a9694;
+  color: #8696a0;
 }
 
 html[data-admin-theme="dark"] .text-neutral-500 {
-  color: #9aa8a5;
+  color: #8696a0;
 }
 
 html[data-admin-theme="dark"] .text-neutral-600 {
-  color: #b0bbb9;
+  color: #aebac1;
 }
 
 html[data-admin-theme="dark"] .text-neutral-700 {
-  color: #c5cfcd;
+  color: #c5cdd3;
 }
 
 html[data-admin-theme="dark"] .text-neutral-800 {
-  color: #d8e0de;
+  color: #d1d7db;
 }
 
 html[data-admin-theme="dark"] .text-neutral-900 {
-  color: #ecf2f0;
+  color: #e9edef;
 }
 
 html[data-admin-theme="dark"] .text-amber-950 {
@@ -976,29 +990,38 @@ html[data-admin-theme="dark"] .text-amber-800 {
 }
 
 html[data-admin-theme="dark"] .hover\:text-neutral-900:hover {
-  color: #ecf2f0;
+  color: #e9edef;
 }
 
 html[data-admin-theme="dark"] .hover\:text-neutral-800:hover {
-  color: #d8e0de;
+  color: #d1d7db;
 }
 
 html[data-admin-theme="dark"] .placeholder\:text-neutral-400::placeholder {
-  color: #8a9694;
+  color: #8696a0;
 }
 
 html[data-admin-theme="dark"] .shadow-sm {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 html[data-admin-theme="dark"] .shadow-xl {
   box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.45),
-    0 4px 8px rgba(0, 0, 0, 0.3);
+    0 10px 24px rgba(0, 0, 0, 0.5),
+    0 4px 8px rgba(0, 0, 0, 0.35);
 }
 
 html[data-admin-theme="dark"] .admin-table-row:hover {
-  background-color: #2a3533;
+  background-color: #2a3942;
+}
+
+html[data-admin-theme="dark"] .admin-table-row[data-selected="true"] {
+  background-color: color-mix(in srgb, #00a884 16%, #202c33);
+}
+
+html[data-admin-theme="dark"] .admin-table-row[data-selected="true"]:hover {
+  filter: none;
+  background-color: color-mix(in srgb, #00a884 22%, #202c33);
 }
 
 html[data-admin-theme="dark"] .admin-table-row[data-weigh-pending="true"] {
@@ -1021,14 +1044,14 @@ html[data-admin-theme="dark"]
 html[data-admin-theme="dark"] .rocha-skeleton {
   background: linear-gradient(
     90deg,
-    #2a3533 0%,
-    #354240 45%,
-    #2a3533 100%
+    #2a3942 0%,
+    #374955 45%,
+    #2a3942 100%
   );
 }
 
 html[data-admin-theme="dark"] select:not([multiple]) {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b0bbb9' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23aebac1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 }
 
 html[data-admin-theme="dark"] input[type="date"],
@@ -1041,8 +1064,8 @@ html[data-admin-theme="dark"] input[type="week"] {
 
 html[data-admin-theme="dark"] .data-table-scroll-btn {
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.35),
-    0 1px 2px rgba(0, 0, 0, 0.25);
+    0 1px 3px rgba(0, 0, 0, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 html[data-admin-theme="dark"] .bg-amber-300 {
@@ -1050,20 +1073,20 @@ html[data-admin-theme="dark"] .bg-amber-300 {
 }
 
 html[data-admin-theme="dark"] .hover\:bg-white\/70:hover {
-  background-color: color-mix(in srgb, #1e2826 70%, transparent);
+  background-color: color-mix(in srgb, #202c33 70%, transparent);
 }
 
 html[data-admin-theme="dark"] .stroke-neutral-100 {
-  stroke: #354240;
+  stroke: #2a3942;
 }
 
 html[data-admin-theme="dark"] .border-neutral-200\/80 {
-  border-color: color-mix(in srgb, #354240 80%, transparent);
+  border-color: color-mix(in srgb, #2a3942 80%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {
   html[data-admin-theme="dark"] .rocha-skeleton {
-    background: #354240;
+    background: #374955;
   }
 }
 
