@@ -18,7 +18,7 @@ import {
 } from "@/lib/stock-units";
 import { cn } from "@/lib/utils";
 import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
-import { productMatchesStockModule } from "@/lib/stock-rubros";
+import { productMatchesStockModule } from "@/lib/stock-rubros-shared";
 
 export type StockRecountCustomer = {
   id: string;
