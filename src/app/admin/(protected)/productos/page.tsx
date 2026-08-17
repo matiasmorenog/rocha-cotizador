@@ -63,6 +63,7 @@ export default async function AdminProductosPage() {
         exportUrl="/api/admin/products/export"
         importUrl="/api/admin/products/import"
         entityLabel="productos"
+        broadcastCatalogStale
       />
 
       <ProductAdminTable

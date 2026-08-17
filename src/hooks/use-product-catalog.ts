@@ -10,6 +10,7 @@ import {
   clearCachedCatalog,
   readCachedCatalog,
   readCachedUnitPrices,
+  subscribeCatalogStale,
   unitPriceFromMap,
   writeCachedCatalog,
   writeCachedUnitPrices,
@@ -49,8 +50,12 @@ type CatalogSnapshot = {
   products: CatalogProduct[];
   searchIndex: ProductSearchIndex<CatalogProduct>;
   unitPrices: Record<string, number>;
+  version: string | null;
   ready: boolean;
 };
+
+/** Background ping while tab stays visible — version only, then full catalog if stale. */
+const CATALOG_VERSION_POLL_MS = 60 * 60 * 1000;
 
 function customerKey(customerId?: string): string {
   return customerId?.trim() || "self";
@@ -137,6 +142,20 @@ async function fetchCatalogJson(params: URLSearchParams) {
   return { res, data };
 }
 
+async function fetchCatalogVersion(customerId?: string) {
+  const params = new URLSearchParams();
+  if (customerId) params.set("customerId", customerId);
+  const qs = params.toString();
+  const res = await fetch(
+    qs ? `/api/products/catalog/version?${qs}` : "/api/products/catalog/version",
+  );
+  const data = (await res.json().catch(() => ({}))) as {
+    error?: string;
+    version?: string;
+  };
+  return { res, data };
+}
+
 export function useProductCatalog(
   opts: UseProductCatalogOptions = {},
 ): CatalogState & {
@@ -148,6 +167,7 @@ export function useProductCatalog(
     products: state.products,
     searchIndex: state.searchIndex,
     unitPrices: state.unitPrices,
+    version: state.version,
     ready: state.ready,
   });
   // Keep search()/searchAsync in sync with the latest paint (no post-effect lag).
@@ -155,6 +175,7 @@ export function useProductCatalog(
     products: state.products,
     searchIndex: state.searchIndex,
     unitPrices: state.unitPrices,
+    version: state.version,
     ready: state.ready,
   };
   const loadPromiseRef = useRef<Promise<void> | null>(null);
@@ -167,6 +188,7 @@ export function useProductCatalog(
   useEffect(() => {
     let cancelled = false;
     const key = customerKey(opts.customerId);
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
     async function revalidate() {
       const cached = readCachedCatalog();
@@ -186,6 +208,7 @@ export function useProductCatalog(
             products,
             searchIndex,
             unitPrices: prices?.unitPrices ?? snapshotRef.current.unitPrices,
+            version: cached.version,
             ready: true,
           });
           setState((s) => ({
@@ -212,9 +235,13 @@ export function useProductCatalog(
         error: null,
       }));
 
+      const knownVersion =
+        snapshotRef.current.version ??
+        (cached && cached.products.length > 0 ? cached.version : null);
+
       const params = new URLSearchParams();
-      if (cached?.version && cached.products.length > 0) {
-        params.set("v", cached.version);
+      if (knownVersion && hasLocal) {
+        params.set("v", knownVersion);
       }
       if (opts.customerId) params.set("customerId", opts.customerId);
 
@@ -245,6 +272,7 @@ export function useProductCatalog(
             products,
             searchIndex,
             unitPrices,
+            version,
             ready: true,
           });
           setState({
@@ -319,6 +347,7 @@ export function useProductCatalog(
             products: [],
             searchIndex: emptyIndex,
             unitPrices: nextPrices,
+            version: data.version ?? null,
             ready: false,
           });
           setState({
@@ -333,7 +362,7 @@ export function useProductCatalog(
           return;
         }
 
-        const version = data.version ?? cached?.version ?? "0";
+        const version = data.version ?? knownVersion ?? cached?.version ?? "0";
         writeCachedCatalog({
           version,
           products,
@@ -346,6 +375,7 @@ export function useProductCatalog(
           products: hydrated.products,
           searchIndex: hydrated.searchIndex,
           unitPrices: nextPrices,
+          version,
           ready: true,
         });
         setState({
@@ -372,6 +402,7 @@ export function useProductCatalog(
             products: hydrated.products,
             searchIndex: hydrated.searchIndex,
             unitPrices: prices?.unitPrices ?? {},
+            version: fallback.version,
             ready: true,
           });
           setState({
@@ -394,13 +425,111 @@ export function useProductCatalog(
       }
     }
 
-    const run = revalidate();
-    loadPromiseRef.current = run.then(
-      () => undefined,
-      () => undefined,
-    );
+    /** Coalesce concurrent kicks (visibility + focus, interval overlap). */
+    function kick(task: () => Promise<void>) {
+      if (cancelled) return;
+      if (loadPromiseRef.current) return;
+      const run = task().then(
+        () => undefined,
+        () => undefined,
+      );
+      loadPromiseRef.current = run;
+      void run.finally(() => {
+        if (loadPromiseRef.current === run) {
+          loadPromiseRef.current = null;
+        }
+      });
+    }
+
+    async function pingVersionThenRefresh() {
+      const cached = readCachedCatalog();
+      const known =
+        snapshotRef.current.version ??
+        (cached && cached.products.length > 0 ? cached.version : null);
+      if (!known) {
+        await revalidate();
+        return;
+      }
+      try {
+        const { res, data } = await fetchCatalogVersion(opts.customerId);
+        if (cancelled) return;
+        if (!res.ok || !data.version) return;
+        if (data.version !== known) {
+          await revalidate();
+        }
+      } catch {
+        // Keep serving local catalog.
+      }
+    }
+
+    function kickRevalidate() {
+      kick(revalidate);
+    }
+
+    function kickVersionCheck() {
+      kick(pingVersionThenRefresh);
+    }
+
+    function stopInterval() {
+      if (intervalId != null) {
+        clearInterval(intervalId);
+        intervalId = null;
+      }
+    }
+
+    function startInterval() {
+      if (intervalId != null) return;
+      intervalId = setInterval(() => {
+        if (typeof document !== "undefined" && document.hidden) return;
+        kickVersionCheck();
+      }, CATALOG_VERSION_POLL_MS);
+    }
+
+    function onVisibilityChange() {
+      if (typeof document === "undefined") return;
+      if (document.visibilityState === "visible") {
+        kickVersionCheck();
+        startInterval();
+      } else {
+        stopInterval();
+      }
+    }
+
+    function onFocus() {
+      kickVersionCheck();
+    }
+
+    function onPageShow(event: PageTransitionEvent) {
+      if (event.persisted) {
+        kickVersionCheck();
+      }
+    }
+
+    kickRevalidate();
+
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", onVisibilityChange);
+      if (!document.hidden) startInterval();
+    }
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", onFocus);
+      window.addEventListener("pageshow", onPageShow);
+    }
+    const unsubscribeStale = subscribeCatalogStale(() => {
+      kickRevalidate();
+    });
+
     return () => {
       cancelled = true;
+      stopInterval();
+      unsubscribeStale();
+      if (typeof document !== "undefined") {
+        document.removeEventListener("visibilitychange", onVisibilityChange);
+      }
+      if (typeof window !== "undefined") {
+        window.removeEventListener("focus", onFocus);
+        window.removeEventListener("pageshow", onPageShow);
+      }
     };
   }, [opts.customerId]);
 
