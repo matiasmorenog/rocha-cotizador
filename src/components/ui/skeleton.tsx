@@ -46,10 +46,7 @@ const ADMIN_SKELETON_CARD = SKELETON_CARD;
 
 const ADMIN_SKELETON_CARD_SHADOW = cn(SKELETON_CARD, "shadow-sm");
 
-const ADMIN_SKELETON_TABLE = cn(
-  SKELETON_CARD,
-  "data-table-scroll overflow-hidden",
-);
+const ADMIN_SKELETON_TABLE = cn(SKELETON_CARD, "data-table-scroll");
 
 function SkeletonLogo({
   size = "xl",
@@ -87,15 +84,22 @@ function SkeletonTableRows({
   rows = 6,
   cols = 4,
   admin = false,
+  tableMinWidth = "min-w-[36rem]",
 }: {
   rows?: number;
   cols?: number;
   /** Admin list pages — table chrome on page bg, not a white card slab. */
   admin?: boolean;
+  /** Match the loaded table's min-width (quotes list is 42rem / 6 cols). */
+  tableMinWidth?: string;
 }) {
   return (
-    <div className={admin ? ADMIN_SKELETON_TABLE : cn(SKELETON_CARD, "data-table-scroll overflow-hidden")}>
-      <table className="w-full min-w-[36rem] text-sm">
+    <div
+      className={
+        admin ? ADMIN_SKELETON_TABLE : cn(SKELETON_CARD, "data-table-scroll")
+      }
+    >
+      <table className={cn("w-full text-sm", tableMinWidth)}>
         <thead className="bg-neutral-50 text-left text-neutral-600">
           <tr>
             {Array.from({ length: cols }, (_, i) => (
@@ -559,24 +563,23 @@ export function SkeletonAdminQuotesPage() {
             <Skeleton className="h-4 w-44" />
             <Skeleton className="h-3 w-56" />
           </div>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div className="space-y-1">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="w-[12.75rem] shrink-0 space-y-1">
               <Skeleton className="h-3 w-12" />
               <Skeleton className="h-10 w-full rounded-md" />
             </div>
-            <div className="space-y-1">
+            <div className="w-[12.75rem] shrink-0 space-y-1">
               <Skeleton className="h-3 w-12" />
               <Skeleton className="h-10 w-full rounded-md" />
             </div>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-            <Skeleton className="h-10 w-full rounded-md sm:w-32" />
-            <Skeleton className="h-10 w-full rounded-md sm:w-36" />
+            <Skeleton className="h-10 w-28 rounded-md" />
+            <Skeleton className="h-10 w-36 rounded-md" />
           </div>
         </div>
       </div>
       <Skeleton className="h-10 w-full rounded-md" />
-      <SkeletonTableRows rows={8} cols={5} admin />
+      {/* Número · Cliente · Pedido · Entrega · Estado · Total */}
+      <SkeletonTableRows rows={8} cols={6} admin tableMinWidth="min-w-[42rem]" />
     </SkeletonRegion>
   );
 }
