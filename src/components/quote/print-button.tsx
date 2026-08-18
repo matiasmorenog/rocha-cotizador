@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { suspendAdminThemeForPrint } from "@/lib/admin-theme";
 
 type PrintMode = "normal" | "thermal";
 
@@ -9,7 +8,6 @@ const THERMAL_PAGE_STYLE_ID = "remito-thermal-page-size";
 
 function printWithMode(mode: PrintMode) {
   const root = document.documentElement;
-  const restoreAdminTheme = suspendAdminThemeForPrint();
 
   if (mode === "thermal") {
     root.dataset.printMode = "thermal";
@@ -25,7 +23,6 @@ function printWithMode(mode: PrintMode) {
   }
 
   const cleanup = () => {
-    restoreAdminTheme();
     delete root.dataset.printMode;
     document.getElementById(THERMAL_PAGE_STYLE_ID)?.remove();
     window.removeEventListener("afterprint", cleanup);

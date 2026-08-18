@@ -867,7 +867,10 @@ select:not([multiple]):disabled {
   Admin dark mode — scoped via data-admin-theme on <html>, persisted in
   localStorage and applied app-wide (admin + remito routes for staff).
   Palette tuned toward WhatsApp dark (#111b21 / #202c33 / #00a884 accent).
+  Screen-only: print (PDF + thermal) must keep light :root tokens without
+  stripping data-admin-theme from the live document (that flashed the UI).
 */
+@media screen {
 html[data-admin-theme="dark"] {
   --background: #111b21;
   --foreground: #e9edef;
@@ -1184,6 +1187,7 @@ html[data-admin-theme="dark"] .admin-edit-hover:hover {
     background: #415763;
   }
 }
+}
 
 .route-loading-fill {
   transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
@@ -1257,10 +1261,11 @@ html[data-admin-theme="dark"] .admin-edit-hover:hover {
 
 @media print {
   /*
-    Print output is always light — screen dark mode must not leak into PDF
-    or thermal receipts (browsers may still honor html[data-admin-theme]).
+    Print output is always light. Dark theme CSS is @media screen only;
+    these resets still force light tokens if a dark rule leaks, without
+    mutating data-admin-theme on the visible page.
   */
-  html[data-admin-theme="dark"] {
+  html {
     color-scheme: light !important;
     --background: #f3f6f5 !important;
     --foreground: #1a2e2c !important;
