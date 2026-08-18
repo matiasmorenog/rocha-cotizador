@@ -1053,12 +1053,14 @@ html[data-admin-theme="dark"]
 }
 
 html[data-admin-theme="dark"] .rocha-skeleton {
-  background: linear-gradient(
+  /* background-image (not shorthand) — keeps background-size: 200% for shimmer */
+  background-image: linear-gradient(
     90deg,
-    #31424c 0%,
-    #415763 45%,
-    #31424c 100%
+    #2a3942 0%,
+    #3d4f5a 45%,
+    #2a3942 100%
   );
+  background-size: 200% 100%;
 }
 
 html[data-admin-theme="dark"] select:not([multiple]) {
