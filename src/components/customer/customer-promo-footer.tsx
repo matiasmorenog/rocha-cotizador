@@ -62,7 +62,7 @@ export function CustomerPromoFooter() {
             target="_blank"
             rel="noopener noreferrer"
             className={cn(
-              "inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white/70 px-4 text-sm font-medium text-[var(--brand-primary)] transition-colors hover:bg-white active:brightness-95",
+              "customer-promo-cta inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white px-4 text-sm font-medium text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary-soft)] active:brightness-95",
               FOCUS_BRAND_BORDER,
             )}
           >
