@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { auth } from "@/lib/auth";
 import {
   isStaffRole,
@@ -6,8 +7,11 @@ import {
 } from "@/lib/staff-permissions";
 import { redirect } from "next/navigation";
 
+/** One auth() decode per RSC request (layout + page share). */
+const getAuthSession = cache(auth);
+
 export async function requireCustomerSession() {
-  const session = await auth();
+  const session = await getAuthSession();
   if (
     !session?.user ||
     session.user.role !== "CUSTOMER" ||
@@ -20,7 +24,7 @@ export async function requireCustomerSession() {
 
 /** Any staff role (ADMIN | QUOTES | STOCK). */
 export async function requireStaffSession() {
-  const session = await auth();
+  const session = await getAuthSession();
   if (!session?.user || !isStaffRole(session.user.role)) {
     redirect("/admin/login");
   }
@@ -41,5 +45,5 @@ export async function requireStaffPermission(permission: StaffPermission) {
 }
 
 export async function getOptionalSession() {
-  return auth();
+  return getAuthSession();
 }
