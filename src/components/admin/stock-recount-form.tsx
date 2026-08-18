@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import { ProductPicker } from "@/components/quote/product-picker";
 import type { CatalogSearchProduct } from "@/components/quote/product-picker";
 import { Button } from "@/components/ui/button";
+import { DataTableScroll } from "@/components/ui/data-table";
 import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
 import { Label } from "@/components/ui/label";
 import { ArNumberValueInput } from "@/components/ui/ar-number-input";
@@ -311,8 +312,8 @@ export function StockRecountForm({
           cantidad &gt; 0.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-md border border-neutral-200">
-          <table className="min-w-full text-left text-sm">
+        <DataTableScroll>
+          <table className="w-full min-w-[36rem] text-left text-sm">
             <thead className="bg-neutral-50 text-xs uppercase text-neutral-500">
               <tr>
                 <th className="px-3 py-2">Producto</th>
@@ -381,7 +382,7 @@ export function StockRecountForm({
               ))}
             </tbody>
           </table>
-        </div>
+        </DataTableScroll>
       )}
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}

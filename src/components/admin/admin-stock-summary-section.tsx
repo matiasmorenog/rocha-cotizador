@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import type { StockTab } from "@/lib/admin-stock-data";
 import type { StockSummaryPayload } from "@/lib/admin-stock-summary-shared";
 import { AdminStockSummaryChart } from "@/components/admin/admin-stock-summary-chart";
+import { DataTableScroll } from "@/components/ui/data-table";
 import { cn, formatPrice, formatQty } from "@/lib/utils";
 import { formatDeliveryDateDisplay, parseDateOnlyYmd } from "@/lib/delivery-date";
 
@@ -113,8 +114,8 @@ export function AdminStockSummarySection({
                 Sin líneas en el período con los filtros actuales.
               </p>
             ) : (
-              <div className="overflow-x-auto rounded-lg border border-neutral-200">
-                <table className="min-w-full text-sm">
+              <DataTableScroll className="data-table-rows-2l">
+                <table className="w-full min-w-[40rem] text-sm">
                   <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
                     <tr>
                       <th className="px-3 py-2 font-medium">Producto</th>
@@ -166,7 +167,7 @@ export function AdminStockSummarySection({
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </DataTableScroll>
             )}
           </div>
 
