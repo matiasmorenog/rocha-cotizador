@@ -128,8 +128,8 @@ export function CustomerAdminForm({
       <p className="text-sm font-medium text-neutral-800">
         {isEdit ? "Editar cliente" : "Nuevo cliente"}
       </p>
-      <div className="space-y-3">
-        <div className="space-y-1">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <div className="shrink-0 space-y-1">
           <Label htmlFor="customer-code">Código</Label>
           <Input
             id="customer-code"
@@ -141,32 +141,30 @@ export function CustomerAdminForm({
             className="w-20 max-w-[4rem]"
           />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1">
-            <Label htmlFor="customer-name">Nombre</Label>
-            <Input
-              id="customer-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="customer-name-note">Aclaración</Label>
-            <Input
-              id="customer-name-note"
-              value={nameNote}
-              onChange={(e) => setNameNote(e.target.value)}
-              placeholder="Opcional — ej. contacto o sucursal"
-              aria-describedby="customer-name-note-hint"
-            />
-            <p
-              id="customer-name-note-hint"
-              className="text-xs text-neutral-500"
-            >
-              Solo visible en admin; el cliente ve únicamente el nombre.
-            </p>
-          </div>
+        <div className="min-w-0 flex-[2] space-y-1">
+          <Label htmlFor="customer-name">Nombre</Label>
+          <Input
+            id="customer-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+        <div className="min-w-0 flex-1 space-y-1">
+          <Label htmlFor="customer-name-note">Aclaración</Label>
+          <Input
+            id="customer-name-note"
+            value={nameNote}
+            onChange={(e) => setNameNote(e.target.value)}
+            placeholder="Opcional — ej. contacto o sucursal"
+            aria-describedby="customer-name-note-hint"
+          />
+          <p
+            id="customer-name-note-hint"
+            className="text-xs text-neutral-500"
+          >
+            Solo visible en admin; el cliente ve únicamente el nombre.
+          </p>
         </div>
       </div>
 
