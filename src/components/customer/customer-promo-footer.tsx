@@ -2,30 +2,37 @@
 
 import Link from "next/link";
 import { X } from "lucide-react";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { developerPortfolioMailtoHref } from "@/lib/developer-portfolio-contact";
 import {
   dismissCustomerPromoFooter,
+  isCustomerPromoFooterDismissed,
   notifyCustomerPromoFooterChange,
-  readCustomerPromoFooterVisible,
   subscribeCustomerPromoFooter,
 } from "@/lib/customer-promo-footer";
 import { FOCUS_BRAND_BORDER, FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 export function CustomerPromoFooter() {
-  const visible = useSyncExternalStore(
-    subscribeCustomerPromoFooter,
-    readCustomerPromoFooterVisible,
-    () => true,
-  );
+  const [dismissed, setDismissed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    // Mounted gate: defer sessionStorage read until after hydration (null → known).
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional client-only gate
+    setDismissed(isCustomerPromoFooterDismissed());
+
+    return subscribeCustomerPromoFooter(() => {
+      setDismissed(isCustomerPromoFooterDismissed());
+    });
+  }, []);
 
   function handleDismiss() {
     dismissCustomerPromoFooter();
     notifyCustomerPromoFooterChange();
+    setDismissed(true);
   }
 
-  if (!visible) {
+  if (dismissed !== false) {
     return null;
   }
 
