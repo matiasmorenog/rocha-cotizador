@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { developerPortfolioMailtoHref } from "@/lib/developer-portfolio-contact";
+import { developerPortfolioWhatsAppHref } from "@/lib/developer-portfolio-contact";
 import {
   dismissCustomerPromoFooter,
   isCustomerPromoFooterDismissed,
@@ -58,7 +58,9 @@ export function CustomerPromoFooter() {
             </span>
           </p>
           <Link
-            href={developerPortfolioMailtoHref()}
+            href={developerPortfolioWhatsAppHref()}
+            target="_blank"
+            rel="noopener noreferrer"
             className={cn(
               "inline-flex h-9 cursor-pointer items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white/70 px-4 text-sm font-medium text-[var(--brand-primary)] transition-colors hover:bg-white active:brightness-95",
               FOCUS_BRAND_BORDER,
