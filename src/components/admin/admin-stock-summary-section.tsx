@@ -7,17 +7,6 @@ import { AdminStockSummaryChart } from "@/components/admin/admin-stock-summary-c
 import { cn, formatPrice, formatQty } from "@/lib/utils";
 import { formatDeliveryDateDisplay, parseDateOnlyYmd } from "@/lib/delivery-date";
 
-function formatUnitsSummary(payload: StockSummaryPayload): string {
-  if (payload.unitTotals.length === 0) return "0";
-  if (payload.unitTotals.length === 1) {
-    const row = payload.unitTotals[0];
-    return `${formatQty(row.totalQty)} ${row.unit}`;
-  }
-  return payload.unitTotals
-    .map((row) => `${formatQty(row.totalQty)} ${row.unit}`)
-    .join(" · ");
-}
-
 function formatLastEntryDate(value: string | null): string {
   if (!value) return "—";
   const date = parseDateOnlyYmd(value);
@@ -99,7 +88,7 @@ export function AdminStockSummarySection({
         <p className="text-sm text-red-600">{error}</p>
       ) : data ? (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <SummaryCard
               label="Entradas en el período"
               value={String(data.entryCount)}
@@ -112,15 +101,6 @@ export function AdminStockSummarySection({
               label="Mercadería contada (precio base)"
               value={formatPrice(data.totalBaseCost)}
               hint={`Promedio ${formatPrice(data.avgBaseCostPerDay)} / día`}
-            />
-            <SummaryCard
-              label="Cantidad total"
-              value={formatUnitsSummary(data)}
-              hint={
-                data.mixedUnits
-                  ? "Unidades mixtas (kg y unid.) — ver tabla por producto."
-                  : undefined
-              }
             />
           </div>
 

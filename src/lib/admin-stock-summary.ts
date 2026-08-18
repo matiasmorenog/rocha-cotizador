@@ -75,7 +75,6 @@ async function loadElaboradosSummary(
     entryCountRow,
     distinctRow,
     totalCostRow,
-    unitRows,
     productRows,
     dailyRows,
     lastDateRows,
@@ -97,14 +96,6 @@ async function loadElaboradosSummary(
         INNER JOIN "MermaEntry" e ON e.id = l."entryId"
         INNER JOIN "Product" p ON p.id = l."productId"
         WHERE ${entryWhere}
-      `,
-      db.$queryRaw<{ unit: string; totalQty: number }[]>`
-        SELECT l.unit, SUM(l.qty)::float AS "totalQty"
-        FROM "MermaLine" l
-        INNER JOIN "MermaEntry" e ON e.id = l."entryId"
-        WHERE ${entryWhere}
-        GROUP BY l.unit
-        ORDER BY l.unit
       `,
       db.$queryRaw<ProductAggRow[]>`
         SELECT
@@ -143,7 +134,6 @@ async function loadElaboradosSummary(
     entryCount: Number(entryCountRow[0]?.count ?? 0),
     distinctProducts: Number(distinctRow[0]?.count ?? 0),
     totalBaseCost: decimalToNumber(totalCostRow[0]?.totalCost),
-    unitRows,
     productRows,
     dailyRows: dailyRows.map((row) => ({
       date: row.entryDate.toISOString().slice(0, 10),
@@ -183,7 +173,6 @@ async function loadConsumiblesSummary(
     entryCountRow,
     distinctRow,
     totalCostRow,
-    unitRows,
     productRows,
     dailyRows,
     lastDateRows,
@@ -205,14 +194,6 @@ async function loadConsumiblesSummary(
         INNER JOIN "ConsumableCount" c ON c.id = l."countId"
         INNER JOIN "Product" p ON p.id = l."productId"
         WHERE ${entryWhere}
-      `,
-      db.$queryRaw<{ unit: string; totalQty: number }[]>`
-        SELECT l.unit, SUM(l.qty)::float AS "totalQty"
-        FROM "ConsumableCountLine" l
-        INNER JOIN "ConsumableCount" c ON c.id = l."countId"
-        WHERE ${entryWhere}
-        GROUP BY l.unit
-        ORDER BY l.unit
       `,
       db.$queryRaw<ProductAggRow[]>`
         SELECT
@@ -251,7 +232,6 @@ async function loadConsumiblesSummary(
     entryCount: Number(entryCountRow[0]?.count ?? 0),
     distinctProducts: Number(distinctRow[0]?.count ?? 0),
     totalBaseCost: decimalToNumber(totalCostRow[0]?.totalCost),
-    unitRows,
     productRows,
     dailyRows: dailyRows.map((row) => ({
       date: row.entryDate.toISOString().slice(0, 10),
@@ -273,7 +253,6 @@ async function assembleSummaryPayload(input: {
   entryCount: number;
   distinctProducts: number;
   totalBaseCost: number;
-  unitRows: Array<{ unit: string; totalQty: number }>;
   productRows: ProductAggRow[];
   dailyRows: Array<{ date: string; totalCost: number }>;
   lastDateRows: Map<string, string>;
@@ -311,10 +290,6 @@ async function assembleSummaryPayload(input: {
   });
 
   const totalBaseCost = decimalToNumber(input.totalBaseCost);
-  const unitTotals = input.unitRows.map((row) => ({
-    unit: row.unit,
-    totalQty: decimalToNumber(row.totalQty),
-  }));
 
   return {
     dayCount: input.dayCount,
@@ -322,8 +297,6 @@ async function assembleSummaryPayload(input: {
     distinctProducts: input.distinctProducts,
     totalBaseCost,
     avgBaseCostPerDay: totalBaseCost / input.dayCount,
-    unitTotals,
-    mixedUnits: unitTotals.length > 1,
     products,
     daily: buildDailySeries(input.from, input.to, input.dailyRows),
   };
@@ -340,8 +313,6 @@ function emptySummary(
     distinctProducts: 0,
     totalBaseCost: 0,
     avgBaseCostPerDay: 0,
-    unitTotals: [],
-    mixedUnits: false,
     products: [],
     daily: buildDailySeries(from, to, []),
   };

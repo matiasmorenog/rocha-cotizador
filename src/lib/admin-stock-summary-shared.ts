@@ -31,8 +31,6 @@ export type StockSummaryPayload = {
   distinctProducts: number;
   totalBaseCost: number;
   avgBaseCostPerDay: number;
-  unitTotals: Array<{ unit: string; totalQty: number }>;
-  mixedUnits: boolean;
   products: StockSummaryProductRow[];
   daily: StockSummaryDailyPoint[];
 };
