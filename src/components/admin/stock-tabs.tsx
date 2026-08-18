@@ -8,10 +8,11 @@ const TABS: Array<{ id: StockTab; label: string }> = [
   { id: "consumibles", label: "Consumibles" },
 ];
 
-function tabHref(tab: StockTab, from: string, to: string) {
+function tabHref(tab: StockTab, from: string, to: string, customerId: string) {
   const params = new URLSearchParams({ tab });
   if (from) params.set("from", from);
   if (to) params.set("to", to);
+  if (customerId) params.set("customer", customerId);
   return `/admin/stock?${params}`;
 }
 
@@ -19,10 +20,12 @@ export function StockTabs({
   active,
   from,
   to,
+  customerId,
 }: {
   active: StockTab;
   from: string;
   to: string;
+  customerId: string;
 }) {
   return (
     <div
@@ -35,7 +38,7 @@ export function StockTabs({
         return (
           <Link
             key={tab.id}
-            href={tabHref(tab.id, from, to)}
+            href={tabHref(tab.id, from, to, customerId)}
             role="tab"
             aria-selected={selected}
             className={cn(

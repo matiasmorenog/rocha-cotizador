@@ -7,8 +7,25 @@ import {
 
 export type StockTab = "elaborados" | "consumibles";
 
+export const STOCK_HISTORY_LIMIT = 20;
+
+export type StockModuleCustomer = {
+  id: string;
+  code: string;
+  name: string;
+};
+
 export function parseStockTab(tab?: string): StockTab {
   return tab === "consumibles" ? "consumibles" : "elaborados";
+}
+
+export function resolveStockCustomerId(
+  customers: StockModuleCustomer[],
+  customerParam?: string,
+): string {
+  const id = (customerParam ?? "").trim();
+  if (!id) return "";
+  return customers.some((c) => c.id === id) ? id : "";
 }
 
 export async function moduleCustomers(module: "MERMAS" | "CONSUMABLES") {
@@ -22,23 +39,38 @@ export async function moduleCustomers(module: "MERMAS" | "CONSUMABLES") {
   });
 }
 
-function entryDateFilter(from: string, to: string) {
+function stockEntryWhere(
+  from: string,
+  to: string,
+  customerId?: string,
+) {
   const fromDate = from ? parseDateOnlyYmd(from) : null;
   const toDate = to ? parseDateOnlyYmd(to) : null;
-  if (!fromDate && !toDate) return undefined;
+  const dateFilter =
+    fromDate || toDate
+      ? {
+          entryDate: {
+            ...(fromDate ? { gte: fromDate } : {}),
+            ...(toDate ? { lte: toDate } : {}),
+          },
+        }
+      : {};
+
   return {
-    entryDate: {
-      ...(fromDate ? { gte: fromDate } : {}),
-      ...(toDate ? { lte: toDate } : {}),
-    },
+    ...dateFilter,
+    ...(customerId ? { customerId } : {}),
   };
 }
 
-export async function loadElaboradosEntries(from: string, to: string) {
+export async function loadElaboradosEntries(
+  from: string,
+  to: string,
+  customerId?: string,
+) {
   const rows = await db.mermaEntry.findMany({
-    where: entryDateFilter(from, to),
+    where: stockEntryWhere(from, to, customerId),
     orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
-    take: 200,
+    take: STOCK_HISTORY_LIMIT,
     select: {
       id: true,
       entryDate: true,
@@ -59,11 +91,15 @@ export async function loadElaboradosEntries(from: string, to: string) {
   }));
 }
 
-export async function loadConsumiblesEntries(from: string, to: string) {
+export async function loadConsumiblesEntries(
+  from: string,
+  to: string,
+  customerId?: string,
+) {
   const rows = await db.consumableCount.findMany({
-    where: entryDateFilter(from, to),
+    where: stockEntryWhere(from, to, customerId),
     orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
-    take: 200,
+    take: STOCK_HISTORY_LIMIT,
     select: {
       id: true,
       entryDate: true,
