@@ -17,7 +17,7 @@ export default async function AdminDashboardPage({
   searchParams: Promise<{ chart?: string }>;
 }) {
   const session = await requireStaffSession();
-  const showEarningsChart = isStaffAdmin(session.user.role);
+  const isAdmin = isStaffAdmin(session.user.role);
   const canQuotes = staffHasPermission(session.user.permissions, "quotes");
 
   const { chart: chartParam } = await searchParams;
@@ -36,15 +36,19 @@ export default async function AdminDashboardPage({
     activity,
   ] = await Promise.all([
     getAdminDashboardData(),
-    showEarningsChart ? getAdminQuoteActivity(chartPeriod) : Promise.resolve(null),
+    isAdmin ? getAdminQuoteActivity(chartPeriod) : Promise.resolve(null),
   ]);
 
   const stats: { label: string; value: number | string; hint: string }[] = [
-    {
-      label: "Cotizaciones hoy",
-      value: quotesToday,
-      hint: `${formatPrice(quotesTodayTotal)} · ayer ${quotesYesterday}`,
-    },
+    ...(isAdmin
+      ? [
+          {
+            label: "Cotizaciones hoy",
+            value: quotesToday,
+            hint: `${formatPrice(quotesTodayTotal)} · ayer ${quotesYesterday}`,
+          },
+        ]
+      : []),
     {
       label: "Clientes que cotizaron hoy",
       value: customersQuotedToday,
@@ -91,7 +95,7 @@ export default async function AdminDashboardPage({
         ))}
       </div>
 
-      {showEarningsChart && activity ? (
+      {isAdmin && activity ? (
         <AdminQuoteActivitySection
           initial={{
             period: activity.period,
