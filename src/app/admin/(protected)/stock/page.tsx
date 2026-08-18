@@ -40,6 +40,7 @@ async function ElaboradosPanel({
 
       <div className="space-y-4">
         <StockPanelFilters
+          key={`${from}-${to}-${customerId}`}
           customers={customers}
           customerId={customerId}
           from={from}
@@ -101,6 +102,7 @@ async function ConsumiblesPanel({
 
       <div className="space-y-4">
         <StockPanelFilters
+          key={`${from}-${to}-${customerId}`}
           customers={customers}
           customerId={customerId}
           from={from}

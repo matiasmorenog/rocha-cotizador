@@ -1,0 +1,22 @@
+---
+description: Reuse existing UI components — no duplicate pickers, filters, or patterns
+alwaysApply: true
+---
+
+# Strict component reuse
+
+Before adding UI for admin (filters, pickers, tables, forms): **search the codebase for an existing component** and reuse it.
+
+## Hard rules
+
+- **Do not** add a new date/time picker, calendar, or native `input[type="date"]` for admin filtering if `DatetimeLocalPicker` (`src/components/ui/datetime-local-picker.tsx`) already fits — used in cotizaciones and stock filters.
+- **Do not** fork styling/behavior of an existing shared component “for this screen only” — extend the shared one or extract a thin wrapper used everywhere.
+- **Do not** duplicate filter/form patterns that already exist in admin panels — match layout and controls from the reference screen (e.g. `quotes-admin-panel.tsx` for date range filters).
+
+## Workflow
+
+1. Grep / search `src/components/` and sibling admin pages for the same concern.
+2. Reuse the existing component; minimal wrapper OK if props differ (e.g. YMD URL params ↔ datetime-local value).
+3. New shared primitive only when nothing suitable exists **and** user agreed on a new pattern.
+
+Refs: `quotes-admin-panel.tsx`, `stock-panel-filters.tsx`, `datetime-local-picker.tsx`.
