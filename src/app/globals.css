@@ -132,6 +132,12 @@ body {
   color: var(--brand-primary);
 }
 
+.admin-edit-hover:hover {
+  border-color: color-mix(in srgb, var(--brand-primary) 42%, white);
+  background-color: color-mix(in srgb, var(--brand-primary) 12%, white);
+  color: color-mix(in srgb, var(--brand-primary) 92%, #02443b);
+}
+
 /*
   Admin table rows: hover + persistent click/focus selection so scrolling a
   wide table horizontally doesn't lose which row you were reading. The
@@ -1132,6 +1138,12 @@ html[data-admin-theme="dark"] .admin-delete-hover:hover {
   border-color: color-mix(in srgb, var(--admin-destructive) 58%, #2a3942);
   background-color: var(--admin-destructive-hover-bg);
   color: color-mix(in srgb, var(--admin-destructive) 92%, #f6d7d3);
+}
+
+html[data-admin-theme="dark"] .admin-edit-hover:hover {
+  border-color: color-mix(in srgb, var(--brand-primary) 58%, #2a3942);
+  background-color: color-mix(in srgb, var(--brand-primary) 18%, #202c33);
+  color: color-mix(in srgb, var(--brand-primary) 90%, #d9fff3);
 }
 
 @media (prefers-reduced-motion: reduce) {
