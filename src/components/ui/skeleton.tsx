@@ -72,21 +72,29 @@ function SkeletonPageHeader({
 
 function SkeletonTableRows({ rows = 6, cols = 4 }: { rows?: number; cols?: number }) {
   return (
-    <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-      <div className="flex gap-3 border-b border-neutral-100 px-3 py-3">
-        {Array.from({ length: cols }, (_, i) => (
-          <Skeleton key={i} className="h-4 flex-1" />
-        ))}
-      </div>
-      <div className="divide-y divide-neutral-100">
-        {Array.from({ length: rows }, (_, row) => (
-          <div key={row} className="flex gap-3 px-3 py-3">
-            {Array.from({ length: cols }, (_, col) => (
-              <Skeleton key={col} className="h-4 flex-1" />
+    <div className="data-table-scroll overflow-hidden rounded-lg border border-neutral-200 bg-white">
+      <table className="w-full min-w-[36rem] text-sm">
+        <thead className="bg-neutral-50 text-left text-neutral-600">
+          <tr>
+            {Array.from({ length: cols }, (_, i) => (
+              <th key={i} className="px-3 py-2">
+                <Skeleton className="h-4 w-full" />
+              </th>
             ))}
-          </div>
-        ))}
-      </div>
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: rows }, (_, row) => (
+            <tr key={row} className="border-t border-neutral-100">
+              {Array.from({ length: cols }, (_, col) => (
+                <td key={col} className="px-3 py-2 align-middle">
+                  <Skeleton className="h-4 w-full" />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
