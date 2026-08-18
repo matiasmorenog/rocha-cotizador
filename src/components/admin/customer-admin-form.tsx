@@ -128,25 +128,45 @@ export function CustomerAdminForm({
       <p className="text-sm font-medium text-neutral-800">
         {isEdit ? "Editar cliente" : "Nuevo cliente"}
       </p>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="space-y-3">
         <div className="space-y-1">
-          <Label>Código</Label>
-          <Input value={code} onChange={(e) => setCode(e.target.value)} required />
-        </div>
-        <div className="space-y-1">
-          <Label>Nombre</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} required />
-        </div>
-        <div className="space-y-1">
-          <Label>Aclaración</Label>
+          <Label htmlFor="customer-code">Código</Label>
           <Input
-            value={nameNote}
-            onChange={(e) => setNameNote(e.target.value)}
-            placeholder="Opcional — ej. contacto o sucursal"
+            id="customer-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            required
+            inputMode="numeric"
+            maxLength={3}
+            className="w-20 max-w-[4rem]"
           />
-          <p className="text-xs text-neutral-500">
-            Solo visible en admin; el cliente ve únicamente el nombre.
-          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <Label htmlFor="customer-name">Nombre</Label>
+            <Input
+              id="customer-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="customer-name-note">Aclaración</Label>
+            <Input
+              id="customer-name-note"
+              value={nameNote}
+              onChange={(e) => setNameNote(e.target.value)}
+              placeholder="Opcional — ej. contacto o sucursal"
+              aria-describedby="customer-name-note-hint"
+            />
+            <p
+              id="customer-name-note-hint"
+              className="text-xs text-neutral-500"
+            >
+              Solo visible en admin; el cliente ve únicamente el nombre.
+            </p>
+          </div>
         </div>
       </div>
 
