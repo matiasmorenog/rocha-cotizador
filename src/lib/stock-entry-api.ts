@@ -6,6 +6,12 @@ import { db } from "@/lib/db";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
 import { productWhereForModule } from "@/lib/stock-rubros";
 import {
+  serializeStockLinesWithProducts,
+  stockLineFlatSelect,
+  stockProductReportSelect,
+  type ProductReportRow,
+} from "@/lib/stock-line-serialize";
+import {
   coerceStockUnitForProduct,
   isValidStockUnitForProduct,
 } from "@/lib/stock-units";
@@ -23,6 +29,35 @@ export const stockEntryBodySchema = z.object({
   lines: z.array(stockEntryLineSchema).min(1),
 });
 
+async function productReportByIds(productIds: string[]) {
+  if (productIds.length === 0) {
+    return new Map<string, ProductReportRow>();
+  }
+  const products = await db.product.findMany({
+    where: { id: { in: productIds } },
+    select: { id: true, ...stockProductReportSelect },
+  });
+  return new Map(
+    products.map(({ id, ...product }) => [id, product] as const),
+  );
+}
+
+function mapEntryLines(
+  lines: Array<{
+    productId: string;
+    unit: string;
+    qty: { toNumber?: () => number } | number | string;
+  }>,
+  productById: Map<string, ProductReportRow>,
+) {
+  return serializeStockLinesWithProducts(lines, productById).map((line) => ({
+    productId: line.productId,
+    unit: line.unit,
+    qty: line.qty,
+    product: line.product,
+  }));
+}
+
 export async function loadStockEntryForDate(
   module: CustomerModule,
   customerId: string,
@@ -32,52 +67,44 @@ export async function loadStockEntryForDate(
   if (!entryDate) return null;
 
   if (module === "MERMAS") {
-    return db.mermaEntry.findUnique({
+    const entry = await db.mermaEntry.findUnique({
       where: { customerId_entryDate: { customerId, entryDate } },
       select: {
         id: true,
         notes: true,
-        lines: {
-          select: {
-            productId: true,
-            unit: true,
-            qty: true,
-            product: {
-              select: {
-                code: true,
-                name: true,
-                rubro: true,
-                allowsUnitOrder: true,
-              },
-            },
-          },
-        },
+        lines: { select: stockLineFlatSelect },
       },
     });
+    if (!entry) return null;
+
+    const productById = await productReportByIds([
+      ...new Set(entry.lines.map((line) => line.productId)),
+    ]);
+    return {
+      id: entry.id,
+      notes: entry.notes,
+      lines: mapEntryLines(entry.lines, productById),
+    };
   }
 
-  return db.consumableCount.findUnique({
+  const entry = await db.consumableCount.findUnique({
     where: { customerId_entryDate: { customerId, entryDate } },
     select: {
       id: true,
       notes: true,
-      lines: {
-        select: {
-          productId: true,
-          unit: true,
-          qty: true,
-          product: {
-            select: {
-              code: true,
-              name: true,
-              rubro: true,
-              allowsUnitOrder: true,
-            },
-          },
-        },
-      },
+      lines: { select: stockLineFlatSelect },
     },
   });
+  if (!entry) return null;
+
+  const productById = await productReportByIds([
+    ...new Set(entry.lines.map((line) => line.productId)),
+  ]);
+  return {
+    id: entry.id,
+    notes: entry.notes,
+    lines: mapEntryLines(entry.lines, productById),
+  };
 }
 
 export async function upsertStockEntry(

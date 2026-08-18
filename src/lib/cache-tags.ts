@@ -86,6 +86,11 @@ export function invalidateAfterStaffUserMutation() {
   invalidateStaffUsersCache();
 }
 
+/** Stock entry create/update — refresh admin stock RSC (history is uncached). */
+export function invalidateAfterStockEntryMutation() {
+  revalidatePath("/admin/stock");
+}
+
 /** Quote create — expire dashboard Data Cache + refresh list routes. */
 export function invalidateAfterQuoteCreate() {
   invalidateAdminDashboardCache();

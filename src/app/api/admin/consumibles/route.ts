@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { requireStaffApi } from "@/lib/api-auth";
-import { db } from "@/lib/db";
-import { parseDateOnlyYmd } from "@/lib/delivery-date";
+import { loadConsumiblesEntries } from "@/lib/admin-stock-data";
+import { invalidateAfterStockEntryMutation } from "@/lib/cache-tags";
 import {
   loadStockEntryForDate,
   stockEntryBodySchema,
   upsertStockEntry,
 } from "@/lib/stock-entry-api";
-import {
-  serializeStockLine,
-  stockLineSelect,
-} from "@/lib/stock-line-serialize";
 
 export async function GET(req: NextRequest) {
   if (!(await requireStaffApi("stockReports"))) {
@@ -52,46 +48,17 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const fromParam = req.nextUrl.searchParams.get("from");
-  const toParam = req.nextUrl.searchParams.get("to");
+  const fromParam = req.nextUrl.searchParams.get("from") ?? "";
+  const toParam = req.nextUrl.searchParams.get("to") ?? "";
 
-  const from = fromParam ? parseDateOnlyYmd(fromParam) : null;
-  const to = toParam ? parseDateOnlyYmd(toParam) : null;
+  const entries = await loadConsumiblesEntries(
+    fromParam,
+    toParam,
+    customerId || undefined,
+    200,
+  );
 
-  const entries = await db.consumableCount.findMany({
-    where: {
-      ...(customerId ? { customerId } : {}),
-      ...(from || to
-        ? {
-            entryDate: {
-              ...(from ? { gte: from } : {}),
-              ...(to ? { lte: to } : {}),
-            },
-          }
-        : {}),
-    },
-    orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
-    take: 200,
-    select: {
-      id: true,
-      entryDate: true,
-      notes: true,
-      submittedBy: true,
-      customer: { select: { code: true, name: true } },
-      lines: { select: stockLineSelect },
-    },
-  });
-
-  return NextResponse.json({
-    entries: entries.map((e) => ({
-      id: e.id,
-      entryDate: e.entryDate.toISOString().slice(0, 10),
-      notes: e.notes,
-      submittedBy: e.submittedBy,
-      customer: e.customer,
-      lines: e.lines.map(serializeStockLine),
-    })),
-  });
+  return NextResponse.json({ entries });
 }
 
 export async function POST(req: NextRequest) {
@@ -116,5 +83,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
+  invalidateAfterStockEntryMutation();
   return NextResponse.json({ id: result.id, ok: true });
 }

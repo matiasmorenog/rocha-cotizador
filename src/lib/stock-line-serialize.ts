@@ -7,14 +7,20 @@ export const stockProductReportSelect = {
   allowsUnitOrder: true,
 } as const;
 
-export const stockLineSelect = {
+/** Flat line select — join products in memory to avoid nested Prisma joins. */
+export const stockLineFlatSelect = {
   productId: true,
   unit: true,
   qty: true,
+} as const;
+
+/** Nested select for single-entry loads that still use inline product join. */
+export const stockLineSelect = {
+  ...stockLineFlatSelect,
   product: { select: stockProductReportSelect },
 } as const;
 
-type ProductReportRow = {
+export type ProductReportRow = {
   code: string;
   name: string;
   rubro: string | null;
@@ -30,12 +36,34 @@ export function serializeStockProductReport(product: ProductReportRow) {
   };
 }
 
-type StockLineRow = {
+const missingProductReport: ProductReportRow = {
+  code: "?",
+  name: "—",
+  rubro: null,
+  allowsUnitOrder: false,
+};
+
+type StockLineFlatRow = {
   productId: string;
   unit: string;
   qty: { toNumber?: () => number } | number | string;
+};
+
+type StockLineRow = StockLineFlatRow & {
   product: ProductReportRow;
 };
+
+export function serializeStockLinesWithProducts(
+  lines: StockLineFlatRow[],
+  productById: Map<string, ProductReportRow>,
+) {
+  return lines.map((line) =>
+    serializeStockLine({
+      ...line,
+      product: productById.get(line.productId) ?? missingProductReport,
+    }),
+  );
+}
 
 export function serializeStockLine(line: StockLineRow) {
   const qty =

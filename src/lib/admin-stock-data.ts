@@ -3,8 +3,10 @@ import { db } from "@/lib/db";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
 import {
-  serializeStockLine,
-  stockLineSelect,
+  serializeStockLinesWithProducts,
+  stockLineFlatSelect,
+  stockProductReportSelect,
+  type ProductReportRow,
 } from "@/lib/stock-line-serialize";
 
 export type StockTab = "elaborados" | "consumibles";
@@ -82,86 +84,104 @@ function stockEntryWhere(
   };
 }
 
+async function productReportByIds(productIds: string[]) {
+  if (productIds.length === 0) {
+    return new Map<string, ProductReportRow>();
+  }
+  const products = await db.product.findMany({
+    where: { id: { in: productIds } },
+    select: { id: true, ...stockProductReportSelect },
+  });
+  return new Map(
+    products.map(({ id, ...product }) => [id, product] as const),
+  );
+}
+
+type StockEntryListRow = {
+  id: string;
+  entryDate: Date;
+  notes: string | null;
+  submittedBy: string | null;
+  customerId: string;
+  lines: Array<{
+    productId: string;
+    unit: string;
+    qty: { toNumber?: () => number } | number | string;
+  }>;
+};
+
+async function mapStockEntryListRows(rows: StockEntryListRow[]) {
+  const customerIds = [...new Set(rows.map((row) => row.customerId))];
+  const productIds = [
+    ...new Set(rows.flatMap((row) => row.lines.map((line) => line.productId))),
+  ];
+
+  const [customers, productById] = await Promise.all([
+    customerIds.length > 0
+      ? db.customer.findMany({
+          where: { id: { in: customerIds } },
+          select: { id: true, code: true, name: true },
+        })
+      : Promise.resolve([]),
+    productReportByIds(productIds),
+  ]);
+  const customerById = new Map(customers.map((customer) => [customer.id, customer] as const));
+
+  return rows.map((entry) => {
+    const customer = customerById.get(entry.customerId);
+    return {
+      id: entry.id,
+      entryDate: entry.entryDate.toISOString().slice(0, 10),
+      notes: entry.notes,
+      submittedBy: entry.submittedBy,
+      customer: customer ?? { code: "?", name: "—" },
+      lines: serializeStockLinesWithProducts(entry.lines, productById),
+    };
+  });
+}
+
 export async function loadElaboradosEntries(
   from: string,
   to: string,
   customerId?: string,
+  limit = STOCK_HISTORY_LIMIT,
 ) {
   const rows = await db.mermaEntry.findMany({
     where: stockEntryWhere(from, to, customerId),
     orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
-    take: STOCK_HISTORY_LIMIT,
+    take: limit,
     select: {
       id: true,
       entryDate: true,
       notes: true,
       submittedBy: true,
       customerId: true,
-      lines: { select: stockLineSelect },
+      lines: { select: stockLineFlatSelect },
     },
   });
 
-  const customerIds = [...new Set(rows.map((r) => r.customerId))];
-  const customers =
-    customerIds.length > 0
-      ? await db.customer.findMany({
-          where: { id: { in: customerIds } },
-          select: { id: true, code: true, name: true },
-        })
-      : [];
-  const customerById = new Map(customers.map((c) => [c.id, c] as const));
-
-  return rows.map((e) => {
-    const customer = customerById.get(e.customerId);
-    return {
-      id: e.id,
-      entryDate: e.entryDate.toISOString().slice(0, 10),
-      notes: e.notes,
-      submittedBy: e.submittedBy,
-      customer: customer ?? { code: "?", name: "—" },
-      lines: e.lines.map(serializeStockLine),
-    };
-  });
+  return mapStockEntryListRows(rows);
 }
 
 export async function loadConsumiblesEntries(
   from: string,
   to: string,
   customerId?: string,
+  limit = STOCK_HISTORY_LIMIT,
 ) {
   const rows = await db.consumableCount.findMany({
     where: stockEntryWhere(from, to, customerId),
     orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
-    take: STOCK_HISTORY_LIMIT,
+    take: limit,
     select: {
       id: true,
       entryDate: true,
       notes: true,
       submittedBy: true,
       customerId: true,
-      lines: { select: stockLineSelect },
+      lines: { select: stockLineFlatSelect },
     },
   });
 
-  const customerIds = [...new Set(rows.map((r) => r.customerId))];
-  const customers =
-    customerIds.length > 0
-      ? await db.customer.findMany({
-          where: { id: { in: customerIds } },
-          select: { id: true, code: true, name: true },
-        })
-      : [];
-  const customerById = new Map(customers.map((c) => [c.id, c] as const));
-
-  return rows.map((e) => {
-    const customer = customerById.get(e.customerId);
-    return {
-      id: e.id,
-      entryDate: e.entryDate.toISOString().slice(0, 10),
-      notes: e.notes,
-      submittedBy: e.submittedBy,
-      customer: customer ?? { code: "?", name: "—" },
-      lines: e.lines.map(serializeStockLine),
-    };
-  });
+  return mapStockEntryListRows(rows);
 }
