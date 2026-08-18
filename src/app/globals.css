@@ -864,8 +864,8 @@ select:not([multiple]):disabled {
 }
 
 /*
-  Admin dark mode — scoped via data-admin-theme on <html>, set only while
-  the protected admin layout is mounted. Customer routes never set the attribute.
+  Admin dark mode — scoped via data-admin-theme on <html>, persisted in
+  localStorage and applied app-wide (admin + remito routes for staff).
   Palette tuned toward WhatsApp dark (#111b21 / #202c33 / #00a884 accent).
 */
 html[data-admin-theme="dark"] {
@@ -1243,6 +1243,65 @@ html[data-admin-theme="dark"] .admin-edit-hover:hover {
 }
 
 @media print {
+  /*
+    Print output is always light — screen dark mode must not leak into PDF
+    or thermal receipts (browsers may still honor html[data-admin-theme]).
+  */
+  html[data-admin-theme="dark"] {
+    color-scheme: light !important;
+    --background: #f3f6f5 !important;
+    --foreground: #1a2e2c !important;
+    --brand-primary: #046c5d !important;
+    --brand-primary-soft: #e4f0ee !important;
+  }
+
+  html[data-admin-theme="dark"],
+  html[data-admin-theme="dark"] body,
+  html[data-admin-theme="dark"] .brand-page-atmosphere,
+  html[data-admin-theme="dark"] main {
+    background: white !important;
+    background-image: none !important;
+    color: #1a2e2c !important;
+  }
+
+  html[data-admin-theme="dark"] .bg-white,
+  html[data-admin-theme="dark"] .print-remito,
+  html[data-admin-theme="dark"] .remito-thermal-receipt {
+    background-color: #fff !important;
+    color: #171717 !important;
+  }
+
+  html[data-admin-theme="dark"] .bg-neutral-50,
+  html[data-admin-theme="dark"] .bg-amber-50 {
+    background-color: #fffbeb !important;
+  }
+
+  html[data-admin-theme="dark"] .text-neutral-900,
+  html[data-admin-theme="dark"] .text-neutral-800,
+  html[data-admin-theme="dark"] .text-neutral-700,
+  html[data-admin-theme="dark"] .text-neutral-600,
+  html[data-admin-theme="dark"] .text-neutral-500 {
+    color: #404040 !important;
+  }
+
+  html[data-admin-theme="dark"] .text-neutral-900 {
+    color: #171717 !important;
+  }
+
+  html[data-admin-theme="dark"] .text-amber-800,
+  html[data-admin-theme="dark"] .text-amber-900,
+  html[data-admin-theme="dark"] .text-amber-950 {
+    color: #92400e !important;
+  }
+
+  html[data-admin-theme="dark"] .border-neutral-100,
+  html[data-admin-theme="dark"] .border-neutral-200,
+  html[data-admin-theme="dark"] .border-neutral-300,
+  html[data-admin-theme="dark"] .border-amber-100,
+  html[data-admin-theme="dark"] .border-amber-200 {
+    border-color: #e5e5e5 !important;
+  }
+
   html,
   body {
     background: white !important;

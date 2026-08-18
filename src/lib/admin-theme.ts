@@ -28,3 +28,18 @@ export function applyAdminThemeToDocument(theme: AdminTheme) {
     document.documentElement.removeAttribute("data-admin-theme");
   }
 }
+
+/** Strip dark theme before print; restore after (print output must stay light). */
+export function suspendAdminThemeForPrint(): () => void {
+  if (typeof document === "undefined") return () => {};
+  const root = document.documentElement;
+  const hadDark = root.getAttribute("data-admin-theme") === "dark";
+  if (hadDark) {
+    root.removeAttribute("data-admin-theme");
+  }
+  return () => {
+    if (hadDark) {
+      root.setAttribute("data-admin-theme", "dark");
+    }
+  };
+}

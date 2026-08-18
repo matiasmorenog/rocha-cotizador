@@ -9,7 +9,6 @@ export function AdminThemeProvider({ children }: { children: ReactNode }) {
 
   useLayoutEffect(() => {
     applyAdminThemeToDocument(theme);
-    return () => applyAdminThemeToDocument("light");
   }, [theme]);
 
   return <>{children}</>;
