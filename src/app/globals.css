@@ -1310,4 +1310,125 @@ html[data-admin-theme="dark"] .admin-edit-hover:hover {
   .quote-draft-row-cell-clip {
     overflow: visible;
   }
+
+  /* 80mm thermal receipt (data-print-mode=thermal on <html>) */
+  html[data-print-mode="thermal"] main {
+    max-width: none !important;
+    width: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  html[data-print-mode="thermal"] .remito-screen-only {
+    display: none !important;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-only {
+    display: block !important;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-receipt {
+    box-shadow: none !important;
+    border: none !important;
+    background: #fff !important;
+    width: 72mm;
+    max-width: 72mm;
+    margin: 0;
+    padding: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+      "Liberation Mono", "Courier New", monospace;
+    font-size: 9pt;
+    line-height: 1.35;
+    color: #000;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-brand {
+    font-size: 11pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-align: center;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-title {
+    font-size: 10pt;
+    font-weight: 700;
+    text-align: center;
+    margin-top: 0.25rem;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-header p,
+  html[data-print-mode="thermal"] .remito-thermal-section p,
+  html[data-print-mode="thermal"] .remito-thermal-line p,
+  html[data-print-mode="thermal"] .remito-thermal-footer p {
+    margin: 0;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-header {
+    text-align: center;
+    margin-bottom: 0.35rem;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-section {
+    margin-bottom: 0.35rem;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-customer {
+    font-weight: 700;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-divider {
+    border-top: 1px dashed #000;
+    margin: 0.35rem 0;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-line {
+    margin-bottom: 0.45rem;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-line-name {
+    font-weight: 600;
+    word-break: break-word;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-code {
+    font-weight: 700;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-line-qty,
+  html[data-print-mode="thermal"] .remito-thermal-line-price {
+    font-size: 8.5pt;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-warning {
+    font-size: 8pt;
+    margin-top: 0.15rem !important;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-notes-label {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 0.15rem !important;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-notes {
+    font-size: 8.5pt;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-bottom: 0.35rem !important;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-total {
+    font-size: 11pt;
+    font-weight: 700;
+    text-align: right;
+    margin-top: 0.25rem !important;
+  }
+}
+
+/* Screen: thermal receipt stays hidden until thermal print */
+.remito-thermal-only {
+  display: none;
 }

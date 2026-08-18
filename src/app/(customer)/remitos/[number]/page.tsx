@@ -21,7 +21,11 @@ import {
   whatsappUrl,
 } from "@/lib/whatsapp";
 import { BrandLogo } from "@/components/brand-logo";
-import { PrintButton } from "@/components/quote/print-button";
+import { RemitoPrintButtons } from "@/components/quote/print-button";
+import {
+  ThermalRemitoReceipt,
+  type ThermalRemitoLine,
+} from "@/components/quote/remito-thermal-receipt";
 import { RemitoBackButton } from "@/components/quote/remito-back-button";
 import { RemitoAdminTable } from "@/components/quote/remito-admin-table";
 import {
@@ -239,7 +243,7 @@ export default async function RemitoDetailPage({
                 : "/remitos"
             }
           />
-          <PrintButton />
+          <RemitoPrintButtons />
           {isAdmin ? <RemitoEditModeToggle /> : null}
         </div>
       </div>
@@ -248,7 +252,36 @@ export default async function RemitoDetailPage({
         <WhatsAppNotifyButton whatsappUrl={notifyWhatsappUrl} autoOpen />
       ) : null}
 
-      <article className="print-remito rounded-lg border border-neutral-200 bg-white p-7 shadow-sm">
+      <ThermalRemitoReceipt
+        quoteNumber={quote.number}
+        createdAt={quote.createdAt}
+        deliveryLabel={deliveryLabel}
+        customer={quote.customer}
+        lines={quote.items.map((item): ThermalRemitoLine => {
+          const allowsUnitOrder = item.productId
+            ? (allowsUnitOrderByProductId.get(item.productId) ?? false)
+            : false;
+          const needsWeighPrice =
+            item.orderByUnit || Number(item.unitPrice) === 0;
+          return {
+            itemId: item.id,
+            productCode: item.productCode,
+            productName: item.productName,
+            qty: item.qty,
+            measureLabel: quoteLineMeasureLabel(
+              item.orderByUnit,
+              allowsUnitOrder,
+            ),
+            unitPrice: item.unitPrice,
+            lineTotal: item.lineTotal,
+            needsWeighPrice,
+          };
+        })}
+        total={quote.total}
+        notes={quote.notes}
+      />
+
+      <article className="remito-screen-only print-remito rounded-lg border border-neutral-200 bg-white p-7 shadow-sm">
         <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-4">
           <div>
             <BrandLogo size="md" priority className="print:h-24 print:w-24" />
