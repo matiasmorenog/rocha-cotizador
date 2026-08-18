@@ -1,7 +1,8 @@
 import { requireStaffPermission } from "@/lib/session";
-import { parseDateOnlyYmd } from "@/lib/delivery-date";
 import { AdminStockReports } from "@/components/admin/admin-stock-reports";
+import { AdminStockSummarySection } from "@/components/admin/admin-stock-summary-section";
 import { StockRecountForm } from "@/components/admin/stock-recount-form";
+import { StockPanelFilters } from "@/components/admin/stock-panel-filters";
 import { StockTabs } from "@/components/admin/stock-tabs";
 import {
   loadConsumiblesEntries,
@@ -12,6 +13,7 @@ import {
   STOCK_HISTORY_LIMIT,
   type StockTab,
 } from "@/lib/admin-stock-data";
+import { resolveStockDateRange } from "@/lib/admin-stock-summary-shared";
 
 async function ElaboradosPanel({
   from,
@@ -37,6 +39,21 @@ async function ElaboradosPanel({
       />
 
       <div className="space-y-4">
+        <StockPanelFilters
+          customers={customers}
+          customerId={customerId}
+          from={from}
+          to={to}
+          tab="elaborados"
+        />
+
+        <AdminStockSummarySection
+          tab="elaborados"
+          from={from}
+          to={to}
+          customerId={customerId}
+        />
+
         <div>
           <h2 className="text-lg font-semibold text-neutral-900">Historial</h2>
           <p className="text-sm text-neutral-600">
@@ -49,9 +66,6 @@ async function ElaboradosPanel({
           customers={customers}
           customerId={customerId}
           kindLabel="Elaborado"
-          from={from}
-          to={to}
-          tab="elaborados"
         />
       </div>
     </div>
@@ -86,6 +100,21 @@ async function ConsumiblesPanel({
       />
 
       <div className="space-y-4">
+        <StockPanelFilters
+          customers={customers}
+          customerId={customerId}
+          from={from}
+          to={to}
+          tab="consumibles"
+        />
+
+        <AdminStockSummarySection
+          tab="consumibles"
+          from={from}
+          to={to}
+          customerId={customerId}
+        />
+
         <div>
           <h2 className="text-lg font-semibold text-neutral-900">Historial</h2>
           <p className="text-sm text-neutral-600">
@@ -98,9 +127,6 @@ async function ConsumiblesPanel({
           customers={customers}
           customerId={customerId}
           kindLabel="Recuento"
-          from={from}
-          to={to}
-          tab="consumibles"
         />
       </div>
     </div>
@@ -125,8 +151,7 @@ export default async function AdminStockPage({
     customer: customerParam,
   } = await searchParams;
   const tab: StockTab = parseStockTab(tabParam);
-  const from = fromParam && parseDateOnlyYmd(fromParam) ? fromParam : "";
-  const to = toParam && parseDateOnlyYmd(toParam) ? toParam : "";
+  const { from, to } = resolveStockDateRange(fromParam, toParam);
   const stockModule = tab === "consumibles" ? "CONSUMABLES" : "MERMAS";
   const customers = await moduleCustomers(stockModule);
   const customerId = resolveStockCustomerId(customers, customerParam);
