@@ -1032,6 +1032,17 @@ html[data-admin-theme="dark"] .shadow-xl {
     0 4px 8px rgba(0, 0, 0, 0.35);
 }
 
+/* Sidebar nav — active bg must differ from sidebar surface (#202c33) in dark. */
+html[data-admin-theme="dark"] .admin-nav-link-active {
+  background-color: color-mix(in srgb, #00a884 18%, #202c33);
+  color: #00a884;
+}
+
+html[data-admin-theme="dark"] .admin-nav-link-active:hover {
+  background-color: color-mix(in srgb, #00a884 24%, #202c33);
+  color: #00a884;
+}
+
 html[data-admin-theme="dark"] .admin-table-row:hover {
   background-color: #2a3942;
 }

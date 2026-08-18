@@ -74,10 +74,10 @@ function NavLinks({
             href={l.href}
             onClick={onNavigate}
             className={cn(
-              "rounded-md px-2 py-1.5 transition-colors",
+              "admin-nav-link rounded-md px-2 py-1.5 transition-colors",
               FOCUS_BRAND_OUTLINE,
               active
-                ? "bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
+                ? "admin-nav-link-active bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
                 : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900",
             )}
           >
