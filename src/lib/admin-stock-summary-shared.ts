@@ -9,15 +9,16 @@ export type StockSummaryProductRow = {
   code: string;
   name: string;
   unit: string;
-  totalQty: number;
-  avgPerDay: number;
+  basePrice: number;
+  totalCost: number;
+  avgCostPerDay: number;
   lastEntryDate: string | null;
 };
 
 export type StockSummaryDailyPoint = {
   date: string;
   label: string;
-  totalQty: number;
+  totalCost: number;
 };
 
 export type StockSummaryPayload = {
@@ -27,8 +28,8 @@ export type StockSummaryPayload = {
   dayCount: number;
   entryCount: number;
   distinctProducts: number;
-  unitTotals: Array<{ unit: string; totalQty: number }>;
-  mixedUnits: boolean;
+  totalBaseCost: number;
+  avgBaseCostPerDay: number;
   products: StockSummaryProductRow[];
   daily: StockSummaryDailyPoint[];
 };

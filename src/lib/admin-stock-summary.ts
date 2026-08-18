@@ -26,9 +26,9 @@ function decimalToNumber(
 function buildDailySeries(
   from: string,
   to: string,
-  rows: Array<{ date: string; totalQty: number }>,
+  rows: Array<{ date: string; totalCost: number }>,
 ): StockSummaryDailyPoint[] {
-  const byDate = new Map(rows.map((row) => [row.date, row.totalQty]));
+  const byDate = new Map(rows.map((row) => [row.date, row.totalCost]));
   const points: StockSummaryDailyPoint[] = [];
   let cursor = from;
 
@@ -36,7 +36,7 @@ function buildDailySeries(
     points.push({
       date: cursor,
       label: formatStockDayLabel(cursor),
-      totalQty: byDate.get(cursor) ?? 0,
+      totalCost: byDate.get(cursor) ?? 0,
     });
     cursor = addCalendarDaysYmd(cursor, 1);
   }
@@ -47,7 +47,8 @@ function buildDailySeries(
 type ProductAggRow = {
   productId: string;
   unit: string;
-  totalQty: number;
+  basePrice: number;
+  totalCost: number;
 };
 
 async function loadElaboradosSummary(
@@ -69,7 +70,7 @@ async function loadElaboradosSummary(
     AND ${customerFilter}
   `;
 
-  const [entryCountRow, distinctRow, unitRows, productRows, dailyRows, lastDateRows] =
+  const [entryCountRow, distinctRow, totalCostRow, productRows, dailyRows, lastDateRows] =
     await Promise.all([
       db.$queryRaw<{ count: bigint }[]>`
         SELECT COUNT(*)::bigint AS count
@@ -82,29 +83,31 @@ async function loadElaboradosSummary(
         INNER JOIN "MermaEntry" e ON e.id = l."entryId"
         WHERE ${entryWhere}
       `,
-      db.$queryRaw<{ unit: string; totalQty: number }[]>`
-        SELECT l.unit, SUM(l.qty)::float AS "totalQty"
+      db.$queryRaw<{ totalCost: number }[]>`
+        SELECT COALESCE(SUM(l.qty * p."basePrice"), 0)::float AS "totalCost"
         FROM "MermaLine" l
         INNER JOIN "MermaEntry" e ON e.id = l."entryId"
+        INNER JOIN "Product" p ON p.id = l."productId"
         WHERE ${entryWhere}
-        GROUP BY l.unit
-        ORDER BY l.unit
       `,
       db.$queryRaw<ProductAggRow[]>`
         SELECT
           l."productId",
           l.unit,
-          SUM(l.qty)::float AS "totalQty"
+          MAX(p."basePrice")::float AS "basePrice",
+          SUM(l.qty * p."basePrice")::float AS "totalCost"
         FROM "MermaLine" l
         INNER JOIN "MermaEntry" e ON e.id = l."entryId"
+        INNER JOIN "Product" p ON p.id = l."productId"
         WHERE ${entryWhere}
         GROUP BY l."productId", l.unit
-        ORDER BY "totalQty" DESC
+        ORDER BY "totalCost" DESC
       `,
-      db.$queryRaw<{ entryDate: Date; totalQty: number }[]>`
-        SELECT e."entryDate", SUM(l.qty)::float AS "totalQty"
+      db.$queryRaw<{ entryDate: Date; totalCost: number }[]>`
+        SELECT e."entryDate", SUM(l.qty * p."basePrice")::float AS "totalCost"
         FROM "MermaEntry" e
         INNER JOIN "MermaLine" l ON l."entryId" = e.id
+        INNER JOIN "Product" p ON p.id = l."productId"
         WHERE ${entryWhere}
         GROUP BY e."entryDate"
         ORDER BY e."entryDate"
@@ -122,11 +125,11 @@ async function loadElaboradosSummary(
     dayCount,
     entryCount: Number(entryCountRow[0]?.count ?? 0),
     distinctProducts: Number(distinctRow[0]?.count ?? 0),
-    unitRows,
+    totalBaseCost: decimalToNumber(totalCostRow[0]?.totalCost),
     productRows,
     dailyRows: dailyRows.map((row) => ({
       date: row.entryDate.toISOString().slice(0, 10),
-      totalQty: decimalToNumber(row.totalQty),
+      totalCost: decimalToNumber(row.totalCost),
     })),
     lastDateRows: new Map(
       lastDateRows.map((row) => [
@@ -158,7 +161,7 @@ async function loadConsumiblesSummary(
     AND ${customerFilter}
   `;
 
-  const [entryCountRow, distinctRow, unitRows, productRows, dailyRows, lastDateRows] =
+  const [entryCountRow, distinctRow, totalCostRow, productRows, dailyRows, lastDateRows] =
     await Promise.all([
       db.$queryRaw<{ count: bigint }[]>`
         SELECT COUNT(*)::bigint AS count
@@ -171,29 +174,31 @@ async function loadConsumiblesSummary(
         INNER JOIN "ConsumableCount" c ON c.id = l."countId"
         WHERE ${entryWhere}
       `,
-      db.$queryRaw<{ unit: string; totalQty: number }[]>`
-        SELECT l.unit, SUM(l.qty)::float AS "totalQty"
+      db.$queryRaw<{ totalCost: number }[]>`
+        SELECT COALESCE(SUM(l.qty * p."basePrice"), 0)::float AS "totalCost"
         FROM "ConsumableCountLine" l
         INNER JOIN "ConsumableCount" c ON c.id = l."countId"
+        INNER JOIN "Product" p ON p.id = l."productId"
         WHERE ${entryWhere}
-        GROUP BY l.unit
-        ORDER BY l.unit
       `,
       db.$queryRaw<ProductAggRow[]>`
         SELECT
           l."productId",
           l.unit,
-          SUM(l.qty)::float AS "totalQty"
+          MAX(p."basePrice")::float AS "basePrice",
+          SUM(l.qty * p."basePrice")::float AS "totalCost"
         FROM "ConsumableCountLine" l
         INNER JOIN "ConsumableCount" c ON c.id = l."countId"
+        INNER JOIN "Product" p ON p.id = l."productId"
         WHERE ${entryWhere}
         GROUP BY l."productId", l.unit
-        ORDER BY "totalQty" DESC
+        ORDER BY "totalCost" DESC
       `,
-      db.$queryRaw<{ entryDate: Date; totalQty: number }[]>`
-        SELECT c."entryDate", SUM(l.qty)::float AS "totalQty"
+      db.$queryRaw<{ entryDate: Date; totalCost: number }[]>`
+        SELECT c."entryDate", SUM(l.qty * p."basePrice")::float AS "totalCost"
         FROM "ConsumableCount" c
         INNER JOIN "ConsumableCountLine" l ON l."countId" = c.id
+        INNER JOIN "Product" p ON p.id = l."productId"
         WHERE ${entryWhere}
         GROUP BY c."entryDate"
         ORDER BY c."entryDate"
@@ -211,11 +216,11 @@ async function loadConsumiblesSummary(
     dayCount,
     entryCount: Number(entryCountRow[0]?.count ?? 0),
     distinctProducts: Number(distinctRow[0]?.count ?? 0),
-    unitRows,
+    totalBaseCost: decimalToNumber(totalCostRow[0]?.totalCost),
     productRows,
     dailyRows: dailyRows.map((row) => ({
       date: row.entryDate.toISOString().slice(0, 10),
-      totalQty: decimalToNumber(row.totalQty),
+      totalCost: decimalToNumber(row.totalCost),
     })),
     lastDateRows: new Map(
       lastDateRows.map((row) => [
@@ -232,9 +237,9 @@ async function assembleSummaryPayload(input: {
   dayCount: number;
   entryCount: number;
   distinctProducts: number;
-  unitRows: Array<{ unit: string; totalQty: number }>;
+  totalBaseCost: number;
   productRows: ProductAggRow[];
-  dailyRows: Array<{ date: string; totalQty: number }>;
+  dailyRows: Array<{ date: string; totalCost: number }>;
   lastDateRows: Map<string, string>;
   from: string;
   to: string;
@@ -254,29 +259,28 @@ async function assembleSummaryPayload(input: {
 
   const products: StockSummaryProductRow[] = input.productRows.map((row) => {
     const product = productsById.get(row.productId);
-    const totalQty = decimalToNumber(row.totalQty);
+    const totalCost = decimalToNumber(row.totalCost);
+    const basePrice = decimalToNumber(row.basePrice);
     return {
       productId: row.productId,
       code: product?.code ?? "—",
       name: product?.name ?? "Producto",
       unit: row.unit,
-      totalQty,
-      avgPerDay: totalQty / input.dayCount,
+      basePrice,
+      totalCost,
+      avgCostPerDay: totalCost / input.dayCount,
       lastEntryDate: input.lastDateRows.get(row.productId) ?? null,
     };
   });
 
-  const unitTotals = input.unitRows.map((row) => ({
-    unit: row.unit,
-    totalQty: decimalToNumber(row.totalQty),
-  }));
+  const totalBaseCost = decimalToNumber(input.totalBaseCost);
 
   return {
     dayCount: input.dayCount,
     entryCount: input.entryCount,
     distinctProducts: input.distinctProducts,
-    unitTotals,
-    mixedUnits: unitTotals.length > 1,
+    totalBaseCost,
+    avgBaseCostPerDay: totalBaseCost / input.dayCount,
     products,
     daily: buildDailySeries(input.from, input.to, input.dailyRows),
   };
@@ -291,8 +295,8 @@ function emptySummary(
     dayCount,
     entryCount: 0,
     distinctProducts: 0,
-    unitTotals: [],
-    mixedUnits: false,
+    totalBaseCost: 0,
+    avgBaseCostPerDay: 0,
     products: [],
     daily: buildDailySeries(from, to, []),
   };

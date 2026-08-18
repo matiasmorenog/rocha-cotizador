@@ -9,7 +9,7 @@ import {
 /**
  * GET /api/admin/stock/summary?tab=elaborados|consumibles&customerId=&from=&to=
  *
- * Server-side stock aggregates for admin summary cards, product table, and chart.
+ * Server-side stock aggregates at base price for summary cards, product table, and chart.
  */
 export async function GET(req: NextRequest) {
   if (!(await requireStaffApi("stockReports"))) {

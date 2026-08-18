@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { StockSummaryDailyPoint } from "@/lib/admin-stock-summary-shared";
-import { cn, formatQty } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 
 type PlotPoint = {
   x: number;
@@ -37,7 +37,7 @@ function buildPlotPoints(
     y:
       PLOT.top +
       plotHeight -
-      (point.totalQty / maxTotal) * plotHeight,
+      (point.totalCost / maxTotal) * plotHeight,
     point,
   }));
 }
@@ -61,7 +61,7 @@ function ChartTooltip({
       }}
     >
       <p className="text-xs font-semibold text-neutral-900">
-        {formatQty(plot.point.totalQty)} u.
+        {formatPrice(plot.point.totalCost)}
       </p>
       <p className="mt-0.5 text-[11px] font-medium text-neutral-500">
         {plot.point.label}
@@ -154,8 +154,8 @@ export function AdminStockSummaryChart({
 }) {
   const [activeDate, setActiveDate] = useState<string | null>(null);
 
-  const maxTotal = Math.max(...daily.map((point) => point.totalQty), 1);
-  const hasData = daily.some((point) => point.totalQty > 0);
+  const maxTotal = Math.max(...daily.map((point) => point.totalCost), 1);
+  const hasData = daily.some((point) => point.totalCost > 0);
   const plotPoints = useMemo(
     () => buildPlotPoints(daily, maxTotal),
     [daily, maxTotal],
@@ -178,7 +178,7 @@ export function AdminStockSummaryChart({
   return (
     <div>
       <p className="mb-2 text-xs text-neutral-400">
-        Totales diarios en el período. Pasá el mouse para detalles.
+        Costo diario a precio base en el período. Pasá el mouse para detalles.
       </p>
       <div
         className={cn(
@@ -202,7 +202,7 @@ export function AdminStockSummaryChart({
                   }}
                   onMouseEnter={() => setActiveDate(plot.point.date)}
                   onMouseLeave={() => setActiveDate(null)}
-                  aria-label={`${plot.point.label}: ${formatQty(plot.point.totalQty)} unidades`}
+                  aria-label={`${plot.point.label}: ${formatPrice(plot.point.totalCost)}`}
                 >
                   <span
                     className={cn(
@@ -215,7 +215,7 @@ export function AdminStockSummaryChart({
               );
             })}
 
-            {activePlot && activePlot.point.totalQty > 0 ? (
+            {activePlot && activePlot.point.totalCost > 0 ? (
               <ChartTooltip
                 plot={activePlot}
                 showBelow={showTooltipBelow}

@@ -4,19 +4,8 @@ import { useEffect, useState } from "react";
 import type { StockTab } from "@/lib/admin-stock-data";
 import type { StockSummaryPayload } from "@/lib/admin-stock-summary-shared";
 import { AdminStockSummaryChart } from "@/components/admin/admin-stock-summary-chart";
-import { cn, formatQty } from "@/lib/utils";
+import { cn, formatPrice } from "@/lib/utils";
 import { formatDeliveryDateDisplay, parseDateOnlyYmd } from "@/lib/delivery-date";
-
-function formatUnitsSummary(payload: StockSummaryPayload): string {
-  if (payload.unitTotals.length === 0) return "0";
-  if (payload.unitTotals.length === 1) {
-    const row = payload.unitTotals[0];
-    return `${formatQty(row.totalQty)} ${row.unit}`;
-  }
-  return payload.unitTotals
-    .map((row) => `${formatQty(row.totalQty)} ${row.unit}`)
-    .join(" · ");
-}
 
 function formatLastEntryDate(value: string | null): string {
   if (!value) return "—";
@@ -88,7 +77,7 @@ export function AdminStockSummarySection({
       <div>
         <h2 className="text-lg font-semibold text-neutral-900">Resumen</h2>
         <p className="text-sm text-neutral-600">
-          Totales agregados del período ({from} — {to}
+          Costo de mercadería contada a precio base ({from} — {to}
           {customerId ? ", sucursal filtrada" : ", todas las sucursales"}).
         </p>
       </div>
@@ -109,13 +98,9 @@ export function AdminStockSummarySection({
               value={String(data.distinctProducts)}
             />
             <SummaryCard
-              label="Total unidades"
-              value={formatUnitsSummary(data)}
-              hint={
-                data.mixedUnits
-                  ? "Unidades mixtas (kg y unid.) — ver tabla por producto."
-                  : undefined
-              }
+              label="Mercadería contada (precio base)"
+              value={formatPrice(data.totalBaseCost)}
+              hint={`Promedio ${formatPrice(data.avgBaseCostPerDay)} / día`}
             />
           </div>
 
@@ -134,7 +119,10 @@ export function AdminStockSummarySection({
                     <tr>
                       <th className="px-3 py-2 font-medium">Producto</th>
                       <th className="px-3 py-2 font-medium text-right">
-                        Total período
+                        Precio base
+                      </th>
+                      <th className="px-3 py-2 font-medium text-right">
+                        Costo período
                       </th>
                       <th className="px-3 py-2 font-medium text-right">
                         Promedio / día
@@ -154,13 +142,18 @@ export function AdminStockSummarySection({
                           <p className="font-medium text-neutral-900">
                             {row.name}
                           </p>
-                          <p className="text-xs text-neutral-500">{row.code}</p>
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums">
-                          {formatQty(row.totalQty)} {row.unit}
+                          <p className="text-xs text-neutral-500">
+                            {row.code} · {row.unit}
+                          </p>
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
-                          {formatQty(row.avgPerDay)} {row.unit}
+                          {formatPrice(row.basePrice)}
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium text-neutral-900">
+                          {formatPrice(row.totalCost)}
+                        </td>
+                        <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
+                          {formatPrice(row.avgCostPerDay)}
                         </td>
                         <td className="px-3 py-2 text-right text-neutral-600">
                           {formatLastEntryDate(row.lastEntryDate)}
