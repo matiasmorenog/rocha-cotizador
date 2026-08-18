@@ -142,10 +142,7 @@ export function ProductAdminForm({
       </label>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={loading}>
-          {loading ? "Guardando…" : "Crear producto"}
-        </Button>
+      <div className="flex flex-wrap justify-end gap-2">
         <Button
           type="button"
           variant="outline"
@@ -153,6 +150,9 @@ export function ProductAdminForm({
           onClick={onCancel}
         >
           Cancelar
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? "Guardando…" : "Crear producto"}
         </Button>
       </div>
     </form>

@@ -312,10 +312,7 @@ export function CustomerAdminForm({
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
 
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={loading}>
-          {loading ? "Guardando…" : customer ? "Actualizar cliente" : "Crear cliente"}
-        </Button>
+      <div className="flex flex-wrap justify-end gap-2">
         {onCancel ? (
           <Button
             type="button"
@@ -326,6 +323,9 @@ export function CustomerAdminForm({
             Cancelar
           </Button>
         ) : null}
+        <Button type="submit" disabled={loading}>
+          {loading ? "Guardando…" : customer ? "Actualizar cliente" : "Crear cliente"}
+        </Button>
       </div>
     </form>
   );

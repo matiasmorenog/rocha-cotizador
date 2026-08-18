@@ -293,12 +293,12 @@ function StaffUserForm({
         />
       </div>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <div className="flex gap-2">
-        <Button type="submit" disabled={loading}>
-          {loading ? "Guardando…" : "Guardar"}
-        </Button>
+      <div className="flex flex-wrap justify-end gap-2">
         <Button type="button" variant="outline" onClick={onCancel}>
           Cancelar
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? "Guardando…" : "Guardar"}
         </Button>
       </div>
     </form>

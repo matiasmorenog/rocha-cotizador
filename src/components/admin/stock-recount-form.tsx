@@ -387,7 +387,7 @@ export function StockRecountForm({
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button type="submit" disabled={saving || customers.length === 0}>
           {saving ? "Guardando…" : "Guardar carga"}
         </Button>

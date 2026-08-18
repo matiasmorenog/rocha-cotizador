@@ -83,16 +83,18 @@ export function WhatsAppSettingsForm({ initialPhone }: Props) {
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
 
-      <Button type="submit" disabled={loading || !localPhone.trim()}>
-        {loading ? (
-          <>
-            <Spinner className="mr-2 text-white" />
-            Guardando…
-          </>
-        ) : (
-          "Guardar"
-        )}
-      </Button>
+      <div className="flex justify-end">
+        <Button type="submit" disabled={loading || !localPhone.trim()}>
+          {loading ? (
+            <>
+              <Spinner className="mr-2 text-white" />
+              Guardando…
+            </>
+          ) : (
+            "Guardar"
+          )}
+        </Button>
+      </div>
     </form>
   );
 }
