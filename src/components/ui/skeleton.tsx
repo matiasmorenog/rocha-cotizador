@@ -73,7 +73,7 @@ function SkeletonPageHeader({
 function SkeletonTableRows({ rows = 6, cols = 4 }: { rows?: number; cols?: number }) {
   return (
     <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-      <div className="flex gap-3 border-b border-neutral-100 bg-neutral-50 px-3 py-3">
+      <div className="flex gap-3 border-b border-neutral-100 px-3 py-3">
         {Array.from({ length: cols }, (_, i) => (
           <Skeleton key={i} className="h-4 flex-1" />
         ))}
