@@ -4,7 +4,10 @@ import { StaffUsersPanel } from "@/components/admin/staff-users-panel";
 
 export default async function AdminUsuariosPage() {
   const session = await requireStaffPermission("users");
-  const users = await getAdminUsuariosPageData();
+  const all = await getAdminUsuariosPageData();
+  const users = session.user.isSuperuser
+    ? all
+    : all.filter((u) => !u.isSuperuser);
 
   return (
     <div className="space-y-6">
@@ -14,7 +17,11 @@ export default async function AdminUsuariosPage() {
           Alta y permisos del equipo interno (Administración, Cotización, Stock).
         </p>
       </div>
-      <StaffUsersPanel users={users} currentUserId={session.user.id} />
+      <StaffUsersPanel
+        users={users}
+        currentUserId={session.user.id}
+        viewerIsSuperuser={Boolean(session.user.isSuperuser)}
+      />
     </div>
   );
 }

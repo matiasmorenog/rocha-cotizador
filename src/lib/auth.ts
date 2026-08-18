@@ -9,6 +9,7 @@ import {
   type StaffPermission,
 } from "@/lib/staff-permissions";
 import { padCustomerCode } from "@/lib/utils";
+import { isPlatformOwnerEmail } from "@/lib/platform-owner";
 import type { AppRole, CustomerModuleSession, StaffRole } from "@/types/auth";
 
 export type { AppRole };
@@ -65,6 +66,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               canStock: true,
               active: true,
               inAppNotificationsEnabled: true,
+              isSuperuser: true,
             },
           });
           if (!user?.passwordHash || !user.active || !isStaffRole(user.role)) {
@@ -81,6 +83,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             canStock: user.canStock,
           });
 
+          let isSuperuser = user.isSuperuser;
+          if (!isSuperuser && isPlatformOwnerEmail(user.email)) {
+            await db.user.update({
+              where: { id: user.id },
+              data: { isSuperuser: true },
+            });
+            isSuperuser = true;
+          }
+
           return {
             id: user.id,
             email: user.email,
@@ -92,6 +103,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             inAppNotificationsEnabled: user.inAppNotificationsEnabled !== false,
             modules: [],
             permissions,
+            isSuperuser,
           };
         } catch (err) {
           console.error("[auth] admin authorize failed", err);
@@ -161,6 +173,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user.inAppNotificationsEnabled ?? true;
         token.modules = user.modules ?? [];
         token.permissions = user.permissions ?? [];
+        token.isSuperuser = Boolean(user.isSuperuser);
         token.sub = user.id;
         token.email = user.email;
         token.name = user.name;
@@ -183,7 +196,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (token.role && isStaffRole(String(token.role))) {
           const dbUser = await db.user.findUnique({
             where: { id: String(token.sub) },
-            select: { role: true, canQuotes: true, canStock: true },
+            select: {
+              role: true,
+              canQuotes: true,
+              canStock: true,
+              isSuperuser: true,
+              email: true,
+            },
           });
           if (dbUser && isStaffRole(dbUser.role)) {
             token.permissions = staffPermissionsFromProfile({
@@ -191,6 +210,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               canQuotes: dbUser.canQuotes,
               canStock: dbUser.canStock,
             });
+            let isSuperuser = dbUser.isSuperuser;
+            if (!isSuperuser && isPlatformOwnerEmail(dbUser.email)) {
+              await db.user.update({
+                where: { id: String(token.sub) },
+                data: { isSuperuser: true },
+              });
+              isSuperuser = true;
+            }
+            token.isSuperuser = isSuperuser;
           }
         }
         if (
@@ -241,6 +269,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             : Array.isArray(token.permissions)
               ? token.permissions
               : [],
+          isSuperuser: Boolean(token.isSuperuser),
         },
       };
     },

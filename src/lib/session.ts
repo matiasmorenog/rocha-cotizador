@@ -1,12 +1,13 @@
 import { cache } from "react";
 import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
 import {
   isStaffRole,
   staffHasPermission,
   staffHomeHref,
   type StaffPermission,
 } from "@/lib/staff-permissions";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 /** One auth() decode per RSC request (layout + page share). */
 const getAuthSession = cache(auth);
@@ -50,4 +51,17 @@ export async function requireStaffPermission(permission: StaffPermission) {
 
 export async function getOptionalSession() {
   return getAuthSession();
+}
+
+/** Platform owner only. Rocha staff get a 404 even if they guess the URL. */
+export async function requireSuperuser() {
+  const session = await requireStaffSession();
+  if (session.user.isSuperuser) return session;
+
+  const row = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { isSuperuser: true },
+  });
+  if (row?.isSuperuser) return session;
+  notFound();
 }

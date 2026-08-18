@@ -18,9 +18,13 @@ export async function GET() {
         select: {
           id: true,
           inAppNotificationsEnabled: true,
+          isSuperuser: true,
         },
       }),
       db.pushSubscription.findFirst({
+        select: { id: true },
+      }),
+      db.subscriptionPayment.findFirst({
         select: { id: true },
       }),
     ]);

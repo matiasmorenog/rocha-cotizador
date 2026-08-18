@@ -9,6 +9,7 @@ export const CACHE_TAGS = {
   customers: "customers",
   adminDashboard: "admin-dashboard",
   staffUsers: "staff-users",
+  subscriptionPayments: "subscription-payments",
 } as const;
 
 /**
@@ -84,6 +85,16 @@ export function invalidateAfterCustomerMutation() {
 /** Staff user create/update — admin usuarios list. */
 export function invalidateAfterStaffUserMutation() {
   invalidateStaffUsersCache();
+}
+
+export function invalidateSubscriptionPaymentsCache() {
+  expireTag(CACHE_TAGS.subscriptionPayments);
+}
+
+export function invalidateAfterSubscriptionPaymentMutation() {
+  invalidateSubscriptionPaymentsCache();
+  revalidatePath("/admin/configuracion");
+  revalidatePath("/admin/plataforma");
 }
 
 /** Stock entry create/update — refresh admin stock RSC (history is uncached). */

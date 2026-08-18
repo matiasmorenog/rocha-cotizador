@@ -15,6 +15,8 @@ declare module "next-auth" {
     modules?: CustomerModuleSession[];
     /** Staff: derived from role for nav/gates. */
     permissions?: StaffPermission[];
+    /** Platform owner (developer). JWT — not togglable in Rocha UI. */
+    isSuperuser?: boolean;
   }
 
   interface Session {
@@ -30,6 +32,7 @@ declare module "next-auth" {
       inAppNotificationsEnabled?: boolean;
       modules?: CustomerModuleSession[];
       permissions?: StaffPermission[];
+      isSuperuser?: boolean;
     };
   }
 }
@@ -43,5 +46,6 @@ declare module "next-auth/jwt" {
     inAppNotificationsEnabled?: boolean;
     modules?: CustomerModuleSession[];
     permissions?: StaffPermission[];
+    isSuperuser?: boolean;
   }
 }

@@ -337,8 +337,8 @@ export function SkeletonAccountPage() {
 }
 
 /**
- * Admin `/admin/configuracion` — two cards:
- * Notificaciones (WhatsApp, in-app, sistema), Mi cuenta (email, contraseña).
+ * Admin `/admin/configuracion` — cards:
+ * Notificaciones, Servicio (subscription status), Mi cuenta.
  */
 export function SkeletonAdminConfigPage() {
   return (
@@ -405,6 +405,22 @@ export function SkeletonAdminConfigPage() {
               <Skeleton className="h-10 w-64 rounded-md" />
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Servicio */}
+      <section className={cn(ADMIN_SKELETON_CARD_SHADOW, "p-5")}>
+        <Skeleton className="mb-1 h-3 w-20" />
+        <Skeleton className="mb-4 h-4 w-64" />
+        <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
+          <Skeleton className="h-4 w-36" />
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-3 w-full" />
+        </div>
+        <div className="mt-3 space-y-2">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-9 w-full rounded-md" />
+          <Skeleton className="h-9 w-full rounded-md" />
         </div>
       </section>
 

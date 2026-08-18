@@ -11,6 +11,7 @@ export type AdminStaffUserRow = {
   canQuotes: boolean;
   canStock: boolean;
   active: boolean;
+  isSuperuser: boolean;
 };
 
 async function fetchAdminUsuariosUncached(): Promise<AdminStaffUserRow[]> {
@@ -25,6 +26,7 @@ async function fetchAdminUsuariosUncached(): Promise<AdminStaffUserRow[]> {
       canQuotes: true,
       canStock: true,
       active: true,
+      isSuperuser: true,
     },
   });
 

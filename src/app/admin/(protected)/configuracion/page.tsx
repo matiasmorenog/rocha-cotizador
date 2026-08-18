@@ -1,7 +1,9 @@
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { requireStaffPermission } from "@/lib/session";
 import { staffHasPermission } from "@/lib/staff-permissions";
+import { getRochaSubscriptionStatus } from "@/lib/subscription-payments";
 import { PushNotificationsSettings } from "@/components/admin/push-notifications-settings";
+import { SubscriptionStatusSection } from "@/components/admin/subscription-status-section";
 import { WhatsAppSettingsForm } from "@/components/admin/whatsapp-settings-form";
 import { AdminChangeEmailForm } from "@/components/account/admin-change-email-form";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
@@ -9,9 +11,10 @@ import { ChangePasswordForm } from "@/components/account/change-password-form";
 export default async function AdminConfigPage() {
   const session = await requireStaffPermission("account");
   const canEditAppSettings = staffHasPermission(session.user.permissions, "settings");
-  const whatsappNotifyPhone = canEditAppSettings
-    ? await getWhatsAppNotifyDigits()
-    : null;
+  const [whatsappNotifyPhone, subscriptionStatus] = await Promise.all([
+    canEditAppSettings ? getWhatsAppNotifyDigits() : Promise.resolve(null),
+    getRochaSubscriptionStatus(),
+  ]);
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -42,6 +45,8 @@ export default async function AdminConfigPage() {
           <PushNotificationsSettings />
         </div>
       </section>
+
+      <SubscriptionStatusSection status={subscriptionStatus} />
 
       <section
         id="cuenta"

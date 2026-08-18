@@ -21,6 +21,7 @@ import {
 import { padCustomerCode, pinFromCustomerCode } from "../src/lib/utils";
 import { seedCustomerModuleAccess } from "../src/lib/customer-modules";
 import { seedStockSampleData } from "../src/lib/stock-seed";
+import { parsePlatformOwnerEmails } from "../src/lib/platform-owner";
 import { assertSafeDestructiveDb } from "./assert-safe-db";
 import { revalidateAppCache } from "../scripts/revalidate-app-cache";
 
@@ -80,6 +81,16 @@ async function seedAdmin() {
   });
 
   console.log(`Admin ready: ${email}`);
+}
+
+async function bootstrapSuperuserFromEnv() {
+  const emails = parsePlatformOwnerEmails();
+  if (emails.length === 0) return;
+  const r = await db.user.updateMany({
+    where: { email: { in: emails } },
+    data: { isSuperuser: true },
+  });
+  console.log(`Superuser flag set for ${r.count} matching user(s)`);
 }
 
 /**
@@ -427,6 +438,7 @@ async function main() {
 
   await seedBusinessSettings();
   await seedAdmin();
+  await bootstrapSuperuserFromEnv();
 
   const xlsxPath = path.join(process.cwd(), "prisma", "data", "rocha_data.xlsx");
   if (!fs.existsSync(xlsxPath)) {

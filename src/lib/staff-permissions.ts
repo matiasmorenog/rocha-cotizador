@@ -1,3 +1,4 @@
+import { SUPERUSER_LABEL } from "@/lib/platform-owner";
 import type { StaffRole } from "@/types/auth";
 
 /** Fine-grained admin UI/API gates. Derived from staff role + capability flags. */
@@ -168,7 +169,10 @@ export function staffFieldsFromSwitches(input: {
   return { role, canQuotes, canStock };
 }
 
-export function formatStaffPermissionLabels(profile: StaffCapabilityProfile): string {
+export function formatStaffPermissionLabels(
+  profile: StaffCapabilityProfile & { isSuperuser?: boolean },
+): string {
+  if (profile.isSuperuser) return SUPERUSER_LABEL;
   const switches = staffSwitchesFromProfile(profile);
   if (switches.isAdmin) return "Administración";
   const parts: string[] = [];

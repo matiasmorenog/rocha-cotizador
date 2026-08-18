@@ -41,15 +41,31 @@ const userSelect = {
   canQuotes: true,
   canStock: true,
   active: true,
+  isSuperuser: true,
 } as const;
 
+function serializeStaffUser<T extends { isSuperuser: boolean }>(
+  user: T,
+  callerIsSuperuser: boolean,
+) {
+  if (callerIsSuperuser) return user;
+  const { isSuperuser, ...rest } = user;
+  void isSuperuser;
+  return rest;
+}
+
 export async function GET() {
-  if (!(await requireStaffApi("users"))) {
+  const session = await requireStaffApi("users");
+  if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  const callerIsSuperuser = Boolean(session.user.isSuperuser);
   const users = await db.user.findMany({
-    where: { role: { in: [...STAFF_ROLES] } },
+    where: {
+      role: { in: [...STAFF_ROLES] },
+      ...(callerIsSuperuser ? {} : { isSuperuser: false }),
+    },
     orderBy: [{ active: "desc" }, { email: "asc" }],
     select: {
       ...userSelect,
@@ -58,7 +74,11 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json({ users });
+  return NextResponse.json({
+    users: users
+      .filter((u) => callerIsSuperuser || !u.isSuperuser)
+      .map((u) => serializeStaffUser(u, callerIsSuperuser)),
+  });
 }
 
 export async function POST(req: NextRequest) {
@@ -90,9 +110,12 @@ export async function POST(req: NextRequest) {
   if (parsed.data.id) {
     const existing = await db.user.findUnique({
       where: { id: parsed.data.id },
-      select: { id: true, role: true },
+      select: { id: true, role: true, isSuperuser: true },
     });
     if (!existing || !STAFF_ROLES.includes(existing.role as (typeof STAFF_ROLES)[number])) {
+      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
+    }
+    if (existing.isSuperuser && !session.user.isSuperuser) {
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
 
@@ -140,7 +163,9 @@ export async function POST(req: NextRequest) {
       select: userSelect,
     });
     invalidateAfterStaffUserMutation();
-    return NextResponse.json({ user });
+    return NextResponse.json({
+      user: serializeStaffUser(user, Boolean(session.user.isSuperuser)),
+    });
   }
 
   if (!parsed.data.password) {
@@ -173,5 +198,8 @@ export async function POST(req: NextRequest) {
   });
 
   invalidateAfterStaffUserMutation();
-  return NextResponse.json({ user }, { status: 201 });
+  return NextResponse.json(
+    { user: serializeStaffUser(user, Boolean(session.user.isSuperuser)) },
+    { status: 201 },
+  );
 }

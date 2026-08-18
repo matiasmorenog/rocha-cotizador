@@ -46,7 +46,7 @@ Solo en **push a `main`**, y **solo si** `lint-and-typecheck` pasó:
 5. **Post-deploy smoke** — `npm run ci:post-deploy-smoke`:
    - `GET /api/health` → 200 `{ ok: true }` (503/`schema_drift` si faltan columnas/tablas)
    - `GET /` (homepage) → 200
-6. **Post-deploy cache revalidate** — [`scripts/post-deploy-cache.sh`](../scripts/post-deploy-cache.sh): purge CDN + Data Cache, `vercel cache invalidate` de **todas** las tags en `src/lib/cache-tags.ts` (`products`, `price-lists`, `customers`, `admin-dashboard`), Image Optimization de `/brand/*`, y `POST /api/revalidate` si existe `REVALIDATE_SECRET`.
+6. **Post-deploy cache revalidate** — [`scripts/post-deploy-cache.sh`](../scripts/post-deploy-cache.sh): purge CDN + Data Cache, `vercel cache invalidate` de **todas** las tags en `src/lib/cache-tags.ts` (`products`, `price-lists`, `customers`, `admin-dashboard`, `staff-users`, `subscription-payments`), Image Optimization de `/brand/*`, y `POST /api/revalidate` si existe `REVALIDATE_SECRET`.
 
 `vercel.json` desactiva auto-deploy de Vercel en `main` → no hay carrera paralela.
 Previews (`development` branch → **`rocha-cotizador-dev`**) usan Git integration. Feature-branch PRs **no** auto-deploy (`vercel.json` `**`: false) — draft o ready da igual para Vercel; ready solo dispara Actions. Prod = Actions.

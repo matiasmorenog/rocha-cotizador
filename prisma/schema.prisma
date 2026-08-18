@@ -39,6 +39,8 @@ model User {
   /// Staff capability: stock (mermas, consumibles). ADMIN ignores flags.
   canStock                  Boolean            @default(false)
   active                    Boolean            @default(true)
+  /// Platform owner (developer). Not togglable in Rocha UI. Bootstrap via PLATFORM_OWNER_EMAIL.
+  isSuperuser               Boolean            @default(false)
   /// Account-level: in-app toast/poll while admin is open (default on).
   inAppNotificationsEnabled Boolean            @default(true)
   createdAt                 DateTime           @default(now())
@@ -275,4 +277,21 @@ model ConsumableCountLine {
 
   @@unique([countId, productId])
   @@index([productId])
+}
+
+/// Monthly SaaS fee Rocha pays the developer. Owner-only writes.
+model SubscriptionPayment {
+  id          String    @id @default(cuid())
+  periodYear  Int
+  periodMonth Int
+  amountUsd   Decimal   @default(100) @db.Decimal(10, 2)
+  amountArs   Decimal?  @db.Decimal(12, 2)
+  /// ARS per 1 USD.
+  fxRate      Decimal?  @db.Decimal(12, 4)
+  paidAt      DateTime?
+  note        String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([periodYear, periodMonth])
 }

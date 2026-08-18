@@ -72,6 +72,9 @@ function adminSkeletonFor(path: string) {
   if (path.startsWith("/admin/configuracion")) {
     return <SkeletonAdminConfigPage />;
   }
+  if (path.startsWith("/admin/plataforma")) {
+    return <SkeletonAdminPriceListsPage />;
+  }
   if (path === "/admin" || path === "/admin/") {
     return <SkeletonAdminDashboardPage />;
   }
