@@ -141,7 +141,7 @@ export function CustomerAdminForm({
             className="w-20 max-w-[4rem]"
           />
         </div>
-        <div className="min-w-0 flex-[2] space-y-1">
+        <div className="min-w-0 flex-1 space-y-1">
           <Label htmlFor="customer-name">Nombre</Label>
           <Input
             id="customer-name"
