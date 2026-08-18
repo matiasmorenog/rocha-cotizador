@@ -232,7 +232,7 @@ model MermaEntry {
   lines        MermaLine[]
 
   @@unique([customerId, entryDate])
-  @@index([entryDate])
+  @@index([entryDate, createdAt])
 }
 
 model MermaLine {
@@ -261,7 +261,7 @@ model ConsumableCount {
   lines       ConsumableCountLine[]
 
   @@unique([customerId, entryDate])
-  @@index([entryDate])
+  @@index([entryDate, createdAt])
 }
 
 model ConsumableCountLine {

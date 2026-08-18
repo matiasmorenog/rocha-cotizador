@@ -1,3 +1,4 @@
+import { Suspense, type ReactNode } from "react";
 import { requireStaffPermission } from "@/lib/session";
 import { AdminStockReports } from "@/components/admin/admin-stock-reports";
 import { AdminStockSummarySection } from "@/components/admin/admin-stock-summary-section";
@@ -11,31 +12,44 @@ import {
   parseStockTab,
   resolveStockCustomerId,
   STOCK_HISTORY_LIMIT,
+  type StockModuleCustomer,
   type StockTab,
 } from "@/lib/admin-stock-data";
 import { resolveStockDateRange } from "@/lib/admin-stock-summary-shared";
 
-async function ElaboradosPanel({
+function StockHistorialFallback() {
+  return <p className="text-sm text-neutral-500">Cargando historial…</p>;
+}
+
+function StockPanel({
+  tab,
   from,
   to,
   customerId,
   customers,
+  children,
 }: {
+  tab: StockTab;
   from: string;
   to: string;
   customerId: string;
-  customers: Awaited<ReturnType<typeof moduleCustomers>>;
+  customers: StockModuleCustomer[];
+  children: ReactNode;
 }) {
-  const entries = await loadElaboradosEntries(from, to, customerId || undefined);
+  const consumibles = tab === "consumibles";
 
   return (
     <div className="space-y-8">
       <StockRecountForm
-        title="Carga de elaborados"
-        description="Recuento fin de día de panes y masas por sucursal. Buscá productos y cargá cantidades a tirar."
-        apiPath="/api/admin/mermas"
+        title={consumibles ? "Recuento de consumibles" : "Carga de elaborados"}
+        description={
+          consumibles
+            ? "Stock invertido (gaseosas, insumos, etc.) por sucursal. No son elaborados diarios."
+            : "Recuento fin de día de panes y masas por sucursal. Buscá productos y cargá cantidades a tirar."
+        }
+        apiPath={consumibles ? "/api/admin/consumibles" : "/api/admin/mermas"}
         customers={customers}
-        stockModule="MERMAS"
+        stockModule={consumibles ? "CONSUMABLES" : "MERMAS"}
       />
 
       <div className="space-y-4">
@@ -45,11 +59,11 @@ async function ElaboradosPanel({
           customerId={customerId}
           from={from}
           to={to}
-          tab="elaborados"
+          tab={tab}
         />
 
         <AdminStockSummarySection
-          tab="elaborados"
+          tab={tab}
           from={from}
           to={to}
           customerId={customerId}
@@ -58,80 +72,44 @@ async function ElaboradosPanel({
         <div>
           <h2 className="text-lg font-semibold text-neutral-900">Historial</h2>
           <p className="text-sm text-neutral-600">
-            Cargas guardadas por sucursal (módulo Elaborados). Hasta{" "}
-            {STOCK_HISTORY_LIMIT} por consulta — filtrá por sucursal o fechas.
+            {consumibles
+              ? "Recuentos guardados por sucursal (módulo Consumibles)."
+              : "Cargas guardadas por sucursal (módulo Elaborados)."}{" "}
+            Hasta {STOCK_HISTORY_LIMIT} por consulta — filtrá por sucursal o
+            fechas.
           </p>
         </div>
-        <AdminStockReports
-          entries={entries}
-          customers={customers}
-          customerId={customerId}
-          kindLabel="Elaborado"
-        />
+        {children}
       </div>
     </div>
   );
 }
 
-async function ConsumiblesPanel({
+async function StockHistorial({
+  tab,
   from,
   to,
   customerId,
   customers,
 }: {
+  tab: StockTab;
   from: string;
   to: string;
   customerId: string;
-  customers: Awaited<ReturnType<typeof moduleCustomers>>;
+  customers: StockModuleCustomer[];
 }) {
-  const entries = await loadConsumiblesEntries(
-    from,
-    to,
-    customerId || undefined,
-  );
+  const entries =
+    tab === "consumibles"
+      ? await loadConsumiblesEntries(from, to, customerId || undefined)
+      : await loadElaboradosEntries(from, to, customerId || undefined);
 
   return (
-    <div className="space-y-8">
-      <StockRecountForm
-        title="Recuento de consumibles"
-        description="Stock invertido (gaseosas, insumos, etc.) por sucursal. No son elaborados diarios."
-        apiPath="/api/admin/consumibles"
-        customers={customers}
-        stockModule="CONSUMABLES"
-      />
-
-      <div className="space-y-4">
-        <StockPanelFilters
-          key={`${from}-${to}-${customerId}`}
-          customers={customers}
-          customerId={customerId}
-          from={from}
-          to={to}
-          tab="consumibles"
-        />
-
-        <AdminStockSummarySection
-          tab="consumibles"
-          from={from}
-          to={to}
-          customerId={customerId}
-        />
-
-        <div>
-          <h2 className="text-lg font-semibold text-neutral-900">Historial</h2>
-          <p className="text-sm text-neutral-600">
-            Recuentos guardados por sucursal (módulo Consumibles). Hasta{" "}
-            {STOCK_HISTORY_LIMIT} por consulta — filtrá por sucursal o fechas.
-          </p>
-        </div>
-        <AdminStockReports
-          entries={entries}
-          customers={customers}
-          customerId={customerId}
-          kindLabel="Recuento"
-        />
-      </div>
-    </div>
+    <AdminStockReports
+      entries={entries}
+      customers={customers}
+      customerId={customerId}
+      kindLabel={tab === "consumibles" ? "Recuento" : "Elaborado"}
+    />
   );
 }
 
@@ -145,18 +123,15 @@ export default async function AdminStockPage({
     customer?: string;
   }>;
 }) {
-  await requireStaffPermission("stockReports");
-  const {
-    tab: tabParam,
-    from: fromParam,
-    to: toParam,
-    customer: customerParam,
-  } = await searchParams;
-  const tab: StockTab = parseStockTab(tabParam);
-  const { from, to } = resolveStockDateRange(fromParam, toParam);
+  const [params] = await Promise.all([
+    searchParams,
+    requireStaffPermission("stockReports"),
+  ]);
+  const tab: StockTab = parseStockTab(params.tab);
+  const { from, to } = resolveStockDateRange(params.from, params.to);
   const stockModule = tab === "consumibles" ? "CONSUMABLES" : "MERMAS";
   const customers = await moduleCustomers(stockModule);
-  const customerId = resolveStockCustomerId(customers, customerParam);
+  const customerId = resolveStockCustomerId(customers, params.customer);
 
   return (
     <div className="space-y-6">
@@ -169,21 +144,23 @@ export default async function AdminStockPage({
 
       <StockTabs active={tab} from={from} to={to} customerId={customerId} />
 
-      {tab === "consumibles" ? (
-        <ConsumiblesPanel
-          from={from}
-          to={to}
-          customerId={customerId}
-          customers={customers}
-        />
-      ) : (
-        <ElaboradosPanel
-          from={from}
-          to={to}
-          customerId={customerId}
-          customers={customers}
-        />
-      )}
+      <StockPanel
+        tab={tab}
+        from={from}
+        to={to}
+        customerId={customerId}
+        customers={customers}
+      >
+        <Suspense fallback={<StockHistorialFallback />}>
+          <StockHistorial
+            tab={tab}
+            from={from}
+            to={to}
+            customerId={customerId}
+            customers={customers}
+          />
+        </Suspense>
+      </StockPanel>
     </div>
   );
 }

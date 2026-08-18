@@ -4,13 +4,14 @@ import { z } from "zod";
 import { customerHasModule } from "@/lib/customer-modules";
 import { db } from "@/lib/db";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
+import { getActiveProductsBase } from "@/lib/products-cache";
 import { productWhereForModule } from "@/lib/stock-rubros";
 import {
   serializeStockLinesWithProducts,
   stockLineFlatSelect,
-  stockProductReportSelect,
   type ProductReportRow,
 } from "@/lib/stock-line-serialize";
+import { resolveStockProductReportMap } from "@/lib/stock-product-lookup";
 import {
   coerceStockUnitForProduct,
   isValidStockUnitForProduct,
@@ -29,19 +30,6 @@ export const stockEntryBodySchema = z.object({
   lines: z.array(stockEntryLineSchema).min(1),
 });
 
-async function productReportByIds(productIds: string[]) {
-  if (productIds.length === 0) {
-    return new Map<string, ProductReportRow>();
-  }
-  const products = await db.product.findMany({
-    where: { id: { in: productIds } },
-    select: { id: true, ...stockProductReportSelect },
-  });
-  return new Map(
-    products.map(({ id, ...product }) => [id, product] as const),
-  );
-}
-
 function mapEntryLines(
   lines: Array<{
     productId: string;
@@ -58,6 +46,12 @@ function mapEntryLines(
   }));
 }
 
+const stockEntryDateSelect = {
+  id: true,
+  notes: true,
+  lines: { select: stockLineFlatSelect },
+} as const;
+
 export async function loadStockEntryForDate(
   module: CustomerModule,
   customerId: string,
@@ -66,40 +60,24 @@ export async function loadStockEntryForDate(
   const entryDate = parseDateOnlyYmd(entryDateYmd);
   if (!entryDate) return null;
 
-  if (module === "MERMAS") {
-    const entry = await db.mermaEntry.findUnique({
-      where: { customerId_entryDate: { customerId, entryDate } },
-      select: {
-        id: true,
-        notes: true,
-        lines: { select: stockLineFlatSelect },
-      },
-    });
-    if (!entry) return null;
-
-    const productById = await productReportByIds([
-      ...new Set(entry.lines.map((line) => line.productId)),
-    ]);
-    return {
-      id: entry.id,
-      notes: entry.notes,
-      lines: mapEntryLines(entry.lines, productById),
-    };
-  }
-
-  const entry = await db.consumableCount.findUnique({
-    where: { customerId_entryDate: { customerId, entryDate } },
-    select: {
-      id: true,
-      notes: true,
-      lines: { select: stockLineFlatSelect },
-    },
-  });
+  const [entry, catalog] = await Promise.all([
+    module === "MERMAS"
+      ? db.mermaEntry.findUnique({
+          where: { customerId_entryDate: { customerId, entryDate } },
+          select: stockEntryDateSelect,
+        })
+      : db.consumableCount.findUnique({
+          where: { customerId_entryDate: { customerId, entryDate } },
+          select: stockEntryDateSelect,
+        }),
+    getActiveProductsBase(),
+  ]);
   if (!entry) return null;
 
-  const productById = await productReportByIds([
-    ...new Set(entry.lines.map((line) => line.productId)),
-  ]);
+  const productById = await resolveStockProductReportMap(
+    [...new Set(entry.lines.map((line) => line.productId))],
+    catalog,
+  );
   return {
     id: entry.id,
     notes: entry.notes,

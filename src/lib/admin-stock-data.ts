@@ -2,10 +2,11 @@ import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import { CACHE_TAGS } from "@/lib/cache-tags";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
+import { getActiveProductsBase } from "@/lib/products-cache";
+import { resolveStockProductReportMap } from "@/lib/stock-product-lookup";
 import {
   serializeStockLinesWithProducts,
   stockLineFlatSelect,
-  stockProductReportSelect,
   type ProductReportRow,
 } from "@/lib/stock-line-serialize";
 
@@ -84,19 +85,6 @@ function stockEntryWhere(
   };
 }
 
-async function productReportByIds(productIds: string[]) {
-  if (productIds.length === 0) {
-    return new Map<string, ProductReportRow>();
-  }
-  const products = await db.product.findMany({
-    where: { id: { in: productIds } },
-    select: { id: true, ...stockProductReportSelect },
-  });
-  return new Map(
-    products.map(({ id, ...product }) => [id, product] as const),
-  );
-}
-
 type StockEntryListRow = {
   id: string;
   entryDate: Date;
@@ -110,22 +98,14 @@ type StockEntryListRow = {
   }>;
 };
 
-async function mapStockEntryListRows(rows: StockEntryListRow[]) {
-  const customerIds = [...new Set(rows.map((row) => row.customerId))];
-  const productIds = [
-    ...new Set(rows.flatMap((row) => row.lines.map((line) => line.productId))),
-  ];
-
-  const [customers, productById] = await Promise.all([
-    customerIds.length > 0
-      ? db.customer.findMany({
-          where: { id: { in: customerIds } },
-          select: { id: true, code: true, name: true },
-        })
-      : Promise.resolve([]),
-    productReportByIds(productIds),
-  ]);
-  const customerById = new Map(customers.map((customer) => [customer.id, customer] as const));
+function mapStockEntryListRows(
+  rows: StockEntryListRow[],
+  customers: StockModuleCustomer[],
+  productById: Map<string, ProductReportRow>,
+) {
+  const customerById = new Map(
+    customers.map((customer) => [customer.id, customer] as const),
+  );
 
   return rows.map((entry) => {
     const customer = customerById.get(entry.customerId);
@@ -140,27 +120,45 @@ async function mapStockEntryListRows(rows: StockEntryListRow[]) {
   });
 }
 
+async function hydrateStockEntryListRows(
+  rows: StockEntryListRow[],
+  catalog: Awaited<ReturnType<typeof getActiveProductsBase>>,
+  customers: StockModuleCustomer[],
+) {
+  const productIds = [
+    ...new Set(rows.flatMap((row) => row.lines.map((line) => line.productId))),
+  ];
+  const productById = await resolveStockProductReportMap(productIds, catalog);
+  return mapStockEntryListRows(rows, customers, productById);
+}
+
+const stockEntryListSelect = {
+  id: true,
+  entryDate: true,
+  notes: true,
+  submittedBy: true,
+  customerId: true,
+  lines: { select: stockLineFlatSelect },
+} as const;
+
 export async function loadElaboradosEntries(
   from: string,
   to: string,
   customerId?: string,
   limit = STOCK_HISTORY_LIMIT,
 ) {
-  const rows = await db.mermaEntry.findMany({
-    where: stockEntryWhere(from, to, customerId),
-    orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
-    take: limit,
-    select: {
-      id: true,
-      entryDate: true,
-      notes: true,
-      submittedBy: true,
-      customerId: true,
-      lines: { select: stockLineFlatSelect },
-    },
-  });
+  const [rows, customers, catalog] = await Promise.all([
+    db.mermaEntry.findMany({
+      where: stockEntryWhere(from, to, customerId),
+      orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
+      take: limit,
+      select: stockEntryListSelect,
+    }),
+    moduleCustomers("MERMAS"),
+    getActiveProductsBase(),
+  ]);
 
-  return mapStockEntryListRows(rows);
+  return hydrateStockEntryListRows(rows, catalog, customers);
 }
 
 export async function loadConsumiblesEntries(
@@ -169,19 +167,16 @@ export async function loadConsumiblesEntries(
   customerId?: string,
   limit = STOCK_HISTORY_LIMIT,
 ) {
-  const rows = await db.consumableCount.findMany({
-    where: stockEntryWhere(from, to, customerId),
-    orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
-    take: limit,
-    select: {
-      id: true,
-      entryDate: true,
-      notes: true,
-      submittedBy: true,
-      customerId: true,
-      lines: { select: stockLineFlatSelect },
-    },
-  });
+  const [rows, customers, catalog] = await Promise.all([
+    db.consumableCount.findMany({
+      where: stockEntryWhere(from, to, customerId),
+      orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
+      take: limit,
+      select: stockEntryListSelect,
+    }),
+    moduleCustomers("CONSUMABLES"),
+    getActiveProductsBase(),
+  ]);
 
-  return mapStockEntryListRows(rows);
+  return hydrateStockEntryListRows(rows, catalog, customers);
 }
