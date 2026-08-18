@@ -1094,9 +1094,18 @@ html[data-admin-theme="dark"] input[type="week"] {
 }
 
 html[data-admin-theme="dark"] .data-table-scroll-btn {
+  /* Lift off table surface (#202c33) — --brand-primary-soft matches table bg in dark */
+  background-color: color-mix(in srgb, var(--brand-primary) 14%, #2a3942);
+  border-color: color-mix(in srgb, var(--brand-primary) 38%, #2a3942);
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.4),
-    0 1px 2px rgba(0, 0, 0, 0.3);
+    0 0 0 1px color-mix(in srgb, var(--brand-primary) 22%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.45),
+    0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+html[data-admin-theme="dark"] .data-table-scroll-btn:hover {
+  background-color: color-mix(in srgb, var(--brand-primary) 24%, #2a3942);
+  border-color: var(--brand-primary);
 }
 
 html[data-admin-theme="dark"] .bg-amber-300 {
