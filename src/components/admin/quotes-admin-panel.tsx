@@ -296,43 +296,41 @@ export function QuotesAdminPanel({
               />
             </label>
 
-            {error ? (
-              <p className="w-full text-sm text-red-600 sm:order-last">{error}</p>
-            ) : null}
-
-            <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:items-center">
-              <Button
-                type="submit"
-                variant="outline"
-                disabled={loading}
-                className="w-full gap-2 sm:w-auto"
-              >
-                {loading ? (
-                  <>
-                    <Spinner />
-                    Filtrando…
-                  </>
-                ) : (
-                  "Filtrar lista"
-                )}
-              </Button>
-              <Button
-                type="button"
-                onClick={onDownload}
-                disabled={downloading}
-                className="w-full gap-2 sm:w-auto"
-              >
-                {downloading ? (
-                  <>
-                    <Spinner className="text-white" />
-                    Generando…
-                  </>
-                ) : (
-                  "Descargar PDF"
-                )}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={loading}
+              className="gap-2"
+            >
+              {loading ? (
+                <>
+                  <Spinner />
+                  Filtrando…
+                </>
+              ) : (
+                "Filtrar lista"
+              )}
+            </Button>
+            <Button
+              type="button"
+              onClick={onDownload}
+              disabled={downloading}
+              className="gap-2"
+            >
+              {downloading ? (
+                <>
+                  <Spinner className="text-white" />
+                  Generando…
+                </>
+              ) : (
+                "Descargar PDF"
+              )}
+            </Button>
           </div>
+
+          {error ? (
+            <p className="text-sm text-red-600">{error}</p>
+          ) : null}
         </form>
       </div>
 

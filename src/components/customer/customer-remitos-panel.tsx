@@ -194,7 +194,7 @@ export function CustomerRemitosPanel({
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex w-full min-w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600 sm:w-[12.75rem]">
+            <label className="flex w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
               Desde
               <DatetimeLocalPicker
                 value={from}
@@ -202,7 +202,7 @@ export function CustomerRemitosPanel({
                 aria-label="Desde"
               />
             </label>
-            <label className="flex w-full min-w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600 sm:w-[12.75rem]">
+            <label className="flex w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
               Hasta
               <DatetimeLocalPicker
                 value={to}
@@ -210,40 +210,36 @@ export function CustomerRemitosPanel({
                 aria-label="Hasta"
               />
             </label>
-
-            {error ? (
-              <p className="w-full text-sm text-red-600">{error}</p>
-            ) : null}
-
-            <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row">
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={loading}
+              className="gap-2"
+            >
+              {loading && mode !== "search" ? (
+                <>
+                  <Spinner />
+                  Filtrando…
+                </>
+              ) : (
+                "Filtrar"
+              )}
+            </Button>
+            {mode !== "default" ? (
               <Button
-                type="submit"
-                variant="outline"
+                type="button"
+                variant="secondary"
                 disabled={loading}
-                className="w-full gap-2 sm:w-auto"
+                onClick={onReset}
               >
-                {loading && mode !== "search" ? (
-                  <>
-                    <Spinner />
-                    Filtrando…
-                  </>
-                ) : (
-                  "Filtrar"
-                )}
+                Ver últimos 5
               </Button>
-              {mode !== "default" ? (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={loading}
-                  onClick={onReset}
-                  className="w-full sm:w-auto"
-                >
-                  Ver últimos 5
-                </Button>
-              ) : null}
-            </div>
+            ) : null}
           </div>
+
+          {error ? (
+            <p className="text-sm text-red-600">{error}</p>
+          ) : null}
         </form>
       </div>
 
