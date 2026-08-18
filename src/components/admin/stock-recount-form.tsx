@@ -6,7 +6,7 @@ import { Trash2 } from "lucide-react";
 import { ProductPicker } from "@/components/quote/product-picker";
 import type { CatalogSearchProduct } from "@/components/quote/product-picker";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
 import { Label } from "@/components/ui/label";
 import { ArNumberValueInput } from "@/components/ui/ar-number-input";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
@@ -40,6 +40,14 @@ function todayYmdAr(): string {
   return toArgentinaDatetimeLocal(new Date()).slice(0, 10);
 }
 
+function ymdToPickerValue(ymd: string): string {
+  return `${ymd}T00:00`;
+}
+
+function pickerValueToYmd(value: string): string {
+  return value.slice(0, 10);
+}
+
 export function StockRecountForm({
   title,
   description,
@@ -55,7 +63,10 @@ export function StockRecountForm({
 }) {
   const router = useRouter();
   const [customerId, setCustomerId] = useState(customers[0]?.id ?? "");
-  const [date, setDate] = useState(todayYmdAr());
+  const [dateValue, setDateValue] = useState(() =>
+    ymdToPickerValue(todayYmdAr()),
+  );
+  const date = pickerValueToYmd(dateValue);
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<RecountLine[]>([]);
   const [picked, setPicked] = useState<CatalogSearchProduct | null>(null);
@@ -254,11 +265,10 @@ export function StockRecountForm({
         </div>
         <div className="space-y-1">
           <Label>Fecha</Label>
-          <Input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
+          <DatetimeLocalPicker
+            value={dateValue}
+            onChange={setDateValue}
+            aria-label="Fecha de carga"
           />
         </div>
       </div>
