@@ -4,6 +4,8 @@ import { RecentQuotesList } from "@/components/admin/recent-quotes-list";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
 import { getAdminQuoteActivity, parseQuoteActivityPeriod } from "@/lib/admin-quote-activity";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
+import { requireStaffSession } from "@/lib/session";
+import { isStaffAdmin } from "@/lib/staff-permissions";
 import { cn, formatPrice } from "@/lib/utils";
 
 /** Dynamic shell; dashboard payload uses tagged Data Cache (TTL 24h, bust on quote create / wipe). */
@@ -14,6 +16,9 @@ export default async function AdminDashboardPage({
 }: {
   searchParams: Promise<{ chart?: string }>;
 }) {
+  const session = await requireStaffSession();
+  const showEarningsChart = isStaffAdmin(session.user.role);
+
   const { chart: chartParam } = await searchParams;
   const chartPeriod = parseQuoteActivityPeriod(chartParam);
 
@@ -30,7 +35,7 @@ export default async function AdminDashboardPage({
     activity,
   ] = await Promise.all([
     getAdminDashboardData(),
-    getAdminQuoteActivity(chartPeriod),
+    showEarningsChart ? getAdminQuoteActivity(chartPeriod) : Promise.resolve(null),
   ]);
 
   const stats: { label: string; value: number | string; hint: string }[] = [
@@ -83,14 +88,16 @@ export default async function AdminDashboardPage({
         ))}
       </div>
 
-      <AdminQuoteActivitySection
-        initial={{
-          period: activity.period,
-          points: activity.points,
-          totalQuotes: activity.totalQuotes,
-          totalRevenue: activity.totalRevenue,
-        }}
-      />
+      {showEarningsChart && activity ? (
+        <AdminQuoteActivitySection
+          initial={{
+            period: activity.period,
+            points: activity.points,
+            totalQuotes: activity.totalQuotes,
+            totalRevenue: activity.totalRevenue,
+          }}
+        />
+      ) : null}
 
       <div className="rounded-lg border border-neutral-200 bg-white">
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">

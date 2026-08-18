@@ -60,6 +60,11 @@ export function isStaffRole(role: string | undefined | null): role is StaffRole 
   return role === "ADMIN" || role === "QUOTES" || role === "STOCK";
 }
 
+/** Full admin (not Cotización-/Stock-only staff). */
+export function isStaffAdmin(role: string | undefined | null): boolean {
+  return role === "ADMIN";
+}
+
 /** Legacy role-only resolver (prefer permissionsForStaff). */
 export function permissionsForRole(role: StaffRole): StaffPermission[] {
   return [...ROLE_PERMISSIONS[role]];
