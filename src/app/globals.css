@@ -66,13 +66,13 @@ body,
   background-image:
     radial-gradient(
       ellipse 80% 50% at 10% -10%,
-      color-mix(in srgb, #d7e8e5 75%, transparent) 0%,
-      transparent 55%
+      color-mix(in srgb, #d7e8e5 84%, transparent) 0%,
+      transparent 58%
     ),
     radial-gradient(
       ellipse 60% 40% at 100% 0%,
-      color-mix(in srgb, #c5ddd8 45%, transparent) 0%,
-      transparent 50%
+      color-mix(in srgb, #c5ddd8 55%, transparent) 0%,
+      transparent 54%
     );
   background-repeat: no-repeat;
 }
@@ -867,21 +867,33 @@ html[data-admin-theme="dark"] {
   --foreground: #e9edef;
   --brand-primary: #00a884;
   --brand-primary-soft: #202c33;
+  --admin-destructive: #cf8b87;
+  --admin-destructive-border: color-mix(
+    in srgb,
+    var(--admin-destructive) 36%,
+    #2a3942
+  );
+  --admin-destructive-hover-bg: color-mix(
+    in srgb,
+    var(--admin-destructive) 18%,
+    #202c33
+  );
   color-scheme: dark;
 }
 
-html[data-admin-theme="dark"] body {
+html[data-admin-theme="dark"] body,
+html[data-admin-theme="dark"] .brand-page-atmosphere {
   background-color: var(--background);
   background-image:
     radial-gradient(
       ellipse 80% 50% at 10% -10%,
-      color-mix(in srgb, #00a884 12%, transparent) 0%,
-      transparent 55%
+      color-mix(in srgb, #00a884 15%, transparent) 0%,
+      transparent 58%
     ),
     radial-gradient(
       ellipse 60% 40% at 100% 0%,
-      color-mix(in srgb, #005c4b 18%, transparent) 0%,
-      transparent 50%
+      color-mix(in srgb, #005c4b 22%, transparent) 0%,
+      transparent 54%
     );
   color: var(--foreground);
 }
@@ -1095,6 +1107,31 @@ html[data-admin-theme="dark"] .stroke-neutral-100 {
 
 html[data-admin-theme="dark"] .border-neutral-200\/80 {
   border-color: color-mix(in srgb, #2a3942 80%, transparent);
+}
+
+/* Destructive icon buttons (listas-precios, editor): muted coral, not bright red-600. */
+html[data-admin-theme="dark"] .btn-destructive {
+  border-color: var(--admin-destructive-border);
+  background-color: #202c33;
+  color: var(--admin-destructive);
+}
+
+html[data-admin-theme="dark"] .btn-destructive:hover {
+  border-color: color-mix(in srgb, var(--admin-destructive) 50%, #2a3942);
+  background-color: var(--admin-destructive-hover-bg);
+  color: color-mix(in srgb, var(--admin-destructive) 88%, #e9edef);
+}
+
+/* Ghost delete controls (stock recount rows, etc.). */
+html[data-admin-theme="dark"] .hover\:text-red-600:hover {
+  color: var(--admin-destructive);
+}
+
+/* Remito line delete: teal secondary at rest, coral on hover in dark. */
+html[data-admin-theme="dark"] .admin-delete-hover:hover {
+  border-color: color-mix(in srgb, var(--admin-destructive) 50%, #2a3942);
+  background-color: var(--admin-destructive-hover-bg);
+  color: color-mix(in srgb, var(--admin-destructive) 88%, #e9edef);
 }
 
 @media (prefers-reduced-motion: reduce) {

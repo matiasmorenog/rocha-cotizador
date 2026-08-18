@@ -115,7 +115,7 @@ export function RemitoAdminItemRows({
   /** Match quote draft table: secondary + red hover on delete. */
   const iconBtnClass = "h-8 shrink-0 px-2";
   const deleteBtnClass =
-    "h-8 shrink-0 px-2 hover:border-red-400 hover:bg-red-50 hover:text-red-700";
+    "admin-delete-hover h-8 shrink-0 px-2 hover:border-red-400 hover:bg-red-50 hover:text-red-700";
 
   function openEdit() {
     setQtyInput(formatArInput(qty, 3));

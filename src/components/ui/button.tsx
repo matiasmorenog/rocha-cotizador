@@ -26,7 +26,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
               variant === "secondary",
             "border-neutral-300 bg-white text-neutral-900 hover:bg-neutral-50":
               variant === "outline",
-            "border-red-200 bg-white text-red-600 hover:bg-red-50":
+            "btn-destructive border-red-200 bg-white text-red-600 hover:bg-red-50":
               variant === "destructive",
             "h-8 px-3 text-sm": size === "sm",
             "h-10 px-4 text-sm": size === "md",
