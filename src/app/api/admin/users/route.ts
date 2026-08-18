@@ -3,6 +3,7 @@ import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
+import { invalidateAfterStaffUserMutation } from "@/lib/cache-tags";
 import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
@@ -138,6 +139,7 @@ export async function POST(req: NextRequest) {
       data,
       select: userSelect,
     });
+    invalidateAfterStaffUserMutation();
     return NextResponse.json({ user });
   }
 
@@ -170,5 +172,6 @@ export async function POST(req: NextRequest) {
     select: userSelect,
   });
 
+  invalidateAfterStaffUserMutation();
   return NextResponse.json({ user }, { status: 201 });
 }

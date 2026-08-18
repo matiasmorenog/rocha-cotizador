@@ -8,6 +8,7 @@ export const CACHE_TAGS = {
   /** customerId → priceListId mapping (not unit prices). */
   customers: "customers",
   adminDashboard: "admin-dashboard",
+  staffUsers: "staff-users",
 } as const;
 
 /**
@@ -28,6 +29,10 @@ export function invalidatePriceListsCache() {
 
 export function invalidateCustomersCache() {
   expireTag(CACHE_TAGS.customers);
+}
+
+export function invalidateStaffUsersCache() {
+  expireTag(CACHE_TAGS.staffUsers);
 }
 
 export function invalidateAdminDashboardCache() {
@@ -74,6 +79,11 @@ export function invalidateAfterPriceListMutation() {
 export function invalidateAfterCustomerMutation() {
   invalidateCustomersCache();
   invalidateAdminDashboardCache();
+}
+
+/** Staff user create/update — admin usuarios list. */
+export function invalidateAfterStaffUserMutation() {
+  invalidateStaffUsersCache();
 }
 
 /** Quote create — expire dashboard Data Cache + refresh list routes. */
