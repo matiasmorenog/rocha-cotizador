@@ -26,6 +26,7 @@ type CustomerRow = {
   id: string;
   code: string;
   name: string;
+  nameNote: string | null;
   priceListId: string | null;
   address: string | null;
   phone: string | null;
@@ -52,6 +53,7 @@ export function CustomerAdminForm({
     priceLists.find((l) => l.isBase)?.id ?? priceLists[0]?.id ?? "";
   const [code, setCode] = useState(customer?.code ?? "");
   const [name, setName] = useState(customer?.name ?? "");
+  const [nameNote, setNameNote] = useState(customer?.nameNote ?? "");
   const [priceListId, setPriceListId] = useState(
     customer?.priceListId ?? baseListId,
   );
@@ -83,6 +85,7 @@ export function CustomerAdminForm({
         id: customer?.id,
         code,
         name,
+        nameNote,
         priceListId: priceListId || baseListId || null,
         address,
         phone,
@@ -133,6 +136,17 @@ export function CustomerAdminForm({
         <div className="space-y-1">
           <Label>Nombre</Label>
           <Input value={name} onChange={(e) => setName(e.target.value)} required />
+        </div>
+        <div className="space-y-1">
+          <Label>Aclaración</Label>
+          <Input
+            value={nameNote}
+            onChange={(e) => setNameNote(e.target.value)}
+            placeholder="Opcional — ej. contacto o sucursal"
+          />
+          <p className="text-xs text-neutral-500">
+            Solo visible en admin; el cliente ve únicamente el nombre.
+          </p>
         </div>
       </div>
 

@@ -16,6 +16,7 @@ import {
 } from "@/lib/admin-excel";
 import { isBasePriceListLabel } from "@/lib/pricing";
 import { getBasePriceList } from "@/lib/price-list-resolve";
+import { emptyToNullNameNote } from "@/lib/customer-name-note";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -82,6 +83,9 @@ export async function POST(req: NextRequest) {
     const row = sheet.getRow(r);
     const codeRaw = cellText(getCellByHeader(row, headers, "código"));
     const name = cellText(getCellByHeader(row, headers, "nombre"));
+    const nameNote = emptyToNullNameNote(
+      cellText(getCellByHeader(row, headers, "aclaración")),
+    );
 
     if (!codeRaw && !name) {
       summary.skipped += 1;
@@ -146,6 +150,7 @@ export async function POST(req: NextRequest) {
       if (existing) {
         const data: {
           name: string;
+          nameNote: string | null;
           priceListId: string | null;
           address: string | null;
           phone: string | null;
@@ -158,6 +163,7 @@ export async function POST(req: NextRequest) {
           mustChangePassword?: boolean;
         } = {
           name,
+          nameNote,
           priceListId,
           address,
           phone,
@@ -183,6 +189,7 @@ export async function POST(req: NextRequest) {
           data: {
             code,
             name,
+            nameNote,
             passwordHash,
             mustChangePassword: true,
             priceListId,

@@ -12,6 +12,7 @@ export type AdminCustomerTableRow = {
   id: string;
   code: string;
   name: string;
+  nameNote: string | null;
   priceListId: string | null;
   priceListName: string | null;
   address: string | null;
@@ -44,6 +45,7 @@ async function fetchAdminClientesPageDataUncached(): Promise<AdminClientesPageDa
         id: true,
         code: true,
         name: true,
+        nameNote: true,
         priceListId: true,
         address: true,
         phone: true,
@@ -80,6 +82,7 @@ async function fetchAdminClientesPageDataUncached(): Promise<AdminClientesPageDa
     id: c.id,
     code: c.code,
     name: c.name,
+    nameNote: c.nameNote,
     priceListId: c.priceListId,
     priceListName: c.priceListId
       ? (priceListNameById.get(c.priceListId) ?? null)

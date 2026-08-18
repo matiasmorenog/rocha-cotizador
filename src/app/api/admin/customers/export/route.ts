@@ -22,6 +22,7 @@ export async function GET() {
     select: {
       code: true,
       name: true,
+      nameNote: true,
       email: true,
       phone: true,
       address: true,
@@ -42,6 +43,7 @@ export async function GET() {
     sheet.addRow([
       c.code,
       c.name,
+      c.nameNote ?? "",
       c.email ?? "",
       c.phone ?? "",
       c.address ?? "",

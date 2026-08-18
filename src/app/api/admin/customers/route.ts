@@ -12,6 +12,7 @@ import {
   type CustomerModuleFlags,
 } from "@/lib/customer-modules";
 import { padCustomerCode, pinFromCustomerCode } from "@/lib/utils";
+import { emptyToNullNameNote } from "@/lib/customer-name-note";
 
 const moduleFlagsSchema = z.object({
   MERMAS: z.boolean(),
@@ -29,6 +30,7 @@ export async function GET(req: NextRequest) {
       ? {
           OR: [
             { name: { contains: q, mode: "insensitive" } },
+            { nameNote: { contains: q, mode: "insensitive" } },
             { code: { contains: q, mode: "insensitive" } },
           ],
         }
@@ -39,6 +41,7 @@ export async function GET(req: NextRequest) {
       id: true,
       code: true,
       name: true,
+      nameNote: true,
       priceListId: true,
       priceList: { select: { id: true, name: true } },
       active: true,
@@ -57,6 +60,7 @@ const upsertSchema = z.object({
   id: z.string().optional(),
   code: z.string().min(1),
   name: z.string().min(1),
+  nameNote: z.string().optional().nullable(),
   priceListId: z.string().nullable().optional(),
   address: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
@@ -98,6 +102,7 @@ export async function POST(req: NextRequest) {
   const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
   const email = emptyToNull(parsed.data.email);
   const notes = emptyToNull(parsed.data.notes);
+  const nameNote = emptyToNullNameNote(parsed.data.nameNote);
   const paymentTerms = emptyToNull(parsed.data.paymentTerms);
   const deliveryHours = emptyToNull(parsed.data.deliveryHours);
   const priceListIdRaw =
@@ -127,6 +132,7 @@ export async function POST(req: NextRequest) {
       data: {
         code,
         name: parsed.data.name,
+        nameNote,
         ...(priceListId !== undefined ? { priceListId } : {}),
         address,
         phone,
@@ -161,6 +167,7 @@ export async function POST(req: NextRequest) {
     data: {
       code,
       name: parsed.data.name,
+      nameNote,
       passwordHash,
       mustChangePassword: true,
       priceListId: priceListId ?? null,

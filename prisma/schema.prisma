@@ -80,6 +80,8 @@ model Customer {
   id                 String                 @id @default(cuid())
   code               String                 @unique
   name               String
+  /// Admin-only contact/clarification (e.g. person name); not shown to customers.
+  nameNote           String?
   /// bcrypt hash — initial seed is a 4-digit PIN; clients must set a real password.
   passwordHash       String                 @map("pinHash")
   mustChangePassword Boolean                @default(true)

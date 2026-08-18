@@ -7,6 +7,7 @@ import {
   AdminTableIconAction,
 } from "@/components/admin/admin-table";
 import { CustomerAdminForm } from "@/components/admin/customer-admin-form";
+import { AdminCustomerName } from "@/components/admin/admin-customer-name";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
@@ -28,6 +29,7 @@ export type CustomerListRow = {
   id: string;
   code: string;
   name: string;
+  nameNote: string | null;
   priceListId: string | null;
   priceListName: string | null;
   address: string | null;
@@ -66,7 +68,7 @@ export function CustomersAdminPanel({
     () =>
       filterFoldedSearch(customers, query, {
         primary: [(c) => c.code],
-        secondary: [(c) => c.name],
+        secondary: [(c) => c.name, (c) => c.nameNote ?? ""],
         emptyReturnsAll: true,
       }),
     [customers, query],
@@ -134,6 +136,7 @@ export function CustomersAdminPanel({
                   id: editing.id,
                   code: editing.code,
                   name: editing.name,
+                  nameNote: editing.nameNote,
                   priceListId: editing.priceListId,
                   address: editing.address,
                   phone: editing.phone,
@@ -188,9 +191,11 @@ export function CustomersAdminPanel({
                       >
                         <td className="px-3 py-2 font-mono">{c.code}</td>
                         <td className="px-3 py-2">
-                          <span className="admin-table-name-2l max-w-[14rem]">
-                            {c.name}
-                          </span>
+                          <AdminCustomerName
+                            name={c.name}
+                            nameNote={c.nameNote}
+                            className="admin-table-name-2l max-w-[14rem]"
+                          />
                         </td>
                         <td className="px-3 py-2 text-neutral-700">
                           <span className="admin-table-name-2l max-w-[16rem]">
