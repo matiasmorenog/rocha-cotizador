@@ -14,8 +14,14 @@ import { DataTableScroll } from "@/components/ui/data-table";
 import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { ARGENTINA_TZ } from "@/lib/argentina-time";
+import { ARGENTINA_TZ, parseArgentinaDateTime } from "@/lib/argentina-time";
 import type { CustomerRemitoRow } from "@/lib/customer-remitos-data";
+import {
+  clampCustomerRemitosHasta,
+  CUSTOMER_REMITOS_DEFAULT_LIMIT,
+  CUSTOMER_REMITOS_MAX_RANGE_DAYS,
+  customerRemitosDateRangeError,
+} from "@/lib/customer-remitos-limits";
 import { formatDeliveryDateLabel } from "@/lib/delivery-date";
 import { quoteStatusLabel } from "@/lib/quote-status";
 import { formatPrice } from "@/lib/utils";
@@ -105,12 +111,38 @@ export function CustomerRemitosPanel({
     [],
   );
 
+  function onFromChange(next: string) {
+    setFrom(next);
+    if (next.trim() && to.trim()) {
+      setTo(clampCustomerRemitosHasta(next, to));
+    }
+  }
+
+  function onToChange(next: string) {
+    if (from.trim() && next.trim()) {
+      setTo(clampCustomerRemitosHasta(from, next));
+      return;
+    }
+    setTo(next);
+  }
+
   async function onFilter(e: FormEvent) {
     e.preventDefault();
     const fromValue = from.trim();
     const toValue = to.trim();
     if (!fromValue || !toValue) {
       setError("Indicá fecha Desde y Hasta para filtrar por rango");
+      return;
+    }
+    const fromDate = parseArgentinaDateTime(fromValue);
+    const toDate = parseArgentinaDateTime(toValue);
+    if (!fromDate || !toDate) {
+      setError("Fechas inválidas");
+      return;
+    }
+    const rangeError = customerRemitosDateRangeError(fromDate, toDate);
+    if (rangeError) {
+      setError(rangeError);
       return;
     }
     setAppliedFrom(fromValue);
@@ -179,8 +211,17 @@ export function CustomerRemitosPanel({
         ? "Sin remitos en este rango"
         : "Todavía no hay remitos.";
 
+  const showDefaultHint = mode === "default" && remitos.length > 0;
+
   return (
     <div className="space-y-4">
+      {showDefaultHint ? (
+        <p className="text-sm text-neutral-600">
+          Mostrando los últimos {CUSTOMER_REMITOS_DEFAULT_LIMIT} remitos. Usá
+          fechas o búsqueda para ver más.
+        </p>
+      ) : null}
+
       <div className="rounded-lg border border-neutral-200 bg-white p-4">
         <form onSubmit={onFilter} className="space-y-4">
           <div className="space-y-1">
@@ -188,8 +229,8 @@ export function CustomerRemitosPanel({
               Buscar en tu historial
             </p>
             <p className="text-xs text-neutral-500">
-              Por defecto ves tus 5 remitos más recientes. Elegí un rango de
-              fechas o buscá por número para ver más.
+              Filtrá por fechas (máximo {CUSTOMER_REMITOS_MAX_RANGE_DAYS} días)
+              o buscá por número de remito.
             </p>
           </div>
 
@@ -198,7 +239,7 @@ export function CustomerRemitosPanel({
               Desde
               <DatetimeLocalPicker
                 value={from}
-                onChange={setFrom}
+                onChange={onFromChange}
                 aria-label="Desde"
               />
             </label>
@@ -206,7 +247,7 @@ export function CustomerRemitosPanel({
               Hasta
               <DatetimeLocalPicker
                 value={to}
-                onChange={setTo}
+                onChange={onToChange}
                 aria-label="Hasta"
               />
             </label>

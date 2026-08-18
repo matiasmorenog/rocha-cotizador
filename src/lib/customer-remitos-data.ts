@@ -1,11 +1,14 @@
 import { db } from "@/lib/db";
+import {
+  CUSTOMER_REMITOS_DEFAULT_LIMIT,
+  CUSTOMER_REMITOS_FILTERED_LIMIT,
+} from "@/lib/customer-remitos-limits";
 import { formatDateOnlyYmd } from "@/lib/delivery-date";
 
-/** Default rows on /remitos before the customer applies filters or search. */
-export const CUSTOMER_REMITOS_DEFAULT_LIMIT = 5;
-
-/** Cap when expanding via date filter or search (avoid unbounded history loads). */
-export const CUSTOMER_REMITOS_FILTERED_LIMIT = 100;
+export {
+  CUSTOMER_REMITOS_DEFAULT_LIMIT,
+  CUSTOMER_REMITOS_FILTERED_LIMIT,
+} from "@/lib/customer-remitos-limits";
 
 export type CustomerRemitoRow = {
   id: string;

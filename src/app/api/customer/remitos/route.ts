@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { parseArgentinaDateTime } from "@/lib/argentina-time";
 import { getCustomerRemitos } from "@/lib/customer-remitos-data";
+import { customerRemitosDateRangeError } from "@/lib/customer-remitos-limits";
 
 /**
  * GET /api/customer/remitos?from=&to=&q=
@@ -40,11 +41,9 @@ export async function GET(req: NextRequest) {
         { status: 400 },
       );
     }
-    if (from.getTime() >= to.getTime()) {
-      return NextResponse.json(
-        { error: "El rango es inválido: 'Desde' debe ser anterior a 'Hasta'" },
-        { status: 400 },
-      );
+    const rangeError = customerRemitosDateRangeError(from, to);
+    if (rangeError) {
+      return NextResponse.json({ error: rangeError }, { status: 400 });
     }
   }
 
