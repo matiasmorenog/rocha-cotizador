@@ -1,14 +1,10 @@
 import { requireStaffPermission } from "@/lib/session";
-import { db } from "@/lib/db";
 import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-route-transition";
 import { QuotesAdminPanel } from "@/components/admin/quotes-admin-panel";
 import { resolveQuotesExportRange } from "@/lib/argentina-time";
-import { formatDateOnlyYmd } from "@/lib/delivery-date";
+import { getAdminCotizacionesQuotes } from "@/lib/admin-cotizaciones-data";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
-
-/** Always hit DB — quote lists must reflect deletes/wipes immediately. */
-export const dynamic = "force-dynamic";
 
 export default async function AdminCotizacionesPage({
   searchParams,
@@ -22,29 +18,7 @@ export default async function AdminCotizacionesPage({
     toParam,
   );
 
-  const quotes = await db.quote.findMany({
-    where: { createdAt: { gte: from, lt: to } },
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true,
-      number: true,
-      status: true,
-      total: true,
-      createdAt: true,
-      deliveryDate: true,
-      customer: { select: { code: true, name: true } },
-    },
-  });
-
-  const rows = quotes.map((q) => ({
-    id: q.id,
-    number: q.number,
-    status: q.status,
-    total: Number(q.total),
-    createdAt: q.createdAt.toISOString(),
-    deliveryDate: q.deliveryDate ? formatDateOnlyYmd(q.deliveryDate) : null,
-    customer: q.customer,
-  }));
+  const rows = await getAdminCotizacionesQuotes(from, to, toParam);
 
   return (
     <div className="space-y-6">
