@@ -32,12 +32,7 @@ const links: Array<{
     label: "Cotizaciones",
     permission: "quotes",
   },
-  { href: "/admin/mermas", label: "Mermas", permission: "stockReports" },
-  {
-    href: "/admin/consumibles",
-    label: "Consumibles",
-    permission: "stockReports",
-  },
+  { href: "/admin/stock", label: "Stock", permission: "stockReports" },
   { href: "/admin/usuarios", label: "Usuarios", permission: "users" },
   {
     href: "/admin/configuracion",

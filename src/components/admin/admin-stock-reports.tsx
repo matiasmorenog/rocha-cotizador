@@ -29,11 +29,13 @@ export function AdminStockReports({
   kindLabel,
   from,
   to,
+  tab,
 }: {
   entries: StockReportEntry[];
   kindLabel: string;
   from: string;
   to: string;
+  tab?: "elaborados" | "consumibles";
 }) {
   const router = useRouter();
   const [fromLocal, setFromLocal] = useState(from);
@@ -42,6 +44,7 @@ export function AdminStockReports({
 
   function applyFilter() {
     const params = new URLSearchParams();
+    if (tab) params.set("tab", tab);
     if (fromLocal) params.set("from", fromLocal);
     if (toLocal) params.set("to", toLocal);
     const qs = params.toString();

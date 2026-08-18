@@ -270,7 +270,7 @@ function StaffUserForm({
         />
         <PermissionSwitch
           label="Stock"
-          description="Mermas y consumibles"
+          description="Elaborados y consumibles"
           checked={canStock}
           onChange={setCanStock}
           disabled={isAdmin}

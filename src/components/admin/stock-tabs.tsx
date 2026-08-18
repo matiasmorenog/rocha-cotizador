@@ -1,0 +1,55 @@
+import Link from "next/link";
+import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
+import type { StockTab } from "@/lib/admin-stock-data";
+import { cn } from "@/lib/utils";
+
+const TABS: Array<{ id: StockTab; label: string }> = [
+  { id: "elaborados", label: "Elaborados" },
+  { id: "consumibles", label: "Consumibles" },
+];
+
+function tabHref(tab: StockTab, from: string, to: string) {
+  const params = new URLSearchParams({ tab });
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  return `/admin/stock?${params}`;
+}
+
+export function StockTabs({
+  active,
+  from,
+  to,
+}: {
+  active: StockTab;
+  from: string;
+  to: string;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Stock"
+      className="inline-flex rounded-lg border border-neutral-200 bg-white p-1"
+    >
+      {TABS.map((tab) => {
+        const selected = active === tab.id;
+        return (
+          <Link
+            key={tab.id}
+            href={tabHref(tab.id, from, to)}
+            role="tab"
+            aria-selected={selected}
+            className={cn(
+              "rounded-md px-4 py-2 text-sm font-medium transition-colors",
+              FOCUS_BRAND_OUTLINE,
+              selected
+                ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
+                : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900",
+            )}
+          >
+            {tab.label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}

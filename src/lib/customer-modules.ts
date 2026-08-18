@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 export type { CustomerModule };
 
 export const CUSTOMER_MODULE_LABELS: Record<CustomerModule, string> = {
-  MERMAS: "Mermas",
+  MERMAS: "Elaborados",
   CONSUMABLES: "Consumibles",
 };
 

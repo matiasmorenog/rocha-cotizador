@@ -141,7 +141,7 @@ export function StockRecountForm({
   const moduleMismatchMessage =
     stockModule === "MERMAS"
       ? "Ese producto es insumo/consumible — cargalo en Consumibles"
-      : "Ese producto no es insumo/consumible — cargalo en Mermas";
+      : "Ese producto no es insumo/consumible — cargalo en Elaborados";
 
   function addProduct(product: CatalogSearchProduct) {
     if (!productMatchesStockModule(product.rubro, stockModule)) {
