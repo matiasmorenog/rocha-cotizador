@@ -91,7 +91,8 @@ type RoutePendingShellProps = {
  * outside `main.max-w-6xl`. Opaque bg only on the main column left a sharp
  * vertical edge where body wheat/latte radials showed on the right (remito
  * skeleton). Admin keeps column-local solid bg so the desktop sidebar stays
- * visible under a fixed layer.
+ * visible under a fixed layer. Do not paint a flat --background slab on the
+ * overlay — body uses radial washes; a solid fill reads as a contrasting box.
  */
 export function RoutePendingShell({ children, variant }: RoutePendingShellProps) {
   const { pending, pendingPath } = useRouteLoading();
@@ -121,7 +122,6 @@ export function RoutePendingShell({ children, variant }: RoutePendingShellProps)
             data-route-pending=""
             className={cn(
               "absolute -inset-x-4 -inset-y-6 z-[5] cursor-wait overflow-auto px-4 py-6",
-              variant === "admin" && "bg-[var(--background)]",
             )}
             role="status"
             aria-busy="true"

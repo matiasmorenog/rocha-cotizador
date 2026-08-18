@@ -41,17 +41,14 @@ const AUTH_CARD =
 /** Customer/card surfaces — white fill on cream page. */
 const SKELETON_CARD = "rounded-lg border border-neutral-200 bg-white";
 
-/**
- * Admin loading panels — page bg, not white cards.
- * Real admin UI uses white cards once content renders; empty skeleton slabs
- * on sage/dark shell read as a double-background halo before data arrives.
- */
-const ADMIN_SKELETON_PANEL =
-  "rounded-lg border border-neutral-200 bg-[var(--background)]";
+/** Admin cards — match loaded Excel panels, tables, config sections. */
+const ADMIN_SKELETON_CARD = SKELETON_CARD;
+
+const ADMIN_SKELETON_CARD_SHADOW = cn(SKELETON_CARD, "shadow-sm");
 
 const ADMIN_SKELETON_TABLE = cn(
+  SKELETON_CARD,
   "data-table-scroll overflow-hidden",
-  ADMIN_SKELETON_PANEL,
 );
 
 function SkeletonLogo({
@@ -126,7 +123,7 @@ function SkeletonTableRows({
 
 function SkeletonExcelSyncPanel() {
   return (
-    <div className={cn(ADMIN_SKELETON_PANEL, "p-4")}>
+    <div className={cn(ADMIN_SKELETON_CARD, "p-4")}>
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
         <div className="space-y-2 md:max-w-sm">
           <Skeleton className="h-4 w-16" />
@@ -348,7 +345,7 @@ export function SkeletonAdminConfigPage() {
       <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-72" />
 
       {/* Notificaciones */}
-      <section className={cn(ADMIN_SKELETON_PANEL, "p-5")}>
+      <section className={cn(ADMIN_SKELETON_CARD_SHADOW, "p-5")}>
         <Skeleton className="mb-3 h-3 w-32" />
         <div className="space-y-4">
           {/* WhatsApp */}
@@ -408,7 +405,7 @@ export function SkeletonAdminConfigPage() {
       </section>
 
       {/* Mi cuenta */}
-      <section className={cn(ADMIN_SKELETON_PANEL, "p-5")}>
+      <section className={cn(ADMIN_SKELETON_CARD_SHADOW, "p-5")}>
         <Skeleton className="mb-1 h-3 w-24" />
         <Skeleton className="mb-4 h-4 w-56" />
         <div className="space-y-4">
@@ -467,14 +464,14 @@ export function SkeletonAdminDashboardPage() {
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className={cn(ADMIN_SKELETON_PANEL, "p-4")}>
+          <div key={i} className={cn(ADMIN_SKELETON_CARD_SHADOW, "p-4")}>
             <Skeleton className="h-3 w-40" />
             <Skeleton className="mt-2 h-9 w-16" />
             <Skeleton className="mt-2 h-3 w-36" />
           </div>
         ))}
       </div>
-      <div className={cn(ADMIN_SKELETON_PANEL, "p-4 sm:p-5")}>
+      <div className={cn(ADMIN_SKELETON_CARD_SHADOW, "p-4 sm:p-5")}>
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
             <Skeleton className="h-5 w-52" />
@@ -499,7 +496,7 @@ export function SkeletonAdminDashboardPage() {
           ))}
         </div>
       </div>
-      <div className={ADMIN_SKELETON_PANEL}>
+      <div className={ADMIN_SKELETON_CARD}>
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
           <Skeleton className="h-5 w-44" />
           <Skeleton className="h-4 w-16" />
@@ -556,7 +553,7 @@ export function SkeletonAdminQuotesPage() {
         <Skeleton className="h-8 w-40" />
         <Skeleton className="h-10 w-40 rounded-md" />
       </div>
-      <div className={cn(ADMIN_SKELETON_PANEL, "p-4")}>
+      <div className={cn(ADMIN_SKELETON_CARD, "p-4")}>
         <div className="space-y-4">
           <div className="space-y-2">
             <Skeleton className="h-4 w-44" />
@@ -593,7 +590,7 @@ export function SkeletonAdminPriceListsPage() {
         <Skeleton className="mt-2 h-4 w-full max-w-2xl" />
         <Skeleton className="mt-1 h-4 w-2/3 max-w-md" />
       </div>
-      <div className={cn(ADMIN_SKELETON_PANEL, "p-4")}>
+      <div className={cn(ADMIN_SKELETON_CARD, "p-4")}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
           <div className="min-w-0 flex-1 space-y-1">
             <Skeleton className="h-4 w-24" />
@@ -622,7 +619,7 @@ export function SkeletonAdminNewQuotePage() {
         <SkeletonPageHeader titleWidth="w-48" descriptionWidth="w-64" />
         <Skeleton className="h-4 w-32" />
       </div>
-      <div className={cn(ADMIN_SKELETON_PANEL, "p-4")}>
+      <div className={cn(ADMIN_SKELETON_CARD, "p-4")}>
         <Skeleton className="h-4 w-16" />
         <Skeleton className="mt-2 h-10 w-full rounded-md" />
       </div>
