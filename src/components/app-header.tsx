@@ -5,7 +5,9 @@ import { PinChangeHint } from "@/components/account/pin-change-hint";
 import { AdminMenuButton } from "@/components/admin/admin-menu-button";
 import { AdminThemeToggle } from "@/components/admin/admin-theme-toggle";
 import { HeaderProgressLine } from "@/components/header-progress-line";
+import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { isStaffRole } from "@/lib/staff-permissions";
+import { cn } from "@/lib/utils";
 
 export async function AppHeader() {
   const session = await auth();
@@ -76,7 +78,10 @@ export async function AppHeader() {
                       type="submit"
                       aria-label="Salir"
                       title="Salir"
-                      className="cursor-pointer rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
+                      className={cn(
+                        "inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800",
+                        FOCUS_BRAND_OUTLINE,
+                      )}
                     >
                       <LogOut className="h-4 w-4" aria-hidden />
                     </button>
