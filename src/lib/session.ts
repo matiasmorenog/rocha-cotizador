@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import {
   isStaffRole,
   staffHasPermission,
+  staffHomeHref,
   type StaffPermission,
 } from "@/lib/staff-permissions";
 import { redirect } from "next/navigation";
@@ -12,6 +13,9 @@ const getAuthSession = cache(auth);
 
 export async function requireCustomerSession() {
   const session = await getAuthSession();
+  if (session?.user && isStaffRole(session.user.role)) {
+    redirect(staffHomeHref(session.user.permissions));
+  }
   if (
     !session?.user ||
     session.user.role !== "CUSTOMER" ||

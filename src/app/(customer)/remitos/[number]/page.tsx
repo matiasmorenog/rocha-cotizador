@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
-import { staffHasPermission } from "@/lib/staff-permissions";
+import { getOptionalSession } from "@/lib/session";
+import { staffHasPermission, staffHomeHref } from "@/lib/staff-permissions";
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
 import {
@@ -68,7 +68,7 @@ export default async function RemitoDetailPage({
 }) {
   const { number: rawParam } = await params;
   const { whatsapp } = await searchParams;
-  const session = await auth();
+  const session = await getOptionalSession();
 
   const canonicalNumber = normalizeRemitoNumberParam(rawParam);
   const query =
@@ -238,9 +238,9 @@ export default async function RemitoDetailPage({
         <div className="flex flex-wrap justify-end gap-2">
           <RemitoBackButton
             href={
-              staffHasPermission(session.user.permissions, "quotes")
-                ? "/admin/cotizaciones"
-                : "/remitos"
+              session.user.role === "CUSTOMER"
+                ? "/remitos"
+                : staffHomeHref(session.user.permissions)
             }
           />
           <RemitoPrintButtons />

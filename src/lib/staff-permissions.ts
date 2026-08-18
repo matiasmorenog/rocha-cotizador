@@ -112,6 +112,15 @@ export function staffHasPermission(
   return permissions?.includes(permission) ?? false;
 }
 
+/** Where staff should land instead of customer routes / login. */
+export function staffHomeHref(
+  permissions: readonly StaffPermission[] | undefined | null,
+): "/admin/cotizaciones" | "/admin" {
+  return staffHasPermission(permissions, "quotes")
+    ? "/admin/cotizaciones"
+    : "/admin";
+}
+
 /** DB / login profile → permission list. */
 export function staffPermissionsFromProfile(
   profile: StaffCapabilityProfile,

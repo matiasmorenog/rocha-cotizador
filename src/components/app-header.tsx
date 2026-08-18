@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LogOut } from "lucide-react";
-import { auth, signOut } from "@/lib/auth";
+import { signOut } from "@/lib/auth";
+import { getOptionalSession } from "@/lib/session";
 import { PinChangeHint } from "@/components/account/pin-change-hint";
 import { AdminMenuButton } from "@/components/admin/admin-menu-button";
 import { AdminThemeToggle } from "@/components/admin/admin-theme-toggle";
@@ -10,7 +11,7 @@ import { isStaffRole } from "@/lib/staff-permissions";
 import { cn } from "@/lib/utils";
 
 export async function AppHeader() {
-  const session = await auth();
+  const session = await getOptionalSession();
   const isCustomer = session?.user?.role === "CUSTOMER";
   const isStaff = isStaffRole(session?.user?.role);
   /** From JWT — updated via session.update() after password change. No Neon hit. */

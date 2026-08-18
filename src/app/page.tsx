@@ -4,13 +4,15 @@ import { Suspense } from "react";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { SkeletonHomePage } from "@/components/ui/skeleton";
-import { auth } from "@/lib/auth";
+import { getOptionalSession } from "@/lib/session";
 import { isStaffRole } from "@/lib/staff-permissions";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 async function HomeContent() {
-  const session = await auth();
+  const session = await getOptionalSession();
   if (session?.user?.role === "CUSTOMER") redirect("/cotizar");
   if (isStaffRole(session?.user?.role)) redirect("/admin");
 
