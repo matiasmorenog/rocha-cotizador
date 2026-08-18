@@ -1,4 +1,6 @@
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
+import { CACHE_TAGS } from "@/lib/cache-tags";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
 import {
   serializeStockLine,
@@ -28,15 +30,33 @@ export function resolveStockCustomerId(
   return customers.some((c) => c.id === id) ? id : "";
 }
 
+async function fetchModuleCustomersUncached(
+  module: "MERMAS" | "CONSUMABLES",
+): Promise<StockModuleCustomer[]> {
+  const [customers, accessRows] = await Promise.all([
+    db.customer.findMany({
+      where: { active: true },
+      orderBy: { code: "asc" },
+      select: { id: true, code: true, name: true },
+    }),
+    db.customerModuleAccess.findMany({
+      where: { module, enabled: true },
+      select: { customerId: true },
+    }),
+  ]);
+
+  const enabledIds = new Set(accessRows.map((r) => r.customerId));
+  return customers.filter((c) => enabledIds.has(c.id));
+}
+
+const getCachedModuleCustomers = unstable_cache(
+  fetchModuleCustomersUncached,
+  ["admin-stock-module-customers"],
+  { tags: [CACHE_TAGS.customers], revalidate: 86400 },
+);
+
 export async function moduleCustomers(module: "MERMAS" | "CONSUMABLES") {
-  return db.customer.findMany({
-    where: {
-      active: true,
-      moduleAccess: { some: { module, enabled: true } },
-    },
-    orderBy: { code: "asc" },
-    select: { id: true, code: true, name: true },
-  });
+  return getCachedModuleCustomers(module);
 }
 
 function stockEntryWhere(
@@ -76,19 +96,32 @@ export async function loadElaboradosEntries(
       entryDate: true,
       notes: true,
       submittedBy: true,
-      customer: { select: { code: true, name: true } },
+      customerId: true,
       lines: { select: stockLineSelect },
     },
   });
 
-  return rows.map((e) => ({
-    id: e.id,
-    entryDate: e.entryDate.toISOString().slice(0, 10),
-    notes: e.notes,
-    submittedBy: e.submittedBy,
-    customer: e.customer,
-    lines: e.lines.map(serializeStockLine),
-  }));
+  const customerIds = [...new Set(rows.map((r) => r.customerId))];
+  const customers =
+    customerIds.length > 0
+      ? await db.customer.findMany({
+          where: { id: { in: customerIds } },
+          select: { id: true, code: true, name: true },
+        })
+      : [];
+  const customerById = new Map(customers.map((c) => [c.id, c] as const));
+
+  return rows.map((e) => {
+    const customer = customerById.get(e.customerId);
+    return {
+      id: e.id,
+      entryDate: e.entryDate.toISOString().slice(0, 10),
+      notes: e.notes,
+      submittedBy: e.submittedBy,
+      customer: customer ?? { code: "?", name: "—" },
+      lines: e.lines.map(serializeStockLine),
+    };
+  });
 }
 
 export async function loadConsumiblesEntries(
@@ -105,17 +138,30 @@ export async function loadConsumiblesEntries(
       entryDate: true,
       notes: true,
       submittedBy: true,
-      customer: { select: { code: true, name: true } },
+      customerId: true,
       lines: { select: stockLineSelect },
     },
   });
 
-  return rows.map((e) => ({
-    id: e.id,
-    entryDate: e.entryDate.toISOString().slice(0, 10),
-    notes: e.notes,
-    submittedBy: e.submittedBy,
-    customer: e.customer,
-    lines: e.lines.map(serializeStockLine),
-  }));
+  const customerIds = [...new Set(rows.map((r) => r.customerId))];
+  const customers =
+    customerIds.length > 0
+      ? await db.customer.findMany({
+          where: { id: { in: customerIds } },
+          select: { id: true, code: true, name: true },
+        })
+      : [];
+  const customerById = new Map(customers.map((c) => [c.id, c] as const));
+
+  return rows.map((e) => {
+    const customer = customerById.get(e.customerId);
+    return {
+      id: e.id,
+      entryDate: e.entryDate.toISOString().slice(0, 10),
+      notes: e.notes,
+      submittedBy: e.submittedBy,
+      customer: customer ?? { code: "?", name: "—" },
+      lines: e.lines.map(serializeStockLine),
+    };
+  });
 }
