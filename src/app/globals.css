@@ -1141,9 +1141,9 @@ html[data-admin-theme="dark"] .admin-delete-hover:hover {
 }
 
 html[data-admin-theme="dark"] .admin-edit-hover:hover {
-  border-color: color-mix(in srgb, var(--brand-primary) 58%, #2a3942);
-  background-color: color-mix(in srgb, var(--brand-primary) 18%, #202c33);
-  color: color-mix(in srgb, var(--brand-primary) 90%, #d9fff3);
+  border-color: color-mix(in srgb, var(--brand-primary) 72%, #415763);
+  background-color: color-mix(in srgb, var(--brand-primary) 30%, #202c33);
+  color: color-mix(in srgb, var(--brand-primary) 96%, #effff9);
 }
 
 @media (prefers-reduced-motion: reduce) {
