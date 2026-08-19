@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-import { isStaffRole } from "@/lib/staff-permissions";
+import { requireStaffApi } from "@/lib/api-auth";
 import { getVapidPublicKey } from "@/lib/push";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user || !isStaffRole(session.user.role)) {
+  if (!(await requireStaffApi("quotes"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

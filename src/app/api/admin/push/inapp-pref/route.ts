@@ -44,7 +44,7 @@ async function setInAppNotificationsEnabled(
  * Client then calls session.update({ inAppNotificationsEnabled }) — no GET/poll.
  */
 export async function PATCH(req: NextRequest) {
-  const session = await requireStaffApi();
+  const session = await requireStaffApi("quotes");
   if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }

@@ -14,7 +14,7 @@ const subscribeSchema = z.object({
 
 /** List this admin's stored endpoints (for client ↔ DB match after Activar). */
 export async function GET() {
-  const session = await requireStaffApi();
+  const session = await requireStaffApi("quotes");
   if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
@@ -33,7 +33,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  const session = await requireStaffApi();
+  const session = await requireStaffApi("quotes");
   if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
@@ -69,7 +69,7 @@ const deleteSchema = z.object({
 });
 
 export async function DELETE(req: NextRequest) {
-  const session = await requireStaffApi();
+  const session = await requireStaffApi("quotes");
   if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }

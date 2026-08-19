@@ -7,7 +7,6 @@ import {
   staffHomeHref,
   type StaffPermission,
 } from "@/lib/staff-permissions";
-import { isSuperuserRole } from "@/lib/platform-owner";
 import { notFound, redirect } from "next/navigation";
 
 /** One auth() decode per RSC request (layout + page share). */
@@ -57,12 +56,13 @@ export async function getOptionalSession() {
 /** Platform owner only. Rocha staff get a 404 even if they guess the URL. */
 export async function requireSuperuser() {
   const session = await requireStaffSession();
-  if (isSuperuserRole(session.user.role)) return session;
-
-  const row = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { role: true },
-  });
-  if (row?.role === "SUPERUSER") return session;
-  notFound();
+  if (!session.user.isSuperuser) {
+    const row = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { role: true },
+    });
+    if (row?.role !== "SUPERUSER") notFound();
+  }
+  if (session.user.staffPreview) notFound();
+  return session;
 }
