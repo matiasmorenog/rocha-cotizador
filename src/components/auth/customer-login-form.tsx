@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
+import { useLoginShake } from "@/components/auth/login-card";
 import { safeCallbackUrl } from "@/lib/callback-url";
 import {
   readLastCustomerCode,
@@ -28,6 +29,7 @@ export function CustomerLoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { shake } = useLoginShake();
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -40,6 +42,7 @@ export function CustomerLoginForm() {
     });
     if (result?.error) {
       setError("Código o contraseña incorrectos");
+      shake();
       setLoading(false);
       return;
     }
@@ -48,7 +51,10 @@ export function CustomerLoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto flex w-full max-w-sm flex-col gap-4">
+    <form
+      onSubmit={onSubmit}
+      className="mx-auto flex w-full max-w-sm flex-col gap-4"
+    >
       <div className="space-y-1.5">
         <Label htmlFor="code">Código de cliente</Label>
         <Input

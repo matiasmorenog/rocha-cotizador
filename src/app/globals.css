@@ -865,7 +865,8 @@ select:not([multiple]):disabled {
 
 /*
   Admin dark mode — scoped via data-admin-theme on <html>, persisted in
-  localStorage and applied app-wide (admin + remito routes for staff).
+  localStorage. Applied on /admin/* and on remito detail when the viewer is
+  staff. Customer routes (incl. remito as CUSTOMER) stay light.
   Palette tuned toward WhatsApp dark (#111b21 / #202c33 / #00a884 accent).
   Screen-only: print (PDF + thermal) must keep light :root tokens without
   stripping data-admin-theme from the live document (that flashed the UI).
@@ -1508,4 +1509,20 @@ html[data-admin-theme="dark"] .admin-edit-hover:hover {
 /* Screen: thermal receipt stays hidden until thermal print */
 .remito-thermal-only {
   display: none;
+}
+
+@keyframes login-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(6px); }
+  45% { transform: translateX(-4px); }
+  60% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
+  90% { transform: translateX(2px); }
+}
+.login-shake {
+  animation: login-shake 0.45s ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-shake { animation: none; }
 }
