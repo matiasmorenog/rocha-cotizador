@@ -280,9 +280,9 @@ function PaymentForm({
             required
           />
         </div>
-        <div className="space-y-1 sm:col-span-2">
+        <div className="space-y-1">
           <Label htmlFor="pay-fx" className="flex items-center gap-1">
-            Tipo de cambio ARS por USD
+            Cotización del día
             <Lock className="h-3 w-3 text-neutral-400" />
           </Label>
           <ArNumberInput
