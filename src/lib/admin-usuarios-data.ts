@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { CACHE_TAGS } from "@/lib/cache-tag-names";
 import type { StaffRole } from "@/types/auth";
 
 export type AdminStaffUserRow = {

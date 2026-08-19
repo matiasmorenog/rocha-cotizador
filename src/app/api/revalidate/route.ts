@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CACHE_TAGS, invalidateAfterDbScript } from "@/lib/cache-tags";
+import { CACHE_TAGS } from "@/lib/cache-tag-names";
+import { invalidateAfterDbScript } from "@/lib/cache-tags";
 
 /**
  * POST /api/revalidate

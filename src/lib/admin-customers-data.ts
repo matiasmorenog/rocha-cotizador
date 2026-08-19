@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import type { CustomerModule } from "@prisma/client";
 import { db } from "@/lib/db";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { CACHE_TAGS } from "@/lib/cache-tag-names";
 import {
   modulesFromAccess,
   type CustomerModuleFlags,

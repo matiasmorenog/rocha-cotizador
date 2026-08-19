@@ -2,7 +2,7 @@ import { unstable_cache } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { ARGENTINA_TZ, toArgentinaDatetimeLocal } from "@/lib/argentina-time";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { CACHE_TAGS } from "@/lib/cache-tag-names";
 
 const MONTH_FORMATTER = new Intl.DateTimeFormat("es-AR", {
   timeZone: "UTC",
