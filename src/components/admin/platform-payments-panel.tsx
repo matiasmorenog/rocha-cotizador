@@ -20,6 +20,7 @@ import {
   type SubscriptionPaymentDto,
 } from "@/lib/subscription-payments";
 import { cn } from "@/lib/utils";
+import { useExitPresence } from "@/hooks/use-exit-presence";
 
 function toArgentinaDateOnly(date: Date): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -57,6 +58,8 @@ function yearOptions(currentYear: number) {
   return years;
 }
 
+const PAYMENT_FORM_EXIT_MS = 250;
+
 export function PlatformPaymentsPanel({
   payments: initial,
 }: {
@@ -66,6 +69,11 @@ export function PlatformPaymentsPanel({
   const { year: currentYear, month: currentMonth } = argentinaYearMonth();
   const [payments, setPayments] = useState(initial);
   const [creating, setCreating] = useState(false);
+
+  const { present, exiting, animKey } = useExitPresence(
+    creating,
+    PAYMENT_FORM_EXIT_MS,
+  );
 
   return (
     <div className="space-y-4">
@@ -81,8 +89,10 @@ export function PlatformPaymentsPanel({
         </Button>
       </div>
 
-      {creating ? (
+      {present ? (
         <PaymentForm
+          key={animKey}
+          exiting={exiting}
           defaultYear={currentYear}
           defaultMonth={currentMonth}
           years={yearOptions(currentYear)}
@@ -162,12 +172,14 @@ function PaymentForm({
   defaultYear,
   defaultMonth,
   years,
+  exiting,
   onCancel,
   onSaved,
 }: {
   defaultYear: number;
   defaultMonth: number;
   years: number[];
+  exiting: boolean;
   onCancel: () => void;
   onSaved: (payments: SubscriptionPaymentDto[]) => void;
 }) {
@@ -222,7 +234,10 @@ function PaymentForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="payment-form-enter space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
+      className={cn(
+        "space-y-4 rounded-lg border border-neutral-200 bg-white p-4",
+        exiting ? "payment-form-exit" : "payment-form-enter",
+      )}
     >
       <p className="text-sm font-medium text-neutral-800">
         {`Nuevo pago · ${formatPeriodLabel(periodYear, periodMonth)}`}
