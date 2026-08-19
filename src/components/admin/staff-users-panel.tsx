@@ -104,7 +104,7 @@ export function StaffUsersPanel({
         </div>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
             <tr>
@@ -243,7 +243,7 @@ function StaffUserForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
+      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
     >
       <p className="text-sm font-medium text-neutral-800">
         {isEdit ? "Editar usuario" : "Nuevo usuario"}

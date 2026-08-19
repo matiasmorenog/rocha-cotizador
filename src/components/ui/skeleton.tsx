@@ -42,11 +42,9 @@ const AUTH_CARD =
 const SKELETON_CARD = "rounded-lg border border-neutral-200 bg-white";
 
 /** Admin cards — match loaded Excel panels, tables, config sections. */
-const ADMIN_SKELETON_CARD = SKELETON_CARD;
+const ADMIN_SKELETON_CARD = cn(SKELETON_CARD, "shadow-sm");
 
-const ADMIN_SKELETON_CARD_SHADOW = cn(SKELETON_CARD, "shadow-sm");
-
-const ADMIN_SKELETON_TABLE = cn(SKELETON_CARD, "data-table-scroll");
+const ADMIN_SKELETON_TABLE = cn(ADMIN_SKELETON_CARD, "data-table-scroll");
 
 function SkeletonLogo({
   size = "xl",
@@ -349,7 +347,7 @@ export function SkeletonAdminConfigPage() {
       <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-72" />
 
       {/* Notificaciones */}
-      <section className={cn(ADMIN_SKELETON_CARD_SHADOW, "p-5")}>
+      <section className={cn(ADMIN_SKELETON_CARD, "p-5")}>
         <Skeleton className="mb-3 h-3 w-32" />
         <div className="space-y-4">
           {/* WhatsApp */}
@@ -409,7 +407,7 @@ export function SkeletonAdminConfigPage() {
       </section>
 
       {/* Servicio */}
-      <section className={cn(ADMIN_SKELETON_CARD_SHADOW, "p-5")}>
+      <section className={cn(ADMIN_SKELETON_CARD, "p-5")}>
         <Skeleton className="mb-1 h-3 w-20" />
         <Skeleton className="mb-4 h-4 w-64" />
         <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
@@ -425,7 +423,7 @@ export function SkeletonAdminConfigPage() {
       </section>
 
       {/* Mi cuenta */}
-      <section className={cn(ADMIN_SKELETON_CARD_SHADOW, "p-5")}>
+      <section className={cn(ADMIN_SKELETON_CARD, "p-5")}>
         <Skeleton className="mb-1 h-3 w-24" />
         <Skeleton className="mb-4 h-4 w-56" />
         <div className="space-y-4">
@@ -484,14 +482,14 @@ export function SkeletonAdminDashboardPage() {
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className={cn(ADMIN_SKELETON_CARD_SHADOW, "p-4")}>
+          <div key={i} className={cn(ADMIN_SKELETON_CARD, "p-4")}>
             <Skeleton className="h-3 w-40" />
             <Skeleton className="mt-2 h-9 w-16" />
             <Skeleton className="mt-2 h-3 w-36" />
           </div>
         ))}
       </div>
-      <div className={cn(ADMIN_SKELETON_CARD_SHADOW, "p-4 sm:p-5")}>
+      <div className={cn(ADMIN_SKELETON_CARD, "p-4 sm:p-5")}>
         <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-2">
             <Skeleton className="h-5 w-52" />

@@ -40,7 +40,7 @@ export function PriceListCreateForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-4"
+      className="flex flex-col gap-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
         <div className="min-w-0 flex-1 space-y-1">

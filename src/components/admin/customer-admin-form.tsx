@@ -123,7 +123,7 @@ export function CustomerAdminForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
+      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
     >
       <p className="text-sm font-medium text-neutral-800">
         {isEdit ? "Editar cliente" : "Nuevo cliente"}

@@ -193,7 +193,7 @@ export function PriceListEditor({
     <div className="space-y-6">
       <form
         onSubmit={saveMeta}
-        className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4"
+        className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
           <div className="min-w-0 flex-1 space-y-1">
