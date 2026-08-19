@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useExitPresence } from "@/hooks/use-exit-presence";
+import { cn } from "@/lib/utils";
 import { Pencil, Plus } from "lucide-react";
 import {
   AdminTableActions,
@@ -96,6 +98,7 @@ export function CustomersAdminPanel({
     ? customers.find((c) => c.id === editingId)
     : undefined;
   const showForm = Boolean(editing) || creating;
+  const { present, exiting, animKey } = useExitPresence(showForm, 250);
 
   return (
     <div className="space-y-3">
@@ -122,35 +125,46 @@ export function CustomersAdminPanel({
         ) : null}
       </div>
 
-      {showForm ? (
-        <CustomerAdminForm
-          key={editing?.id ?? "new"}
-          priceLists={priceLists}
-          onCancel={() => {
-            setCreating(false);
-            setEditingId(null);
-          }}
-          customer={
-            editing
-              ? {
-                  id: editing.id,
-                  code: editing.code,
-                  name: editing.name,
-                  nameNote: editing.nameNote,
-                  priceListId: editing.priceListId,
-                  address: editing.address,
-                  phone: editing.phone,
-                  email: editing.email,
-                  notes: editing.notes,
-                  paymentTerms: editing.paymentTerms,
-                  deliveryHours: editing.deliveryHours,
-                  active: editing.active,
-                  modules: editing.modules,
+      <div
+        className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
+        style={{ gridTemplateRows: present ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden min-h-0">
+          {present ? (
+            <div
+              key={animKey}
+              className={cn(exiting ? "payment-form-exit" : "payment-form-enter")}
+            >
+              <CustomerAdminForm
+                priceLists={priceLists}
+                onCancel={() => {
+                  setCreating(false);
+                  setEditingId(null);
+                }}
+                customer={
+                  editing
+                    ? {
+                        id: editing.id,
+                        code: editing.code,
+                        name: editing.name,
+                        nameNote: editing.nameNote,
+                        priceListId: editing.priceListId,
+                        address: editing.address,
+                        phone: editing.phone,
+                        email: editing.email,
+                        notes: editing.notes,
+                        paymentTerms: editing.paymentTerms,
+                        deliveryHours: editing.deliveryHours,
+                        active: editing.active,
+                        modules: editing.modules,
+                      }
+                    : undefined
                 }
-              : undefined
-          }
-        />
-      ) : null}
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
 
       <div ref={tableHeightLockRef}>
         <DataTableScroll className="data-table-rows-2l">

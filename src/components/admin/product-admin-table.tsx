@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useRef, useState } from "react";
+import { useExitPresence } from "@/hooks/use-exit-presence";
 import { useRouter } from "next/navigation";
 import { Check, Pencil, Plus, X } from "lucide-react";
 import {
@@ -377,6 +378,7 @@ export function ProductAdminTable({
   const { rowProps } = useSelectedRow(visible.map((p) => p.id));
 
   const colSpan = 6 + activeLists.length;
+  const { present: formPresent, exiting: formExiting, animKey: formAnimKey } = useExitPresence(creating, 250);
 
   return (
     <div className="space-y-3">
@@ -399,12 +401,24 @@ export function ProductAdminTable({
           </Button>
         ) : null}
       </div>
-      {creating ? (
-        <ProductAdminForm
-          rubros={rubros}
-          onCancel={() => setCreating(false)}
-        />
-      ) : null}
+      <div
+        className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
+        style={{ gridTemplateRows: formPresent ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden min-h-0">
+          {formPresent ? (
+            <div
+              key={formAnimKey}
+              className={cn(formExiting ? "payment-form-exit" : "payment-form-enter")}
+            >
+              <ProductAdminForm
+                rubros={rubros}
+                onCancel={() => setCreating(false)}
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
       <div ref={tableHeightLockRef}>
         <DataTableScroll className="data-table-rows-2l">
           <table ref={tableRef} className="w-full min-w-[36rem] text-sm">
