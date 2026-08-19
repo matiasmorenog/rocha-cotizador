@@ -865,7 +865,8 @@ select:not([multiple]):disabled {
 
 /*
   Admin dark mode — scoped via data-admin-theme on <html>, persisted in
-  localStorage and applied app-wide (admin + remito routes for staff).
+  localStorage. Applied on /admin/* and on remito detail when the viewer is
+  staff. Customer routes (incl. remito as CUSTOMER) stay light.
   Palette tuned toward WhatsApp dark (#111b21 / #202c33 / #00a884 accent).
   Screen-only: print (PDF + thermal) must keep light :root tokens without
   stripping data-admin-theme from the live document (that flashed the UI).
