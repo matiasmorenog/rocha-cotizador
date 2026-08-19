@@ -222,7 +222,7 @@ function PaymentForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
+      className="payment-form-enter space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
     >
       <p className="text-sm font-medium text-neutral-800">
         {`Nuevo pago · ${formatPeriodLabel(periodYear, periodMonth)}`}

@@ -352,6 +352,21 @@ select:not([multiple]):disabled {
 }
 
 /* Admin in-app notification toasts */
+@keyframes payment-form-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.payment-form-enter {
+  animation: payment-form-enter 0.25s ease-out both;
+}
+
 @keyframes admin-toast-enter {
   from {
     opacity: 0;
