@@ -91,7 +91,21 @@ type Props = {
   className?: string;
   disabled?: boolean;
   "aria-label"?: string;
+  /** When true: renders date-only picker. Value format: YYYY-MM-DD. No hour column shown. */
+  dateOnly?: boolean;
 };
+
+function formatDisplayDateOnly(value: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!m) return value;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+  return d.toLocaleDateString("es-AR", {
+    timeZone: "UTC",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
 
 export function DatetimeLocalPicker({
   value,
@@ -100,6 +114,7 @@ export function DatetimeLocalPicker({
   className,
   disabled = false,
   "aria-label": ariaLabel,
+  dateOnly = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -107,7 +122,21 @@ export function DatetimeLocalPicker({
   const panelId = useId();
   const { present, exiting, animKey } = useExitPresence(open);
 
-  const selected = partsFromValue(value);
+  function partsFromValueMode(v: string): Parts | null {
+    if (dateOnly) {
+      const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.trim());
+      if (!m) return null;
+      return { year: Number(m[1]), month: Number(m[2]), day: Number(m[3]), hour: 0 };
+    }
+    return partsFromValue(v);
+  }
+
+  function toValueMode(p: Parts): string {
+    if (dateOnly) return `${p.year}-${pad2(p.month)}-${pad2(p.day)}`;
+    return toValue(p);
+  }
+
+  const selected = partsFromValueMode(value);
   const fallbackNow = (): Parts => {
     const now = partsFromValue(toArgentinaDatetimeLocal(new Date()));
     if (now) return now;
@@ -128,7 +157,7 @@ export function DatetimeLocalPicker({
   const [draft, setDraft] = useState<Parts>(() => selected ?? fallbackNow());
 
   function syncFromValue() {
-    const next = partsFromValue(value) ?? fallbackNow();
+    const next = partsFromValueMode(value) ?? fallbackNow();
     setDraft(next);
     setViewYear(next.year);
     setViewMonth(next.month);
@@ -200,7 +229,7 @@ export function DatetimeLocalPicker({
 
   function commit(next: Parts) {
     setDraft(next);
-    onChange(toValue(next));
+    onChange(toValueMode(next));
   }
 
   function shiftMonth(delta: number) {
@@ -231,7 +260,13 @@ export function DatetimeLocalPicker({
     setOpen(false);
   }
 
-  const display = value.trim() ? formatDisplay(value) : "Elegir fecha y hora";
+  const display = value.trim()
+    ? dateOnly
+      ? formatDisplayDateOnly(value)
+      : formatDisplay(value)
+    : dateOnly
+      ? "Elegir fecha"
+      : "Elegir fecha y hora";
 
   return (
     <div ref={rootRef} className={cn("relative", className)}>
@@ -264,7 +299,7 @@ export function DatetimeLocalPicker({
           key={animKey}
           id={panelId}
           role="dialog"
-          aria-label="Elegir fecha y hora"
+          aria-label={dateOnly ? "Elegir fecha" : "Elegir fecha y hora"}
           aria-hidden={exiting || undefined}
           className={cn(
             "absolute left-0 z-50 mt-1 w-[min(100vw-2rem,22.5rem)] overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-lg",
@@ -350,34 +385,36 @@ export function DatetimeLocalPicker({
               </div>
             </div>
 
-            <div className="relative w-[4.75rem] shrink-0 border-l border-neutral-200">
-              <div
-                ref={hourListRef}
-                className="absolute inset-0 overflow-y-auto overscroll-contain py-3 pl-2 pr-1 [scrollbar-gutter:stable]"
-                aria-label="Hora"
-              >
-                {HOURS.map((h) => {
-                  const selectedHour = draft.hour === h;
-                  return (
-                    <button
-                      key={h}
-                      type="button"
-                      data-hour={h}
-                      onClick={() => commit({ ...draft, hour: h })}
-                      className={cn(
-                        "flex h-8 w-full items-center justify-center rounded-md text-sm tabular-nums",
-                        selectedHour ? FOCUS_BRAND_PRIMARY : FOCUS_BRAND_OUTLINE,
-                        selectedHour
-                          ? "bg-[var(--brand-primary)] font-medium text-white"
-                          : "text-neutral-800 hover:bg-[var(--brand-primary-soft)]",
-                      )}
-                    >
-                      {pad2(h)}:00
-                    </button>
-                  );
-                })}
+            {!dateOnly && (
+              <div className="relative w-[4.75rem] shrink-0 border-l border-neutral-200">
+                <div
+                  ref={hourListRef}
+                  className="absolute inset-0 overflow-y-auto overscroll-contain py-3 pl-2 pr-1 [scrollbar-gutter:stable]"
+                  aria-label="Hora"
+                >
+                  {HOURS.map((h) => {
+                    const selectedHour = draft.hour === h;
+                    return (
+                      <button
+                        key={h}
+                        type="button"
+                        data-hour={h}
+                        onClick={() => commit({ ...draft, hour: h })}
+                        className={cn(
+                          "flex h-8 w-full items-center justify-center rounded-md text-sm tabular-nums",
+                          selectedHour ? FOCUS_BRAND_PRIMARY : FOCUS_BRAND_OUTLINE,
+                          selectedHour
+                            ? "bg-[var(--brand-primary)] font-medium text-white"
+                            : "text-neutral-800 hover:bg-[var(--brand-primary-soft)]",
+                        )}
+                      >
+                        {pad2(h)}:00
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between border-t border-neutral-200 bg-[var(--brand-primary-soft)]/40 px-3 py-2">

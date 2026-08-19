@@ -1,25 +1,35 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil } from "lucide-react";
-import {
-  AdminTableActions,
-  AdminTableIconAction,
-} from "@/components/admin/admin-table";
+import { Lock } from "lucide-react";
+import { fetchBlueDollarRate } from "@/lib/blue-dollar";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
-import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  AR_PRICE_FORMAT,
+  ArNumberInput,
+} from "@/components/ui/ar-number-input";
+import { parseArNumber, formatArInput } from "@/lib/utils";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
+import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
 import {
   argentinaYearMonth,
   formatPeriodLabel,
   type SubscriptionPaymentDto,
 } from "@/lib/subscription-payments";
-import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
 import { cn } from "@/lib/utils";
+
+function toArgentinaDateOnly(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
 
 const MONTHS = [
   "Enero",
@@ -55,46 +65,31 @@ export function PlatformPaymentsPanel({
   const router = useRouter();
   const { year: currentYear, month: currentMonth } = argentinaYearMonth();
   const [payments, setPayments] = useState(initial);
-  const [editingKey, setEditingKey] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
-
-  const editing = useMemo(() => {
-    if (!editingKey) return null;
-    return payments.find((p) => `${p.periodYear}-${p.periodMonth}` === editingKey) ?? null;
-  }, [payments, editingKey]);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-neutral-600">
-          Mes calendario (Argentina). Monto por defecto USD 100.
+          Mes calendario (Argentina).
         </p>
         <Button
           type="button"
-          onClick={() => {
-            setCreating(true);
-            setEditingKey(null);
-          }}
+          onClick={() => setCreating(true)}
         >
           Registrar pago
         </Button>
       </div>
 
-      {creating || editing ? (
+      {creating ? (
         <PaymentForm
-          key={editing ? `${editing.periodYear}-${editing.periodMonth}` : "new"}
-          payment={editing ?? undefined}
           defaultYear={currentYear}
           defaultMonth={currentMonth}
           years={yearOptions(currentYear)}
-          onCancel={() => {
-            setCreating(false);
-            setEditingKey(null);
-          }}
+          onCancel={() => setCreating(false)}
           onSaved={(next) => {
             setPayments(next);
             setCreating(false);
-            setEditingKey(null);
             router.refresh();
           }}
         />
@@ -114,7 +109,6 @@ export function PlatformPaymentsPanel({
                 <th className="px-3 py-2 font-medium">ARS</th>
                 <th className="px-3 py-2 font-medium">Tipo de cambio</th>
                 <th className="px-3 py-2 font-medium">Nota</th>
-                <th className="px-3 py-2 font-medium" />
               </tr>
             </thead>
             <tbody>
@@ -153,18 +147,6 @@ export function PlatformPaymentsPanel({
                     <td className="max-w-[12rem] truncate px-3 py-2 text-neutral-600">
                       {p.note ?? "—"}
                     </td>
-                    <td className="px-3 py-2">
-                      <AdminTableActions className="justify-end">
-                        <AdminTableIconAction
-                          label="Editar"
-                          icon={Pencil}
-                          onClick={() => {
-                            setCreating(false);
-                            setEditingKey(`${p.periodYear}-${p.periodMonth}`);
-                          }}
-                        />
-                      </AdminTableActions>
-                    </td>
                   </tr>
                 );
               })}
@@ -177,35 +159,38 @@ export function PlatformPaymentsPanel({
 }
 
 function PaymentForm({
-  payment,
   defaultYear,
   defaultMonth,
   years,
   onCancel,
   onSaved,
 }: {
-  payment?: SubscriptionPaymentDto;
   defaultYear: number;
   defaultMonth: number;
   years: number[];
   onCancel: () => void;
   onSaved: (payments: SubscriptionPaymentDto[]) => void;
 }) {
-  const [periodYear, setPeriodYear] = useState(payment?.periodYear ?? defaultYear);
-  const [periodMonth, setPeriodMonth] = useState(
-    payment?.periodMonth ?? defaultMonth,
-  );
-  const [amountUsd, setAmountUsd] = useState(String(payment?.amountUsd ?? 100));
-  const [amountArs, setAmountArs] = useState(
-    payment?.amountArs == null ? "" : String(payment.amountArs),
-  );
-  const [fxRate, setFxRate] = useState(
-    payment?.fxRate == null ? "" : String(payment.fxRate),
-  );
-  const [paidAt, setPaidAt] = useState(
-    payment?.paidAtLocal ?? toArgentinaDatetimeLocal(new Date()),
-  );
-  const [note, setNote] = useState(payment?.note ?? "");
+  const [periodYear, setPeriodYear] = useState(defaultYear);
+  const [periodMonth, setPeriodMonth] = useState(defaultMonth);
+  const [amountUsd, setAmountUsd] = useState(formatArInput(100, 2, AR_PRICE_FORMAT));
+  const [fxRate, setFxRate] = useState("");
+  const [fxRateLoading, setFxRateLoading] = useState(true);
+  const [fxRateError, setFxRateError] = useState(false);
+
+  useEffect(() => {
+    fetchBlueDollarRate().then((rate) => {
+      setFxRateLoading(false);
+      if (rate == null) {
+        setFxRateError(true);
+      } else {
+        setFxRate(formatArInput(rate, 2));
+      }
+    });
+  }, []);
+
+  const [paidAt, setPaidAt] = useState(toArgentinaDateOnly(new Date()));
+  const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -214,15 +199,14 @@ function PaymentForm({
     setLoading(true);
     setError(null);
     const res = await fetch("/api/admin/platform/payments", {
-      method: "PUT",
+      method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         periodYear,
         periodMonth,
-        amountUsd: Number(amountUsd.replace(",", ".")),
-        amountArs: amountArs.trim() ? amountArs : null,
-        fxRate: fxRate.trim() ? fxRate : null,
-        paidAt,
+        amountUsd: parseArNumber(amountUsd),
+        fxRate: fxRate.trim() ? parseArNumber(fxRate) : null,
+        paidAt: paidAt ? `${paidAt}T00:00` : paidAt,
         note: note.trim() || null,
       }),
     });
@@ -241,9 +225,7 @@ function PaymentForm({
       className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
     >
       <p className="text-sm font-medium text-neutral-800">
-        {payment
-          ? `Editar ${payment.periodLabel}`
-          : `Nuevo pago · ${formatPeriodLabel(periodYear, periodMonth)}`}
+        {`Nuevo pago · ${formatPeriodLabel(periodYear, periodMonth)}`}
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
@@ -253,7 +235,6 @@ function PaymentForm({
             value={periodMonth}
             onChange={(e) => setPeriodMonth(Number(e.target.value))}
             className={selectClass}
-            disabled={Boolean(payment)}
           >
             {MONTHS.map((label, i) => (
               <option key={label} value={i + 1}>
@@ -269,7 +250,6 @@ function PaymentForm({
             value={periodYear}
             onChange={(e) => setPeriodYear(Number(e.target.value))}
             className={selectClass}
-            disabled={Boolean(payment)}
           >
             {years.map((y) => (
               <option key={y} value={y}>
@@ -279,8 +259,10 @@ function PaymentForm({
           </select>
         </div>
         <div className="space-y-1 sm:col-span-2">
-          <Label>Fecha de pago</Label>
+          <Label htmlFor="pay-date">Fecha de pago</Label>
           <DatetimeLocalPicker
+            id="pay-date"
+            dateOnly
             value={paidAt}
             onChange={setPaidAt}
             aria-label="Fecha de pago"
@@ -288,30 +270,35 @@ function PaymentForm({
         </div>
         <div className="space-y-1">
           <Label htmlFor="pay-usd">Monto USD</Label>
-          <Input
+          <ArNumberInput
             id="pay-usd"
-            inputMode="decimal"
             value={amountUsd}
-            onChange={(e) => setAmountUsd(e.target.value)}
+            onValueChange={setAmountUsd}
+            maxFractionDigits={2}
+            formatOptions={AR_PRICE_FORMAT}
+            placeholder="100,00"
             required
           />
         </div>
-        <div className="space-y-1">
-          <Label htmlFor="pay-ars">Monto ARS (opcional)</Label>
-          <Input
-            id="pay-ars"
-            inputMode="decimal"
-            value={amountArs}
-            onChange={(e) => setAmountArs(e.target.value)}
-          />
-        </div>
         <div className="space-y-1 sm:col-span-2">
-          <Label htmlFor="pay-fx">Tipo de cambio ARS por USD (opcional)</Label>
-          <Input
+          <Label htmlFor="pay-fx" className="flex items-center gap-1">
+            Tipo de cambio ARS por USD
+            <Lock className="h-3 w-3 text-neutral-400" />
+          </Label>
+          <ArNumberInput
             id="pay-fx"
-            inputMode="decimal"
-            value={fxRate}
-            onChange={(e) => setFxRate(e.target.value)}
+            value={fxRateLoading ? "" : fxRate}
+            onValueChange={() => {}}
+            maxFractionDigits={2}
+            placeholder={
+              fxRateLoading
+                ? "Cargando…"
+                : fxRateError
+                  ? "No disponible"
+                  : undefined
+            }
+            disabled
+            className="pr-8 disabled:cursor-default disabled:opacity-100 bg-neutral-50"
           />
         </div>
         <div className="space-y-1 sm:col-span-2">

@@ -51,10 +51,13 @@ export function formatArInput(
   options?: FormatArInputOptions,
 ): string {
   if (!Number.isFinite(amount)) return "";
+  const clampedMax = Math.min(20, Math.max(0, maxFractionDigits));
+  const minFrac = options?.minFractionDigits ?? 0;
+  const clampedMin = Math.min(minFrac, clampedMax);
   return new Intl.NumberFormat("es-AR", {
     useGrouping: options?.useGrouping ?? false,
-    maximumFractionDigits: maxFractionDigits,
-    minimumFractionDigits: options?.minFractionDigits,
+    maximumFractionDigits: clampedMax,
+    minimumFractionDigits: clampedMin,
   }).format(amount);
 }
 

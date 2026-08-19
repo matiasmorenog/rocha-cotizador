@@ -4,17 +4,24 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { getEnabledModulesForCustomer } from "@/lib/customer-modules";
 import {
+  ALL_PERMISSIONS,
   isAdminPanelRole,
   isStaffRole,
   staffPermissionsFromProfile,
   type StaffPermission,
 } from "@/lib/staff-permissions";
+import {
+  parseStaffPreviewPresetId,
+  staffPreviewPermissions,
+  staffPreviewSessionFromPresetId,
+} from "@/lib/staff-preview";
 import { padCustomerCode } from "@/lib/utils";
 import {
   isPlatformOwnerEmail,
   isSuperuserRole,
 } from "@/lib/platform-owner";
 import type { AppRole, CustomerModuleSession, StaffRole } from "@/types/auth";
+import type { JWT } from "next-auth/jwt";
 
 export type { AppRole };
 
@@ -46,6 +53,55 @@ async function ensureSuperuserRole(user: {
   }
 
   return "SUPERUSER";
+}
+
+/**
+ * Keep `isSuperuser` accurate for tokens minted before the field existed, or
+ * after DB/bootstrap promoted PLATFORM_OWNER_EMAIL without a fresh login.
+ */
+function syncSuperuserTokenIdentity(token: JWT) {
+  const email = typeof token.email === "string" ? token.email : null;
+  const role = typeof token.role === "string" ? token.role : null;
+
+  if (email && isPlatformOwnerEmail(email)) {
+    token.isSuperuser = true;
+    if (!token.staffPreview && role !== "SUPERUSER") {
+      token.role = "SUPERUSER";
+      token.permissions = [...ALL_PERMISSIONS];
+    }
+    return;
+  }
+
+  if (token.isSuperuser !== true && isSuperuserRole(role)) {
+    token.isSuperuser = true;
+    return;
+  }
+
+  // Preview presets are superuser-only — recover flag if it was dropped.
+  if (token.isSuperuser !== true && token.staffPreview) {
+    token.isSuperuser = true;
+  }
+}
+
+/** Superuser JWT: apply optional staff preview to role + permissions. */
+function applyEffectiveStaffSession(token: JWT) {
+  if (!token.isSuperuser) return;
+
+  const previewId = token.staffPreview;
+  if (previewId) {
+    const permissions = staffPreviewPermissions(previewId);
+    token.role =
+      previewId === "full_admin"
+        ? "ADMIN"
+        : previewId === "stock_only"
+          ? "STOCK"
+          : "QUOTES";
+    token.permissions = permissions;
+    return;
+  }
+
+  token.role = "SUPERUSER";
+  token.permissions = [...ALL_PERMISSIONS];
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -195,6 +251,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user, trigger, session }) {
       if (user) {
+        token.isSuperuser = isSuperuserRole(user.role);
+        token.staffPreview = null;
         token.role = user.role;
         token.customerId = user.customerId ?? null;
         token.customerCode = user.customerCode ?? null;
@@ -206,6 +264,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.sub = user.id;
         token.email = user.email;
         token.name = user.name;
+        syncSuperuserTokenIdentity(token);
+        applyEffectiveStaffSession(token);
       }
       if (trigger === "update") {
         if (token.customerId) {
@@ -240,14 +300,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               role: dbUser.role,
               isSuperuser: dbUser.isSuperuser,
             });
-            token.role = effectiveRole;
-            token.permissions = isSuperuserRole(effectiveRole)
-              ? []
-              : staffPermissionsFromProfile({
-                  role: effectiveRole,
-                  canQuotes: dbUser.canQuotes,
-                  canStock: dbUser.canStock,
-                });
+            token.isSuperuser = isSuperuserRole(effectiveRole);
+            if (token.isSuperuser) {
+              token.role = "SUPERUSER";
+              token.permissions = [...ALL_PERMISSIONS];
+            } else {
+              token.role = effectiveRole;
+              token.permissions = staffPermissionsFromProfile({
+                role: effectiveRole,
+                canQuotes: dbUser.canQuotes,
+                canStock: dbUser.canStock,
+              });
+            }
+          }
+        }
+        if (
+          session &&
+          typeof (session as { staffPreview?: unknown }).staffPreview !==
+            "undefined"
+        ) {
+          const previewPayload = (session as { staffPreview: unknown })
+            .staffPreview;
+          if (token.isSuperuser) {
+            if (previewPayload === null) {
+              token.staffPreview = null;
+            } else {
+              const presetId = parseStaffPreviewPresetId(previewPayload);
+              if (presetId) token.staffPreview = presetId;
+            }
           }
         }
         if (
@@ -266,10 +346,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.email = (session as { email: string }).email;
         }
       }
+      syncSuperuserTokenIdentity(token);
+      applyEffectiveStaffSession(token);
       return token;
     },
     async session({ session, token }) {
       const role = (token.role as AppRole) ?? "CUSTOMER";
+      const isSuperuser = Boolean(token.isSuperuser);
+      const previewId = parseStaffPreviewPresetId(token.staffPreview);
+      const staffPreview =
+        isSuperuser && previewId
+          ? staffPreviewSessionFromPresetId(previewId)
+          : null;
+
       return {
         ...session,
         user: {
@@ -287,20 +376,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           modules: Array.isArray(token.modules)
             ? (token.modules as CustomerModuleSession[])
             : [],
-          permissions: isSuperuserRole(role)
-            ? []
-            : isStaffRole(role)
-              ? Array.isArray(token.permissions)
-                ? (token.permissions as StaffPermission[])
-                : staffPermissionsFromProfile({
-                    role,
-                    canQuotes: false,
-                    canStock: false,
-                  })
-              : Array.isArray(token.permissions)
-                ? token.permissions
-                : [],
-          isSuperuser: isSuperuserRole(role),
+          permissions: isStaffRole(role)
+            ? Array.isArray(token.permissions)
+              ? (token.permissions as StaffPermission[])
+              : staffPermissionsFromProfile({
+                  role,
+                  canQuotes: false,
+                  canStock: false,
+                })
+            : Array.isArray(token.permissions)
+              ? (token.permissions as StaffPermission[])
+              : [],
+          isSuperuser,
+          staffPreview,
         },
       };
     },

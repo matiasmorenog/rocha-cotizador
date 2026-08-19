@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api-auth";
 import { getAdminQuoteActivity } from "@/lib/admin-quote-activity";
-import { isStaffAdmin } from "@/lib/staff-permissions";
 
 /**
  * GET /api/admin/quote-activity?period=week|month|year
@@ -13,8 +12,7 @@ import { isStaffAdmin } from "@/lib/staff-permissions";
  * Prisma singleton and no separate cache invalidation surface.
  */
 export async function GET(req: NextRequest) {
-  const session = await requireStaffApi();
-  if (!session || !isStaffAdmin(session.user.role)) {
+  if (!(await requireStaffApi("quotes"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

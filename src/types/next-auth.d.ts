@@ -1,5 +1,6 @@
 import type { AppRole, CustomerModuleSession } from "./auth";
 import type { StaffPermission } from "@/lib/staff-permissions";
+import type { StaffPreviewSession } from "@/lib/staff-preview";
 
 declare module "next-auth" {
   interface User {
@@ -15,8 +16,10 @@ declare module "next-auth" {
     modules?: CustomerModuleSession[];
     /** Staff: derived from role for nav/gates. */
     permissions?: StaffPermission[];
-    /** Platform owner (developer). Derived from role SUPERUSER in session callback. */
+    /** Platform owner (developer). True even during staff preview. */
     isSuperuser?: boolean;
+    /** session.update({ staffPreview }) — superuser only. */
+    staffPreview?: import("@/lib/staff-preview").StaffPreviewPresetId | null;
   }
 
   interface Session {
@@ -33,6 +36,7 @@ declare module "next-auth" {
       modules?: CustomerModuleSession[];
       permissions?: StaffPermission[];
       isSuperuser?: boolean;
+      staffPreview?: StaffPreviewSession | null;
     };
   }
 }
@@ -46,6 +50,8 @@ declare module "next-auth/jwt" {
     inAppNotificationsEnabled?: boolean;
     modules?: CustomerModuleSession[];
     permissions?: StaffPermission[];
+    /** Actual platform owner flag — independent of preview role. */
     isSuperuser?: boolean;
+    staffPreview?: import("@/lib/staff-preview").StaffPreviewPresetId | null;
   }
 }

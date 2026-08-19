@@ -2,7 +2,6 @@ import { requireStaffSession } from "@/lib/session";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { AdminPageSafe } from "@/components/admin/admin-page-safe";
 import { AdminPushSafe } from "@/components/admin/admin-push-safe";
-
 export default async function AdminLayout({
   children,
 }: {

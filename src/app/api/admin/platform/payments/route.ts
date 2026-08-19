@@ -22,11 +22,10 @@ const optionalMoney = z
     message: "Monto inválido",
   });
 
-const upsertSchema = z.object({
+const createSchema = z.object({
   periodYear: z.coerce.number().int().min(2020).max(2100),
   periodMonth: z.coerce.number().int().min(1).max(12),
   amountUsd: z.coerce.number().positive().max(1_000_000).default(100),
-  amountArs: optionalMoney,
   fxRate: optionalMoney,
   paidAt: z.string().min(1, "Indicá la fecha de pago"),
   note: z
@@ -44,10 +43,10 @@ export async function GET() {
   return NextResponse.json({ payments });
 }
 
-export async function PUT(req: NextRequest) {
+export async function POST(req: NextRequest) {
   if (!(await requireSuperuserApi())) return notFound();
 
-  const parsed = upsertSchema.safeParse(await req.json().catch(() => null));
+  const parsed = createSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     const first = parsed.error.issues[0]?.message;
     return NextResponse.json(
@@ -61,34 +60,26 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Fecha de pago inválida" }, { status: 400 });
   }
 
-  const data = {
-    amountUsd: new Prisma.Decimal(parsed.data.amountUsd.toFixed(2)),
-    amountArs:
-      parsed.data.amountArs == null
-        ? null
-        : new Prisma.Decimal(parsed.data.amountArs.toFixed(2)),
-    fxRate:
-      parsed.data.fxRate == null
-        ? null
-        : new Prisma.Decimal(parsed.data.fxRate.toFixed(4)),
-    paidAt,
-    note: parsed.data.note,
-  };
-
-  await db.subscriptionPayment.upsert({
-    where: {
-      periodYear_periodMonth: {
+  try {
+    await db.subscriptionPayment.create({
+      data: {
         periodYear: parsed.data.periodYear,
         periodMonth: parsed.data.periodMonth,
+        amountUsd: new Prisma.Decimal(parsed.data.amountUsd.toFixed(2)),
+        fxRate:
+          parsed.data.fxRate == null
+            ? null
+            : new Prisma.Decimal(parsed.data.fxRate.toFixed(4)),
+        paidAt,
+        note: parsed.data.note,
       },
-    },
-    create: {
-      periodYear: parsed.data.periodYear,
-      periodMonth: parsed.data.periodMonth,
-      ...data,
-    },
-    update: data,
-  });
+    });
+  } catch {
+    return NextResponse.json(
+      { error: "Ya existe un pago para ese período" },
+      { status: 409 },
+    );
+  }
 
   invalidateAfterSubscriptionPaymentMutation();
   const payments = await listSubscriptionPaymentsUncached();

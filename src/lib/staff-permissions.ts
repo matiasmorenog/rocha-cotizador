@@ -14,7 +14,7 @@ export type StaffPermission =
   | "stockReports"
   | "account";
 
-const ALL_PERMISSIONS: StaffPermission[] = [
+export const ALL_PERMISSIONS: StaffPermission[] = [
   "dashboard",
   "customers",
   "products",

@@ -1,20 +1,35 @@
+import Link from "next/link";
 import type { RochaSubscriptionStatus } from "@/lib/subscription-payments";
 
 export function SubscriptionStatusSection({
   status,
+  isSuperuser,
 }: {
   status: RochaSubscriptionStatus;
+  isSuperuser?: boolean;
 }) {
-  const { current, recentPaid } = status;
+  const { current } = status;
 
   return (
     <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
-      <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
-        Servicio
-      </h2>
-      <p className="mb-4 text-sm text-neutral-600">
-        Estado del abono mensual de la plataforma.
-      </p>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div>
+          <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+            Servicio
+          </h2>
+          <p className="text-sm text-neutral-600">
+            Estado del abono mensual de la plataforma.
+          </p>
+        </div>
+        {isSuperuser ? (
+          <Link
+            href="/admin/plataforma"
+            className="shrink-0 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+          >
+            Gestionar pagos
+          </Link>
+        ) : null}
+      </div>
 
       <div className="space-y-3 text-sm">
         <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
@@ -32,30 +47,6 @@ export function SubscriptionStatusSection({
             </p>
           ) : null}
         </div>
-
-        {recentPaid.length > 0 ? (
-          <div>
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">
-              Últimos pagos
-            </p>
-            <ul className="divide-y divide-neutral-100 overflow-hidden rounded-md border border-neutral-200">
-              {recentPaid.map((row) => (
-                <li
-                  key={`${row.periodYear}-${row.periodMonth}`}
-                  className="flex items-baseline justify-between gap-3 px-3 py-2"
-                >
-                  <span className="text-neutral-800">{row.periodLabel}</span>
-                  <span className="text-neutral-600">
-                    Pagado
-                    {row.paidAtLabel ? ` · ${row.paidAtLabel}` : ""}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : (
-          <p className="text-neutral-500">No hay pagos anteriores registrados.</p>
-        )}
       </div>
     </section>
   );

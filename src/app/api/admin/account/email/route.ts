@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { isStaffRole } from "@/lib/staff-permissions";
 import { db } from "@/lib/db";
 
@@ -17,8 +17,8 @@ const schema = z.object({
 });
 
 export async function PATCH(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user || !isStaffRole(session.user.role) || !session.user.id) {
+  const session = await requireStaffApi("account");
+  if (!session?.user?.id) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

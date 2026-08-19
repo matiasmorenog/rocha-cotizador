@@ -5,8 +5,17 @@ import {
   staffHasPermission,
   type StaffPermission,
 } from "@/lib/staff-permissions";
-import { isSuperuserRole } from "@/lib/platform-owner";
 import type { Session } from "next-auth";
+
+/**
+ * Effective staff permissions for API gates — JWT/session after staff preview.
+ * Superuser without preview has `[]` (platform-only; use preview or requireSuperuserApi).
+ */
+export function getEffectiveStaffPermissions(
+  session: Session,
+): readonly StaffPermission[] {
+  return session.user.permissions ?? [];
+}
 
 /** Staff session for admin API routes. Optional permission gate. */
 export async function requireStaffApi(
@@ -14,7 +23,10 @@ export async function requireStaffApi(
 ): Promise<Session | null> {
   const session = await auth();
   if (!session?.user || !isAdminPanelRole(session.user.role)) return null;
-  if (permission && !staffHasPermission(session.user.permissions, permission)) {
+  if (
+    permission &&
+    !staffHasPermission(getEffectiveStaffPermissions(session), permission)
+  ) {
     return null;
   }
   return session;
@@ -29,7 +41,8 @@ export async function requireAdminApi(): Promise<Session | null> {
 export async function requireSuperuserApi(): Promise<Session | null> {
   const session = await requireStaffApi();
   if (!session?.user?.id) return null;
-  if (isSuperuserRole(session.user.role)) return session;
+  if (session.user.staffPreview) return null;
+  if (session.user.isSuperuser) return session;
 
   const row = await db.user.findUnique({
     where: { id: session.user.id },

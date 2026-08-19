@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { requireStaffApi } from "@/lib/api-auth";
 import { loadElaboradosEntries } from "@/lib/admin-stock-data";
 import { invalidateAfterStockEntryMutation } from "@/lib/cache-tags";
@@ -58,11 +57,10 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await requireStaffApi("stockReports"))) {
+  const session = await requireStaffApi("stockReports");
+  if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
-
-  const session = await auth();
   const parsed = stockEntryBodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
