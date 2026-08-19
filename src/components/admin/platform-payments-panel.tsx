@@ -89,21 +89,28 @@ export function PlatformPaymentsPanel({
         </Button>
       </div>
 
-      {present ? (
-        <PaymentForm
-          key={animKey}
-          exiting={exiting}
-          defaultYear={currentYear}
-          defaultMonth={currentMonth}
-          years={yearOptions(currentYear)}
-          onCancel={() => setCreating(false)}
-          onSaved={(next) => {
-            setPayments(next);
-            setCreating(false);
-            router.refresh();
-          }}
-        />
-      ) : null}
+      <div
+        className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
+        style={{ gridTemplateRows: present ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden min-h-0">
+          {present ? (
+            <PaymentForm
+              key={animKey}
+              exiting={exiting}
+              defaultYear={currentYear}
+              defaultMonth={currentMonth}
+              years={yearOptions(currentYear)}
+              onCancel={() => setCreating(false)}
+              onSaved={(next) => {
+                setPayments(next);
+                setCreating(false);
+                router.refresh();
+              }}
+            />
+          ) : null}
+        </div>
+      </div>
 
       {payments.length === 0 ? (
         <p className="text-sm text-neutral-500">Todavía no hay pagos registrados.</p>
