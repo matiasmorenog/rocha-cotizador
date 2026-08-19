@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useState, useSyncExternalStore } from "react";
+import { FormEvent, useCallback, useState, useSyncExternalStore } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,8 @@ export function AdminLoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [shaking, setShaking] = useState(false);
+  const stopShaking = useCallback(() => setShaking(false), []);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -49,6 +51,7 @@ export function AdminLoginForm() {
           ? "Error de configuración del servidor de acceso. Si persiste, avisá a soporte."
           : "Email o contraseña incorrectos",
       );
+      setShaking(true);
       setLoading(false);
       return;
     }
@@ -58,7 +61,11 @@ export function AdminLoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto flex w-full max-w-sm flex-col gap-4">
+    <form
+      onSubmit={onSubmit}
+      onAnimationEnd={stopShaking}
+      className={`mx-auto flex w-full max-w-sm flex-col gap-4${shaking ? " login-shake" : ""}`}
+    >
       <div className="space-y-1.5">
         <Label htmlFor="email">Email</Label>
         <Input
