@@ -440,13 +440,9 @@ export function StockRecountTrigger({
   onClick: () => void;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-    >
+    <Button type="button" onClick={onClick}>
       <Plus className="h-4 w-4" />
       Registrar stock
-    </button>
+    </Button>
   );
 }
