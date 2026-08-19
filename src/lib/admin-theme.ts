@@ -2,15 +2,36 @@ export type AdminTheme = "light" | "dark";
 
 export const ADMIN_THEME_STORAGE_KEY = "rocha-admin-theme";
 
-/** Auth screens always render light; dark applies only inside the admin shell. */
-export const ADMIN_LOGIN_PATHS = ["/login", "/entrar", "/admin/login"] as const;
+function isAdminLoginPath(path: string): boolean {
+  return path === "/admin/login" || path.startsWith("/admin/login/");
+}
 
-export function isLoginPath(path: string): boolean {
-  return (ADMIN_LOGIN_PATHS as readonly string[]).includes(path);
+/** `/admin` shell except login. Customer auth stays light. */
+export function isAdminThemePath(path: string): boolean {
+  if (isAdminLoginPath(path)) return false;
+  return path === "/admin" || path.startsWith("/admin/");
+}
+
+/** Shared remito detail (`/remitos/R-…`), not the customer list `/remitos`. */
+export function isRemitoDetailPath(path: string): boolean {
+  return path.startsWith("/remitos/");
+}
+
+/**
+ * Dark theme: admin shell, or remito detail when the viewer is staff.
+ * Customers never get dark — even if localStorage still has "dark".
+ */
+export function shouldApplyAdminTheme(path: string, isStaff: boolean): boolean {
+  if (isAdminThemePath(path)) return true;
+  return isStaff && isRemitoDetailPath(path);
 }
 
 /** Inline <head> script: set data-admin-theme before first paint (no FOUC). */
-export const ADMIN_THEME_BLOCKING_SCRIPT = `(function(){try{var p=location.pathname;var L=${JSON.stringify(ADMIN_LOGIN_PATHS)};if(L.indexOf(p)!==-1)return;if(localStorage.getItem(${JSON.stringify(ADMIN_THEME_STORAGE_KEY)})==="dark"){document.documentElement.setAttribute("data-admin-theme","dark")}}catch(e){}})();`;
+export function adminThemeBlockingScript(isStaff: boolean): string {
+  const staff = isStaff ? "true" : "false";
+  const key = JSON.stringify(ADMIN_THEME_STORAGE_KEY);
+  return `(function(){try{var p=location.pathname;var strip=function(){document.documentElement.removeAttribute("data-admin-theme")};if(p==="/admin/login"||p.indexOf("/admin/login/")===0){strip();return}var admin=p==="/admin"||p.indexOf("/admin/")===0;var remito=p.indexOf("/remitos/")===0;if(!admin&&!(${staff}&&remito)){strip();return}if(localStorage.getItem(${key})==="dark"){document.documentElement.setAttribute("data-admin-theme","dark")}else{strip()}}catch(e){}})();`;
+}
 
 export function readStoredAdminTheme(): AdminTheme {
   if (typeof window === "undefined") return "light";

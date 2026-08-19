@@ -1,13 +1,19 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
+import { shouldApplyAdminTheme } from "@/lib/admin-theme";
 import { toggleAdminTheme, useAdminThemeStore } from "@/lib/admin-theme-store";
 import { cn } from "@/lib/utils";
 
 export function AdminThemeToggle({ className }: { className?: string }) {
+  const pathname = usePathname();
   const theme = useAdminThemeStore();
   const isDark = theme === "dark";
+
+  // Only mounted in staff header chrome; still hide on customer-only paths.
+  if (!shouldApplyAdminTheme(pathname, true)) return null;
 
   return (
     <button

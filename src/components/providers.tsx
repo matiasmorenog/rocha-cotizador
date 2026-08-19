@@ -6,10 +6,16 @@ import { AdminThemeProvider } from "@/components/admin/admin-theme-provider";
 import { RouteLoadingOverlay } from "@/components/route-loading-overlay";
 import { RouteLoadingProvider } from "@/lib/route-loading-context";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({
+  children,
+  isStaff,
+}: {
+  children: React.ReactNode;
+  isStaff: boolean;
+}) {
   return (
     <SessionProvider>
-      <AdminThemeProvider>
+      <AdminThemeProvider isStaff={isStaff}>
         <RouteLoadingProvider>
           <Suspense fallback={null}>
             <RouteLoadingOverlay />
