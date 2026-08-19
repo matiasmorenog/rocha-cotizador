@@ -631,6 +631,40 @@ export function SkeletonAdminPriceListsPage() {
   );
 }
 
+/** Stock — recount form card + filters row + history table. */
+export function SkeletonAdminStockPage() {
+  return (
+    <SkeletonRegion label="Cargando stock" className="space-y-8">
+      {/* Recount form card */}
+      <div className={cn(ADMIN_SKELETON_CARD_SHADOW, "p-5 space-y-4")}>
+        <SkeletonPageHeader titleWidth="w-56" descriptionWidth="w-80" />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <Skeleton className="h-10 flex-1 rounded-md" />
+          <Skeleton className="h-10 w-36 rounded-md" />
+          <Skeleton className="h-10 w-28 rounded-md" />
+        </div>
+      </div>
+      {/* Tabs + filters + table */}
+      <div className="space-y-4">
+        {/* Tabs */}
+        <div className="flex gap-2">
+          <Skeleton className="h-9 w-32 rounded-md" />
+          <Skeleton className="h-9 w-32 rounded-md" />
+        </div>
+        {/* Filters row */}
+        <div className="flex flex-wrap items-end gap-3">
+          <Skeleton className="h-10 w-44 rounded-md" />
+          <Skeleton className="h-10 w-44 rounded-md" />
+          <Skeleton className="h-10 w-36 rounded-md" />
+          <Skeleton className="h-10 w-28 rounded-md" />
+        </div>
+        {/* History table */}
+        <SkeletonTableRows rows={8} cols={5} admin />
+      </div>
+    </SkeletonRegion>
+  );
+}
+
 export function SkeletonAdminNewQuotePage() {
   return (
     <SkeletonRegion label="Cargando nueva cotización" className="space-y-6">
