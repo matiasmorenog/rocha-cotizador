@@ -86,7 +86,7 @@ export default async function AdminDashboardPage({
           {stats.map((s) => (
             <div
               key={s.label}
-              className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
+              className="admin-dashboard-card rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
             >
               <p className="text-xs uppercase tracking-wide text-neutral-500">{s.label}</p>
               <p className="mt-1 text-3xl font-semibold tabular-nums text-neutral-900">

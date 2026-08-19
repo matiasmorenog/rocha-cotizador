@@ -92,7 +92,7 @@ export function AdminQuoteActivitySection({
   const labels = QUOTE_ACTIVITY_PERIOD_LABELS[activity.period];
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
+    <section className="admin-dashboard-card rounded-lg border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-medium text-neutral-900">Actividad de cotizaciones</h2>
