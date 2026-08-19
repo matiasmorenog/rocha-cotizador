@@ -139,6 +139,7 @@ jobs:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: prj_Oagw7Pq3Tg9MpBaQSWSuH7IOhD5O
       VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      WAIT_TARGET: production
       APP_URL: https://rocha-cotizador-dev.vercel.app
       REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
 
@@ -155,6 +156,44 @@ jobs:
         run: npm install --global vercel@latest
 
       - name: Wait for Vercel development deploy
+        run: |
+          chmod +x scripts/wait-vercel-ready.sh
+          bash scripts/wait-vercel-ready.sh
+
+      - name: Post-deploy cache revalidate
+        run: |
+          chmod +x scripts/post-deploy-cache.sh
+          bash scripts/post-deploy-cache.sh
+
+  # Preview of `development` on the production Vercel project (SSO).
+  # Same purge script; project-wide CLI cache also refreshes Production CDN/Data
+  # on this project (not the DB). HTTP revalidate may 302 SSO — CLI purge still runs.
+  post-deploy-cache-prod-preview:
+    name: post-deploy-cache-prod-preview
+    if: github.event_name == 'push' && github.ref == 'refs/heads/development'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      WAIT_TARGET: preview
+      APP_URL: https://rocha-cotizador-git-development-tutemorenos-projects.vercel.app
+      REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Install Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: Wait for Vercel production-project preview
         run: |
           chmod +x scripts/wait-vercel-ready.sh
           bash scripts/wait-vercel-ready.sh

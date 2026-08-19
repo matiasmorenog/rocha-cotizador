@@ -53,7 +53,11 @@ Solo en **push a `main`**, y **solo si** `lint-and-typecheck` pasó:
 
 ### Job `post-deploy-cache-development`
 
-En **push a `development`**: espera a que el Git integration de **`rocha-cotizador-dev`** (`prj_Oagw7Pq3Tg9MpBaQSWSuH7IOhD5O`) deje el SHA en `READY`, y corre el mismo `post-deploy-cache.sh` contra ese proyecto (alias `https://rocha-cotizador-dev.vercel.app`). No usa `vercel --prod` del proyecto de producción.
+En **push a `development`**: espera a que el Git integration de **`rocha-cotizador-dev`** (`prj_Oagw7Pq3Tg9MpBaQSWSuH7IOhD5O`) deje el SHA en `READY` (`WAIT_TARGET=production` de *ese* proyecto), y corre `post-deploy-cache.sh` contra ese proyecto (alias `https://rocha-cotizador-dev.vercel.app`).
+
+### Job `post-deploy-cache-prod-preview`
+
+Mismo push: espera el Preview Git de branch `development` en el proyecto **`rocha-cotizador`** (`secrets.VERCEL_PROJECT_ID`, `WAIT_TARGET=preview`) y corre el **mismo** `post-deploy-cache.sh`. `vercel cache purge` es **por proyecto**: también refresca CDN/Data Cache de Production en ese proyecto (no toca Neon `main`). `POST /api/revalidate` al alias git puede 302 SSO; el purge CLI igual corre. No usa `vercel --prod`.
 
 ### Schema gate: de dónde sale `DATABASE_URL`
 

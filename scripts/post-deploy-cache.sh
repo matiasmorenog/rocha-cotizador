@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Purge Vercel CDN + Data Cache, invalidate Next.js tags, bust brand Image Optimization.
-# Used after production (Actions) and after development-project deploys.
+# Used after production (Actions) and after development Git deploys
+# (rocha-cotizador-dev Production + rocha-cotizador Preview).
 # Requires: VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
 # Optional: REVALIDATE_SECRET + APP_URL (or AUTH_URL) → POST /api/revalidate
 set -euo pipefail

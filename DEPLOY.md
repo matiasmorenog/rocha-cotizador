@@ -134,7 +134,7 @@ Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateA
 
 Ops / wipe / scripts out-of-band: `POST /api/revalidate` con `REVALIDATE_SECRET` + `AUTH_URL` → `invalidateAfterDbScript` (todas las tags + paths admin/remitos). Obligatorio tras cualquier mutación DB fuera de la app.
 
-**Después de cada deploy** (automático: Actions `deploy-production` en `main`, y `post-deploy-cache-development` en push a `development`):
+**Después de cada deploy** (automático: Actions `deploy-production` en `main`; en push a `development`: `post-deploy-cache-development` + `post-deploy-cache-prod-preview`):
 
 ```bash
 # Prefer the script (CDN + Data + tags + brand Image Optimization):
@@ -152,7 +152,7 @@ Build command (Vercel): `npm run build` → `prisma generate && next build` (`po
 
 - Auto-deploy Vercel en **`main` está OFF** (`vercel.json`).
 - Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production** (incluye **pre-deploy schema sync** + **post-deploy smoke**: `/api/health` + homepage + **post-deploy cache revalidate**: CDN + Data + tags + brand images).
-- Push a `development` → Git Preview en **`rocha-cotizador`** (SSO; `DATABASE_URL`/`AUTH_URL` override `gitBranch=development` → Neon development) **y** Git Production en **`rocha-cotizador-dev`** (público). Después Actions **post-deploy-cache-development** (purge contra el proyecto demo).
+- Push a `development` → Git Preview en **`rocha-cotizador`** (SSO) **y** Git Production en **`rocha-cotizador-dev`** (público). Después Actions **post-deploy-cache-development** (proyecto demo) **y** **post-deploy-cache-prod-preview** (proyecto prod; purge CLI es por proyecto).
 - Secrets en GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (ver [`docs/ci.md`](docs/ci.md)).
 - Opcional pero recomendado: `DATABASE_URL_PRODUCTION` (Neon `main`, preferible URL **direct**) para el gate de schema sin depender solo de `vercel pull`.
 
