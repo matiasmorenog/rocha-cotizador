@@ -1,5 +1,7 @@
+import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { UNIT_ORDER_PRODUCT_CODES } from "../src/lib/unit-order-products";
+import { revalidateAppCache } from "./revalidate-app-cache";
 
 async function main() {
   const db = new PrismaClient();
@@ -10,6 +12,7 @@ async function main() {
   });
   const count = await db.product.count({ where: { allowsUnitOrder: true } });
   console.log(`Unit-order flag: updated=${r.count}, total flagged=${count}`);
+  await revalidateAppCache();
   await db.$disconnect();
 }
 

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
 import { Label } from "@/components/ui/label";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
@@ -47,6 +47,14 @@ import {
 
 /** Keep in sync with `.quote-panel-enter` duration in globals.css */
 const QUOTE_PANEL_ENTER_MS = 200;
+
+function ymdToPickerValue(ymd: string): string {
+  return `${ymd}T00:00`;
+}
+
+function pickerValueToYmd(value: string): string {
+  return value.slice(0, 10);
+}
 
 type QuoteBuilderProps = {
   /** When set (admin flow), prices and submit use this customer. */
@@ -467,13 +475,15 @@ export function QuoteBuilder({
 
       <div className="space-y-1">
         <Label htmlFor="quote-delivery-date">Fecha de entrega</Label>
-        <Input
+        <DatetimeLocalPicker
           id="quote-delivery-date"
-          type="date"
-          value={deliveryDate}
-          min={minDeliveryDate}
-          onChange={(e) => setDeliveryDate(e.target.value)}
+          value={ymdToPickerValue(deliveryDate)}
+          onChange={(next) => {
+            const ymd = pickerValueToYmd(next);
+            if (ymd) setDeliveryDate(ymd);
+          }}
           className="max-w-xs"
+          aria-label="Fecha de entrega"
         />
         <p className="text-xs text-neutral-500">
           Pedidos antes de las {ORDER_CUTOFF_HOUR_AR}:00 (AR) se preparan para el

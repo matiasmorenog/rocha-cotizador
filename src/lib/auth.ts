@@ -2,10 +2,107 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { getEnabledModulesForCustomer } from "@/lib/customer-modules";
+import {
+  ALL_PERMISSIONS,
+  isAdminPanelRole,
+  isStaffRole,
+  staffPermissionsFromProfile,
+  type StaffPermission,
+} from "@/lib/staff-permissions";
+import {
+  parseStaffPreviewPresetId,
+  staffPreviewPermissions,
+  staffPreviewSessionFromPresetId,
+} from "@/lib/staff-preview";
 import { padCustomerCode } from "@/lib/utils";
-import type { AppRole } from "@/types/auth";
+import {
+  isPlatformOwnerEmail,
+  isSuperuserRole,
+} from "@/lib/platform-owner";
+import type { AppRole, CustomerModuleSession, StaffRole } from "@/types/auth";
+import type { JWT } from "next-auth/jwt";
 
 export type { AppRole };
+
+async function ensureSuperuserRole(user: {
+  id: string;
+  email: string;
+  role: string;
+  isSuperuser: boolean;
+}): Promise<"SUPERUSER" | StaffRole> {
+  const shouldBeSuperuser =
+    user.role === "SUPERUSER" ||
+    user.isSuperuser ||
+    isPlatformOwnerEmail(user.email);
+
+  if (!shouldBeSuperuser) {
+    return user.role as StaffRole;
+  }
+
+  if (user.role !== "SUPERUSER" || !user.isSuperuser) {
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        role: "SUPERUSER",
+        isSuperuser: true,
+        canQuotes: false,
+        canStock: false,
+      },
+    });
+  }
+
+  return "SUPERUSER";
+}
+
+/**
+ * Keep `isSuperuser` accurate for tokens minted before the field existed, or
+ * after DB/bootstrap promoted PLATFORM_OWNER_EMAIL without a fresh login.
+ */
+function syncSuperuserTokenIdentity(token: JWT) {
+  const email = typeof token.email === "string" ? token.email : null;
+  const role = typeof token.role === "string" ? token.role : null;
+
+  if (email && isPlatformOwnerEmail(email)) {
+    token.isSuperuser = true;
+    if (!token.staffPreview && role !== "SUPERUSER") {
+      token.role = "SUPERUSER";
+      token.permissions = [...ALL_PERMISSIONS];
+    }
+    return;
+  }
+
+  if (token.isSuperuser !== true && isSuperuserRole(role)) {
+    token.isSuperuser = true;
+    return;
+  }
+
+  // Preview presets are superuser-only — recover flag if it was dropped.
+  if (token.isSuperuser !== true && token.staffPreview) {
+    token.isSuperuser = true;
+  }
+}
+
+/** Superuser JWT: apply optional staff preview to role + permissions. */
+function applyEffectiveStaffSession(token: JWT) {
+  if (!token.isSuperuser) return;
+
+  const previewId = token.staffPreview;
+  if (previewId) {
+    const permissions = staffPreviewPermissions(previewId);
+    token.role =
+      previewId === "full_admin"
+        ? "ADMIN"
+        : previewId === "stock_only"
+          ? "STOCK"
+          : "QUOTES";
+    token.permissions = permissions;
+    return;
+  }
+
+  token.role = "SUPERUSER";
+  token.permissions = [...ALL_PERMISSIONS];
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -46,9 +143,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!email || !password) return null;
 
         try {
-          // Explicit select — omit newer columns so schema drift (e.g. missing
-          // inAppNotificationsEnabled on Neon main) cannot throw and surface as
-          // Auth.js "Configuration" (UI shows as wrong email/password).
+          // Single round-trip: cold Neon + bcrypt already tight vs Vercel default maxDuration.
           const user = await db.user.findUnique({
             where: { email },
             select: {
@@ -57,35 +152,44 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               name: true,
               passwordHash: true,
               role: true,
+              canQuotes: true,
+              canStock: true,
+              active: true,
+              inAppNotificationsEnabled: true,
+              isSuperuser: true,
             },
           });
-          if (!user?.passwordHash || user.role !== "ADMIN") return null;
+          if (
+            !user?.passwordHash ||
+            !user.active ||
+            !isAdminPanelRole(user.role)
+          ) {
+            return null;
+          }
 
           const valid = await bcrypt.compare(password, user.passwordHash);
           if (!valid) return null;
 
-          let inAppNotificationsEnabled = true;
-          try {
-            const pref = await db.user.findUnique({
-              where: { id: user.id },
-              select: { inAppNotificationsEnabled: true },
-            });
-            if (typeof pref?.inAppNotificationsEnabled === "boolean") {
-              inAppNotificationsEnabled = pref.inAppNotificationsEnabled;
-            }
-          } catch {
-            // Column/client drift — keep default true; login must still succeed.
-          }
+          const effectiveRole = await ensureSuperuserRole(user);
+          const permissions = isSuperuserRole(effectiveRole)
+            ? []
+            : staffPermissionsFromProfile({
+                role: effectiveRole,
+                canQuotes: user.canQuotes,
+                canStock: user.canStock,
+              });
 
           return {
             id: user.id,
             email: user.email,
             name: user.name,
-            role: "ADMIN" as const,
+            role: effectiveRole,
             customerId: null,
             customerCode: null,
             mustChangePassword: false,
-            inAppNotificationsEnabled,
+            inAppNotificationsEnabled: user.inAppNotificationsEnabled !== false,
+            modules: [],
+            permissions,
           };
         } catch (err) {
           console.error("[auth] admin authorize failed", err);
@@ -105,11 +209,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const password = String(credentials?.password ?? "");
         if (!/^\d{3}$/.test(code) || password.length < 1) return null;
 
-        const customer = await db.customer.findUnique({ where: { code } });
+        // One round-trip: customer + enabled modules (Neon cold + bcrypt budget).
+        const customer = await db.customer.findUnique({
+          where: { code },
+          select: {
+            id: true,
+            name: true,
+            code: true,
+            active: true,
+            passwordHash: true,
+            mustChangePassword: true,
+            moduleAccess: {
+              where: { enabled: true },
+              select: { module: true },
+            },
+          },
+        });
         if (!customer || !customer.active) return null;
 
         const valid = await bcrypt.compare(password, customer.passwordHash);
         if (!valid) return null;
+
+        const modules = customer.moduleAccess.map(
+          (r) => r.module,
+        ) as CustomerModuleSession[];
 
         return {
           id: customer.id,
@@ -119,6 +242,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           customerId: customer.id,
           customerCode: customer.code,
           mustChangePassword: customer.mustChangePassword,
+          modules,
+          permissions: [],
         };
       },
     }),
@@ -126,15 +251,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, user, trigger, session }) {
       if (user) {
+        token.isSuperuser = isSuperuserRole(user.role);
+        token.staffPreview = null;
         token.role = user.role;
         token.customerId = user.customerId ?? null;
         token.customerCode = user.customerCode ?? null;
         token.mustChangePassword = user.mustChangePassword ?? false;
         token.inAppNotificationsEnabled =
           user.inAppNotificationsEnabled ?? true;
+        token.modules = user.modules ?? [];
+        token.permissions = user.permissions ?? [];
         token.sub = user.id;
         token.email = user.email;
         token.name = user.name;
+        syncSuperuserTokenIdentity(token);
+        applyEffectiveStaffSession(token);
       }
       if (trigger === "update") {
         if (token.customerId) {
@@ -143,8 +274,62 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             select: { mustChangePassword: true },
           });
           token.mustChangePassword = customer?.mustChangePassword ?? false;
+          try {
+            token.modules = (await getEnabledModulesForCustomer(
+              String(token.customerId),
+            )) as CustomerModuleSession[];
+          } catch {
+            // keep existing
+          }
         }
-        // After PATCH: client passes value — refresh JWT without another DB read.
+        if (token.role && isAdminPanelRole(String(token.role))) {
+          const dbUser = await db.user.findUnique({
+            where: { id: String(token.sub) },
+            select: {
+              role: true,
+              canQuotes: true,
+              canStock: true,
+              isSuperuser: true,
+              email: true,
+            },
+          });
+          if (dbUser && isAdminPanelRole(dbUser.role)) {
+            const effectiveRole = await ensureSuperuserRole({
+              id: String(token.sub),
+              email: dbUser.email,
+              role: dbUser.role,
+              isSuperuser: dbUser.isSuperuser,
+            });
+            token.isSuperuser = isSuperuserRole(effectiveRole);
+            if (token.isSuperuser) {
+              token.role = "SUPERUSER";
+              token.permissions = [...ALL_PERMISSIONS];
+            } else {
+              token.role = effectiveRole;
+              token.permissions = staffPermissionsFromProfile({
+                role: effectiveRole,
+                canQuotes: dbUser.canQuotes,
+                canStock: dbUser.canStock,
+              });
+            }
+          }
+        }
+        if (
+          session &&
+          typeof (session as { staffPreview?: unknown }).staffPreview !==
+            "undefined"
+        ) {
+          const previewPayload = (session as { staffPreview: unknown })
+            .staffPreview;
+          if (token.isSuperuser) {
+            if (previewPayload === null) {
+              token.staffPreview = null;
+            } else {
+              const presetId = parseStaffPreviewPresetId(previewPayload);
+              if (presetId) token.staffPreview = presetId;
+            }
+          }
+        }
         if (
           session &&
           typeof (session as { inAppNotificationsEnabled?: unknown })
@@ -161,24 +346,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.email = (session as { email: string }).email;
         }
       }
+      syncSuperuserTokenIdentity(token);
+      applyEffectiveStaffSession(token);
       return token;
     },
     async session({ session, token }) {
+      const role = (token.role as AppRole) ?? "CUSTOMER";
+      const isSuperuser = Boolean(token.isSuperuser);
+      const previewId = parseStaffPreviewPresetId(token.staffPreview);
+      const staffPreview =
+        isSuperuser && previewId
+          ? staffPreviewSessionFromPresetId(previewId)
+          : null;
+
       return {
         ...session,
         user: {
           ...session.user,
           id: token.sub ?? "",
-          role: (token.role as AppRole) ?? "CUSTOMER",
+          role,
           customerId:
             typeof token.customerId === "string" ? token.customerId : null,
           customerCode:
             typeof token.customerCode === "string" ? token.customerCode : null,
           mustChangePassword: Boolean(token.mustChangePassword),
-          // Missing on old JWTs → default true (matches DB default).
           inAppNotificationsEnabled: token.inAppNotificationsEnabled !== false,
           email: typeof token.email === "string" ? token.email : null,
           name: typeof token.name === "string" ? token.name : null,
+          modules: Array.isArray(token.modules)
+            ? (token.modules as CustomerModuleSession[])
+            : [],
+          permissions: isStaffRole(role)
+            ? Array.isArray(token.permissions)
+              ? (token.permissions as StaffPermission[])
+              : staffPermissionsFromProfile({
+                  role,
+                  canQuotes: false,
+                  canStock: false,
+                })
+            : Array.isArray(token.permissions)
+              ? (token.permissions as StaffPermission[])
+              : [],
+          isSuperuser,
+          staffPreview,
         },
       };
     },

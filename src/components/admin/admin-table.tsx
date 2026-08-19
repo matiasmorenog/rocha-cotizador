@@ -62,6 +62,7 @@ export function AdminTableIconAction({
         href={href}
         className={cn(
           iconLinkClass,
+          variant === "secondary" && "admin-edit-hover",
           (disabled || loading) && "pointer-events-none opacity-50",
         )}
         aria-label={label}
@@ -80,6 +81,7 @@ export function AdminTableIconAction({
       size="sm"
       className={cn(
         "size-8 shrink-0 p-0",
+        variant === "secondary" && "admin-edit-hover",
         blocked && !loading && "cursor-not-allowed opacity-50",
       )}
       onClick={onClick}

@@ -1,58 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getActiveProductsBase } from "@/lib/products-cache";
+import { getCachedUnitPricesForCatalog } from "@/lib/price-list-resolve";
 import {
-  getActiveProductsBase,
-  getProductsCatalogVersion,
-} from "@/lib/products-cache";
-import {
-  getCachedCustomerPricingContext,
-  getCachedUnitPricesForCatalog,
-} from "@/lib/price-list-resolve";
+  catalogVersionParts,
+  resolveCatalogAccess,
+} from "@/lib/product-catalog-access";
 
 /**
  * Shared base catalog + per-customer unitPrices map.
  * Conditional: `?v=` matching current version → products omitted (unitPrices always sent).
  */
 export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
-
-  let priceListId: string | null = null;
-
-  if (session.user.role === "CUSTOMER" && session.user.customerId) {
-    const customer = await getCachedCustomerPricingContext(
-      session.user.customerId,
+  const access = await resolveCatalogAccess(req);
+  if (!access.ok) {
+    return NextResponse.json(
+      { error: access.error },
+      { status: access.status },
     );
-    priceListId = customer?.priceListId ?? null;
-  } else if (session.user.role === "ADMIN") {
-    const customerId = (req.nextUrl.searchParams.get("customerId") ?? "").trim();
-    if (!customerId) {
-      return NextResponse.json(
-        { error: "customerId requerido para precios de cliente" },
-        { status: 400 },
-      );
-    }
-    const customer = await getCachedCustomerPricingContext(customerId);
-    if (!customer) {
-      return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
-    }
-    priceListId = customer.priceListId;
-  } else {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const version = await getProductsCatalogVersion();
-  const listKey = priceListId ?? "base";
-  const catalogKey = `${version}:${listKey}`;
+  const { priceListId } = access;
+  const { stamp, catalogKey } = await catalogVersionParts(priceListId);
 
   const clientVersion =
     req.nextUrl.searchParams.get("v")?.trim() ||
     req.headers.get("If-None-Match")?.replaceAll('"', "").trim() ||
     "";
 
-  const unitPrices = await getCachedUnitPricesForCatalog(priceListId, version);
+  const unitPrices = await getCachedUnitPricesForCatalog(priceListId, stamp);
 
   if (clientVersion && clientVersion === catalogKey) {
     return NextResponse.json(

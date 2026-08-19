@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { listAdminInboxSince } from "@/lib/push";
 
 /**
@@ -7,8 +7,7 @@ import { listAdminInboxSince } from "@/lib/push";
  * Lightweight poll for in-app admin notifications.
  */
 export async function GET(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!(await requireStaffApi("quotes"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { resolveQuotesExportRange } from "@/lib/argentina-time";
 import {
@@ -8,12 +8,8 @@ import {
 } from "@/lib/quotes-export-pdf";
 
 export const runtime = "nodejs";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") return null;
-  return session;
-}
+/** Multi-remito PDF over date range — Neon cold + pdfkit. */
+export const maxDuration = 60;
 
 /**
  * GET /api/admin/quotes/export?from=&to=
@@ -24,7 +20,7 @@ async function requireAdmin() {
  * Returns a multi-remito PDF (`cotizaciones.pdf`).
  */
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaffApi("quotes"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

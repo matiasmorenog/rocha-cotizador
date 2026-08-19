@@ -23,9 +23,11 @@ Solo **dos** branches Neon. Preview **no** crea branch Neon por deploy.
 
 **Vercel Preview ≡ Development:** mismas variables (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, …) y mismo Neon `development`. **Production** aislado (Neon `main` + secrets propios). No copiar Production → Preview/Development.
 
+En el proyecto **`rocha-cotizador`**, Preview de git branch `development` usa overrides `gitBranch=development`: `DATABASE_URL` = Neon `development` pooled (`ep-noisy-darkness…-pooler`); `AUTH_URL` = alias git de esa branch. El scope **Production** no se toca.
+
 ### Schema drift / wrong DB (léelo antes de un release)
 
-**Local DB ≠ production.** Son dos bases Neon distintas.
+**Local DB ≠ production.** Son dos bases Neon distintas. Agentes: cualquier cambio Neon (schema, pooler/`DATABASE_URL`, branches) también en Production — ver `.cursor/rules/neon-prod-parity.mdc`.
 
 | Dónde | Neon branch | Cómo lo reconocés (host prefix) |
 |-------|-------------|----------------------------------|
@@ -61,6 +63,7 @@ Hosts (password en dashboard / `vercel env`; no commitear):
 
 ```bash
 # Vercel: Neon pooled + pgbouncer=true&connection_limit=1 (Prisma + serverless = 1 conn/instance)
+# Optional: &connect_timeout=15 if cold connects flake (Neon us-west-2 from Vercel).
 DATABASE_URL=postgresql://...-pooler...?sslmode=require&pgbouncer=true&connection_limit=1
 AUTH_SECRET=                    # openssl rand -base64 32
 AUTH_URL=https://rocha-cotizador.vercel.app
@@ -106,6 +109,18 @@ DATABASE_URL="postgresql://...@ep-noisy-darkness-a6ms81wq.us-west-2.aws.neon.tec
 
 Dashboard admin serializa queries en `$transaction` (no `Promise.all` de 4 counts) para no abrir 4 conexiones a la vez.
 
+### Timeouts (Vercel / Neon)
+
+Neon `us-west-2` cold ~3–4s. Default serverless `maxDuration` (~15s Pro) deja poco margen para export PDF/XLSX, create cotización + Web Push, o login (bcrypt + DB).
+
+Segment config en rutas pesadas (`export const maxDuration = 60` en import/export/quotes; `30` en auth/remito; `15` en health). No hace falta `maxDuration` global en `vercel.json`.
+
+| Runtime `DATABASE_URL` (Vercel) | Schema gate / `db push` |
+|--------------------------------|-------------------------|
+| Neon **`-pooler`** + `pgbouncer=true&connection_limit=1` | Neon **direct** (sin `-pooler`) — secret `DATABASE_URL_PRODUCTION` o URL direct al push |
+
+Si Production runtime usa host **sin** `-pooler`: riesgo de agotar conexiones bajo concurrencia + cold más caro. Corregí a pooler en Vercel **Production** (y Preview/Development al pooler de `development`). No tocar secrets sin confirmación.
+
 ### Cache (Next.js)
 
 | Tag | Qué cachea | Invalidar |
@@ -113,7 +128,7 @@ Dashboard admin serializa queries en `$transaction` (no `Promise.all` de 4 count
 | `products` | Catálogo base activos (`basePrice`, sin `unitPrice`) | Admin producto create/update + import Excel |
 | `price-lists` | Precios por lista | Price list mutate; product import |
 | `customers` | Mapping customerId → priceListId | Customer mutate; price list delete |
-| `admin-dashboard` | Counts + últimas cotizaciones (TTL 1h) | Quote create/wipe; product/customer mutate |
+| `admin-dashboard` | Counts + últimas cotizaciones (TTL 24h) | Quote create/wipe; product/customer mutate |
 
 Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateAfterCustomerMutation`, `invalidateAfterQuoteCreate`, `invalidateAllDataCaches`, `invalidateAfterDbScript`).
 
@@ -137,7 +152,7 @@ Build command (Vercel): `npm run build` → `prisma generate && next build` (`po
 
 - Auto-deploy Vercel en **`main` está OFF** (`vercel.json`).
 - Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production** (incluye **pre-deploy schema sync** + **post-deploy smoke**: `/api/health` + homepage + **post-deploy cache revalidate**: CDN + Data + tags + brand images).
-- Push a `development` → Vercel Git deploy de **`rocha-cotizador-dev`**, luego Actions **post-deploy-cache-development** (mismo purge contra el proyecto demo).
+- Push a `development` → Git Preview en **`rocha-cotizador`** (SSO; `DATABASE_URL`/`AUTH_URL` override `gitBranch=development` → Neon development) **y** Git Production en **`rocha-cotizador-dev`** (público). Después Actions **post-deploy-cache-development** (purge contra el proyecto demo).
 - Secrets en GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (ver [`docs/ci.md`](docs/ci.md)).
 - Opcional pero recomendado: `DATABASE_URL_PRODUCTION` (Neon `main`, preferible URL **direct**) para el gate de schema sin depender solo de `vercel pull`.
 

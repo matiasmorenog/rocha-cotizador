@@ -1,12 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
-import { auth } from "@/lib/auth";
+import { getOptionalSession } from "@/lib/session";
+import { isAdminPanelRole, staffHomeHref } from "@/lib/staff-permissions";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { AdminLoginForm } from "@/components/auth/admin-login-form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { safeCallbackUrl } from "@/lib/callback-url";
+
+export const dynamic = "force-dynamic";
 
 function LoginFormFallback() {
   return (
@@ -31,8 +34,14 @@ export default async function AdminLoginPage({
 }) {
   const { callbackUrl: rawCallback } = await searchParams;
   const callbackUrl = safeCallbackUrl(rawCallback, "/admin");
-  const session = await auth();
-  if (session?.user?.role === "ADMIN") redirect(callbackUrl);
+  const session = await getOptionalSession();
+  if (isAdminPanelRole(session?.user?.role) && session?.user) {
+    redirect(
+      session.user.role === "SUPERUSER"
+        ? staffHomeHref(session.user.permissions, session.user.role)
+        : callbackUrl,
+    );
+  }
 
   const customerLoginHref =
     callbackUrl !== "/admin"

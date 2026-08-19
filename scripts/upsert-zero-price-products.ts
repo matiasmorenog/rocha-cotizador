@@ -4,6 +4,7 @@
  *
  * Usage: SEED_TARGET=development npx tsx scripts/upsert-zero-price-products.ts
  */
+import "dotenv/config";
 import fs from "node:fs";
 import path from "node:path";
 import ExcelJS from "exceljs";
@@ -12,6 +13,7 @@ import { db } from "../src/lib/db";
 import {
   UNIT_ORDER_PRODUCT_CODES,
 } from "../src/lib/unit-order-products";
+import { revalidateAppCache } from "./revalidate-app-cache";
 
 function cellText(value: ExcelJS.CellValue): string {
   if (value === null || value === undefined) return "";
@@ -145,6 +147,7 @@ async function main() {
   });
   console.log(`purged non-unit-order \$0 products: ${deleted.count}`);
   console.log(`Done. created=${created} updated=${updated}`);
+  await revalidateAppCache();
 }
 
 main()

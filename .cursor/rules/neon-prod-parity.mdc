@@ -1,0 +1,33 @@
+---
+description: Neon/Vercel — cambios de DB también en Production, no solo local/dev
+alwaysApply: true
+---
+
+# Neon: parity Production ↔ development
+
+**Local / Preview = Neon `development`. Production = Neon `main` (separado).** Nunca asumir que un cambio en local/dev alcanza prod.
+
+## Obligatorio en cualquier cambio Neon
+
+Si tocás schema (`db push`), connection string, pooler vs direct, env vars `DATABASE_URL*`, o branches Neon — **también** aplicá el equivalente en:
+
+| Target | Neon | Vercel / secrets |
+|--------|------|------------------|
+| Local + Preview + Vercel Development | branch `development` | Preview/Development `DATABASE_URL` (+ local `.env`) |
+| **Production** | branch `main` | Vercel **Production** `DATABASE_URL` (+ GitHub `DATABASE_URL_PRODUCTION` si aplica) |
+
+Ejemplos: recomendás pooler para velocidad → **Preview/dev y Production**. Schema push aditivo → sync **ambas** bases (dev ya; prod antes del release / con URL direct de `main`).
+
+## Schema / `db push`
+
+- `npx prisma db push` con `.env` local = **solo** Neon `development`.
+- Prod: URL **direct** de Neon `main` (host sin `-pooler`), no pooler. Ver `DEPLOY.md` § Schema drift.
+- Actions schema gate: preferí secret `DATABASE_URL_PRODUCTION` (direct). Runtime Vercel puede seguir en pooler.
+
+## No hacer
+
+- Dejar prod con schema viejo o URL distinta “porque local ya anda”.
+- Seed / reset / mutación masiva contra Neon `main`.
+- Copiar Production env → Preview/Development.
+
+Refs: `DEPLOY.md`, `docs/ci.md`, `.cursor/rules/prisma-db-push.mdc`.

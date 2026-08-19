@@ -8,8 +8,8 @@
  *   CONFIRM_PROD_BACKFILL=1
  *   DATABASE_URL = Neon main direct (ep-cool-mud, no -pooler)
  *
- * After run: POST /api/revalidate (REVALIDATE_SECRET + AUTH_URL) so Vercel
- * Data Cache expires all tags — see invalidateAfterDbScript.
+ * After a successful run, scripts/revalidate-app-cache.ts POSTs /api/revalidate
+ * (REVALIDATE_SECRET + AUTH_URL or APP_URL). Warns on failure; does not abort.
  *
  * Usage:
  *   CONFIRM_PROD_BACKFILL=1 DATABASE_URL='postgresql://…@ep-cool-mud-….neon.tech/neondb?sslmode=require' \
@@ -23,6 +23,7 @@ import {
   EXCEL_PRICE_LIST_DEFAULTS,
 } from "../src/lib/pricing";
 import { cellNumber, cellText } from "../src/lib/admin-excel";
+import { revalidateAppCache } from "./revalidate-app-cache";
 
 const PROD_HOST = "ep-cool-mud-a6k5vosf";
 
@@ -231,6 +232,8 @@ async function main() {
     console.log(
       `VERIFY products=${products.length}/${codes.length} allowsUnitOrder=${flagged}/${codes.length} items=${itemCount} (expect ${codes.length * priceLists.length}) withAllLists=${withAllLists}/${codes.length}`,
     );
+
+    await revalidateAppCache();
   } finally {
     await db.$disconnect();
   }

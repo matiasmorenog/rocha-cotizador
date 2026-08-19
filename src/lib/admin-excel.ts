@@ -25,6 +25,7 @@ import ExcelJS from "exceljs";
 export const CUSTOMER_COLUMNS = [
   "código",
   "nombre",
+  "aclaración",
   "email",
   "teléfono",
   "dirección",

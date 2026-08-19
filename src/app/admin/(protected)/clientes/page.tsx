@@ -1,43 +1,17 @@
-import { db } from "@/lib/db";
+import { requireStaffPermission } from "@/lib/session";
 import { ExcelSyncPanel } from "@/components/admin/excel-sync-panel";
 import { CustomersAdminPanel } from "@/components/admin/customers-admin-panel";
-import { sortPriceListsForDisplay } from "@/lib/pricing";
+import { getAdminClientesPageData } from "@/lib/admin-customers-data";
 
 export default async function AdminClientesPage({
   searchParams,
 }: {
   searchParams: Promise<{ edit?: string }>;
 }) {
+  await requireStaffPermission("customers");
   const { edit } = await searchParams;
 
-  const [customers, priceListsRaw] = await Promise.all([
-    db.customer.findMany({
-      include: { priceList: { select: { id: true, name: true } } },
-      orderBy: { code: "asc" },
-    }),
-    db.priceList.findMany({
-      select: { id: true, name: true, active: true, excelKey: true, isBase: true },
-    }),
-  ]);
-
-  const priceLists = sortPriceListsForDisplay(priceListsRaw).map(
-    ({ id, name, active, isBase }) => ({ id, name, active, isBase }),
-  );
-
-  const rows = customers.map((c) => ({
-    id: c.id,
-    code: c.code,
-    name: c.name,
-    priceListId: c.priceListId,
-    priceListName: c.priceList?.name ?? null,
-    address: c.address,
-    phone: c.phone,
-    email: c.email,
-    notes: c.notes,
-    paymentTerms: c.paymentTerms,
-    deliveryHours: c.deliveryHours,
-    active: c.active,
-  }));
+  const { customers: rows, priceLists } = await getAdminClientesPageData();
 
   return (
     <div className="space-y-6">

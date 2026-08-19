@@ -229,7 +229,7 @@ export function PriceListEditor({
         </div>
       </form>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         {!isBase ? (
           <Button
             type="button"

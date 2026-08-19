@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { getAdminQuoteActivity } from "@/lib/admin-quote-activity";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") return null;
-  return session;
-}
 
 /**
  * GET /api/admin/quote-activity?period=week|month|year
@@ -18,7 +12,7 @@ async function requireAdmin() {
  * Prisma singleton and no separate cache invalidation surface.
  */
 export async function GET(req: NextRequest) {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaffApi("quotes"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

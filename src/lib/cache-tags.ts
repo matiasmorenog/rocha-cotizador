@@ -1,14 +1,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
+import { CACHE_TAGS } from "@/lib/cache-tag-names";
 
-/** Shared cache tags — never put per-customer unitPrice or auth under these.
- *  Keep `scripts/post-deploy-cache.sh` TAGS in sync when adding one. */
-export const CACHE_TAGS = {
-  products: "products",
-  priceLists: "price-lists",
-  /** customerId → priceListId mapping (not unit prices). */
-  customers: "customers",
-  adminDashboard: "admin-dashboard",
-} as const;
+export { CACHE_TAGS };
 
 /**
  * Expire tagged entries immediately (Route Handlers cannot use updateTag).
@@ -30,6 +23,10 @@ export function invalidateCustomersCache() {
   expireTag(CACHE_TAGS.customers);
 }
 
+export function invalidateStaffUsersCache() {
+  expireTag(CACHE_TAGS.staffUsers);
+}
+
 export function invalidateAdminDashboardCache() {
   expireTag(CACHE_TAGS.adminDashboard);
 }
@@ -46,8 +43,8 @@ export function invalidateAllDataCaches() {
 
 /**
  * Ops / wipe / DB scripts: bust all tagged Data Cache + admin/remitos list paths.
- * Prefer HTTP POST /api/revalidate from scripts (out-of-process). Call in-process
- * only when the script runs inside the Next.js runtime.
+ * Prefer HTTP POST /api/revalidate via `scripts/revalidate-app-cache.ts`
+ * (out-of-process). Call in-process only inside the Next.js runtime.
  */
 export function invalidateAfterDbScript() {
   invalidateAllDataCaches();
@@ -74,6 +71,26 @@ export function invalidateAfterPriceListMutation() {
 export function invalidateAfterCustomerMutation() {
   invalidateCustomersCache();
   invalidateAdminDashboardCache();
+}
+
+/** Staff user create/update — admin usuarios list. */
+export function invalidateAfterStaffUserMutation() {
+  invalidateStaffUsersCache();
+}
+
+export function invalidateSubscriptionPaymentsCache() {
+  expireTag(CACHE_TAGS.subscriptionPayments);
+}
+
+export function invalidateAfterSubscriptionPaymentMutation() {
+  invalidateSubscriptionPaymentsCache();
+  revalidatePath("/admin/configuracion");
+  revalidatePath("/admin/plataforma");
+}
+
+/** Stock entry create/update — refresh admin stock RSC (history is uncached). */
+export function invalidateAfterStockEntryMutation() {
+  revalidatePath("/admin/stock");
 }
 
 /** Quote create — expire dashboard Data Cache + refresh list routes. */

@@ -4,7 +4,7 @@ import {
   parseArgentinaDateTime,
   toArgentinaDatetimeLocal,
 } from "@/lib/argentina-time";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { CACHE_TAGS } from "@/lib/cache-tag-names";
 import { db } from "@/lib/db";
 import {
   parseQuoteActivityPeriod,
@@ -197,7 +197,7 @@ const getCachedQuoteActivity = unstable_cache(
     return fillBuckets(buckets, rows, period);
   },
   ["admin-quote-activity"],
-  { tags: [CACHE_TAGS.adminDashboard], revalidate: 3600 },
+  { tags: [CACHE_TAGS.adminDashboard], revalidate: 86400 },
 );
 
 export function getAdminQuoteActivity(

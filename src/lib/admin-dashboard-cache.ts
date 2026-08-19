@@ -1,7 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { parseArgentinaDateTime, toArgentinaDatetimeLocal } from "@/lib/argentina-time";
 import { db } from "@/lib/db";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { CACHE_TAGS } from "@/lib/cache-tag-names";
 
 export type AdminDashboardRecentQuote = {
   id: string;
@@ -56,7 +56,7 @@ function argentinaWeekMondayStart(day: string): Date {
 /**
  * Dashboard counts + recent quotes.
  * Sequential queries inside $transaction — one Neon connection (connection_limit=1).
- * TTL 1h (3600, same as catalog); freshness via `invalidateAfterQuoteCreate` /
+ * TTL 24h (86400, same as catalog); freshness via `invalidateAfterQuoteCreate` /
  * wipe → `invalidateAfterDbScript` (all tags via POST /api/revalidate).
  */
 const getCachedAdminDashboard = unstable_cache(
@@ -116,7 +116,7 @@ const getCachedAdminDashboard = unstable_cache(
     });
   },
   ["admin-dashboard"],
-  { tags: [CACHE_TAGS.adminDashboard], revalidate: 3600 },
+  { tags: [CACHE_TAGS.adminDashboard], revalidate: 86400 },
 );
 
 export function getAdminDashboardData(): Promise<AdminDashboardData> {

@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { invalidateAfterPriceListMutation } from "@/lib/cache-tags";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") return null;
-  return session;
-}
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -25,7 +19,7 @@ const bodySchema = z.object({
 
 /** Upsert unit prices for products on this list. Base list also syncs Product.basePrice. */
 export async function PUT(req: NextRequest, ctx: Ctx) {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaffApi("priceLists"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -78,7 +72,7 @@ const fillSchema = z.object({
 
 /** Fill missing/overwrite all items from Product.basePrice. No-op-ish on base list. */
 export async function POST(req: NextRequest, ctx: Ctx) {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaffApi("priceLists"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

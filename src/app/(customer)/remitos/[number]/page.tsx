@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import { auth } from "@/lib/auth";
+import { getOptionalSession } from "@/lib/session";
+import { staffHasPermission, staffHomeHref } from "@/lib/staff-permissions";
 import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
 import {
@@ -20,7 +21,11 @@ import {
   whatsappUrl,
 } from "@/lib/whatsapp";
 import { BrandLogo } from "@/components/brand-logo";
-import { PrintButton } from "@/components/quote/print-button";
+import { RemitoPrintButtons } from "@/components/quote/print-button";
+import {
+  ThermalRemitoReceipt,
+  type ThermalRemitoLine,
+} from "@/components/quote/remito-thermal-receipt";
 import { RemitoBackButton } from "@/components/quote/remito-back-button";
 import { RemitoAdminTable } from "@/components/quote/remito-admin-table";
 import {
@@ -33,8 +38,11 @@ import { TruncatedName } from "@/components/ui/truncated-name";
 import {
   formatDeliveryDateLabel,
 } from "@/lib/delivery-date";
+import type { Decimal } from "@prisma/client/runtime/library";
 
 export const dynamic = "force-dynamic";
+/** Remito detail: quote + products + price list; Neon cold needs headroom. */
+export const maxDuration = 30;
 
 const quoteDetailInclude = {
   customer: {
@@ -60,7 +68,7 @@ export default async function RemitoDetailPage({
 }) {
   const { number: rawParam } = await params;
   const { whatsapp } = await searchParams;
-  const session = await auth();
+  const session = await getOptionalSession();
 
   const canonicalNumber = normalizeRemitoNumberParam(rawParam);
   const query =
@@ -75,7 +83,10 @@ export default async function RemitoDetailPage({
     redirect(`/entrar?callbackUrl=${next}`);
   }
 
-  if (session.user.role !== "CUSTOMER" && session.user.role !== "ADMIN") {
+  if (
+    session.user.role !== "CUSTOMER" &&
+    !staffHasPermission(session.user.permissions, "quotes")
+  ) {
     notFound();
   }
 
@@ -103,24 +114,40 @@ export default async function RemitoDetailPage({
     redirect(`${remitoPath(quote.number)}${query}`);
   }
 
+  if (
+    session.user.role === "CUSTOMER" &&
+    quote.customerId !== session.user.customerId
+  ) {
+    notFound();
+  }
+
   const productIds = quote.items
     .map((item) => item.productId)
     .filter((id): id is string => Boolean(id));
-  const products =
+
+  // Parallel after ownership check: products + list id + WhatsApp digits.
+  const [products, discountListId, notifyDigits, hdrs] = await Promise.all([
     productIds.length > 0
-      ? await db.product.findMany({
+      ? db.product.findMany({
           where: { id: { in: productIds } },
           select: { id: true, allowsUnitOrder: true, basePrice: true },
         })
-      : [];
+      : Promise.resolve(
+          [] as {
+            id: string;
+            allowsUnitOrder: boolean;
+            basePrice: Decimal;
+          }[],
+        ),
+    effectiveDiscountPriceListId(quote.customer.priceListId),
+    getWhatsAppNotifyDigits(),
+    headers(),
+  ]);
   const allowsUnitOrderByProductId = new Map(
     products.map((p) => [p.id, p.allowsUnitOrder]),
   );
 
   // Same $/kg as ordering by kg (customer list override → basePrice).
-  const discountListId = await effectiveDiscountPriceListId(
-    quote.customer.priceListId,
-  );
   const listOverrides =
     discountListId != null
       ? await getPriceListUnitPricesByProductId(discountListId)
@@ -135,14 +162,6 @@ export default async function RemitoDetailPage({
     );
   }
 
-  if (
-    session.user.role === "CUSTOMER" &&
-    quote.customerId !== session.user.customerId
-  ) {
-    notFound();
-  }
-
-  const hdrs = await headers();
   const host = hdrs.get("x-forwarded-host") ?? hdrs.get("host");
   const proto = hdrs.get("x-forwarded-proto") ?? "https";
   const origin =
@@ -150,7 +169,6 @@ export default async function RemitoDetailPage({
     process.env.AUTH_URL?.replace(/\/$/, "") ??
     "";
   const remitoUrl = `${origin}${remitoPath(quote.number)}`;
-  const notifyDigits = await getWhatsAppNotifyDigits();
   const notifyWhatsappUrl = whatsappUrl(
     notifyDigits,
     buildQuoteWhatsAppMessage({
@@ -165,7 +183,7 @@ export default async function RemitoDetailPage({
   );
   const showWhatsappCta = whatsapp === "1" && Boolean(notifyWhatsappUrl);
   const deliveryLabel = formatDeliveryDateLabel(quote.deliveryDate);
-  const isAdmin = session.user.role === "ADMIN";
+  const isAdmin = staffHasPermission(session.user.permissions, "quotes");
   const pendingWeighCount = quote.items.filter(
     (item) => item.orderByUnit || Number(item.unitPrice) === 0,
   ).length;
@@ -219,9 +237,13 @@ export default async function RemitoDetailPage({
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           <RemitoBackButton
-            href={session.user.role === "ADMIN" ? "/admin/cotizaciones" : "/remitos"}
+            href={
+              session.user.role === "CUSTOMER"
+                ? "/remitos"
+                : staffHomeHref(session.user.permissions)
+            }
           />
-          <PrintButton />
+          <RemitoPrintButtons />
           {isAdmin ? <RemitoEditModeToggle /> : null}
         </div>
       </div>
@@ -230,7 +252,36 @@ export default async function RemitoDetailPage({
         <WhatsAppNotifyButton whatsappUrl={notifyWhatsappUrl} autoOpen />
       ) : null}
 
-      <article className="print-remito rounded-lg border border-neutral-200 bg-white p-7 shadow-sm">
+      <ThermalRemitoReceipt
+        quoteNumber={quote.number}
+        createdAt={quote.createdAt}
+        deliveryLabel={deliveryLabel}
+        customer={quote.customer}
+        lines={quote.items.map((item): ThermalRemitoLine => {
+          const allowsUnitOrder = item.productId
+            ? (allowsUnitOrderByProductId.get(item.productId) ?? false)
+            : false;
+          const needsWeighPrice =
+            item.orderByUnit || Number(item.unitPrice) === 0;
+          return {
+            itemId: item.id,
+            productCode: item.productCode,
+            productName: item.productName,
+            qty: item.qty,
+            measureLabel: quoteLineMeasureLabel(
+              item.orderByUnit,
+              allowsUnitOrder,
+            ),
+            unitPrice: item.unitPrice,
+            lineTotal: item.lineTotal,
+            needsWeighPrice,
+          };
+        })}
+        total={quote.total}
+        notes={quote.notes}
+      />
+
+      <article className="remito-screen-only print-remito rounded-lg border border-neutral-200 bg-white p-7 shadow-sm">
         <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-4">
           <div>
             <BrandLogo size="md" priority className="print:h-24 print:w-24" />

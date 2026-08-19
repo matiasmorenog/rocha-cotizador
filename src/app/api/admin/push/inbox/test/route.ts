@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { enqueueAdminInboxTest } from "@/lib/push";
 
 /**
@@ -7,8 +7,7 @@ import { enqueueAdminInboxTest } from "@/lib/push";
  * Enqueue a test in-app notification.
  */
 export async function POST() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") {
+  if (!(await requireStaffApi("quotes"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

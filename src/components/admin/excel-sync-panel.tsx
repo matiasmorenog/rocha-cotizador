@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
+import { notifyCatalogStale } from "@/lib/client-catalog-cache";
 import { cn } from "@/lib/utils";
 
 type ImportSummary = {
@@ -18,12 +19,15 @@ type ExcelSyncPanelProps = {
   exportUrl: string;
   importUrl: string;
   entityLabel: string;
+  /** After a successful product import, other tabs should refresh catalog. */
+  broadcastCatalogStale?: boolean;
 };
 
 export function ExcelSyncPanel({
   exportUrl,
   importUrl,
   entityLabel,
+  broadcastCatalogStale = false,
 }: ExcelSyncPanelProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -73,6 +77,7 @@ export function ExcelSyncPanel({
     setMessage(`Sincronización ${entityLabel}: ${parts.join(", ")}`);
     setFile(null);
     if (inputRef.current) inputRef.current.value = "";
+    if (broadcastCatalogStale) notifyCatalogStale();
     router.refresh();
   }
 

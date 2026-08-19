@@ -3,6 +3,7 @@ import { Source_Sans_3 } from "next/font/google";
 import { AppHeader } from "@/components/app-header";
 import { MainRoutePending } from "@/components/main-route-pending";
 import { Providers } from "@/components/providers";
+import { ADMIN_THEME_BLOCKING_SCRIPT } from "@/lib/admin-theme";
 import "./globals.css";
 
 const sourceSans = Source_Sans_3({
@@ -21,7 +22,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${sourceSans.variable} h-full antialiased`}>
+    <html
+      lang="es"
+      className={`${sourceSans.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: ADMIN_THEME_BLOCKING_SCRIPT }}
+        />
+      </head>
       <body className="min-h-full flex flex-col font-sans">
         <Providers>
           <AppHeader />

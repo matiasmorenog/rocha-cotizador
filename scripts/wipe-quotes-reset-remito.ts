@@ -9,11 +9,9 @@
  *   TARGET=development|production
  *   DATABASE_URL = Neon direct URL matching TARGET (no -pooler)
  *
- * Optional (bust Vercel Data Cache / route cache after wipe):
- *   REVALIDATE_SECRET + AUTH_URL (or APP_URL) — POST /api/revalidate
- *   That endpoint expires ALL shared Data Cache tags (products, price-lists,
- *   customers, admin-dashboard) plus admin/remitos list paths — not only
- *   admin-dashboard.
+ * After a successful wipe, scripts/revalidate-app-cache.ts POSTs /api/revalidate
+ * (REVALIDATE_SECRET + AUTH_URL or APP_URL). Warns if the app is down; does not
+ * abort the wipe.
  *
  * Examples:
  *   CONFIRM_WIPE_QUOTES=1 TARGET=development npx tsx scripts/wipe-quotes-reset-remito.ts
@@ -22,6 +20,7 @@
  *     npx tsx scripts/wipe-quotes-reset-remito.ts
  */
 import { PrismaClient } from "@prisma/client";
+import { revalidateAppCache } from "./revalidate-app-cache";
 
 const DEV_HOST = "ep-noisy-darkness-a6ms81wq";
 const PROD_HOST = "ep-cool-mud-a6k5vosf";
@@ -58,32 +57,6 @@ function assertTargetUrl(url: string, target: Target) {
   }
 
   console.log(`Target OK: TARGET=${target} host=${host}`);
-}
-
-async function revalidateAppCache() {
-  const secret = process.env.REVALIDATE_SECRET?.trim();
-  const base = (
-    process.env.APP_URL?.trim() ||
-    process.env.AUTH_URL?.trim() ||
-    ""
-  ).replace(/\/$/, "");
-
-  if (!secret || !base) {
-    console.warn(
-      "Skip app revalidate: set REVALIDATE_SECRET and AUTH_URL (or APP_URL) so POST /api/revalidate expires ALL Data Cache tags after wipe.",
-    );
-    return;
-  }
-
-  const res = await fetch(`${base}/api/revalidate`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${secret}` },
-  });
-  const body = await res.text();
-  if (!res.ok) {
-    throw new Error(`Revalidate failed (${res.status}): ${body}`);
-  }
-  console.log(`App cache revalidated via ${base}/api/revalidate`);
 }
 
 async function main() {

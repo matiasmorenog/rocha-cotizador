@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { filterFoldedSearch } from "@/lib/search-fold";
+import { AdminCustomerName } from "@/components/admin/admin-customer-name";
 import { useAnchoredFloatingStyle } from "@/hooks/use-anchored-floating-style";
 import {
   useExitPresence,
@@ -30,6 +31,7 @@ export type PickedCustomer = {
   id: string;
   code: string;
   name: string;
+  nameNote: string | null;
   priceListName: string | null;
   active: boolean;
 };
@@ -49,6 +51,7 @@ type SearchHit = {
   id: string;
   code: string;
   name: string;
+  nameNote?: string | null;
   priceList?: { id: string; name: string } | null;
   active: boolean;
 };
@@ -61,7 +64,7 @@ function filterCustomers(catalog: SearchHit[], q: string): SearchHit[] {
   // No take cap: filter full preload; DOM windowed in the listbox.
   return filterFoldedSearch(catalog, q, {
     primary: [(c) => c.code],
-    secondary: [(c) => c.name],
+    secondary: [(c) => c.name, (c) => c.nameNote ?? ""],
   });
 }
 
@@ -238,6 +241,7 @@ export function CustomerPicker({
       id: c.id,
       code: c.code,
       name: c.name,
+      nameNote: c.nameNote ?? null,
       priceListName: c.priceList?.name ?? null,
       active: c.active,
     });
@@ -352,7 +356,8 @@ export function CustomerPicker({
       >
         <div>
           <p className="text-sm font-medium text-neutral-900">
-            {value.code} — {value.name}
+            {value.code} —{" "}
+            <AdminCustomerName name={value.name} nameNote={value.nameNote} />
           </p>
           <p className="text-xs text-neutral-500">
             Lista: {value.priceListName ?? "Precio base"}
@@ -448,7 +453,8 @@ export function CustomerPicker({
                       onClick={() => pickCustomer(c)}
                     >
                       <span className="font-medium text-neutral-900">
-                        {c.code} — {c.name}
+                        {c.code} —{" "}
+                        <AdminCustomerName name={c.name} nameNote={c.nameNote} />
                       </span>
                       <span className="text-xs text-neutral-500">
                         Lista: {c.priceList?.name ?? "Precio base"}

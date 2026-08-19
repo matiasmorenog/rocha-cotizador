@@ -22,6 +22,8 @@ type RouteLoadingContextValue = {
   pendingPath: string | null;
   startLoading: (path?: string | null) => void;
   finishLoading: () => void;
+  /** Sync read of startLoading — overlay settle must not wait for React state. */
+  isNavActive: () => boolean;
 };
 
 const RouteLoadingContext = createContext<RouteLoadingContextValue | null>(null);
@@ -99,6 +101,8 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
     }, HIDE_AFTER_DONE_MS);
   }, [clearHide, clearTrickle]);
 
+  const isNavActive = useCallback(() => activeRef.current, []);
+
   useEffect(() => {
     return () => {
       clearTrickle();
@@ -114,8 +118,17 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
       pendingPath,
       startLoading,
       finishLoading,
+      isNavActive,
     }),
-    [progress, visible, pending, pendingPath, startLoading, finishLoading],
+    [
+      progress,
+      visible,
+      pending,
+      pendingPath,
+      startLoading,
+      finishLoading,
+      isNavActive,
+    ],
   );
 
   return (

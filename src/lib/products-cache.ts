@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
-import { CACHE_TAGS, invalidateProductsCache } from "@/lib/cache-tags";
+import { CACHE_TAGS } from "@/lib/cache-tag-names";
+import { invalidateProductsCache } from "@/lib/cache-tags";
 import {
   indexCatalogProducts,
   type ProductBase,
@@ -36,7 +37,7 @@ const getProductsCatalogVersionCached = unstable_cache(
     return stamps.sort().at(-1) ?? "0";
   },
   ["products-catalog-version"],
-  { tags: [CACHE_TAGS.products, CACHE_TAGS.priceLists], revalidate: 3600 },
+  { tags: [CACHE_TAGS.products, CACHE_TAGS.priceLists], revalidate: 86400 },
 );
 
 export async function getProductsCatalogVersion(): Promise<string> {
@@ -76,7 +77,7 @@ async function fetchActiveProductsBaseUncached(): Promise<ProductBase[]> {
 const getActiveProductsBaseCached = unstable_cache(
   async (): Promise<ProductBase[]> => fetchActiveProductsBaseUncached(),
   ["active-products-base"],
-  { tags: [CACHE_TAGS.products], revalidate: 3600 },
+  { tags: [CACHE_TAGS.products], revalidate: 86400 },
 );
 
 export async function getActiveProductsBase(): Promise<ProductBase[]> {

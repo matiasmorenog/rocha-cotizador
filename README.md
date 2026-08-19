@@ -36,6 +36,10 @@ Abrí [http://localhost:3000](http://localhost:3000).
 | Script | Uso |
 |--------|-----|
 | `npm run dev` | Dev server |
+| `npm run dev:log` | Dev server + tee to `.logs/dev.log` (same terminal output; survives IDE console glitches) |
+| `npm run dev:logs` | `tail -f .logs/dev.log` — run in a **second** terminal while `dev:log` is running |
+| `npm run dev:restart` | Kill stale Next on 3000/3001 for this repo, then `dev:log` |
+| `npm run dev:clean` / `dev:kill` | Clean restart / kill only (`scripts/dev-clean.sh`) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint `src/` |
 | `npm run db:push` | Sync schema |
