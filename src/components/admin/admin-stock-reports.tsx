@@ -57,7 +57,7 @@ export function AdminStockReports({
             return (
               <div
                 key={entry.id}
-                className="rounded-lg border border-neutral-200 bg-white"
+                className="rounded-lg border border-neutral-200 bg-white shadow-sm"
               >
                 <button
                   type="button"

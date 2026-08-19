@@ -257,7 +257,7 @@ export function StockRecountForm({
               key={animKey}
               onSubmit={onSubmit}
               className={cn(
-                "space-y-4 rounded-lg border border-neutral-200 bg-white p-4",
+                "space-y-4 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm",
                 exiting ? "payment-form-exit" : "payment-form-enter",
               )}
             >

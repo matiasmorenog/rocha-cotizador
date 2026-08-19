@@ -1,5 +1,5 @@
 /* Rocha Cotizador — admin Web Push service worker */
-/* v11 — drop any leftover Cache Storage from older SW builds */
+/* v12 — never cache HTML navigations (same-tab reload must hit the network) */
 
 const PUSH_CHANNEL = "rocha-admin-push";
 const FALLBACK_TITLE = "Nueva cotización";
@@ -38,6 +38,15 @@ self.addEventListener("activate", (event) => {
       }
       await self.clients.claim();
     })(),
+  );
+});
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.mode !== "navigate") return;
+  event.respondWith(
+    fetch(event.request, { cache: "no-store" }).catch(() =>
+      fetch(event.request),
+    ),
   );
 });
 

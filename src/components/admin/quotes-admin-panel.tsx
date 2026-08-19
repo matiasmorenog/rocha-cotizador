@@ -265,7 +265,7 @@ export function QuotesAdminPanel({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-lg border border-neutral-200 bg-white p-4">
+      <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
         <form onSubmit={onFilter} className="space-y-4">
           <div className="space-y-1">
             <p className="text-sm font-medium text-neutral-900">

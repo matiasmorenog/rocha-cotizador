@@ -32,8 +32,8 @@ function scriptUrl(reg: ServiceWorkerRegistration): string {
 }
 
 /**
- * Register `/sw.js` if missing. Avoid update() on every call (races push).
- * One update per browser tab session so clients pick up SW fixes (v8+).
+ * Register `/sw.js` if missing. Always `update()` so a same-tab refresh
+ * picks up a new worker (sessionStorage used to skip this after first load).
  */
 export async function ensureFreshServiceWorker(): Promise<ServiceWorkerRegistration> {
   const regs = await navigator.serviceWorker.getRegistrations();
@@ -53,16 +53,8 @@ export async function ensureFreshServiceWorker(): Promise<ServiceWorkerRegistrat
   const existing = await navigator.serviceWorker.getRegistration("/");
   if (existing && scriptUrl(existing).endsWith("/sw.js")) {
     await navigator.serviceWorker.ready;
-    try {
-      const bumpKey = "rocha-sw-bump-v9";
-      if (!sessionStorage.getItem(bumpKey)) {
-        sessionStorage.setItem(bumpKey, "1");
-        await existing.update().catch(() => undefined);
-        await navigator.serviceWorker.ready;
-      }
-    } catch {
-      // sessionStorage may be blocked
-    }
+    await existing.update().catch(() => undefined);
+    await navigator.serviceWorker.ready;
     return existing;
   }
 

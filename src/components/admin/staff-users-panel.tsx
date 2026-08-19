@@ -2,14 +2,21 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Pencil } from "lucide-react";
+import {
+  AdminTableActions,
+  AdminTableIconAction,
+} from "@/components/admin/admin-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useExitPresence } from "@/hooks/use-exit-presence";
 import {
   formatStaffPermissionLabels,
   staffSwitchesFromProfile,
 } from "@/lib/staff-permissions";
+import { cn } from "@/lib/utils";
 import type { StaffRole } from "@/types/auth";
 
 type StaffUser = {
@@ -38,6 +45,8 @@ export function StaffUsersPanel({
     [users, editingId],
   );
   const visibleUsers = users;
+  const showForm = Boolean(editing) || creating;
+  const { present, exiting, animKey } = useExitPresence(showForm, 250);
 
   return (
     <div className="space-y-4">
@@ -45,44 +54,57 @@ export function StaffUsersPanel({
         <p className="text-sm text-neutral-600">
           Usuarios internos con email y permisos (Administración, Cotización, Stock).
         </p>
-        <Button
-          type="button"
-          onClick={() => {
-            setCreating(true);
-            setEditingId(null);
-          }}
-        >
-          Nuevo usuario
-        </Button>
+        {!showForm ? (
+          <Button
+            type="button"
+            onClick={() => {
+              setCreating(true);
+              setEditingId(null);
+            }}
+          >
+            Nuevo usuario
+          </Button>
+        ) : null}
       </div>
 
-      {creating || editing ? (
-        <StaffUserForm
-          key={editing?.id ?? "new"}
-          user={editing ?? undefined}
-          currentUserId={currentUserId}
-          onCancel={() => {
-            setCreating(false);
-            setEditingId(null);
-          }}
-          onSaved={(saved) => {
-            setUsers((prev) => {
-              const idx = prev.findIndex((u) => u.id === saved.id);
-              if (idx >= 0) {
-                const next = [...prev];
-                next[idx] = saved;
-                return next;
-              }
-              return [saved, ...prev];
-            });
-            setCreating(false);
-            setEditingId(null);
-            router.refresh();
-          }}
-        />
-      ) : null}
+      <div
+        className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
+        style={{ gridTemplateRows: present && !exiting ? "1fr" : "0fr" }}
+      >
+        <div className="min-h-0 overflow-hidden">
+          {present ? (
+            <div
+              key={`${animKey}-${editing?.id ?? "new"}`}
+              className={cn(exiting ? "payment-form-exit" : "payment-form-enter")}
+            >
+              <StaffUserForm
+                user={editing ?? undefined}
+                currentUserId={currentUserId}
+                onCancel={() => {
+                  setCreating(false);
+                  setEditingId(null);
+                }}
+                onSaved={(saved) => {
+                  setUsers((prev) => {
+                    const idx = prev.findIndex((u) => u.id === saved.id);
+                    if (idx >= 0) {
+                      const next = [...prev];
+                      next[idx] = saved;
+                      return next;
+                    }
+                    return [saved, ...prev];
+                  });
+                  setCreating(false);
+                  setEditingId(null);
+                  router.refresh();
+                }}
+              />
+            </div>
+          ) : null}
+        </div>
+      </div>
 
-      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white">
+      <div className="overflow-x-auto rounded-lg border border-neutral-200 bg-white shadow-sm">
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
             <tr>
@@ -105,16 +127,16 @@ export function StaffUsersPanel({
                   {u.active ? "Activo" : "Inactivo"}
                 </td>
                 <td className="px-3 py-2 text-right">
-                  <button
-                    type="button"
-                    className="text-[var(--brand-primary)] hover:underline"
-                    onClick={() => {
-                      setCreating(false);
-                      setEditingId(u.id);
-                    }}
-                  >
-                    Editar
-                  </button>
+                  <AdminTableActions className="justify-end">
+                    <AdminTableIconAction
+                      label="Editar"
+                      icon={Pencil}
+                      onClick={() => {
+                        setCreating(false);
+                        setEditingId(u.id);
+                      }}
+                    />
+                  </AdminTableActions>
                 </td>
               </tr>
             ))}
@@ -221,7 +243,7 @@ function StaffUserForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
+      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
     >
       <p className="text-sm font-medium text-neutral-800">
         {isEdit ? "Editar usuario" : "Nuevo usuario"}

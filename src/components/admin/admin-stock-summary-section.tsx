@@ -74,7 +74,7 @@ export function AdminStockSummarySection({
   }, [fetchKey, tab, from, to, customerId]);
 
   return (
-    <div className="space-y-6 rounded-lg border border-neutral-200 bg-white p-4 sm:p-5">
+    <div className="space-y-6 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
       <div>
         <h2 className="text-lg font-semibold text-neutral-900">Resumen</h2>
         <p className="text-sm text-neutral-600">

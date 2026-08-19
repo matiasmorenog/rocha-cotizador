@@ -1,3 +1,4 @@
+import { APP_BUILD_ID } from "@/lib/app-build-id";
 import {
   indexCatalogProducts,
   type CatalogProduct,
@@ -19,6 +20,8 @@ export type CachedCatalog = {
   version: string;
   products: ProductBase[];
   fetchedAt: number;
+  /** Drop cache when this tab still holds a catalog from a previous deploy. */
+  buildId?: string;
 };
 
 /** Session-storage shape is ProductBase[]; memory always holds indexed lowers. */
@@ -80,6 +83,11 @@ export function readCachedCatalog(): IndexedCachedCatalog | null {
       sessionStorage.removeItem(CATALOG_KEY);
       return null;
     }
+    if (parsed.buildId !== APP_BUILD_ID) {
+      sessionStorage.removeItem(CATALOG_KEY);
+      sessionStorage.removeItem(UNIT_PRICES_KEY);
+      return null;
+    }
     if (Date.now() - parsed.fetchedAt > MAX_AGE_MS) {
       return null;
     }
@@ -105,6 +113,7 @@ export function writeCachedCatalog(catalog: CachedCatalog): void {
       version: catalog.version,
       fetchedAt: catalog.fetchedAt,
       products: stripSearchIndex(catalog.products),
+      buildId: APP_BUILD_ID,
     };
     sessionStorage.setItem(CATALOG_KEY, JSON.stringify(payload));
   } catch {

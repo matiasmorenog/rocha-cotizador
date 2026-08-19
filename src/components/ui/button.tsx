@@ -16,7 +16,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex cursor-pointer items-center justify-center font-medium transition-colors disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50",
+          "inline-flex cursor-pointer items-center justify-center font-medium shadow-sm transition-colors disabled:cursor-not-allowed disabled:pointer-events-none disabled:opacity-50",
           "rounded-md border border-transparent",
           variant === "primary" ? FOCUS_BRAND_PRIMARY : FOCUS_BRAND_BORDER,
           {

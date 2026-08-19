@@ -20,7 +20,7 @@ export function AdminTableActions({
 }
 
 const iconLinkClass = cn(
-  "inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] transition-colors hover:bg-[var(--brand-primary-soft)] active:brightness-95 disabled:pointer-events-none disabled:opacity-50",
+  "inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-[var(--brand-primary)] bg-white text-[var(--brand-primary)] shadow-sm transition-colors hover:bg-[var(--brand-primary-soft)] active:brightness-95 disabled:pointer-events-none disabled:opacity-50",
   FOCUS_BRAND_BORDER,
 );
 

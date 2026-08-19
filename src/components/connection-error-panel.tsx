@@ -35,7 +35,7 @@ export function ConnectionErrorPanel({
         <Link
           href={backHref}
           className={cn(
-            "inline-flex h-10 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm text-neutral-900 hover:bg-neutral-50",
+            "inline-flex h-10 items-center rounded-md border border-neutral-300 bg-white px-4 text-sm text-neutral-900 shadow-sm hover:bg-neutral-50",
             FOCUS_BRAND_BORDER,
           )}
         >
