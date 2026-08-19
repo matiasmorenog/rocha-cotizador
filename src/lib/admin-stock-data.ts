@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { CACHE_TAGS } from "@/lib/cache-tag-names";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
 import { getActiveProductsBase } from "@/lib/products-cache";
 import { resolveStockProductReportMap } from "@/lib/stock-product-lookup";

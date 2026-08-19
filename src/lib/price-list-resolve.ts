@@ -1,7 +1,7 @@
 import { Decimal } from "@prisma/client/runtime/library";
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { CACHE_TAGS } from "@/lib/cache-tag-names";
 import { unitPriceForProduct } from "@/lib/pricing";
 import { getActiveProductsBase } from "@/lib/products-cache";
 

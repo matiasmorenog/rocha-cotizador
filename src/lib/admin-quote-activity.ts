@@ -4,7 +4,7 @@ import {
   parseArgentinaDateTime,
   toArgentinaDatetimeLocal,
 } from "@/lib/argentina-time";
-import { CACHE_TAGS } from "@/lib/cache-tags";
+import { CACHE_TAGS } from "@/lib/cache-tag-names";
 import { db } from "@/lib/db";
 import {
   parseQuoteActivityPeriod,
