@@ -20,6 +20,7 @@ import {
   type SubscriptionPaymentDto,
 } from "@/lib/subscription-payments";
 import { cn } from "@/lib/utils";
+import { useExitPresence } from "@/hooks/use-exit-presence";
 
 function toArgentinaDateOnly(date: Date): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -46,6 +47,8 @@ const MONTHS = [
   "Diciembre",
 ] as const;
 
+const PAYMENT_FORM_EXIT_MS = 250;
+
 const selectClass = cn(
   "flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-10 text-sm",
   FOCUS_BRAND_BORDER,
@@ -66,6 +69,10 @@ export function PlatformPaymentsPanel({
   const { year: currentYear, month: currentMonth } = argentinaYearMonth();
   const [payments, setPayments] = useState(initial);
   const [creating, setCreating] = useState(false);
+  const { present, exiting, animKey } = useExitPresence(
+    creating,
+    PAYMENT_FORM_EXIT_MS,
+  );
 
   return (
     <div className="space-y-4">
@@ -81,19 +88,28 @@ export function PlatformPaymentsPanel({
         </Button>
       </div>
 
-      {creating ? (
-        <PaymentForm
-          defaultYear={currentYear}
-          defaultMonth={currentMonth}
-          years={yearOptions(currentYear)}
-          onCancel={() => setCreating(false)}
-          onSaved={(next) => {
-            setPayments(next);
-            setCreating(false);
-            router.refresh();
-          }}
-        />
-      ) : null}
+      <div
+        className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
+        style={{ gridTemplateRows: present && !exiting ? "1fr" : "0fr" }}
+      >
+        <div className="min-h-0 overflow-hidden">
+          {present ? (
+            <PaymentForm
+              key={animKey}
+              exiting={exiting}
+              defaultYear={currentYear}
+              defaultMonth={currentMonth}
+              years={yearOptions(currentYear)}
+              onCancel={() => setCreating(false)}
+              onSaved={(next) => {
+                setPayments(next);
+                setCreating(false);
+                router.refresh();
+              }}
+            />
+          ) : null}
+        </div>
+      </div>
 
       {payments.length === 0 ? (
         <p className="text-sm text-neutral-500">Todavía no hay pagos registrados.</p>
@@ -162,12 +178,14 @@ function PaymentForm({
   defaultYear,
   defaultMonth,
   years,
+  exiting,
   onCancel,
   onSaved,
 }: {
   defaultYear: number;
   defaultMonth: number;
   years: number[];
+  exiting: boolean;
   onCancel: () => void;
   onSaved: (payments: SubscriptionPaymentDto[]) => void;
 }) {
@@ -222,7 +240,10 @@ function PaymentForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
+      className={cn(
+        "space-y-4 rounded-lg border border-neutral-200 bg-white p-4",
+        exiting ? "payment-form-exit" : "payment-form-enter",
+      )}
     >
       <p className="text-sm font-medium text-neutral-800">
         {`Nuevo pago · ${formatPeriodLabel(periodYear, periodMonth)}`}

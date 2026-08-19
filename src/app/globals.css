@@ -351,6 +351,36 @@ select:not([multiple]):disabled {
   animation: rocha-skeleton-shimmer 1.4s ease-in-out infinite;
 }
 
+@keyframes payment-form-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.payment-form-enter {
+  animation: payment-form-enter 0.25s ease-out both;
+}
+
+@keyframes payment-form-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-0.5rem) scale(0.98);
+  }
+}
+
+.payment-form-exit {
+  animation: payment-form-exit 0.25s ease-in forwards;
+}
+
 /* Admin in-app notification toasts */
 @keyframes admin-toast-enter {
   from {
@@ -1204,6 +1234,8 @@ html[data-admin-theme="dark"] .admin-edit-hover:hover {
     background: #d6dee4;
   }
 
+  .payment-form-enter,
+  .payment-form-exit,
   .admin-toast-enter,
   .admin-toast-exit,
   .admin-stat-landed,
