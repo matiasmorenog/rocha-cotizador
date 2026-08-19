@@ -23,6 +23,8 @@ Solo **dos** branches Neon. Preview **no** crea branch Neon por deploy.
 
 **Vercel Preview ≡ Development:** mismas variables (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, …) y mismo Neon `development`. **Production** aislado (Neon `main` + secrets propios). No copiar Production → Preview/Development.
 
+En el proyecto **`rocha-cotizador`**, Preview de git branch `development` usa overrides `gitBranch=development`: `DATABASE_URL` = Neon `development` pooled (`ep-noisy-darkness…-pooler`); `AUTH_URL` = alias git de esa branch. El scope **Production** no se toca.
+
 ### Schema drift / wrong DB (léelo antes de un release)
 
 **Local DB ≠ production.** Son dos bases Neon distintas. Agentes: cualquier cambio Neon (schema, pooler/`DATABASE_URL`, branches) también en Production — ver `.cursor/rules/neon-prod-parity.mdc`.
@@ -150,7 +152,7 @@ Build command (Vercel): `npm run build` → `prisma generate && next build` (`po
 
 - Auto-deploy Vercel en **`main` está OFF** (`vercel.json`).
 - Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production** (incluye **pre-deploy schema sync** + **post-deploy smoke**: `/api/health` + homepage + **post-deploy cache revalidate**: CDN + Data + tags + brand images).
-- Push a `development` → Vercel Git deploy de **`rocha-cotizador-dev`**, luego Actions **post-deploy-cache-development** (mismo purge contra el proyecto demo).
+- Push a `development` → Git Preview en **`rocha-cotizador`** (SSO; `DATABASE_URL`/`AUTH_URL` override `gitBranch=development` → Neon development) **y** Git Production en **`rocha-cotizador-dev`** (público). Después Actions **post-deploy-cache-development** (purge contra el proyecto demo).
 - Secrets en GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (ver [`docs/ci.md`](docs/ci.md)).
 - Opcional pero recomendado: `DATABASE_URL_PRODUCTION` (Neon `main`, preferible URL **direct**) para el gate de schema sin depender solo de `vercel pull`.
 

@@ -9,8 +9,9 @@
 
 set -u
 
-# Production Vercel project — ship only via GitHub Actions (`vercel deploy --prod`).
-# Never spend preview minutes here (PRs / development / feature branches).
+# Production Vercel project — `main` ships only via GitHub Actions (`vercel deploy --prod`).
+# Git Preview is allowed solely for branch `development` (Neon development via branch env).
+# Feature PRs still skip here to save preview minutes.
 PROD_PROJECT_ID="prj_q87cwzCd7xVN7eDPzm81fDmjLKNz"
 
 proceed() {
@@ -28,13 +29,17 @@ if [[ "${VERCEL_ENV:-}" == "production" ]]; then
   proceed "production"
 fi
 
-# Prod project must not Git-build Preview/development — saves duplicate checks.
+ref="${VERCEL_GIT_COMMIT_REF:-}"
+
+# Prod project: Preview Git only for `development`. Never feature branches / PRs.
 if [[ "${VERCEL_PROJECT_ID:-}" == "$PROD_PROJECT_ID" ]]; then
+  if [[ "$ref" == "development" ]]; then
+    proceed "prod project development preview"
+  fi
   skip "prod project non-production git deploy (Actions-only)"
 fi
 
 # Integration branch always builds on the *dev* project when Vercel is allowed.
-ref="${VERCEL_GIT_COMMIT_REF:-}"
 if [[ "$ref" == "development" ]]; then
   proceed "branch ${ref}"
 fi
