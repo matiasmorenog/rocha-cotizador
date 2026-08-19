@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { ConnectionErrorPanel } from "@/components/connection-error-panel";
+import { forceReloadApp } from "@/lib/force-reload-app";
 
 export default function RemitoDetailError({
   error,
@@ -18,7 +19,7 @@ export default function RemitoDetailError({
 
   // Next 16: unstable_retry re-fetches Server Components (needed after DB blips).
   // reset only clears client error state without re-fetch.
-  const retry = unstable_retry ?? reset ?? (() => window.location.reload());
+  const retry = unstable_retry ?? reset ?? (() => void forceReloadApp());
 
   return (
     <ConnectionErrorPanel
