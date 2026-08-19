@@ -122,7 +122,10 @@ function ProductPickerInner({
 
   const inputElRef = inputRef ?? localInputRef;
   // Usable = in-memory products present (ready flag alone can lag parent gate).
-  const catalogUsable = catalog.ready || catalog.products.length > 0;
+  // Gate on isClient: useProductCatalog may read sessionStorage on the client
+  // first paint while SSR had an empty catalog — that mismatch hydrates badly.
+  const catalogUsable =
+    isClient && (catalog.ready || catalog.products.length > 0);
   const catalogLoading = catalog.loading && !catalogUsable;
   const trimmedQuery = query.trim();
   const deferredTrimmed = deferredQuery.trim();
