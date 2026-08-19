@@ -6,6 +6,7 @@ import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { assertSafeDestructiveDb } from "../prisma/assert-safe-db";
 import { normalizePhone } from "../src/lib/phone-contact";
+import { revalidateAppCache } from "./revalidate-app-cache";
 
 const db = new PrismaClient();
 
@@ -46,6 +47,7 @@ async function main() {
       console.log(`  ${e.code}: "${e.before}" → "${e.after ?? ""}"`);
     }
   }
+  await revalidateAppCache();
 }
 
 main()

@@ -2,6 +2,7 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { getProductsCatalogVersion } from "@/lib/products-cache";
 import { getCachedCustomerPricingContext } from "@/lib/price-list-resolve";
+import { staffHasPermission } from "@/lib/staff-permissions";
 
 export type CatalogAccess =
   | { ok: true; priceListId: string | null }
@@ -23,20 +24,33 @@ export async function resolveCatalogAccess(
     return { ok: true, priceListId: customer?.priceListId ?? null };
   }
 
-  if (session.user.role === "ADMIN") {
+  if (staffHasPermission(session.user.permissions, "quotes")) {
     const customerId = (req.nextUrl.searchParams.get("customerId") ?? "").trim();
-    if (!customerId) {
-      return {
-        ok: false,
-        status: 400,
-        error: "customerId requerido para precios de cliente",
-      };
+    if (customerId) {
+      const customer = await getCachedCustomerPricingContext(customerId);
+      if (!customer) {
+        return { ok: false, status: 404, error: "Cliente no encontrado" };
+      }
+      return { ok: true, priceListId: customer.priceListId };
     }
-    const customer = await getCachedCustomerPricingContext(customerId);
-    if (!customer) {
-      return { ok: false, status: 404, error: "Cliente no encontrado" };
+    if (
+      staffHasPermission(session.user.permissions, "stockReports") ||
+      staffHasPermission(session.user.permissions, "products")
+    ) {
+      return { ok: true, priceListId: null };
     }
-    return { ok: true, priceListId: customer.priceListId };
+    return {
+      ok: false,
+      status: 400,
+      error: "customerId requerido para precios de cliente",
+    };
+  }
+
+  if (
+    staffHasPermission(session.user.permissions, "stockReports") ||
+    staffHasPermission(session.user.permissions, "products")
+  ) {
+    return { ok: true, priceListId: null };
   }
 
   return { ok: false, status: 401, error: "No autorizado" };

@@ -9,17 +9,25 @@ export const dynamic = "force-dynamic";
  * missing columns/tables the app expects (the failure mode that once looked
  * like "wrong password" on admin login).
  */
+export const maxDuration = 15;
+
 export async function GET() {
   try {
-    await db.user.findFirst({
-      select: {
-        id: true,
-        inAppNotificationsEnabled: true,
-      },
-    });
-    await db.pushSubscription.findFirst({
-      select: { id: true },
-    });
+    await Promise.all([
+      db.user.findFirst({
+        select: {
+          id: true,
+          inAppNotificationsEnabled: true,
+          isSuperuser: true,
+        },
+      }),
+      db.pushSubscription.findFirst({
+        select: { id: true },
+      }),
+      db.subscriptionPayment.findFirst({
+        select: { id: true },
+      }),
+    ]);
     return NextResponse.json({ ok: true });
   } catch (err) {
     const code =

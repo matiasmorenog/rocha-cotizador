@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { invalidateAfterCustomerMutation } from "@/lib/cache-tags";
 import { normalizePhone } from "@/lib/phone-contact";
@@ -16,17 +16,13 @@ import {
 } from "@/lib/admin-excel";
 import { isBasePriceListLabel } from "@/lib/pricing";
 import { getBasePriceList } from "@/lib/price-list-resolve";
+import { emptyToNullNameNote } from "@/lib/customer-name-note";
 
 export const runtime = "nodejs";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") return null;
-  return session;
-}
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaffApi("customers"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -87,6 +83,9 @@ export async function POST(req: NextRequest) {
     const row = sheet.getRow(r);
     const codeRaw = cellText(getCellByHeader(row, headers, "código"));
     const name = cellText(getCellByHeader(row, headers, "nombre"));
+    const nameNote = emptyToNullNameNote(
+      cellText(getCellByHeader(row, headers, "aclaración")),
+    );
 
     if (!codeRaw && !name) {
       summary.skipped += 1;
@@ -151,6 +150,7 @@ export async function POST(req: NextRequest) {
       if (existing) {
         const data: {
           name: string;
+          nameNote: string | null;
           priceListId: string | null;
           address: string | null;
           phone: string | null;
@@ -163,6 +163,7 @@ export async function POST(req: NextRequest) {
           mustChangePassword?: boolean;
         } = {
           name,
+          nameNote,
           priceListId,
           address,
           phone,
@@ -188,6 +189,7 @@ export async function POST(req: NextRequest) {
           data: {
             code,
             name,
+            nameNote,
             passwordHash,
             mustChangePassword: true,
             priceListId,

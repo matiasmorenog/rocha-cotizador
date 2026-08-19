@@ -1,39 +1,12 @@
-import { db } from "@/lib/db";
+import { requireStaffPermission } from "@/lib/session";
+import { getAdminProductosPageData } from "@/lib/admin-products-data";
 import { ProductAdminTable } from "@/components/admin/product-admin-table";
 import { ExcelSyncPanel } from "@/components/admin/excel-sync-panel";
-import { sortPriceListsForDisplay } from "@/lib/pricing";
 
 export default async function AdminProductosPage() {
-  const [products, priceLists] = await Promise.all([
-    db.product.findMany({
-      include: {
-        priceListItems: {
-          select: { priceListId: true, unitPrice: true },
-        },
-      },
-      orderBy: { code: "asc" },
-    }),
-    db.priceList.findMany({
-      select: { id: true, name: true, active: true, excelKey: true, isBase: true },
-    }),
-  ]);
-
-  const orderedLists = sortPriceListsForDisplay(priceLists)
-    .filter((l) => !l.isBase)
-    .map(({ id, name, active }) => ({ id, name, active }));
-
-  const tableRows = products.map((p) => ({
-    id: p.id,
-    code: p.code,
-    name: p.name,
-    rubro: p.rubro,
-    basePrice: Number(p.basePrice),
-    active: p.active,
-    allowsUnitOrder: p.allowsUnitOrder,
-    listPrices: Object.fromEntries(
-      p.priceListItems.map((i) => [i.priceListId, Number(i.unitPrice)]),
-    ),
-  }));
+  await requireStaffPermission("products");
+  const { products: tableRows, priceLists: orderedLists, rubros } =
+    await getAdminProductosPageData();
 
   return (
     <div className="space-y-6">
@@ -53,7 +26,11 @@ export default async function AdminProductosPage() {
         broadcastCatalogStale
       />
 
-      <ProductAdminTable products={tableRows} priceLists={orderedLists} />
+      <ProductAdminTable
+        products={tableRows}
+        priceLists={orderedLists}
+        rubros={rubros}
+      />
     </div>
   );
 }

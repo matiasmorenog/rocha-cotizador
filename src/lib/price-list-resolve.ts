@@ -64,7 +64,7 @@ export async function getCachedCustomerPricingContext(
       return customer;
     },
     ["customer-pricing-context", customerId],
-    { tags: [CACHE_TAGS.customers], revalidate: 3600 },
+    { tags: [CACHE_TAGS.customers], revalidate: 86400 },
   );
   return cached();
 }
@@ -125,7 +125,7 @@ export async function getCachedUnitPricesForCatalog(
     ["catalog-unit-prices", listKey, catalogVersion],
     {
       tags: [CACHE_TAGS.products, CACHE_TAGS.priceLists],
-      revalidate: 3600,
+      revalidate: 86400,
     },
   );
   return cached();

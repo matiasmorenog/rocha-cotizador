@@ -6,6 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  CUSTOMER_MODULE_LABELS,
+  CUSTOMER_MODULES,
+  DEFAULT_CUSTOMER_MODULE_FLAGS,
+  type CustomerModuleFlags,
+} from "@/lib/customer-modules";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
@@ -20,6 +26,7 @@ type CustomerRow = {
   id: string;
   code: string;
   name: string;
+  nameNote: string | null;
   priceListId: string | null;
   address: string | null;
   phone: string | null;
@@ -28,6 +35,7 @@ type CustomerRow = {
   paymentTerms: string | null;
   deliveryHours: string | null;
   active: boolean;
+  modules?: CustomerModuleFlags;
 };
 
 export function CustomerAdminForm({
@@ -37,7 +45,7 @@ export function CustomerAdminForm({
 }: {
   customer?: CustomerRow;
   priceLists: PriceListOption[];
-  /** Create mode: dismiss form without saving. */
+  /** Dismiss form without saving (create or edit). */
   onCancel?: () => void;
 }) {
   const router = useRouter();
@@ -45,6 +53,7 @@ export function CustomerAdminForm({
     priceLists.find((l) => l.isBase)?.id ?? priceLists[0]?.id ?? "";
   const [code, setCode] = useState(customer?.code ?? "");
   const [name, setName] = useState(customer?.name ?? "");
+  const [nameNote, setNameNote] = useState(customer?.nameNote ?? "");
   const [priceListId, setPriceListId] = useState(
     customer?.priceListId ?? baseListId,
   );
@@ -55,6 +64,9 @@ export function CustomerAdminForm({
   const [deliveryHours, setDeliveryHours] = useState(customer?.deliveryHours ?? "");
   const [notes, setNotes] = useState(customer?.notes ?? "");
   const [active, setActive] = useState(customer?.active ?? true);
+  const [modules, setModules] = useState<CustomerModuleFlags>(
+    customer?.modules ?? DEFAULT_CUSTOMER_MODULE_FLAGS,
+  );
   const [resetPin, setResetPin] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +85,7 @@ export function CustomerAdminForm({
         id: customer?.id,
         code,
         name,
+        nameNote,
         priceListId: priceListId || baseListId || null,
         address,
         phone,
@@ -81,6 +94,7 @@ export function CustomerAdminForm({
         deliveryHours,
         notes,
         active,
+        modules,
         resetPin: customer ? resetPin : true,
       }),
     });
@@ -114,14 +128,43 @@ export function CustomerAdminForm({
       <p className="text-sm font-medium text-neutral-800">
         {isEdit ? "Editar cliente" : "Nuevo cliente"}
       </p>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label>Código</Label>
-          <Input value={code} onChange={(e) => setCode(e.target.value)} required />
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+        <div className="shrink-0 space-y-1">
+          <Label htmlFor="customer-code">Código</Label>
+          <Input
+            id="customer-code"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            required
+            inputMode="numeric"
+            maxLength={3}
+            className="w-20 max-w-[4rem]"
+          />
         </div>
-        <div className="space-y-1">
-          <Label>Nombre</Label>
-          <Input value={name} onChange={(e) => setName(e.target.value)} required />
+        <div className="min-w-0 flex-1 space-y-1">
+          <Label htmlFor="customer-name">Nombre</Label>
+          <Input
+            id="customer-name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+        <div className="min-w-0 flex-1 space-y-1">
+          <Label htmlFor="customer-name-note">Aclaración</Label>
+          <Input
+            id="customer-name-note"
+            value={nameNote}
+            onChange={(e) => setNameNote(e.target.value)}
+            placeholder="Opcional — ej. contacto o sucursal"
+            aria-describedby="customer-name-note-hint"
+          />
+          <p
+            id="customer-name-note-hint"
+            className="text-xs text-neutral-500"
+          >
+            Solo visible en admin; el cliente ve únicamente el nombre.
+          </p>
         </div>
       </div>
 
@@ -214,6 +257,33 @@ export function CustomerAdminForm({
         />
       </div>
 
+      <div className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+          Módulos
+        </p>
+        <div className="flex flex-col gap-2">
+          {CUSTOMER_MODULES.map((module) => (
+            <label
+              key={module}
+              htmlFor={`customer-module-${module}`}
+              className="flex cursor-pointer items-center gap-2.5 text-sm"
+            >
+              <Switch
+                id={`customer-module-${module}`}
+                checked={modules[module]}
+                onChange={(e) =>
+                  setModules((prev) => ({
+                    ...prev,
+                    [module]: e.target.checked,
+                  }))
+                }
+              />
+              {CUSTOMER_MODULE_LABELS[module]}
+            </label>
+          ))}
+        </div>
+      </div>
+
       <label
         htmlFor="customer-active"
         className="flex cursor-pointer items-center gap-2.5 text-sm"
@@ -242,11 +312,8 @@ export function CustomerAdminForm({
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
 
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={loading}>
-          {loading ? "Guardando…" : customer ? "Actualizar cliente" : "Crear cliente"}
-        </Button>
-        {!isEdit && onCancel ? (
+      <div className="flex flex-wrap justify-end gap-2">
+        {onCancel ? (
           <Button
             type="button"
             variant="outline"
@@ -256,6 +323,9 @@ export function CustomerAdminForm({
             Cancelar
           </Button>
         ) : null}
+        <Button type="submit" disabled={loading}>
+          {loading ? "Guardando…" : customer ? "Actualizar cliente" : "Crear cliente"}
+        </Button>
       </div>
     </form>
   );

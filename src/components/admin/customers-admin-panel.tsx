@@ -7,6 +7,7 @@ import {
   AdminTableIconAction,
 } from "@/components/admin/admin-table";
 import { CustomerAdminForm } from "@/components/admin/customer-admin-form";
+import { AdminCustomerName } from "@/components/admin/admin-customer-name";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
@@ -22,11 +23,13 @@ import {
 import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
 import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
 import { useSelectedRow } from "@/hooks/use-selected-row";
+import type { CustomerModuleFlags } from "@/lib/customer-modules";
 
 export type CustomerListRow = {
   id: string;
   code: string;
   name: string;
+  nameNote: string | null;
   priceListId: string | null;
   priceListName: string | null;
   address: string | null;
@@ -36,6 +39,7 @@ export type CustomerListRow = {
   paymentTerms: string | null;
   deliveryHours: string | null;
   active: boolean;
+  modules: CustomerModuleFlags;
 };
 
 export type PriceListOption = {
@@ -64,7 +68,7 @@ export function CustomersAdminPanel({
     () =>
       filterFoldedSearch(customers, query, {
         primary: [(c) => c.code],
-        secondary: [(c) => c.name],
+        secondary: [(c) => c.name, (c) => c.nameNote ?? ""],
         emptyReturnsAll: true,
       }),
     [customers, query],
@@ -122,13 +126,17 @@ export function CustomersAdminPanel({
         <CustomerAdminForm
           key={editing?.id ?? "new"}
           priceLists={priceLists}
-          onCancel={creating ? () => setCreating(false) : undefined}
+          onCancel={() => {
+            setCreating(false);
+            setEditingId(null);
+          }}
           customer={
             editing
               ? {
                   id: editing.id,
                   code: editing.code,
                   name: editing.name,
+                  nameNote: editing.nameNote,
                   priceListId: editing.priceListId,
                   address: editing.address,
                   phone: editing.phone,
@@ -137,6 +145,7 @@ export function CustomersAdminPanel({
                   paymentTerms: editing.paymentTerms,
                   deliveryHours: editing.deliveryHours,
                   active: editing.active,
+                  modules: editing.modules,
                 }
               : undefined
           }
@@ -182,9 +191,11 @@ export function CustomersAdminPanel({
                       >
                         <td className="px-3 py-2 font-mono">{c.code}</td>
                         <td className="px-3 py-2">
-                          <span className="admin-table-name-2l max-w-[14rem]">
-                            {c.name}
-                          </span>
+                          <AdminCustomerName
+                            name={c.name}
+                            nameNote={c.nameNote}
+                            className="admin-table-name-2l max-w-[14rem]"
+                          />
                         </td>
                         <td className="px-3 py-2 text-neutral-700">
                           <span className="admin-table-name-2l max-w-[16rem]">

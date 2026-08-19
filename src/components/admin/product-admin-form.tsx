@@ -10,6 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { ProductTipoField } from "@/components/admin/product-tipo-field";
 import { notifyCatalogStale } from "@/lib/client-catalog-cache";
 import { parseArNumber } from "@/lib/utils";
 
@@ -20,7 +21,13 @@ export type PriceListOption = {
 };
 
 /** Compact create-only form. Edits (incl. list prices) happen inline in ProductAdminTable. */
-export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
+export function ProductAdminForm({
+  rubros,
+  onCancel,
+}: {
+  rubros: string[];
+  onCancel: () => void;
+}) {
   const router = useRouter();
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -97,10 +104,7 @@ export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
             required
           />
         </div>
-        <div className="space-y-1">
-          <Label>Rubro</Label>
-          <Input value={rubro} onChange={(e) => setRubro(e.target.value)} />
-        </div>
+        <ProductTipoField rubros={rubros} value={rubro} onChange={setRubro} />
         <div className="space-y-1">
           <Label>Precio base</Label>
           <ArNumberInput
@@ -138,10 +142,7 @@ export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
       </label>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={loading}>
-          {loading ? "Guardando…" : "Crear producto"}
-        </Button>
+      <div className="flex flex-wrap justify-end gap-2">
         <Button
           type="button"
           variant="outline"
@@ -149,6 +150,9 @@ export function ProductAdminForm({ onCancel }: { onCancel: () => void }) {
           onClick={onCancel}
         >
           Cancelar
+        </Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? "Guardando…" : "Crear producto"}
         </Button>
       </div>
     </form>

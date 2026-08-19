@@ -1,18 +1,13 @@
-import { db } from "@/lib/db";
+import { requireStaffPermission } from "@/lib/session";
 import { Badge } from "@/components/ui/badge";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { PriceListCreateForm } from "@/components/admin/price-list-create-form";
 import { PriceListRowActions } from "@/components/admin/price-list-row-actions";
-import { sortPriceListsForDisplay } from "@/lib/pricing";
+import { getAdminPriceListsPageData } from "@/lib/admin-price-lists-data";
 
 export default async function AdminListasPreciosPage() {
-  const lists = sortPriceListsForDisplay(
-    await db.priceList.findMany({
-      include: {
-        _count: { select: { items: true, customers: true } },
-      },
-    }),
-  );
+  await requireStaffPermission("priceLists");
+  const lists = await getAdminPriceListsPageData();
 
   return (
     <div className="space-y-6">
@@ -48,8 +43,8 @@ export default async function AdminListasPreciosPage() {
                 <td className="px-3 py-2 font-mono text-neutral-600">
                   {l.excelKey ?? "—"}
                 </td>
-                <td className="px-3 py-2">{l._count.items}</td>
-                <td className="px-3 py-2">{l._count.customers}</td>
+                <td className="px-3 py-2">{l.itemCount}</td>
+                <td className="px-3 py-2">{l.customerCount}</td>
                 <td className="px-3 py-2">
                   <Badge variant={l.active ? "success" : "danger"}>
                     {l.active ? "Activa" : "Inactiva"}
@@ -59,7 +54,7 @@ export default async function AdminListasPreciosPage() {
                   <PriceListRowActions
                     id={l.id}
                     name={l.name}
-                    customerCount={l._count.customers}
+                    customerCount={l.customerCount}
                     isBase={l.isBase}
                   />
                 </td>

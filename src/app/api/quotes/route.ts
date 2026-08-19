@@ -17,8 +17,12 @@ import {
   validateDeliveryDateYmd,
 } from "@/lib/delivery-date";
 import { nextQuoteNumber } from "@/lib/quotes";
+import { staffHasPermission } from "@/lib/staff-permissions";
 import { formatPrice } from "@/lib/utils";
 import { buildQuoteWhatsAppMessage, whatsappUrl } from "@/lib/whatsapp";
+
+/** Create + optional Web Push; Neon cold + PDF-adjacent work needs headroom. */
+export const maxDuration = 60;
 
 const bodySchema = z.object({
   notes: z.string().optional(),
@@ -57,7 +61,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
     customerId = session.user.customerId;
-  } else if (session.user.role === "ADMIN") {
+  } else if (staffHasPermission(session.user.permissions, "quotes")) {
     if (!parsed.data.customerId) {
       return NextResponse.json({ error: "customerId requerido" }, { status: 400 });
     }
@@ -74,13 +78,13 @@ export async function POST(req: NextRequest) {
   }
 
   const productIds = parsed.data.items.map((i) => i.productId);
-  const products = await db.product.findMany({
-    where: { id: { in: productIds }, active: true },
-  });
+  const [products, discountListId] = await Promise.all([
+    db.product.findMany({
+      where: { id: { in: productIds }, active: true },
+    }),
+    effectiveDiscountPriceListId(customer.priceListId),
+  ]);
   const byId = new Map(products.map((p) => [p.id, p]));
-  const discountListId = await effectiveDiscountPriceListId(
-    customer.priceListId,
-  );
   const listPrices = discountListId
     ? await getPriceListUnitPricesByProductId(discountListId)
     : null;
@@ -201,22 +205,25 @@ export async function POST(req: NextRequest) {
 
   invalidateAfterQuoteCreate();
 
-  // Customer-created quotes only — admin self-create must not notify.
-  // Await (never throws) so local turbopack / Next after() cannot drop the FCM send.
-  if (session.user.role === "CUSTOMER") {
-    await notifyAdminsNewQuote({
-      id: quote.id,
-      number: quote.number,
-      customerName: customer.name,
-    });
-  }
-
   const origin =
     req.nextUrl.origin ||
     process.env.AUTH_URL?.replace(/\/$/, "") ||
     "";
   const remitoUrl = `${origin}/remitos/${quote.number}`;
-  const notifyDigits = await getWhatsAppNotifyDigits();
+
+  // Customer-created quotes only — admin self-create must not notify.
+  // Await (never throws) so local turbopack / Next after() cannot drop the FCM send.
+  // Parallel with WhatsApp digits lookup to cut post-create latency.
+  const [, notifyDigits] = await Promise.all([
+    session.user.role === "CUSTOMER"
+      ? notifyAdminsNewQuote({
+          id: quote.id,
+          number: quote.number,
+          customerName: customer.name,
+        })
+      : Promise.resolve(),
+    getWhatsAppNotifyDigits(),
+  ]);
   const message = buildQuoteWhatsAppMessage({
     quoteNumber: quote.number,
     customerCode: customer.code,

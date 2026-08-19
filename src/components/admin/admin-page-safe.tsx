@@ -24,7 +24,9 @@ function AdminPageFallback() {
 export function AdminPageSafe({ children }: { children: ReactNode }) {
   return (
     <AdminClientSafe label="admin-page" fallback={<AdminPageFallback />}>
-      <RoutePendingShell variant="admin">{children}</RoutePendingShell>
+      <RoutePendingShell variant="admin" coverGutters={false}>
+        {children}
+      </RoutePendingShell>
     </AdminClientSafe>
   );
 }

@@ -1,35 +1,17 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { db } from "@/lib/db";
+import { requireStaffPermission } from "@/lib/session";
 import { PriceListEditor } from "@/components/admin/price-list-editor";
+import { getAdminPriceListDetail } from "@/lib/admin-price-lists-data";
 
 export default async function AdminListaPrecioDetailPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireStaffPermission("priceLists");
   const { id } = await params;
-  const list = await db.priceList.findUnique({
-    where: { id },
-    include: {
-      items: {
-        include: {
-          product: {
-            select: {
-              id: true,
-              code: true,
-              name: true,
-              rubro: true,
-              basePrice: true,
-              active: true,
-            },
-          },
-        },
-        orderBy: { product: { code: "asc" } },
-      },
-      _count: { select: { customers: true } },
-    },
-  });
+  const list = await getAdminPriceListDetail(id);
 
   if (!list) notFound();
 
@@ -46,7 +28,7 @@ export default async function AdminListaPrecioDetailPage({
           {list.name}
         </h1>
         <p className="text-sm text-neutral-600">
-          {list._count.customers} cliente(s) ·{" "}
+          {list.customerCount} cliente(s) ·{" "}
           {list.isBase
             ? "Precio base (Product.basePrice)"
             : list.excelKey
@@ -56,23 +38,13 @@ export default async function AdminListaPrecioDetailPage({
       </div>
 
       <PriceListEditor
-        key={`${list.id}-${list.items.length}-${list.updatedAt.toISOString()}`}
+        key={`${list.id}-${list.items.length}-${list.updatedAt}`}
         priceList={{
           id: list.id,
           name: list.name,
           active: list.active,
           isBase: list.isBase,
-          items: list.items.map((i) => ({
-            productId: i.productId,
-            unitPrice: Number(i.unitPrice),
-            product: {
-              code: i.product.code,
-              name: i.product.name,
-              rubro: i.product.rubro,
-              basePrice: Number(i.product.basePrice),
-              active: i.product.active,
-            },
-          })),
+          items: list.items,
         }}
       />
     </div>

@@ -11,6 +11,7 @@ import {
   ProductAdminForm,
   type PriceListOption,
 } from "@/components/admin/product-admin-form";
+import { ProductTipoField } from "@/components/admin/product-tipo-field";
 import {
   productOrderModeBadge,
   productOrderModeDescription,
@@ -73,11 +74,13 @@ function buildListPricePayload(
 function ProductEditRow({
   product,
   activeLists,
+  rubros,
   onCancel,
   rowProps,
 }: {
   product: ProductTableRow;
   activeLists: PriceListOption[];
+  rubros: string[];
   onCancel: () => void;
   rowProps?: RowSelectionProps;
 }) {
@@ -180,13 +183,13 @@ function ProductEditRow({
         />
       </td>
       <td className="px-3 py-2">
-        <Input
-          form={formId}
-          className={cellInputClass}
+        <ProductTipoField
+          rubros={rubros}
           value={rubro}
-          onChange={(e) => setRubro(e.target.value)}
+          onChange={setRubro}
+          form={formId}
           disabled={loading}
-          aria-label="Rubro"
+          compact
         />
       </td>
       <td className="px-3 py-2">
@@ -332,9 +335,12 @@ function ProductViewRow({
 export function ProductAdminTable({
   products,
   priceLists,
+  rubros,
 }: {
   products: ProductTableRow[];
   priceLists: PriceListOption[];
+  /** Uniq Tipo options derived from the loaded product list. */
+  rubros: string[];
 }) {
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
@@ -378,7 +384,7 @@ export function ProductAdminTable({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar código, nombre o rubro…"
+          placeholder="Buscar código, nombre o tipo…"
           aria-label="Buscar productos"
           className="min-w-0 flex-1"
         />
@@ -394,7 +400,10 @@ export function ProductAdminTable({
         ) : null}
       </div>
       {creating ? (
-        <ProductAdminForm onCancel={() => setCreating(false)} />
+        <ProductAdminForm
+          rubros={rubros}
+          onCancel={() => setCreating(false)}
+        />
       ) : null}
       <div ref={tableHeightLockRef}>
         <DataTableScroll className="data-table-rows-2l">
@@ -403,7 +412,7 @@ export function ProductAdminTable({
               <tr>
                 <th className="px-3 py-2">Código</th>
                 <th className="px-3 py-2">Nombre</th>
-                <th className="px-3 py-2">Rubro</th>
+                <th className="px-3 py-2">Tipo</th>
                 <th className="px-3 py-2">Base</th>
                 {activeLists.map((l) => (
                   <th key={l.id} className="whitespace-nowrap px-3 py-2">
@@ -422,6 +431,7 @@ export function ProductAdminTable({
                     key={p.id}
                     product={p}
                     activeLists={activeLists}
+                    rubros={rubros}
                     onCancel={() => setEditingId(null)}
                     rowProps={rowProps(p.id)}
                   />

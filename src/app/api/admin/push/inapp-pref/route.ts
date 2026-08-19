@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") return null;
-  return session;
-}
 
 const patchSchema = z.object({
   enabled: z.boolean(),
@@ -50,7 +44,7 @@ async function setInAppNotificationsEnabled(
  * Client then calls session.update({ inAppNotificationsEnabled }) — no GET/poll.
  */
 export async function PATCH(req: NextRequest) {
-  const session = await requireAdmin();
+  const session = await requireStaffApi();
   if (!session) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }

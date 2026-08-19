@@ -4,9 +4,11 @@ import { RecentQuotesList } from "@/components/admin/recent-quotes-list";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
 import { getAdminQuoteActivity, parseQuoteActivityPeriod } from "@/lib/admin-quote-activity";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
+import { requireStaffSession } from "@/lib/session";
+import { isStaffAdmin, staffHasPermission } from "@/lib/staff-permissions";
 import { cn, formatPrice } from "@/lib/utils";
 
-/** Dynamic shell; dashboard payload uses tagged Data Cache (TTL 1h, bust on quote create / wipe). */
+/** Dynamic shell; dashboard payload uses tagged Data Cache (TTL 24h, bust on quote create / wipe). */
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage({
@@ -14,6 +16,10 @@ export default async function AdminDashboardPage({
 }: {
   searchParams: Promise<{ chart?: string }>;
 }) {
+  const session = await requireStaffSession();
+  const isAdmin = isStaffAdmin(session.user.role);
+  const canQuotes = staffHasPermission(session.user.permissions, "quotes");
+
   const { chart: chartParam } = await searchParams;
   const chartPeriod = parseQuoteActivityPeriod(chartParam);
 
@@ -30,15 +36,19 @@ export default async function AdminDashboardPage({
     activity,
   ] = await Promise.all([
     getAdminDashboardData(),
-    getAdminQuoteActivity(chartPeriod),
+    isAdmin ? getAdminQuoteActivity(chartPeriod) : Promise.resolve(null),
   ]);
 
   const stats: { label: string; value: number | string; hint: string }[] = [
-    {
-      label: "Cotizaciones hoy",
-      value: quotesToday,
-      hint: `${formatPrice(quotesTodayTotal)} · ayer ${quotesYesterday}`,
-    },
+    ...(isAdmin
+      ? [
+          {
+            label: "Cotizaciones hoy",
+            value: quotesToday,
+            hint: `${formatPrice(quotesTodayTotal)} · ayer ${quotesYesterday}`,
+          },
+        ]
+      : []),
     {
       label: "Clientes que cotizaron hoy",
       value: customersQuotedToday,
@@ -58,15 +68,17 @@ export default async function AdminDashboardPage({
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="text-2xl font-semibold text-neutral-900">Dashboard</h1>
-        <Link
-          href="/admin/cotizaciones/nueva"
-          className={cn(
-            "inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:opacity-90",
-            FOCUS_BRAND_PRIMARY,
-          )}
-        >
-          Nueva cotización
-        </Link>
+        {canQuotes ? (
+          <Link
+            href="/admin/cotizaciones/nueva"
+            className={cn(
+              "inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:opacity-90",
+              FOCUS_BRAND_PRIMARY,
+            )}
+          >
+            Nueva cotización
+          </Link>
+        ) : null}
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         {stats.map((s) => (
@@ -83,21 +95,25 @@ export default async function AdminDashboardPage({
         ))}
       </div>
 
-      <AdminQuoteActivitySection
-        initial={{
-          period: activity.period,
-          points: activity.points,
-          totalQuotes: activity.totalQuotes,
-          totalRevenue: activity.totalRevenue,
-        }}
-      />
+      {isAdmin && activity ? (
+        <AdminQuoteActivitySection
+          initial={{
+            period: activity.period,
+            points: activity.points,
+            totalQuotes: activity.totalQuotes,
+            totalRevenue: activity.totalRevenue,
+          }}
+        />
+      ) : null}
 
       <div className="rounded-lg border border-neutral-200 bg-white">
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
           <h2 className="font-medium text-neutral-900">Últimas cotizaciones</h2>
-          <Link href="/admin/cotizaciones" className="text-sm text-[var(--brand-primary)]">
-            Ver todas
-          </Link>
+          {canQuotes ? (
+            <Link href="/admin/cotizaciones" className="text-sm text-[var(--brand-primary)]">
+              Ver todas
+            </Link>
+          ) : null}
         </div>
         <RecentQuotesList recent={recent} />
       </div>

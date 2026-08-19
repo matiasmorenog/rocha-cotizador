@@ -41,6 +41,8 @@ type ProductPickerProps = {
   customerId?: string;
   value: CatalogSearchProduct | null;
   onChange: (product: CatalogSearchProduct | null) => void;
+  /** Optional filter (e.g. stock module rubro split). */
+  filterProduct?: (product: CatalogSearchProduct) => boolean;
   /** Focus the search field after adding a line, etc. */
   inputRef?: RefObject<HTMLInputElement | null>;
 };
@@ -95,6 +97,7 @@ function ProductPickerInner({
   customerId,
   value,
   onChange,
+  filterProduct,
   inputRef,
 }: ProductPickerProps) {
   const catalog = useProductCatalog({ customerId });
@@ -138,24 +141,27 @@ function ProductPickerInner({
       return [] as CatalogSearchProduct[];
     }
     // No take cap: filter full in-memory catalog; DOM windowed below.
-    return mapCatalogSearch(
+    const rows = mapCatalogSearch(
       catalog.searchIndex,
       catalog.unitPrices,
       deferredTrimmed,
       Number.POSITIVE_INFINITY,
     );
+    return filterProduct ? rows.filter(filterProduct) : rows;
   }, [
     value,
     deferredTrimmed,
     catalog.products.length,
     catalog.searchIndex,
     catalog.unitPrices,
+    filterProduct,
   ]);
 
-  const results = useMemo(
-    () => (catalog.products.length > 0 ? warmResults : (coldResults ?? [])),
-    [catalog.products.length, warmResults, coldResults],
-  );
+  const results = useMemo(() => {
+    const base =
+      catalog.products.length > 0 ? warmResults : (coldResults ?? []);
+    return filterProduct ? base.filter(filterProduct) : base;
+  }, [catalog.products.length, warmResults, coldResults, filterProduct]);
 
   const {
     visible: visibleResults,
@@ -299,9 +305,10 @@ function ProductPickerInner({
     setColdInFlight(true);
     void searchAsyncRef.current(q).then((rows) => {
       if (requestId !== searchRequestId.current) return;
-      setColdResults(rows);
+      const filtered = filterProduct ? rows.filter(filterProduct) : rows;
+      setColdResults(filtered);
       setColdInFlight(false);
-      setHighlightIndex(rows.length > 0 ? 0 : -1);
+      setHighlightIndex(filtered.length > 0 ? 0 : -1);
     });
   }
 

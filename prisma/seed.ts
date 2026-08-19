@@ -19,7 +19,11 @@ import {
   productAllowsUnitOrderByCode,
 } from "../src/lib/unit-order-products";
 import { padCustomerCode, pinFromCustomerCode } from "../src/lib/utils";
+import { seedCustomerModuleAccess } from "../src/lib/customer-modules";
+import { seedStockSampleData } from "../src/lib/stock-seed";
+import { parsePlatformOwnerEmails } from "../src/lib/platform-owner";
 import { assertSafeDestructiveDb } from "./assert-safe-db";
+import { revalidateAppCache } from "../scripts/revalidate-app-cache";
 
 const db = new PrismaClient();
 
@@ -65,14 +69,33 @@ async function seedAdmin() {
       name: "Administrador",
       passwordHash,
       role: "ADMIN",
+      canQuotes: true,
+      canStock: true,
     },
     update: {
       passwordHash,
       role: "ADMIN",
+      canQuotes: true,
+      canStock: true,
     },
   });
 
   console.log(`Admin ready: ${email}`);
+}
+
+async function bootstrapSuperuserFromEnv() {
+  const email = parsePlatformOwnerEmails()[0];
+  if (!email) return;
+  const r = await db.user.updateMany({
+    where: { email },
+    data: {
+      role: "SUPERUSER",
+      isSuperuser: true,
+      canQuotes: false,
+      canStock: false,
+    },
+  });
+  console.log(`Superuser role set for ${r.count} matching user(s)`);
 }
 
 /**
@@ -420,18 +443,36 @@ async function main() {
 
   await seedBusinessSettings();
   await seedAdmin();
+  await bootstrapSuperuserFromEnv();
 
   const xlsxPath = path.join(process.cwd(), "prisma", "data", "rocha_data.xlsx");
   if (!fs.existsSync(xlsxPath)) {
     console.warn(`Excel not found at ${xlsxPath} — skipping catalog seed`);
     await seedUnitOrderFlags();
+    const modules = await seedCustomerModuleAccess();
+    console.log(
+      `Customer modules: Mermas=${modules.mermas}, Consumibles=${modules.consumables}`,
+    );
+    const stock = await seedStockSampleData();
+    console.log(
+      `Stock sample: merma lines=${stock.mermaLines}, consumibles lines=${stock.consumableLines}, merma=${stock.mermaCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
+    );
     return;
   }
   await seedFromExcel(xlsxPath);
+  const modules = await seedCustomerModuleAccess();
+  console.log(
+    `Customer modules: Mermas=${modules.mermas}, Consumibles=${modules.consumables}`,
+  );
+  const stock = await seedStockSampleData();
+  console.log(
+    `Stock sample: merma lines=${stock.mermaLines}, consumibles lines=${stock.consumableLines}, merma=${stock.mermaCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
+  );
 }
 
 main()
   .then(async () => {
+    await revalidateAppCache();
     await db.$disconnect();
   })
   .catch(async (err) => {

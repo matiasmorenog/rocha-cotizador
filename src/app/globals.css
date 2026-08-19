@@ -66,13 +66,13 @@ body,
   background-image:
     radial-gradient(
       ellipse 80% 50% at 10% -10%,
-      color-mix(in srgb, #d7e8e5 75%, transparent) 0%,
-      transparent 55%
+      color-mix(in srgb, #d7e8e5 94%, transparent) 0%,
+      transparent 64%
     ),
     radial-gradient(
       ellipse 60% 40% at 100% 0%,
-      color-mix(in srgb, #c5ddd8 45%, transparent) 0%,
-      transparent 50%
+      color-mix(in srgb, #c5ddd8 68%, transparent) 0%,
+      transparent 60%
     );
   background-repeat: no-repeat;
 }
@@ -130,6 +130,12 @@ body {
   border-color: var(--brand-primary);
   background-color: color-mix(in srgb, var(--brand-primary) 12%, var(--brand-primary-soft));
   color: var(--brand-primary);
+}
+
+.admin-edit-hover:hover {
+  border-color: color-mix(in srgb, var(--brand-primary) 42%, white);
+  background-color: color-mix(in srgb, var(--brand-primary) 12%, white);
+  color: color-mix(in srgb, var(--brand-primary) 92%, #02443b);
 }
 
 /*
@@ -337,9 +343,9 @@ select:not([multiple]):disabled {
   /* Tailwind neutral-100 / neutral-200 — not brand cream (looks like holes on white) */
   background: linear-gradient(
     90deg,
-    #f5f5f5 0%,
-    #e5e5e5 45%,
-    #f5f5f5 100%
+    #e6ebee 0%,
+    #d6dee4 45%,
+    #e6ebee 100%
   );
   background-size: 200% 100%;
   animation: rocha-skeleton-shimmer 1.4s ease-in-out infinite;
@@ -857,6 +863,332 @@ select:not([multiple]):disabled {
   }
 }
 
+/*
+  Admin dark mode — scoped via data-admin-theme on <html>, persisted in
+  localStorage and applied app-wide (admin + remito routes for staff).
+  Palette tuned toward WhatsApp dark (#111b21 / #202c33 / #00a884 accent).
+  Screen-only: print (PDF + thermal) must keep light :root tokens without
+  stripping data-admin-theme from the live document (that flashed the UI).
+*/
+@media screen {
+html[data-admin-theme="dark"] {
+  --background: #111b21;
+  --foreground: #e9edef;
+  --brand-primary: #00a884;
+  --brand-primary-soft: #202c33;
+  --admin-destructive: #c96a5f;
+  --admin-destructive-border: color-mix(
+    in srgb,
+    var(--admin-destructive) 42%,
+    #2a3942
+  );
+  --admin-destructive-hover-bg: color-mix(
+    in srgb,
+    var(--admin-destructive) 24%,
+    #202c33
+  );
+  color-scheme: dark;
+}
+
+html[data-admin-theme="dark"] body,
+html[data-admin-theme="dark"] .brand-page-atmosphere {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(
+      ellipse 80% 50% at 10% -10%,
+      color-mix(in srgb, #00a884 21%, transparent) 0%,
+      transparent 64%
+    ),
+    radial-gradient(
+      ellipse 60% 40% at 100% 0%,
+      color-mix(in srgb, #005c4b 30%, transparent) 0%,
+      transparent 60%
+    );
+  color: var(--foreground);
+}
+
+html[data-admin-theme="dark"] header {
+  border-bottom-color: color-mix(in srgb, #00a884 28%, transparent);
+  background-color: #202c33;
+}
+
+html[data-admin-theme="dark"] .bg-neutral-300\/70 {
+  background-color: color-mix(in srgb, #8696a0 40%, transparent);
+}
+
+html[data-admin-theme="dark"] .bg-white {
+  background-color: #202c33;
+}
+
+html[data-admin-theme="dark"] .bg-neutral-50 {
+  background-color: #1a252d;
+}
+
+html[data-admin-theme="dark"] .bg-neutral-50\/60 {
+  background-color: color-mix(in srgb, #1a252d 60%, transparent);
+}
+
+html[data-admin-theme="dark"] .bg-neutral-50\/40,
+html[data-admin-theme="dark"] .bg-amber-50\/40,
+html[data-admin-theme="dark"] .bg-amber-50\/50 {
+  background-color: color-mix(in srgb, #3d3520 45%, #1a252d);
+}
+
+html[data-admin-theme="dark"] .bg-neutral-100 {
+  background-color: #2a3942;
+}
+
+html[data-admin-theme="dark"] .bg-amber-50 {
+  background-color: #3d3520;
+}
+
+html[data-admin-theme="dark"] .hover\:bg-neutral-50:hover {
+  background-color: #2a3942;
+}
+
+html[data-admin-theme="dark"] .hover\:bg-neutral-100:hover {
+  background-color: #374955;
+}
+
+html[data-admin-theme="dark"] .hover\:bg-amber-50\/80:hover {
+  background-color: color-mix(in srgb, #4a4028 80%, #1a252d);
+}
+
+html[data-admin-theme="dark"] .border-neutral-100 {
+  border-color: #2a3942;
+}
+
+html[data-admin-theme="dark"] .border-neutral-200 {
+  border-color: #2a3942;
+}
+
+html[data-admin-theme="dark"] .border-neutral-300 {
+  border-color: #374955;
+}
+
+/* Tailwind v4 divide-y targets :not(:last-child); v3 used sibling combinator. */
+html[data-admin-theme="dark"] .divide-neutral-100 > :not(:last-child),
+html[data-admin-theme="dark"] .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #2a3942;
+}
+
+html[data-admin-theme="dark"] .divide-neutral-200 > :not(:last-child),
+html[data-admin-theme="dark"] .divide-neutral-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #2a3942;
+}
+
+html[data-admin-theme="dark"] .text-neutral-400 {
+  color: #8696a0;
+}
+
+html[data-admin-theme="dark"] .text-neutral-500 {
+  color: #8696a0;
+}
+
+html[data-admin-theme="dark"] .text-neutral-600 {
+  color: #aebac1;
+}
+
+html[data-admin-theme="dark"] .text-neutral-700 {
+  color: #c5cdd3;
+}
+
+html[data-admin-theme="dark"] .text-neutral-800 {
+  color: #d1d7db;
+}
+
+html[data-admin-theme="dark"] .text-neutral-900 {
+  color: #e9edef;
+}
+
+html[data-admin-theme="dark"] .text-amber-950 {
+  color: #fde68a;
+}
+
+html[data-admin-theme="dark"] .text-amber-900 {
+  color: #fcd34d;
+}
+
+html[data-admin-theme="dark"] .text-amber-800 {
+  color: #fbbf24;
+}
+
+html[data-admin-theme="dark"] .hover\:text-neutral-900:hover {
+  color: #e9edef;
+}
+
+html[data-admin-theme="dark"] .hover\:text-neutral-800:hover {
+  color: #d1d7db;
+}
+
+html[data-admin-theme="dark"] .placeholder\:text-neutral-400::placeholder {
+  color: #8696a0;
+}
+
+html[data-admin-theme="dark"] .shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+html[data-admin-theme="dark"] .shadow-xl {
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.5),
+    0 4px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* Sidebar nav — active bg must differ from sidebar surface (#202c33) in dark. */
+html[data-admin-theme="dark"] .admin-nav-link-active {
+  background-color: color-mix(in srgb, #00a884 18%, #202c33);
+  color: #00a884;
+}
+
+html[data-admin-theme="dark"] .admin-nav-link-active:hover {
+  background-color: color-mix(in srgb, #00a884 24%, #202c33);
+  color: #00a884;
+}
+
+html[data-admin-theme="dark"] .admin-table-row:hover {
+  background-color: #2a3942;
+}
+
+html[data-admin-theme="dark"] .admin-table-row[data-selected="true"] {
+  background-color: color-mix(in srgb, #00a884 16%, #202c33);
+}
+
+html[data-admin-theme="dark"] .admin-table-row[data-selected="true"]:hover {
+  filter: none;
+  background-color: color-mix(in srgb, #00a884 22%, #202c33);
+}
+
+/* Selection inset rules use light-mode brand colors; tone down in dark lists/tables. */
+html[data-admin-theme="dark"] .admin-table-row:focus-visible,
+html[data-admin-theme="dark"] .admin-table-row[data-selected="true"] {
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, #00a884 55%, #2a3942),
+    inset 0 -1px 0 color-mix(in srgb, #00a884 55%, #2a3942);
+}
+
+html[data-admin-theme="dark"] .admin-table-row[data-weigh-pending="true"] {
+  background-color: #3d3520;
+}
+
+html[data-admin-theme="dark"] .admin-table-row[data-weigh-pending="true"]:hover {
+  background-color: #4a4028;
+}
+
+html[data-admin-theme="dark"]
+  .admin-table-row[data-weigh-pending="true"][data-selected="true"] {
+  background-color: color-mix(
+    in srgb,
+    var(--brand-primary-soft) 65%,
+    #4a4028 35%
+  );
+}
+
+html[data-admin-theme="dark"] .rocha-skeleton {
+  /* background-image (not shorthand) — keeps background-size: 200% for shimmer */
+  background-image: linear-gradient(
+    90deg,
+    #2a3942 0%,
+    #3d4f5a 45%,
+    #2a3942 100%
+  );
+  background-size: 200% 100%;
+}
+
+html[data-admin-theme="dark"] select:not([multiple]) {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23aebac1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+
+html[data-admin-theme="dark"] input[type="date"],
+html[data-admin-theme="dark"] input[type="datetime-local"],
+html[data-admin-theme="dark"] input[type="time"],
+html[data-admin-theme="dark"] input[type="month"],
+html[data-admin-theme="dark"] input[type="week"] {
+  color-scheme: dark;
+}
+
+html[data-admin-theme="dark"] .data-table-scroll-btn {
+  /* Lift off table surface (#202c33) — --brand-primary-soft matches table bg in dark */
+  background-color: color-mix(in srgb, var(--brand-primary) 14%, #2a3942);
+  border-color: color-mix(in srgb, var(--brand-primary) 38%, #2a3942);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--brand-primary) 22%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.45),
+    0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+html[data-admin-theme="dark"] .data-table-scroll-btn:hover {
+  background-color: color-mix(in srgb, var(--brand-primary) 24%, #2a3942);
+  border-color: var(--brand-primary);
+}
+
+/* Customer promo CTA — admin dark persists on customer routes via root Providers. */
+html[data-admin-theme="dark"] .customer-promo-cta {
+  background-color: color-mix(in srgb, var(--brand-primary) 14%, #2a3942);
+  border-color: color-mix(in srgb, var(--brand-primary) 55%, #2a3942);
+  color: color-mix(in srgb, var(--brand-primary) 96%, #effff9);
+}
+
+html[data-admin-theme="dark"] .customer-promo-cta:hover {
+  background-color: color-mix(in srgb, var(--brand-primary) 24%, #2a3942);
+  border-color: var(--brand-primary);
+  color: color-mix(in srgb, var(--brand-primary) 96%, #effff9);
+}
+
+html[data-admin-theme="dark"] .bg-amber-300 {
+  background-color: #b45309;
+}
+
+html[data-admin-theme="dark"] .hover\:bg-white\/70:hover {
+  background-color: color-mix(in srgb, #202c33 70%, transparent);
+}
+
+html[data-admin-theme="dark"] .stroke-neutral-100 {
+  stroke: #2a3942;
+}
+
+html[data-admin-theme="dark"] .border-neutral-200\/80 {
+  border-color: color-mix(in srgb, #2a3942 80%, transparent);
+}
+
+/* Destructive icon buttons (listas-precios, editor): muted coral, not bright red-600. */
+html[data-admin-theme="dark"] .btn-destructive {
+  border-color: var(--admin-destructive-border);
+  background-color: #202c33;
+  color: var(--admin-destructive);
+}
+
+html[data-admin-theme="dark"] .btn-destructive:hover {
+  border-color: color-mix(in srgb, var(--admin-destructive) 58%, #2a3942);
+  background-color: var(--admin-destructive-hover-bg);
+  color: color-mix(in srgb, var(--admin-destructive) 92%, #f6d7d3);
+}
+
+/* Ghost delete controls (stock recount rows, etc.). */
+html[data-admin-theme="dark"] .hover\:text-red-600:hover {
+  color: var(--admin-destructive);
+}
+
+/* Remito line delete: teal secondary at rest, coral on hover in dark. */
+html[data-admin-theme="dark"] .admin-delete-hover:hover {
+  border-color: color-mix(in srgb, var(--admin-destructive) 58%, #2a3942);
+  background-color: var(--admin-destructive-hover-bg);
+  color: color-mix(in srgb, var(--admin-destructive) 92%, #f6d7d3);
+}
+
+html[data-admin-theme="dark"] .admin-edit-hover:hover {
+  border-color: color-mix(in srgb, var(--brand-primary) 72%, #415763);
+  background-color: color-mix(in srgb, var(--brand-primary) 30%, #202c33);
+  color: color-mix(in srgb, var(--brand-primary) 96%, #effff9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-admin-theme="dark"] .rocha-skeleton {
+    background: #415763;
+  }
+}
+}
+
 .route-loading-fill {
   transition: width 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -868,7 +1200,7 @@ select:not([multiple]):disabled {
 @media (prefers-reduced-motion: reduce) {
   .rocha-skeleton {
     animation: none;
-    background: #e5e5e5;
+    background: #d6dee4;
   }
 
   .admin-toast-enter,
@@ -928,6 +1260,66 @@ select:not([multiple]):disabled {
 }
 
 @media print {
+  /*
+    Print output is always light. Dark theme CSS is @media screen only;
+    these resets still force light tokens if a dark rule leaks, without
+    mutating data-admin-theme on the visible page.
+  */
+  html {
+    color-scheme: light !important;
+    --background: #f3f6f5 !important;
+    --foreground: #1a2e2c !important;
+    --brand-primary: #046c5d !important;
+    --brand-primary-soft: #e4f0ee !important;
+  }
+
+  html[data-admin-theme="dark"],
+  html[data-admin-theme="dark"] body,
+  html[data-admin-theme="dark"] .brand-page-atmosphere,
+  html[data-admin-theme="dark"] main {
+    background: white !important;
+    background-image: none !important;
+    color: #1a2e2c !important;
+  }
+
+  html[data-admin-theme="dark"] .bg-white,
+  html[data-admin-theme="dark"] .print-remito,
+  html[data-admin-theme="dark"] .remito-thermal-receipt {
+    background-color: #fff !important;
+    color: #171717 !important;
+  }
+
+  html[data-admin-theme="dark"] .bg-neutral-50,
+  html[data-admin-theme="dark"] .bg-amber-50 {
+    background-color: #fffbeb !important;
+  }
+
+  html[data-admin-theme="dark"] .text-neutral-900,
+  html[data-admin-theme="dark"] .text-neutral-800,
+  html[data-admin-theme="dark"] .text-neutral-700,
+  html[data-admin-theme="dark"] .text-neutral-600,
+  html[data-admin-theme="dark"] .text-neutral-500 {
+    color: #404040 !important;
+  }
+
+  html[data-admin-theme="dark"] .text-neutral-900 {
+    color: #171717 !important;
+  }
+
+  html[data-admin-theme="dark"] .text-amber-800,
+  html[data-admin-theme="dark"] .text-amber-900,
+  html[data-admin-theme="dark"] .text-amber-950 {
+    color: #92400e !important;
+  }
+
+  html[data-admin-theme="dark"] .border-neutral-100,
+  html[data-admin-theme="dark"] .border-neutral-200,
+  html[data-admin-theme="dark"] .border-neutral-300,
+  html[data-admin-theme="dark"] .border-amber-100,
+  html[data-admin-theme="dark"] .border-amber-200 {
+    border-color: #e5e5e5 !important;
+  }
+
   html,
   body {
     background: white !important;
@@ -995,4 +1387,125 @@ select:not([multiple]):disabled {
   .quote-draft-row-cell-clip {
     overflow: visible;
   }
+
+  /* 80mm thermal receipt (data-print-mode=thermal on <html>) */
+  html[data-print-mode="thermal"] main {
+    max-width: none !important;
+    width: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  html[data-print-mode="thermal"] .remito-screen-only {
+    display: none !important;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-only {
+    display: block !important;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-receipt {
+    box-shadow: none !important;
+    border: none !important;
+    background: #fff !important;
+    width: 72mm;
+    max-width: 72mm;
+    margin: 0;
+    padding: 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+      "Liberation Mono", "Courier New", monospace;
+    font-size: 9pt;
+    line-height: 1.35;
+    color: #000;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-brand {
+    font-size: 11pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-align: center;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-title {
+    font-size: 10pt;
+    font-weight: 700;
+    text-align: center;
+    margin-top: 0.25rem;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-header p,
+  html[data-print-mode="thermal"] .remito-thermal-section p,
+  html[data-print-mode="thermal"] .remito-thermal-line p,
+  html[data-print-mode="thermal"] .remito-thermal-footer p {
+    margin: 0;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-header {
+    text-align: center;
+    margin-bottom: 0.35rem;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-section {
+    margin-bottom: 0.35rem;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-customer {
+    font-weight: 700;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-divider {
+    border-top: 1px dashed #000;
+    margin: 0.35rem 0;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-line {
+    margin-bottom: 0.45rem;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-line-name {
+    font-weight: 600;
+    word-break: break-word;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-code {
+    font-weight: 700;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-line-qty,
+  html[data-print-mode="thermal"] .remito-thermal-line-price {
+    font-size: 8.5pt;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-warning {
+    font-size: 8pt;
+    margin-top: 0.15rem !important;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-notes-label {
+    font-size: 8pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 0.15rem !important;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-notes {
+    font-size: 8.5pt;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-bottom: 0.35rem !important;
+  }
+
+  html[data-print-mode="thermal"] .remito-thermal-total {
+    font-size: 11pt;
+    font-weight: 700;
+    text-align: right;
+    margin-top: 0.25rem !important;
+  }
+}
+
+/* Screen: thermal receipt stays hidden until thermal print */
+.remito-thermal-only {
+  display: none;
 }

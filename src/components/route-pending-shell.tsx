@@ -72,6 +72,9 @@ function adminSkeletonFor(path: string) {
   if (path.startsWith("/admin/configuracion")) {
     return <SkeletonAdminConfigPage />;
   }
+  if (path.startsWith("/admin/plataforma")) {
+    return <SkeletonAdminPriceListsPage />;
+  }
   if (path === "/admin" || path === "/admin/") {
     return <SkeletonAdminDashboardPage />;
   }
@@ -81,6 +84,12 @@ function adminSkeletonFor(path: string) {
 type RoutePendingShellProps = {
   children: ReactNode;
   variant: "admin" | "customer";
+  /**
+   * Cover parent padding (customer `main` is `px-4 py-6`). Admin content
+   * column is already the page box — negative inset + extra pad clips the
+   * table skeleton on `min-w-0` flex (remito → cotizaciones).
+   */
+  coverGutters?: boolean;
 };
 
 /**
@@ -91,9 +100,14 @@ type RoutePendingShellProps = {
  * outside `main.max-w-6xl`. Opaque bg only on the main column left a sharp
  * vertical edge where body wheat/latte radials showed on the right (remito
  * skeleton). Admin keeps column-local solid bg so the desktop sidebar stays
- * visible under a fixed layer.
+ * visible under a fixed layer. Do not paint a flat --background slab on the
+ * overlay — body uses radial washes; a solid fill reads as a contrasting box.
  */
-export function RoutePendingShell({ children, variant }: RoutePendingShellProps) {
+export function RoutePendingShell({
+  children,
+  variant,
+  coverGutters = true,
+}: RoutePendingShellProps) {
   const { pending, pendingPath } = useRouteLoading();
   const pathname = usePathname();
   const path = pendingPath ?? pathname;
@@ -101,7 +115,7 @@ export function RoutePendingShell({ children, variant }: RoutePendingShellProps)
     variant === "admin" ? adminSkeletonFor(path) : customerSkeletonFor(path);
 
   return (
-    <div className={cn("relative", pending && "min-h-[12rem]")}>
+    <div className={cn("relative min-w-0", pending && "min-h-[12rem]")}>
       <div
         className={cn(pending && "invisible pointer-events-none select-none")}
         aria-hidden={pending || undefined}
@@ -120,8 +134,10 @@ export function RoutePendingShell({ children, variant }: RoutePendingShellProps)
           <div
             data-route-pending=""
             className={cn(
-              "absolute -inset-x-4 -inset-y-6 z-[5] cursor-wait overflow-auto px-4 py-6",
-              variant === "admin" && "bg-[var(--background)]",
+              "absolute z-[5] cursor-wait overflow-auto",
+              coverGutters
+                ? "-inset-x-4 -inset-y-6 px-4 py-6"
+                : "inset-0",
             )}
             role="status"
             aria-busy="true"

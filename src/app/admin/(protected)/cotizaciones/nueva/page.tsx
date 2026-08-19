@@ -1,8 +1,11 @@
 import { Suspense } from "react";
 import { AdminNewQuoteForm } from "@/components/admin/admin-new-quote-form";
 import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-route-transition";
+import { requireStaffPermission } from "@/lib/session";
 
-export default function AdminNuevaCotizacionPage() {
+export default async function AdminNuevaCotizacionPage() {
+  await requireStaffPermission("quotes");
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">

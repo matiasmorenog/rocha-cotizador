@@ -74,7 +74,8 @@ export function RouteLoadingOverlay() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
-  const { visible, startLoading, finishLoading } = useRouteLoading();
+  const { visible, startLoading, finishLoading, isNavActive } =
+    useRouteLoading();
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navStartedRef = useRef(false);
@@ -101,7 +102,11 @@ export function RouteLoadingOverlay() {
 
   const settleAfterRoute = useCallback(() => {
     clearSettle();
-    if (!navStartedRef.current) return;
+    // Link clicks set navStartedRef. Programmatic startLoading (Volver
+    // button) only flips context activeRef — still must settle or the
+    // admin cover never dismisses.
+    if (!navStartedRef.current && !isNavActive()) return;
+    navStartedRef.current = true;
 
     const startedAt = Date.now();
 
@@ -124,7 +129,7 @@ export function RouteLoadingOverlay() {
       tryFinish();
       pollRef.current = setInterval(tryFinish, SKELETON_POLL_MS);
     }, 32);
-  }, [clearSettle, finishLoading]);
+  }, [clearSettle, finishLoading, isNavActive]);
 
   /** Hard refresh / first paint — soft-nav only listened to clicks before. */
   useEffect(() => {

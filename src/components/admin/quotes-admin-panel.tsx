@@ -296,43 +296,41 @@ export function QuotesAdminPanel({
               />
             </label>
 
-            {error ? (
-              <p className="w-full text-sm text-red-600 sm:order-last">{error}</p>
-            ) : null}
-
-            <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:items-center">
-              <Button
-                type="submit"
-                variant="outline"
-                disabled={loading}
-                className="w-full gap-2 sm:w-auto"
-              >
-                {loading ? (
-                  <>
-                    <Spinner />
-                    Filtrando…
-                  </>
-                ) : (
-                  "Filtrar lista"
-                )}
-              </Button>
-              <Button
-                type="button"
-                onClick={onDownload}
-                disabled={downloading}
-                className="w-full gap-2 sm:w-auto"
-              >
-                {downloading ? (
-                  <>
-                    <Spinner className="text-white" />
-                    Generando…
-                  </>
-                ) : (
-                  "Descargar PDF"
-                )}
-              </Button>
-            </div>
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={loading}
+              className="gap-2"
+            >
+              {loading ? (
+                <>
+                  <Spinner />
+                  Filtrando…
+                </>
+              ) : (
+                "Filtrar lista"
+              )}
+            </Button>
+            <Button
+              type="button"
+              onClick={onDownload}
+              disabled={downloading}
+              className="gap-2"
+            >
+              {downloading ? (
+                <>
+                  <Spinner className="text-white" />
+                  Generando…
+                </>
+              ) : (
+                "Descargar PDF"
+              )}
+            </Button>
           </div>
+
+          {error ? (
+            <p className="text-sm text-red-600">{error}</p>
+          ) : null}
         </form>
       </div>
 
@@ -359,13 +357,13 @@ export function QuotesAdminPanel({
             </thead>
             <tbody>
               {afterCutoff.length > 0 ? (
-                <tr className="border-t border-neutral-200 bg-amber-50/50">
-                  <td colSpan={6} className="px-3 py-0">
+                <tr className="border-t border-neutral-200 bg-amber-50/50 transition-colors hover:bg-amber-50/80">
+                  <td colSpan={6} className="p-0">
                     <button
                       type="button"
                       onClick={() => setLateOpen((o) => !o)}
                       aria-expanded={lateOpen}
-                      className="flex w-full items-center justify-between gap-3 py-2.5 text-left text-sm font-medium text-amber-950 hover:bg-amber-50/80"
+                      className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-medium text-amber-950"
                     >
                       <span>
                         {afterCutoffSummary(afterCutoff.length)}

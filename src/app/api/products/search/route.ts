@@ -5,6 +5,7 @@ import {
   getCachedCustomerPricingContext,
   resolveUnitPricesForList,
 } from "@/lib/price-list-resolve";
+import { staffHasPermission } from "@/lib/staff-permissions";
 
 /** Fallback search API — quote UI prefers local catalog filter. */
 export async function GET(req: NextRequest) {
@@ -18,7 +19,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ products: [] });
   }
 
-  const products = await searchActiveProductsBase(q, 30);
+  const productsRaw = await searchActiveProductsBase(q, 40);
+  const rubroFilter = (req.nextUrl.searchParams.get("rubro") ?? "").trim();
+  const products = rubroFilter
+    ? productsRaw.filter(
+        (p) =>
+          (p.rubro ?? "").trim().toLowerCase() === rubroFilter.toLowerCase(),
+      )
+    : productsRaw;
 
   let priceListId: string | null = null;
 
@@ -27,19 +35,35 @@ export async function GET(req: NextRequest) {
       session.user.customerId,
     );
     priceListId = customer?.priceListId ?? null;
-  } else if (session.user.role === "ADMIN") {
+  } else if (staffHasPermission(session.user.permissions, "quotes")) {
     const customerId = (req.nextUrl.searchParams.get("customerId") ?? "").trim();
-    if (!customerId) {
+    if (customerId) {
+      const customer = await getCachedCustomerPricingContext(customerId);
+      if (!customer) {
+        return NextResponse.json(
+          { error: "Cliente no encontrado" },
+          { status: 404 },
+        );
+      }
+      priceListId = customer.priceListId;
+    } else if (
+      !(
+        staffHasPermission(session.user.permissions, "stockReports") ||
+        staffHasPermission(session.user.permissions, "products")
+      )
+    ) {
       return NextResponse.json(
         { error: "customerId requerido para precios de cliente" },
         { status: 400 },
       );
     }
-    const customer = await getCachedCustomerPricingContext(customerId);
-    if (!customer) {
-      return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
-    }
-    priceListId = customer.priceListId;
+  } else if (
+    !(
+      staffHasPermission(session.user.permissions, "stockReports") ||
+      staffHasPermission(session.user.permissions, "products")
+    )
+  ) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
   const unitPrices = await resolveUnitPricesForList(

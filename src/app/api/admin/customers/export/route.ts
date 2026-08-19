@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
-import { auth } from "@/lib/auth";
+import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import {
   CUSTOMER_COLUMNS,
@@ -10,15 +10,10 @@ import {
 } from "@/lib/admin-excel";
 
 export const runtime = "nodejs";
-
-async function requireAdmin() {
-  const session = await auth();
-  if (!session?.user || session.user.role !== "ADMIN") return null;
-  return session;
-}
+export const maxDuration = 60;
 
 export async function GET() {
-  if (!(await requireAdmin())) {
+  if (!(await requireStaffApi("customers"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -27,6 +22,7 @@ export async function GET() {
     select: {
       code: true,
       name: true,
+      nameNote: true,
       email: true,
       phone: true,
       address: true,
@@ -47,6 +43,7 @@ export async function GET() {
     sheet.addRow([
       c.code,
       c.name,
+      c.nameNote ?? "",
       c.email ?? "",
       c.phone ?? "",
       c.address ?? "",

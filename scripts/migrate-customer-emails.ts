@@ -9,6 +9,7 @@ import {
   appendContactToName,
   parsePhoneContact,
 } from "../src/lib/phone-contact";
+import { revalidateAppCache } from "./revalidate-app-cache";
 
 const db = new PrismaClient();
 
@@ -54,6 +55,7 @@ async function main() {
   }
 
   console.log(`\nMigrated: ${migrated} / ${customers.length} with @ in phone`);
+  await revalidateAppCache();
 }
 
 main()
