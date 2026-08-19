@@ -56,12 +56,16 @@ export function StockRecountForm({
   apiPath,
   customers,
   stockModule,
+  open: openProp,
+  onOpenChange,
 }: {
   title: string;
   description: string;
   apiPath: string;
   customers: StockRecountCustomer[];
   stockModule: "MERMAS" | "CONSUMABLES";
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
 }) {
   const router = useRouter();
   const [customerId, setCustomerId] = useState(customers[0]?.id ?? "");
@@ -232,22 +236,22 @@ export function StockRecountForm({
     router.refresh();
   }
 
-  const [open, setOpen] = useState(false);
+  const [openInternal, setOpenInternal] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : openInternal;
+  const setOpen = (v: boolean) => {
+    if (controlled) onOpenChange?.(v);
+    else setOpenInternal(v);
+  };
   const { present, exiting, animKey } = useExitPresence(open, 250);
 
   return (
-    <div className="space-y-3">
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-        >
-          <Plus className="h-4 w-4" />
-          Registrar stock
-        </button>
-      </div>
-
+    <div>
+      <div
+        className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
+        style={{ gridTemplateRows: present ? "1fr" : "0fr" }}
+      >
+        <div className="overflow-hidden min-h-0">
       {present ? (
         <form
           key={animKey}
@@ -424,6 +428,25 @@ export function StockRecountForm({
           </div>
         </form>
       ) : null}
+        </div>
+      </div>
     </div>
+  );
+}
+
+export function StockRecountTrigger({
+  onClick,
+}: {
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+    >
+      <Plus className="h-4 w-4" />
+      Registrar stock
+    </button>
   );
 }
