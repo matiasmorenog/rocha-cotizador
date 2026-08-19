@@ -91,7 +91,7 @@ export function PlatformPaymentsPanel({
 
       <div
         className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
-        style={{ gridTemplateRows: present ? "1fr" : "0fr" }}
+        style={{ gridTemplateRows: present && !exiting ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden min-h-0">
           {present ? (

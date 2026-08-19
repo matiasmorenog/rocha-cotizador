@@ -403,7 +403,7 @@ export function ProductAdminTable({
       </div>
       <div
         className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
-        style={{ gridTemplateRows: formPresent ? "1fr" : "0fr" }}
+        style={{ gridTemplateRows: formPresent && !formExiting ? "1fr" : "0fr" }}
       >
         <div className="overflow-hidden min-h-0">
           {formPresent ? (
