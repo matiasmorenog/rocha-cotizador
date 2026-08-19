@@ -10,6 +10,7 @@ import {
   SkeletonAdminNewQuotePage,
   SkeletonAdminPriceListsPage,
   SkeletonAdminQuotesPage,
+  SkeletonAdminStockPage,
   SkeletonChooserPage,
   SkeletonHomePage,
   SkeletonListPage,
@@ -71,6 +72,12 @@ function adminSkeletonFor(path: string) {
   }
   if (path.startsWith("/admin/configuracion")) {
     return <SkeletonAdminConfigPage />;
+  }
+  if (path.startsWith("/admin/stock")) {
+    return <SkeletonAdminStockPage />;
+  }
+  if (path.startsWith("/admin/usuarios")) {
+    return <SkeletonAdminListPage label="Cargando usuarios" titleWidth="w-28" />;
   }
   if (path.startsWith("/admin/plataforma")) {
     return <SkeletonAdminPriceListsPage />;

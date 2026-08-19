@@ -2,7 +2,8 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
+import { useExitPresence } from "@/hooks/use-exit-presence";
 import { ProductPicker } from "@/components/quote/product-picker";
 import type { CatalogSearchProduct } from "@/components/quote/product-picker";
 import { Button } from "@/components/ui/button";
@@ -55,12 +56,16 @@ export function StockRecountForm({
   apiPath,
   customers,
   stockModule,
+  open: openProp,
+  onOpenChange,
 }: {
   title: string;
   description: string;
   apiPath: string;
   customers: StockRecountCustomer[];
   stockModule: "MERMAS" | "CONSUMABLES";
+  open?: boolean;
+  onOpenChange?: (v: boolean) => void;
 }) {
   const router = useRouter();
   const [customerId, setCustomerId] = useState(customers[0]?.id ?? "");
@@ -231,11 +236,31 @@ export function StockRecountForm({
     router.refresh();
   }
 
+  const [openInternal, setOpenInternal] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? openProp : openInternal;
+  const setOpen = (v: boolean) => {
+    if (controlled) onOpenChange?.(v);
+    else setOpenInternal(v);
+  };
+  const { present, exiting, animKey } = useExitPresence(open, 250);
+
   return (
-    <form
-      onSubmit={onSubmit}
-      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4"
-    >
+    <div>
+      <div
+        className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
+        style={{ gridTemplateRows: present && !exiting ? "1fr" : "0fr" }}
+      >
+        <div className="min-h-0 overflow-hidden">
+          {present ? (
+            <form
+              key={animKey}
+              onSubmit={onSubmit}
+              className={cn(
+                "space-y-4 rounded-lg border border-neutral-200 bg-white p-4",
+                exiting ? "payment-form-exit" : "payment-form-enter",
+              )}
+            >
       <div>
         <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
         <p className="text-sm text-neutral-600">{description}</p>
@@ -389,10 +414,35 @@ export function StockRecountForm({
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
 
       <div className="flex flex-wrap justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setOpen(false)}
+          disabled={saving}
+        >
+          Cancelar
+        </Button>
         <Button type="submit" disabled={saving || customers.length === 0}>
           {saving ? "Guardando…" : "Guardar carga"}
         </Button>
       </div>
-    </form>
+            </form>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function StockRecountTrigger({
+  onClick,
+}: {
+  onClick: () => void;
+}) {
+  return (
+    <Button type="button" onClick={onClick}>
+      <Plus className="h-4 w-4" />
+      Registrar stock
+    </Button>
   );
 }
