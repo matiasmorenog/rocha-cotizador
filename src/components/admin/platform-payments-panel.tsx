@@ -174,7 +174,6 @@ function PaymentForm({
   const [periodYear, setPeriodYear] = useState(defaultYear);
   const [periodMonth, setPeriodMonth] = useState(defaultMonth);
   const [amountUsd, setAmountUsd] = useState(formatArInput(100, 2, AR_PRICE_FORMAT));
-  const [amountArs, setAmountArs] = useState("");
   const [fxRate, setFxRate] = useState("");
   const [fxRateLoading, setFxRateLoading] = useState(true);
   const [fxRateError, setFxRateError] = useState(false);
@@ -206,7 +205,6 @@ function PaymentForm({
         periodYear,
         periodMonth,
         amountUsd: parseArNumber(amountUsd),
-        amountArs: amountArs.trim() ? parseArNumber(amountArs) : null,
         fxRate: fxRate.trim() ? parseArNumber(fxRate) : null,
         paidAt: paidAt ? `${paidAt}T00:00` : paidAt,
         note: note.trim() || null,
@@ -280,17 +278,6 @@ function PaymentForm({
             formatOptions={AR_PRICE_FORMAT}
             placeholder="100,00"
             required
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="pay-ars">Monto ARS (opcional)</Label>
-          <ArNumberInput
-            id="pay-ars"
-            value={amountArs}
-            onValueChange={setAmountArs}
-            maxFractionDigits={0}
-            formatOptions={AR_PRICE_FORMAT}
-            placeholder=""
           />
         </div>
         <div className="space-y-1 sm:col-span-2">

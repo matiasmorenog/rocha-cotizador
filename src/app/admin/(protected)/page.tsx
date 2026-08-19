@@ -4,6 +4,7 @@ import { RecentQuotesList } from "@/components/admin/recent-quotes-list";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
 import { getAdminQuoteActivity, parseQuoteActivityPeriod } from "@/lib/admin-quote-activity";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
+import { isSuperuserRole } from "@/lib/platform-owner";
 import { requireStaffSession } from "@/lib/session";
 import { isStaffAdmin, staffHasPermission } from "@/lib/staff-permissions";
 import { cn, formatPrice } from "@/lib/utils";
@@ -17,7 +18,7 @@ export default async function AdminDashboardPage({
   searchParams: Promise<{ chart?: string }>;
 }) {
   const session = await requireStaffSession();
-  const isAdmin = isStaffAdmin(session.user.role);
+  const isAdmin = isStaffAdmin(session.user.role) || isSuperuserRole(session.user.role);
   const canQuotes = staffHasPermission(session.user.permissions, "quotes");
 
   const { chart: chartParam } = await searchParams;

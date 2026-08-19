@@ -26,7 +26,6 @@ const createSchema = z.object({
   periodYear: z.coerce.number().int().min(2020).max(2100),
   periodMonth: z.coerce.number().int().min(1).max(12),
   amountUsd: z.coerce.number().positive().max(1_000_000).default(100),
-  amountArs: optionalMoney,
   fxRate: optionalMoney,
   paidAt: z.string().min(1, "Indicá la fecha de pago"),
   note: z
@@ -67,10 +66,6 @@ export async function POST(req: NextRequest) {
         periodYear: parsed.data.periodYear,
         periodMonth: parsed.data.periodMonth,
         amountUsd: new Prisma.Decimal(parsed.data.amountUsd.toFixed(2)),
-        amountArs:
-          parsed.data.amountArs == null
-            ? null
-            : new Prisma.Decimal(parsed.data.amountArs.toFixed(2)),
         fxRate:
           parsed.data.fxRate == null
             ? null
