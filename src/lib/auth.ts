@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { getEnabledModulesForCustomer } from "@/lib/customer-modules";
 import {
+  ALL_PERMISSIONS,
   isAdminPanelRole,
   isStaffRole,
   staffPermissionsFromProfile,
@@ -66,7 +67,7 @@ function syncSuperuserTokenIdentity(token: JWT) {
     token.isSuperuser = true;
     if (!token.staffPreview && role !== "SUPERUSER") {
       token.role = "SUPERUSER";
-      token.permissions = [];
+      token.permissions = [...ALL_PERMISSIONS];
     }
     return;
   }
@@ -100,7 +101,7 @@ function applyEffectiveStaffSession(token: JWT) {
   }
 
   token.role = "SUPERUSER";
-  token.permissions = [];
+  token.permissions = [...ALL_PERMISSIONS];
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
@@ -302,7 +303,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.isSuperuser = isSuperuserRole(effectiveRole);
             if (token.isSuperuser) {
               token.role = "SUPERUSER";
-              token.permissions = [];
+              token.permissions = [...ALL_PERMISSIONS];
             } else {
               token.role = effectiveRole;
               token.permissions = staffPermissionsFromProfile({
@@ -383,11 +384,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                   canQuotes: false,
                   canStock: false,
                 })
-            : isSuperuserRole(role)
-              ? []
-              : Array.isArray(token.permissions)
-                ? (token.permissions as StaffPermission[])
-                : [],
+            : Array.isArray(token.permissions)
+              ? (token.permissions as StaffPermission[])
+              : [],
           isSuperuser,
           staffPreview,
         },

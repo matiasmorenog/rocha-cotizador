@@ -18,15 +18,15 @@ const PRESET_PROFILES: Record<
   { label: string; profile: StaffCapabilityProfile }
 > = {
   full_admin: {
-    label: "Admin completo",
+    label: "Administración",
     profile: { role: "ADMIN", canQuotes: true, canStock: true },
   },
   quotes_only: {
-    label: "Solo cotización",
+    label: "Cotización",
     profile: { role: "QUOTES", canQuotes: true, canStock: false },
   },
   stock_only: {
-    label: "Solo stock",
+    label: "Stock",
     profile: { role: "STOCK", canQuotes: false, canStock: true },
   },
 };
