@@ -167,7 +167,7 @@ export function DataTableScroll({
         id={id}
         ref={scrollRef}
         className={cn(
-          "data-table-scroll rounded-lg border border-neutral-200 bg-white",
+          "data-table-scroll rounded-lg border border-neutral-200 bg-white shadow-sm",
           className,
         )}
       >

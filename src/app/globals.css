@@ -919,6 +919,8 @@ html[data-admin-theme="dark"] {
     #202c33
   );
   color-scheme: dark;
+  /* Soft lift on cards/menus. No 1px ring — that read as a second washed border. */
+  --admin-card-shadow: 0 8px 28px rgba(255, 255, 255, 0.08);
 }
 
 html[data-admin-theme="dark"] body,
@@ -1060,10 +1062,23 @@ html[data-admin-theme="dark"] .shadow-sm {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
-html[data-admin-theme="dark"] .shadow-xl {
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.5),
-    0 4px 8px rgba(0, 0, 0, 0.35);
+/*
+  Admin dark glow on elevated UI. Light stays on Tailwind shadows.
+  - shadow-md/lg/xl: dropdowns, pickers, drawer, chart tooltips
+  - rounded-lg|xl + border + bg-white: cards, tables, skeletons, sidebar
+    Skip .inline-flex (tab bars).
+  - button/a.shadow-sm: CTAs (same token; size-8 icon actions stay this lift)
+*/
+html[data-admin-theme="dark"] .shadow-md,
+html[data-admin-theme="dark"] .shadow-lg,
+html[data-admin-theme="dark"] .shadow-xl,
+html[data-admin-theme="dark"] .admin-toast-enter,
+html[data-admin-theme="dark"] .admin-toast-exit,
+html[data-admin-theme="dark"] .rounded-lg.border.bg-white:not(.inline-flex),
+html[data-admin-theme="dark"] .rounded-xl.border.bg-white,
+html[data-admin-theme="dark"] button.shadow-sm,
+html[data-admin-theme="dark"] a.shadow-sm {
+  box-shadow: var(--admin-card-shadow);
 }
 
 /* Sidebar nav — active bg must differ from sidebar surface (#202c33) in dark. */

@@ -82,7 +82,7 @@ export function ExcelSyncPanel({
   }
 
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-4">
+    <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
         <div className="min-w-0 space-y-1 md:max-w-sm">
           <p className="text-sm font-medium text-neutral-900">Excel</p>
@@ -95,7 +95,7 @@ export function ExcelSyncPanel({
           <a
             href={exportUrl}
             className={cn(
-              "inline-flex h-10 w-full items-center justify-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-50 sm:w-auto",
+              "inline-flex h-10 w-full items-center justify-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-50 sm:w-auto",
               FOCUS_BRAND_BORDER,
             )}
           >

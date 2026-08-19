@@ -349,7 +349,7 @@ export function CustomerPicker({
     return (
       <div
         className={cn(
-          "quote-customer-selected flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4",
+          "quote-customer-selected flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm",
           exiting && "quote-customer-exit pointer-events-none",
         )}
         aria-hidden={exiting || undefined}
@@ -378,7 +378,7 @@ export function CustomerPicker({
 
   return (
     <div
-      className="relative rounded-lg border border-neutral-200 bg-white p-4"
+      className="relative rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
       ref={boxRef}
     >
       <Label htmlFor="customer-search">Cliente</Label>

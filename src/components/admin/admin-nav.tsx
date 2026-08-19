@@ -221,7 +221,7 @@ export function AdminNav({
 
   return (
     <>
-      <aside className="admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 print:hidden">
+      <aside className="admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 shadow-sm print:hidden">
         <AdminSidebarPanel pathname={pathname} permissions={permissions} />
       </aside>
 

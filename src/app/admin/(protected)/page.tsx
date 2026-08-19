@@ -73,7 +73,7 @@ export default async function AdminDashboardPage({
           <Link
             href="/admin/cotizaciones/nueva"
             className={cn(
-              "inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white hover:opacity-90",
+              "inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white shadow-sm hover:opacity-90",
               FOCUS_BRAND_PRIMARY,
             )}
           >
@@ -113,7 +113,7 @@ export default async function AdminDashboardPage({
         />
       ) : null}
 
-      {(isAdmin || canQuotes) ? (<div className="rounded-lg border border-neutral-200 bg-white">
+      {(isAdmin || canQuotes) ? (<div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
           <h2 className="font-medium text-neutral-900">Últimas cotizaciones</h2>
           {canQuotes ? (

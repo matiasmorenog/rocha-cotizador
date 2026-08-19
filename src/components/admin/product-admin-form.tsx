@@ -84,7 +84,7 @@ export function ProductAdminForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4"
+      className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
     >
       <p className="text-sm font-medium text-neutral-800">Nuevo producto</p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

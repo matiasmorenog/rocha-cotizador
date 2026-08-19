@@ -8,7 +8,7 @@ import { forceReloadApp } from "@/lib/force-reload-app";
 
 function AdminPageFallback() {
   return (
-    <div className="rounded-lg border border-neutral-200 bg-white p-6 text-sm text-neutral-700">
+    <div className="rounded-lg border border-neutral-200 bg-white p-6 text-sm text-neutral-700 shadow-sm">
       <p className="font-medium text-neutral-900">No se pudo cargar esta página.</p>
       <p className="mt-2">
         Revisá tu conexión a internet: a veces el fallo es de red, no de la app.

@@ -59,7 +59,7 @@ export function StockPanelFilters({
           name="customer"
           defaultValue={customerId}
           className={cn(
-            "h-10 w-full min-w-[14rem] rounded-md border border-neutral-200 bg-white px-3 text-sm",
+            "flex h-10 w-full min-w-[14rem] rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-10 text-sm",
             FOCUS_BRAND_BORDER,
           )}
         >
