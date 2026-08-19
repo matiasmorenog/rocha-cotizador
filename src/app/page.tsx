@@ -5,7 +5,7 @@ import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { SkeletonHomePage } from "@/components/ui/skeleton";
 import { getOptionalSession } from "@/lib/session";
-import { isStaffRole } from "@/lib/staff-permissions";
+import { isAdminPanelRole, staffHomeHref } from "@/lib/staff-permissions";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +14,9 @@ export const dynamic = "force-dynamic";
 async function HomeContent() {
   const session = await getOptionalSession();
   if (session?.user?.role === "CUSTOMER") redirect("/cotizar");
-  if (isStaffRole(session?.user?.role)) redirect("/admin");
+  if (isAdminPanelRole(session?.user?.role)) {
+    redirect(staffHomeHref(session?.user?.permissions, session?.user?.role));
+  }
 
   return (
     <BrandBackdrop className="mx-auto flex min-h-[70vh] max-w-md items-center justify-center py-4">

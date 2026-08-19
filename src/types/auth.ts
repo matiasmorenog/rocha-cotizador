@@ -1,7 +1,10 @@
-/** Primary staff role on User (email login). */
+/** Rocha staff roles (usuarios UI — not SUPERUSER). */
 export type StaffRole = "ADMIN" | "QUOTES" | "STOCK";
 
-/** JWT / session role — staff or customer. */
-export type AppRole = StaffRole | "CUSTOMER";
+/** Platform owner role — not combinable with staff switches. */
+export type SuperuserRole = "SUPERUSER";
+
+/** JWT / session role — staff, platform owner, or customer. */
+export type AppRole = StaffRole | SuperuserRole | "CUSTOMER";
 
 export type CustomerModuleSession = "MERMAS" | "CONSUMABLES";

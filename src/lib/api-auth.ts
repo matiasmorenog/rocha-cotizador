@@ -1,10 +1,11 @@
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
-  isStaffRole,
+  isAdminPanelRole,
   staffHasPermission,
   type StaffPermission,
 } from "@/lib/staff-permissions";
+import { isSuperuserRole } from "@/lib/platform-owner";
 import type { Session } from "next-auth";
 
 /** Staff session for admin API routes. Optional permission gate. */
@@ -12,7 +13,7 @@ export async function requireStaffApi(
   permission?: StaffPermission,
 ): Promise<Session | null> {
   const session = await auth();
-  if (!session?.user || !isStaffRole(session.user.role)) return null;
+  if (!session?.user || !isAdminPanelRole(session.user.role)) return null;
   if (permission && !staffHasPermission(session.user.permissions, permission)) {
     return null;
   }
@@ -28,11 +29,11 @@ export async function requireAdminApi(): Promise<Session | null> {
 export async function requireSuperuserApi(): Promise<Session | null> {
   const session = await requireStaffApi();
   if (!session?.user?.id) return null;
-  if (session.user.isSuperuser) return session;
+  if (isSuperuserRole(session.user.role)) return session;
 
   const row = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { isSuperuser: true },
+    select: { role: true },
   });
-  return row?.isSuperuser ? session : null;
+  return row?.role === "SUPERUSER" ? session : null;
 }

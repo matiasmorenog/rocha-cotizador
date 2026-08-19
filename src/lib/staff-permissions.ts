@@ -1,4 +1,4 @@
-import { SUPERUSER_LABEL } from "@/lib/platform-owner";
+import { isSuperuserRole, SUPERUSER_LABEL } from "@/lib/platform-owner";
 import type { StaffRole } from "@/types/auth";
 
 /** Fine-grained admin UI/API gates. Derived from staff role + capability flags. */
@@ -61,6 +61,11 @@ export function isStaffRole(role: string | undefined | null): role is StaffRole 
   return role === "ADMIN" || role === "QUOTES" || role === "STOCK";
 }
 
+/** Email-login roles that may access /admin (Rocha staff or platform owner). */
+export function isAdminPanelRole(role: string | undefined | null): boolean {
+  return isStaffRole(role) || isSuperuserRole(role);
+}
+
 /** Full admin (not Cotización-/Stock-only staff). */
 export function isStaffAdmin(role: string | undefined | null): boolean {
   return role === "ADMIN";
@@ -97,6 +102,9 @@ export function resolveStaffCapabilities(
 export function permissionsForStaff(
   profile: StaffCapabilityProfile,
 ): StaffPermission[] {
+  if (isSuperuserRole(profile.role)) {
+    return [];
+  }
   if (profile.role === "ADMIN") {
     return [...ALL_PERMISSIONS];
   }
@@ -121,7 +129,9 @@ export function staffHasPermission(
 /** Where staff should land instead of customer routes / login. */
 export function staffHomeHref(
   permissions: readonly StaffPermission[] | undefined | null,
-): "/admin/cotizaciones" | "/admin" {
+  role?: string | null,
+): "/admin/cotizaciones" | "/admin" | "/admin/plataforma" {
+  if (isSuperuserRole(role)) return "/admin/plataforma";
   return staffHasPermission(permissions, "quotes")
     ? "/admin/cotizaciones"
     : "/admin";
@@ -170,9 +180,9 @@ export function staffFieldsFromSwitches(input: {
 }
 
 export function formatStaffPermissionLabels(
-  profile: StaffCapabilityProfile & { isSuperuser?: boolean },
+  profile: StaffCapabilityProfile,
 ): string {
-  if (profile.isSuperuser) return SUPERUSER_LABEL;
+  if (isSuperuserRole(profile.role)) return SUPERUSER_LABEL;
   const switches = staffSwitchesFromProfile(profile);
   if (switches.isAdmin) return "Administración";
   const parts: string[] = [];

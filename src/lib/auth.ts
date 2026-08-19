@@ -4,15 +4,49 @@ import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
 import { getEnabledModulesForCustomer } from "@/lib/customer-modules";
 import {
+  isAdminPanelRole,
   isStaffRole,
   staffPermissionsFromProfile,
   type StaffPermission,
 } from "@/lib/staff-permissions";
 import { padCustomerCode } from "@/lib/utils";
-import { isPlatformOwnerEmail } from "@/lib/platform-owner";
+import {
+  isPlatformOwnerEmail,
+  isSuperuserRole,
+} from "@/lib/platform-owner";
 import type { AppRole, CustomerModuleSession, StaffRole } from "@/types/auth";
 
 export type { AppRole };
+
+async function ensureSuperuserRole(user: {
+  id: string;
+  email: string;
+  role: string;
+  isSuperuser: boolean;
+}): Promise<"SUPERUSER" | StaffRole> {
+  const shouldBeSuperuser =
+    user.role === "SUPERUSER" ||
+    user.isSuperuser ||
+    isPlatformOwnerEmail(user.email);
+
+  if (!shouldBeSuperuser) {
+    return user.role as StaffRole;
+  }
+
+  if (user.role !== "SUPERUSER" || !user.isSuperuser) {
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        role: "SUPERUSER",
+        isSuperuser: true,
+        canQuotes: false,
+        canStock: false,
+      },
+    });
+  }
+
+  return "SUPERUSER";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
@@ -69,41 +103,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               isSuperuser: true,
             },
           });
-          if (!user?.passwordHash || !user.active || !isStaffRole(user.role)) {
+          if (
+            !user?.passwordHash ||
+            !user.active ||
+            !isAdminPanelRole(user.role)
+          ) {
             return null;
           }
 
           const valid = await bcrypt.compare(password, user.passwordHash);
           if (!valid) return null;
 
-          const staffRole = user.role as StaffRole;
-          const permissions = staffPermissionsFromProfile({
-            role: staffRole,
-            canQuotes: user.canQuotes,
-            canStock: user.canStock,
-          });
-
-          let isSuperuser = user.isSuperuser;
-          if (!isSuperuser && isPlatformOwnerEmail(user.email)) {
-            await db.user.update({
-              where: { id: user.id },
-              data: { isSuperuser: true },
-            });
-            isSuperuser = true;
-          }
+          const effectiveRole = await ensureSuperuserRole(user);
+          const permissions = isSuperuserRole(effectiveRole)
+            ? []
+            : staffPermissionsFromProfile({
+                role: effectiveRole,
+                canQuotes: user.canQuotes,
+                canStock: user.canStock,
+              });
 
           return {
             id: user.id,
             email: user.email,
             name: user.name,
-            role: staffRole,
+            role: effectiveRole,
             customerId: null,
             customerCode: null,
             mustChangePassword: false,
             inAppNotificationsEnabled: user.inAppNotificationsEnabled !== false,
             modules: [],
             permissions,
-            isSuperuser,
           };
         } catch (err) {
           console.error("[auth] admin authorize failed", err);
@@ -173,7 +203,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           user.inAppNotificationsEnabled ?? true;
         token.modules = user.modules ?? [];
         token.permissions = user.permissions ?? [];
-        token.isSuperuser = Boolean(user.isSuperuser);
         token.sub = user.id;
         token.email = user.email;
         token.name = user.name;
@@ -193,7 +222,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             // keep existing
           }
         }
-        if (token.role && isStaffRole(String(token.role))) {
+        if (token.role && isAdminPanelRole(String(token.role))) {
           const dbUser = await db.user.findUnique({
             where: { id: String(token.sub) },
             select: {
@@ -204,21 +233,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               email: true,
             },
           });
-          if (dbUser && isStaffRole(dbUser.role)) {
-            token.permissions = staffPermissionsFromProfile({
+          if (dbUser && isAdminPanelRole(dbUser.role)) {
+            const effectiveRole = await ensureSuperuserRole({
+              id: String(token.sub),
+              email: dbUser.email,
               role: dbUser.role,
-              canQuotes: dbUser.canQuotes,
-              canStock: dbUser.canStock,
+              isSuperuser: dbUser.isSuperuser,
             });
-            let isSuperuser = dbUser.isSuperuser;
-            if (!isSuperuser && isPlatformOwnerEmail(dbUser.email)) {
-              await db.user.update({
-                where: { id: String(token.sub) },
-                data: { isSuperuser: true },
-              });
-              isSuperuser = true;
-            }
-            token.isSuperuser = isSuperuser;
+            token.role = effectiveRole;
+            token.permissions = isSuperuserRole(effectiveRole)
+              ? []
+              : staffPermissionsFromProfile({
+                  role: effectiveRole,
+                  canQuotes: dbUser.canQuotes,
+                  canStock: dbUser.canStock,
+                });
           }
         }
         if (
@@ -258,18 +287,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           modules: Array.isArray(token.modules)
             ? (token.modules as CustomerModuleSession[])
             : [],
-          permissions: isStaffRole(role)
-            ? Array.isArray(token.permissions)
-              ? (token.permissions as StaffPermission[])
-              : staffPermissionsFromProfile({
-                  role,
-                  canQuotes: false,
-                  canStock: false,
-                })
-            : Array.isArray(token.permissions)
-              ? token.permissions
-              : [],
-          isSuperuser: Boolean(token.isSuperuser),
+          permissions: isSuperuserRole(role)
+            ? []
+            : isStaffRole(role)
+              ? Array.isArray(token.permissions)
+                ? (token.permissions as StaffPermission[])
+                : staffPermissionsFromProfile({
+                    role,
+                    canQuotes: false,
+                    canStock: false,
+                  })
+              : Array.isArray(token.permissions)
+                ? token.permissions
+                : [],
+          isSuperuser: isSuperuserRole(role),
         },
       };
     },

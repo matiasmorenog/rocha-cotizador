@@ -20,17 +20,14 @@ type StaffUser = {
   canQuotes: boolean;
   canStock: boolean;
   active: boolean;
-  isSuperuser?: boolean;
 };
 
 export function StaffUsersPanel({
   users: initial,
   currentUserId,
-  viewerIsSuperuser = false,
 }: {
   users: StaffUser[];
   currentUserId: string;
-  viewerIsSuperuser?: boolean;
 }) {
   const router = useRouter();
   const [users, setUsers] = useState(initial);
@@ -40,9 +37,7 @@ export function StaffUsersPanel({
     () => users.find((u) => u.id === editingId) ?? null,
     [users, editingId],
   );
-  const visibleUsers = viewerIsSuperuser
-    ? users
-    : users.filter((u) => !u.isSuperuser);
+  const visibleUsers = users;
 
   return (
     <div className="space-y-4">
@@ -231,11 +226,6 @@ function StaffUserForm({
       <p className="text-sm font-medium text-neutral-800">
         {isEdit ? "Editar usuario" : "Nuevo usuario"}
       </p>
-      {user?.isSuperuser ? (
-        <p className="text-sm text-neutral-600">
-          Superusuario. Este rol no se cambia desde acá.
-        </p>
-      ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label>Email</Label>

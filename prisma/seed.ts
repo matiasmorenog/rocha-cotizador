@@ -84,13 +84,18 @@ async function seedAdmin() {
 }
 
 async function bootstrapSuperuserFromEnv() {
-  const emails = parsePlatformOwnerEmails();
-  if (emails.length === 0) return;
+  const email = parsePlatformOwnerEmails()[0];
+  if (!email) return;
   const r = await db.user.updateMany({
-    where: { email: { in: emails } },
-    data: { isSuperuser: true },
+    where: { email },
+    data: {
+      role: "SUPERUSER",
+      isSuperuser: true,
+      canQuotes: false,
+      canStock: false,
+    },
   });
-  console.log(`Superuser flag set for ${r.count} matching user(s)`);
+  console.log(`Superuser role set for ${r.count} matching user(s)`);
 }
 
 /**

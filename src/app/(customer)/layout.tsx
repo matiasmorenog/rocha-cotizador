@@ -1,6 +1,6 @@
 import { CustomerPromoFooter } from "@/components/customer/customer-promo-footer";
 import { getOptionalSession } from "@/lib/session";
-import { isStaffRole } from "@/lib/staff-permissions";
+import { isAdminPanelRole } from "@/lib/staff-permissions";
 
 export default async function CustomerLayout({
   children,
@@ -9,7 +9,7 @@ export default async function CustomerLayout({
 }) {
   const session = await getOptionalSession();
   const showPromo =
-    session?.user?.role === "CUSTOMER" && !isStaffRole(session.user.role);
+    session?.user?.role === "CUSTOMER" && !isAdminPanelRole(session.user.role);
 
   return (
     <>

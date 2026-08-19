@@ -15,7 +15,7 @@ declare module "next-auth" {
     modules?: CustomerModuleSession[];
     /** Staff: derived from role for nav/gates. */
     permissions?: StaffPermission[];
-    /** Platform owner (developer). JWT — not togglable in Rocha UI. */
+    /** Platform owner (developer). Derived from role SUPERUSER in session callback. */
     isSuperuser?: boolean;
   }
 

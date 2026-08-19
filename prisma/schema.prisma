@@ -13,6 +13,8 @@ enum UserRole {
   ADMIN
   QUOTES
   STOCK
+  /// Platform owner (developer). Singleton — bootstrap via PLATFORM_OWNER_EMAIL.
+  SUPERUSER
   CUSTOMER
 }
 
@@ -39,7 +41,7 @@ model User {
   /// Staff capability: stock (mermas, consumibles). ADMIN ignores flags.
   canStock                  Boolean            @default(false)
   active                    Boolean            @default(true)
-  /// Platform owner (developer). Not togglable in Rocha UI. Bootstrap via PLATFORM_OWNER_EMAIL.
+  /// Legacy sync flag — prefer role SUPERUSER. Kept for schema/health probes.
   isSuperuser               Boolean            @default(false)
   /// Account-level: in-app toast/poll while admin is open (default on).
   inAppNotificationsEnabled Boolean            @default(true)

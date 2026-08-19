@@ -2,11 +2,12 @@ import { cache } from "react";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
-  isStaffRole,
+  isAdminPanelRole,
   staffHasPermission,
   staffHomeHref,
   type StaffPermission,
 } from "@/lib/staff-permissions";
+import { isSuperuserRole } from "@/lib/platform-owner";
 import { notFound, redirect } from "next/navigation";
 
 /** One auth() decode per RSC request (layout + page share). */
@@ -14,8 +15,8 @@ const getAuthSession = cache(auth);
 
 export async function requireCustomerSession() {
   const session = await getAuthSession();
-  if (session?.user && isStaffRole(session.user.role)) {
-    redirect(staffHomeHref(session.user.permissions));
+  if (session?.user && isAdminPanelRole(session.user.role)) {
+    redirect(staffHomeHref(session.user.permissions, session.user.role));
   }
   if (
     !session?.user ||
@@ -27,10 +28,10 @@ export async function requireCustomerSession() {
   return session;
 }
 
-/** Any staff role (ADMIN | QUOTES | STOCK). */
+/** Any admin-panel role (Rocha staff or SUPERUSER). */
 export async function requireStaffSession() {
   const session = await getAuthSession();
-  if (!session?.user || !isStaffRole(session.user.role)) {
+  if (!session?.user || !isAdminPanelRole(session.user.role)) {
     redirect("/admin/login");
   }
   return session;
@@ -56,12 +57,12 @@ export async function getOptionalSession() {
 /** Platform owner only. Rocha staff get a 404 even if they guess the URL. */
 export async function requireSuperuser() {
   const session = await requireStaffSession();
-  if (session.user.isSuperuser) return session;
+  if (isSuperuserRole(session.user.role)) return session;
 
   const row = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { isSuperuser: true },
+    select: { role: true },
   });
-  if (row?.isSuperuser) return session;
+  if (row?.role === "SUPERUSER") return session;
   notFound();
 }

@@ -5,7 +5,7 @@ import { PrismaClient } from "@prisma/client";
  * process may still hold via globalThis (HMR reloads routes, not the client).
  * Forces a fresh PrismaClient without restarting the server.
  */
-const PRISMA_SCHEMA_STAMP = "user-isSuperuser-subscription-payment-v1";
+const PRISMA_SCHEMA_STAMP = "user-role-superuser-subscription-payment-v1";
 
 const globalForPrisma = globalThis as unknown as {
   prisma?: PrismaClient;

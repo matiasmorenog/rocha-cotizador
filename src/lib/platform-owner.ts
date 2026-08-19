@@ -1,4 +1,4 @@
-/** Spanish UI label for User.isSuperuser. Not a UserRole enum value. */
+/** Spanish UI label for UserRole.SUPERUSER. */
 export const SUPERUSER_LABEL = "Superusuario";
 
 export function parsePlatformOwnerEmails(
@@ -11,9 +11,21 @@ export function parsePlatformOwnerEmails(
     .filter(Boolean);
 }
 
+/** Primary platform owner email (singleton superuser). */
+export function primaryPlatformOwnerEmail(): string | null {
+  const emails = parsePlatformOwnerEmails();
+  return emails[0] ?? null;
+}
+
 export function isPlatformOwnerEmail(
   email: string | null | undefined,
 ): boolean {
   if (!email) return false;
   return parsePlatformOwnerEmails().includes(email.trim().toLowerCase());
+}
+
+export function isSuperuserRole(
+  role: string | undefined | null,
+): role is "SUPERUSER" {
+  return role === "SUPERUSER";
 }

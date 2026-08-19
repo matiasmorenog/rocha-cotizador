@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getOptionalSession } from "@/lib/session";
-import { isStaffRole } from "@/lib/staff-permissions";
+import { isAdminPanelRole, staffHomeHref } from "@/lib/staff-permissions";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { AdminLoginForm } from "@/components/auth/admin-login-form";
@@ -35,7 +35,13 @@ export default async function AdminLoginPage({
   const { callbackUrl: rawCallback } = await searchParams;
   const callbackUrl = safeCallbackUrl(rawCallback, "/admin");
   const session = await getOptionalSession();
-  if (isStaffRole(session?.user?.role)) redirect(callbackUrl);
+  if (isAdminPanelRole(session?.user?.role) && session?.user) {
+    redirect(
+      session.user.role === "SUPERUSER"
+        ? staffHomeHref(session.user.permissions, session.user.role)
+        : callbackUrl,
+    );
+  }
 
   const customerLoginHref =
     callbackUrl !== "/admin"

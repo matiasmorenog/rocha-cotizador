@@ -41,18 +41,7 @@ const userSelect = {
   canQuotes: true,
   canStock: true,
   active: true,
-  isSuperuser: true,
 } as const;
-
-function serializeStaffUser<T extends { isSuperuser: boolean }>(
-  user: T,
-  callerIsSuperuser: boolean,
-) {
-  if (callerIsSuperuser) return user;
-  const { isSuperuser, ...rest } = user;
-  void isSuperuser;
-  return rest;
-}
 
 export async function GET() {
   const session = await requireStaffApi("users");
@@ -60,11 +49,9 @@ export async function GET() {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const callerIsSuperuser = Boolean(session.user.isSuperuser);
   const users = await db.user.findMany({
     where: {
       role: { in: [...STAFF_ROLES] },
-      ...(callerIsSuperuser ? {} : { isSuperuser: false }),
     },
     orderBy: [{ active: "desc" }, { email: "asc" }],
     select: {
@@ -74,11 +61,7 @@ export async function GET() {
     },
   });
 
-  return NextResponse.json({
-    users: users
-      .filter((u) => callerIsSuperuser || !u.isSuperuser)
-      .map((u) => serializeStaffUser(u, callerIsSuperuser)),
-  });
+  return NextResponse.json({ users });
 }
 
 export async function POST(req: NextRequest) {
@@ -110,12 +93,12 @@ export async function POST(req: NextRequest) {
   if (parsed.data.id) {
     const existing = await db.user.findUnique({
       where: { id: parsed.data.id },
-      select: { id: true, role: true, isSuperuser: true },
+      select: { id: true, role: true },
     });
-    if (!existing || !STAFF_ROLES.includes(existing.role as (typeof STAFF_ROLES)[number])) {
-      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
-    }
-    if (existing.isSuperuser && !session.user.isSuperuser) {
+    if (
+      !existing ||
+      !STAFF_ROLES.includes(existing.role as (typeof STAFF_ROLES)[number])
+    ) {
       return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
     }
 
@@ -163,9 +146,7 @@ export async function POST(req: NextRequest) {
       select: userSelect,
     });
     invalidateAfterStaffUserMutation();
-    return NextResponse.json({
-      user: serializeStaffUser(user, Boolean(session.user.isSuperuser)),
-    });
+    return NextResponse.json({ user });
   }
 
   if (!parsed.data.password) {
@@ -177,7 +158,7 @@ export async function POST(req: NextRequest) {
 
   const emailTaken = await db.user.findUnique({
     where: { email },
-    select: { id: true },
+    select: { id: true, role: true },
   });
   if (emailTaken) {
     return NextResponse.json({ error: "Email ya en uso" }, { status: 409 });
@@ -198,8 +179,5 @@ export async function POST(req: NextRequest) {
   });
 
   invalidateAfterStaffUserMutation();
-  return NextResponse.json(
-    { user: serializeStaffUser(user, Boolean(session.user.isSuperuser)) },
-    { status: 201 },
-  );
+  return NextResponse.json({ user }, { status: 201 });
 }

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { getOptionalSession } from "@/lib/session";
-import { isStaffRole } from "@/lib/staff-permissions";
+import { isAdminPanelRole, staffHomeHref } from "@/lib/staff-permissions";
 import { safeCallbackUrl } from "@/lib/callback-url";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
@@ -19,8 +19,9 @@ export default async function EntrarPage({
   const callbackUrl = safeCallbackUrl(rawCallback, "/");
   const session = await getOptionalSession();
 
-  if (isStaffRole(session?.user?.role)) {
-    redirect(callbackUrl === "/" ? "/admin" : callbackUrl);
+  if (isAdminPanelRole(session?.user?.role) && session?.user) {
+    const home = staffHomeHref(session.user.permissions, session.user.role);
+    redirect(callbackUrl === "/" ? home : callbackUrl);
   }
   if (session?.user?.role === "CUSTOMER") {
     redirect(callbackUrl === "/" ? "/cotizar" : callbackUrl);

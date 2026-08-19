@@ -7,13 +7,16 @@ import { AdminMenuButton } from "@/components/admin/admin-menu-button";
 import { AdminThemeToggle } from "@/components/admin/admin-theme-toggle";
 import { HeaderProgressLine } from "@/components/header-progress-line";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
-import { isStaffRole } from "@/lib/staff-permissions";
+import { isAdminPanelRole, staffHomeHref } from "@/lib/staff-permissions";
 import { cn } from "@/lib/utils";
 
 export async function AppHeader() {
   const session = await getOptionalSession();
   const isCustomer = session?.user?.role === "CUSTOMER";
-  const isStaff = isStaffRole(session?.user?.role);
+  const isStaff = isAdminPanelRole(session?.user?.role);
+  const staffHome = isStaff
+    ? staffHomeHref(session?.user?.permissions, session?.user?.role)
+    : "/admin";
   /** From JWT — updated via session.update() after password change. No Neon hit. */
   const mustChangePassword = Boolean(session?.user?.mustChangePassword);
 
@@ -24,7 +27,7 @@ export async function AppHeader() {
           <div className="flex min-w-0 items-center gap-2">
             {isStaff ? <AdminMenuButton /> : null}
             <Link
-              href={isCustomer ? "/cotizar" : isStaff ? "/admin" : "/"}
+              href={isCustomer ? "/cotizar" : isStaff ? staffHome : "/"}
               className="truncate text-base font-semibold tracking-tight text-[var(--brand-primary)] sm:text-lg"
             >
               Rocha Cotizador
