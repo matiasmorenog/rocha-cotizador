@@ -41,28 +41,28 @@ export default async function AdminDashboardPage({
   ]);
 
   const stats: { label: string; value: number | string; hint: string }[] = [
-    ...(isAdmin
+    ...(canQuotes
       ? [
           {
             label: "Cotizaciones hoy",
             value: quotesToday,
             hint: `${formatPrice(quotesTodayTotal)} · ayer ${quotesYesterday}`,
           },
+          {
+            label: "Clientes que cotizaron hoy",
+            value: customersQuotedToday,
+            hint: `esta semana: ${customersQuotedWeek}`,
+          },
+          {
+            label: "Líneas pendientes de pesaje",
+            value: pendingWeighLines,
+            hint:
+              pendingWeighLines > 0
+                ? "orden por unidad / precio $0"
+                : "Sin pendientes",
+          },
         ]
       : []),
-    {
-      label: "Clientes que cotizaron hoy",
-      value: customersQuotedToday,
-      hint: `esta semana: ${customersQuotedWeek}`,
-    },
-    {
-      label: "Líneas pendientes de pesaje",
-      value: pendingWeighLines,
-      hint:
-        pendingWeighLines > 0
-          ? "orden por unidad / precio $0"
-          : "Sin pendientes",
-    },
   ];
 
   return (
@@ -81,20 +81,26 @@ export default async function AdminDashboardPage({
           </Link>
         ) : null}
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {stats.map((s) => (
-          <div
-            key={s.label}
-            className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
-          >
-            <p className="text-xs uppercase tracking-wide text-neutral-500">{s.label}</p>
-            <p className="mt-1 text-3xl font-semibold tabular-nums text-neutral-900">
-              {s.value}
-            </p>
-            <p className="mt-1 text-xs text-neutral-500">{s.hint}</p>
-          </div>
-        ))}
-      </div>
+      {stats.length > 0 ? (
+        <div className="grid gap-3 sm:grid-cols-3">
+          {stats.map((s) => (
+            <div
+              key={s.label}
+              className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
+            >
+              <p className="text-xs uppercase tracking-wide text-neutral-500">{s.label}</p>
+              <p className="mt-1 text-3xl font-semibold tabular-nums text-neutral-900">
+                {s.value}
+              </p>
+              <p className="mt-1 text-xs text-neutral-500">{s.hint}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-neutral-500">
+          No hay métricas disponibles para tu rol.
+        </p>
+      )}
 
       {isAdmin && activity ? (
         <AdminQuoteActivitySection
@@ -107,7 +113,7 @@ export default async function AdminDashboardPage({
         />
       ) : null}
 
-      <div className="rounded-lg border border-neutral-200 bg-white">
+      {(isAdmin || canQuotes) ? (<div className="rounded-lg border border-neutral-200 bg-white">
         <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
           <h2 className="font-medium text-neutral-900">Últimas cotizaciones</h2>
           {canQuotes ? (
@@ -117,7 +123,7 @@ export default async function AdminDashboardPage({
           ) : null}
         </div>
         <RecentQuotesList recent={recent} />
-      </div>
+      </div>) : null}
     </div>
   );
 }

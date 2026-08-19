@@ -6,7 +6,8 @@ import {
 export type StaffPreviewPresetId =
   | "full_admin"
   | "quotes_only"
-  | "stock_only";
+  | "stock_only"
+  | "quotes_and_stock";
 
 export type StaffPreviewSession = {
   presetId: StaffPreviewPresetId;
@@ -29,12 +30,17 @@ const PRESET_PROFILES: Record<
     label: "Stock",
     profile: { role: "STOCK", canQuotes: false, canStock: true },
   },
+  quotes_and_stock: {
+    label: "Cotización + Stock",
+    profile: { role: "QUOTES", canQuotes: true, canStock: true },
+  },
 };
 
 export const STAFF_PREVIEW_PRESET_ORDER: StaffPreviewPresetId[] = [
   "full_admin",
   "quotes_only",
   "stock_only",
+  "quotes_and_stock",
 ];
 
 export function staffPreviewPresetLabel(id: StaffPreviewPresetId): string {

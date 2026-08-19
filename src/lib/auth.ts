@@ -93,9 +93,9 @@ function applyEffectiveStaffSession(token: JWT) {
     token.role =
       previewId === "full_admin"
         ? "ADMIN"
-        : previewId === "quotes_only"
-          ? "QUOTES"
-          : "STOCK";
+        : previewId === "stock_only"
+          ? "STOCK"
+          : "QUOTES";
     token.permissions = permissions;
     return;
   }
