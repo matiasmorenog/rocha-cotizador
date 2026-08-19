@@ -9,7 +9,7 @@ alwaysApply: true
 |-------|---------|--------|
 | **draft** | Skipped (`ci.yml` `if`) | No feature-branch deploy; belt `scripts/vercel-ignore-draft-pr.sh` |
 | **ready** | lint/typecheck | Still no feature-branch deploy — preview = `development` / local |
-| push `development` | Runs | `rocha-cotizador-dev` builds |
+| push `development` | Runs | Preview on prod project (SSO) + `rocha-cotizador-dev` public |
 | push `main` | Runs | Auto-deploy off; Actions ships prod |
 
 ## Agent
