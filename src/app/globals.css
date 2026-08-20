@@ -1067,7 +1067,8 @@ html[data-admin-theme="dark"] .shadow-sm {
   - shadow-md/lg/xl: dropdowns, pickers, drawer, chart tooltips
   - rounded-lg|xl + border + bg-white: cards, tables, skeletons, sidebar
     Skip .inline-flex (tab bars).
-  - button/a.shadow-sm: CTAs (same token; size-8 icon actions stay this lift)
+  - button/a.shadow-sm: CTAs outside cards (header links, page-level actions)
+  - Descendants inside card surfaces: no glow (forms, filters, table icon buttons)
 */
 html[data-admin-theme="dark"] .shadow-md,
 html[data-admin-theme="dark"] .shadow-lg,
@@ -1079,6 +1080,20 @@ html[data-admin-theme="dark"] .rounded-xl.border.bg-white,
 html[data-admin-theme="dark"] button.shadow-sm,
 html[data-admin-theme="dark"] a.shadow-sm {
   box-shadow: var(--admin-card-shadow);
+}
+
+/* Strip nested control glow — card wrapper keeps --admin-card-shadow above. */
+html[data-admin-theme="dark"]
+  :is(.rounded-lg, .rounded-xl).border.bg-white:not(.inline-flex)
+  :is(
+    button:not(.data-table-scroll-btn),
+    a.shadow-sm,
+    select,
+    input,
+    textarea,
+    [role="combobox"]
+  ) {
+  box-shadow: none;
 }
 
 /* Sidebar nav — active bg must differ from sidebar surface (#202c33) in dark. */
