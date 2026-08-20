@@ -89,18 +89,51 @@ function NavLinks({
   );
 }
 
+function AdminSidebarUserInfo({
+  name,
+  email,
+  staffPreviewLabel,
+}: {
+  name?: string | null;
+  email?: string | null;
+  staffPreviewLabel?: string | null;
+}) {
+  const primary = name?.trim() || email?.trim() || "Usuario";
+  const showEmailSecondary = Boolean(name?.trim() && email?.trim());
+
+  return (
+    <div className="mt-4 border-t border-neutral-200 pt-3">
+      <p className="truncate text-sm font-medium text-neutral-900">{primary}</p>
+      {showEmailSecondary ? (
+        <p className="truncate text-xs text-neutral-500">{email}</p>
+      ) : null}
+      {staffPreviewLabel ? (
+        <p className="mt-1 truncate text-xs text-amber-800">
+          Ver como: {staffPreviewLabel}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function AdminSidebarPanel({
   pathname,
   onNavigate,
   showCloseButton = false,
   onClose,
   permissions,
+  userName,
+  userEmail,
+  staffPreviewLabel,
 }: {
   pathname: string;
   onNavigate?: () => void;
   showCloseButton?: boolean;
   onClose?: () => void;
   permissions: StaffPermission[];
+  userName?: string | null;
+  userEmail?: string | null;
+  staffPreviewLabel?: string | null;
 }) {
   return (
     <div className="flex h-auto flex-col">
@@ -127,6 +160,11 @@ function AdminSidebarPanel({
         onNavigate={onNavigate}
         permissions={permissions}
       />
+      <AdminSidebarUserInfo
+        name={userName}
+        email={userEmail}
+        staffPreviewLabel={staffPreviewLabel}
+      />
     </div>
   );
 }
@@ -134,9 +172,15 @@ function AdminSidebarPanel({
 function AdminMobileDrawer({
   pathname,
   permissions,
+  userName,
+  userEmail,
+  staffPreviewLabel,
 }: {
   pathname: string;
   permissions: StaffPermission[];
+  userName?: string | null;
+  userEmail?: string | null;
+  staffPreviewLabel?: string | null;
 }) {
   const open = useAdminNavStore((s) => s.open);
   const setOpen = useAdminNavStore((s) => s.setOpen);
@@ -206,6 +250,9 @@ function AdminMobileDrawer({
           showCloseButton
           onClose={close}
           permissions={permissions}
+          userName={userName}
+          userEmail={userEmail}
+          staffPreviewLabel={staffPreviewLabel}
         />
       </aside>
     </div>
@@ -214,18 +261,36 @@ function AdminMobileDrawer({
 
 export function AdminNav({
   permissions,
+  userName,
+  userEmail,
+  staffPreviewLabel,
 }: {
   permissions: StaffPermission[];
+  userName?: string | null;
+  userEmail?: string | null;
+  staffPreviewLabel?: string | null;
 }) {
   const pathname = usePathname();
 
   return (
     <>
       <aside className="admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 shadow-sm print:hidden">
-        <AdminSidebarPanel pathname={pathname} permissions={permissions} />
+        <AdminSidebarPanel
+          pathname={pathname}
+          permissions={permissions}
+          userName={userName}
+          userEmail={userEmail}
+          staffPreviewLabel={staffPreviewLabel}
+        />
       </aside>
 
-      <AdminMobileDrawer pathname={pathname} permissions={permissions} />
+      <AdminMobileDrawer
+        pathname={pathname}
+        permissions={permissions}
+        userName={userName}
+        userEmail={userEmail}
+        staffPreviewLabel={staffPreviewLabel}
+      />
     </>
   );
 }
