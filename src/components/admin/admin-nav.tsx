@@ -8,6 +8,7 @@ import {
   useExitPresence,
   QUOTE_PICKER_FLOAT_MS,
 } from "@/hooks/use-exit-presence";
+import { StaffPreviewControl } from "@/components/admin/staff-preview-ui";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import type { StaffPermission } from "@/lib/staff-permissions";
 import { cn } from "@/lib/utils";
@@ -92,25 +93,25 @@ function NavLinks({
 function AdminSidebarUserInfo({
   name,
   email,
-  staffPreviewLabel,
+  isSuperuser,
 }: {
   name?: string | null;
   email?: string | null;
-  staffPreviewLabel?: string | null;
+  isSuperuser?: boolean;
 }) {
   const primary = name?.trim() || email?.trim() || "Usuario";
   const showEmailSecondary = Boolean(name?.trim() && email?.trim());
 
   return (
-    <div className="mt-4 border-t border-neutral-200 pt-3">
+    <div className="mb-3 border-b border-neutral-200 pb-3">
       <p className="truncate text-sm font-medium text-neutral-900">{primary}</p>
       {showEmailSecondary ? (
         <p className="truncate text-xs text-neutral-500">{email}</p>
       ) : null}
-      {staffPreviewLabel ? (
-        <p className="mt-1 truncate text-xs text-amber-800">
-          Ver como: {staffPreviewLabel}
-        </p>
+      {isSuperuser ? (
+        <div className="mt-2">
+          <StaffPreviewControl isSuperuser />
+        </div>
       ) : null}
     </div>
   );
@@ -124,7 +125,7 @@ function AdminSidebarPanel({
   permissions,
   userName,
   userEmail,
-  staffPreviewLabel,
+  isSuperuser,
 }: {
   pathname: string;
   onNavigate?: () => void;
@@ -133,15 +134,12 @@ function AdminSidebarPanel({
   permissions: StaffPermission[];
   userName?: string | null;
   userEmail?: string | null;
-  staffPreviewLabel?: string | null;
+  isSuperuser?: boolean;
 }) {
   return (
     <div className="flex h-auto flex-col">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-          Administración
-        </p>
-        {showCloseButton ? (
+      {showCloseButton ? (
+        <div className="mb-3 flex justify-end">
           <button
             type="button"
             onClick={onClose}
@@ -153,17 +151,17 @@ function AdminSidebarPanel({
           >
             <X className="h-5 w-5" />
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
+      <AdminSidebarUserInfo
+        name={userName}
+        email={userEmail}
+        isSuperuser={isSuperuser}
+      />
       <NavLinks
         pathname={pathname}
         onNavigate={onNavigate}
         permissions={permissions}
-      />
-      <AdminSidebarUserInfo
-        name={userName}
-        email={userEmail}
-        staffPreviewLabel={staffPreviewLabel}
       />
     </div>
   );
@@ -174,13 +172,13 @@ function AdminMobileDrawer({
   permissions,
   userName,
   userEmail,
-  staffPreviewLabel,
+  isSuperuser,
 }: {
   pathname: string;
   permissions: StaffPermission[];
   userName?: string | null;
   userEmail?: string | null;
-  staffPreviewLabel?: string | null;
+  isSuperuser?: boolean;
 }) {
   const open = useAdminNavStore((s) => s.open);
   const setOpen = useAdminNavStore((s) => s.setOpen);
@@ -252,7 +250,7 @@ function AdminMobileDrawer({
           permissions={permissions}
           userName={userName}
           userEmail={userEmail}
-          staffPreviewLabel={staffPreviewLabel}
+          isSuperuser={isSuperuser}
         />
       </aside>
     </div>
@@ -263,12 +261,12 @@ export function AdminNav({
   permissions,
   userName,
   userEmail,
-  staffPreviewLabel,
+  isSuperuser,
 }: {
   permissions: StaffPermission[];
   userName?: string | null;
   userEmail?: string | null;
-  staffPreviewLabel?: string | null;
+  isSuperuser?: boolean;
 }) {
   const pathname = usePathname();
 
@@ -280,7 +278,7 @@ export function AdminNav({
           permissions={permissions}
           userName={userName}
           userEmail={userEmail}
-          staffPreviewLabel={staffPreviewLabel}
+          isSuperuser={isSuperuser}
         />
       </aside>
 
@@ -289,7 +287,7 @@ export function AdminNav({
         permissions={permissions}
         userName={userName}
         userEmail={userEmail}
-        staffPreviewLabel={staffPreviewLabel}
+        isSuperuser={isSuperuser}
       />
     </>
   );
