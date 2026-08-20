@@ -1067,7 +1067,7 @@ html[data-admin-theme="dark"] .shadow-sm {
   - shadow-md/lg/xl: dropdowns, pickers, drawer, chart tooltips
   - rounded-lg|xl + border + bg-white: cards, tables, skeletons, sidebar
     Skip .inline-flex (tab bars).
-  - button/a.shadow-sm: CTAs (same token; size-8 icon actions stay this lift)
+  - button/a.shadow-sm + button.btn-primary: CTAs (same token; size-8 icon actions stay this lift)
 */
 html[data-admin-theme="dark"] .shadow-md,
 html[data-admin-theme="dark"] .shadow-lg,
@@ -1077,7 +1077,8 @@ html[data-admin-theme="dark"] .admin-toast-exit,
 html[data-admin-theme="dark"] .rounded-lg.border.bg-white:not(.inline-flex),
 html[data-admin-theme="dark"] .rounded-xl.border.bg-white,
 html[data-admin-theme="dark"] button.shadow-sm,
-html[data-admin-theme="dark"] a.shadow-sm {
+html[data-admin-theme="dark"] a.shadow-sm,
+html[data-admin-theme="dark"] button.btn-primary {
   box-shadow: var(--admin-card-shadow);
 }
 
