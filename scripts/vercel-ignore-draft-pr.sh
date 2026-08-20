@@ -3,16 +3,16 @@
 # Exit 0 = cancel build; exit 1 = proceed.
 # Docs: https://vercel.com/docs/project-configuration/vercel-json#ignorecommand
 #
+# Feature / ready PR previews: only on the production Vercel project
+# (`rocha-cotizador`). Demo project (`rocha-cotizador-dev`) keeps Git for
+# `development` / its Production alias only — no feature Preview URLs there.
+#
 # Requires Preview env var GITHUB_TOKEN (or GH_TOKEN) with repo / pull_requests:read
-# so the GitHub API can see draft status on this private repo.
+# on the *prod* project so the GitHub API can see draft status on this private repo.
 # Missing token or API errors on feature branches → fail closed (cancel build).
 
 set -u
 
-# Production Vercel project — `main` ships only via GitHub Actions (`vercel deploy --prod`).
-# Git Preview on this project: only branch `development` (Neon development via branch env).
-# Feature / ready PR previews run on the *dev* project (`rocha-cotizador-dev`); this script
-# still cancels them here so prod-project minutes stay on development + Actions.
 PROD_PROJECT_ID="prj_q87cwzCd7xVN7eDPzm81fDmjLKNz"
 
 proceed() {
@@ -25,29 +25,26 @@ skip() {
   exit 0
 }
 
-# True production builds (Actions / rare hooks).
+# True production builds (Actions on prod project; Git Production on demo project).
 if [[ "${VERCEL_ENV:-}" == "production" ]]; then
   proceed "production"
 fi
 
 ref="${VERCEL_GIT_COMMIT_REF:-}"
 
-# Prod project: Preview Git only for `development`. Never feature branches / PRs.
-if [[ "${VERCEL_PROJECT_ID:-}" == "$PROD_PROJECT_ID" ]]; then
-  if [[ "$ref" == "development" ]]; then
-    proceed "prod project development preview"
-  fi
-  skip "prod project non-production git deploy (Actions-only)"
+# main auto-deploy is off in vercel.json; if something still hits ignore, cancel.
+if [[ "$ref" == "main" ]]; then
+  skip "main (Actions-only ship)"
 fi
 
-# Integration branch always builds on the *dev* project when Vercel is allowed.
+# Integration branch Preview (prod project) / any non-production hit with this ref.
 if [[ "$ref" == "development" ]]; then
   proceed "branch ${ref}"
 fi
 
-# main auto-deploy is off in vercel.json; if something still hits ignore, cancel.
-if [[ "$ref" == "main" ]]; then
-  skip "main (Actions-only ship)"
+# Feature Preview only on rocha-cotizador — demo project skips PR builds.
+if [[ "${VERCEL_PROJECT_ID:-}" != "$PROD_PROJECT_ID" ]]; then
+  skip "feature preview only on prod project (rocha-cotizador)"
 fi
 
 owner="${VERCEL_GIT_REPO_OWNER:-}"

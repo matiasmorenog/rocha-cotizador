@@ -12,14 +12,16 @@ Los PRs en **draft** no deben consumir CI ni previews:
 |------------|----------------|
 | GitHub Actions | Job `lint-and-typecheck` con `if: … draft == false`. También escucha `ready_for_review`. |
 | Vercel Git | `git.deploymentEnabled`: `development` + `**` (feature) on; `main` off. |
-| Vercel ignore | [`scripts/vercel-ignore-draft-pr.sh`](../scripts/vercel-ignore-draft-pr.sh): draft cancela; ready procede en **`rocha-cotizador-dev`**; proyecto prod solo deja Git Preview en branch `development`. |
+| Vercel ignore | [`scripts/vercel-ignore-draft-pr.sh`](../scripts/vercel-ignore-draft-pr.sh): draft cancela; ready procede en **`rocha-cotizador`**; **`rocha-cotizador-dev`** sin feature Preview (solo `development` / Production). |
 | Push a `development` / `main` | CI en push. `development` Git-deploya Preview en **`rocha-cotizador`** (SSO) y Production en **`rocha-cotizador-dev`** (público). Prod `main` = Actions. |
 
-**Proyecto prod** (`prj_q87cwzCd…`): ignore deja pasar Git solo en branch **`development`**. Feature/ready PRs se cancelan ahí (no queman minutos del prod project).
+**Proyecto prod** (`rocha-cotizador` / `prj_q87cwzCd…`): ready feature PR → Preview URL (Neon **development** vía Preview env). Draft → cancel. `main` = Actions-only.
 
-**Proyecto demo** (`rocha-cotizador-dev`): ready PR → Preview URL. Draft → cancel. Requiere Preview env `GITHUB_TOKEN` o `GH_TOKEN` (`repo` / `pull_requests: read`). Sin token → fail-closed.
+**Proyecto demo** (`rocha-cotizador-dev`): sin Preview de feature PRs. Sigue deployando `development` como Production pública.
 
-WIP → abrí **draft** (`gh pr create --draft`). Al marcar **Ready for review**: Actions + Preview en **`rocha-cotizador-dev`**.
+**Vercel:** Preview env en **`rocha-cotizador`** necesita `GITHUB_TOKEN` o `GH_TOKEN` (`repo` / `pull_requests: read`). Sin token → fail-closed.
+
+WIP → abrí **draft** (`gh pr create --draft`). Al marcar **Ready for review**: Actions + Preview en **`rocha-cotizador`**.
 
 ## Job `lint-and-typecheck` (CI)
 
@@ -47,7 +49,7 @@ Solo en **push a `main`**, y **solo si** el `lint-and-typecheck` de ese workflow
 6. **Post-deploy cache revalidate** — [`scripts/post-deploy-cache.sh`](../scripts/post-deploy-cache.sh): purge CDN + Data Cache, `vercel cache invalidate` de **todas** las tags en `src/lib/cache-tags.ts` (`products`, `price-lists`, `customers`, `admin-dashboard`, `staff-users`, `subscription-payments`), Image Optimization de `/brand/*`, y `POST /api/revalidate` si existe `REVALIDATE_SECRET`.
 
 `vercel.json` desactiva auto-deploy de Vercel en `main` → no hay carrera paralela.
-`development` Git-deploya en **ambos** proyectos: Preview en `rocha-cotizador` (env `gitBranch=development` → Neon development) y Production en **`rocha-cotizador-dev`**. Ready feature PRs Preview solo en **`rocha-cotizador-dev`**. Prod `main` = Actions.
+`development` Git-deploya en **ambos** proyectos: Preview en `rocha-cotizador` (env `gitBranch=development` → Neon development) y Production en **`rocha-cotizador-dev`**. Ready feature PRs Preview solo en **`rocha-cotizador`**. Prod `main` = Actions.
 
 ### Job `post-deploy-cache-development`
 
@@ -109,4 +111,4 @@ Si querés freno también en el dashboard:
 
 Con el gate de Actions + `main: false`, esto es backup, no obligatorio.
 
-Nota: preview de ready PR buildea en paralelo al CI (comportamiento normal de Vercel).
+Nota: Preview de ready PR en `rocha-cotizador` buildea en paralelo al CI (comportamiento normal de Vercel).

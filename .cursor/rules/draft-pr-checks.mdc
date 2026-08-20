@@ -8,7 +8,7 @@ alwaysApply: true
 | State | Actions | Vercel |
 |-------|---------|--------|
 | **draft** | Skipped (`ci.yml` `if`) | Ignore cancela feature deploy |
-| **ready** | lint/typecheck | Preview en `rocha-cotizador-dev` (ignore procede) |
+| **ready** | lint/typecheck | Preview en **`rocha-cotizador`** (ignore procede) |
 | push `development` | Runs | Preview on prod project (SSO) + `rocha-cotizador-dev` public |
 | push `main` | CI + Deploy workflow | Auto-deploy off; Actions ships prod |
 
@@ -22,6 +22,6 @@ alwaysApply: true
 
 ## Vercel token
 
-Preview on `rocha-cotizador-dev` needs `GITHUB_TOKEN`/`GH_TOKEN` (`repo` / `pull_requests: read`) or ignore script fails closed.
+Preview on **`rocha-cotizador`** needs `GITHUB_TOKEN`/`GH_TOKEN` (`repo` / `pull_requests: read`) or ignore fails closed. Feature Previews **not** on `rocha-cotizador-dev`.
 
 Refs: `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `scripts/vercel-ignore-draft-pr.sh`, `docs/ci.md`
