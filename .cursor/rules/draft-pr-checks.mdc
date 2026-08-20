@@ -7,20 +7,21 @@ alwaysApply: true
 
 | State | Actions | Vercel |
 |-------|---------|--------|
-| **draft** | Skipped (`ci.yml` `if`) | No feature-branch deploy; belt `scripts/vercel-ignore-draft-pr.sh` |
-| **ready** | lint/typecheck | Still no feature-branch deploy — preview = `development` / local |
-| push `development` | Runs | Preview on prod project (SSO) + `rocha-cotizador-dev` public |
-| push `main` | Runs | Auto-deploy off; Actions ships prod |
+| **draft** | Skipped (`ci.yml` `if`) | Ignore cancela feature deploy (ambos proyectos) |
+| **ready** | lint/typecheck | Preview **solo** `rocha-cotizador`; **no** en `rocha-cotizador-dev` |
+| push `development` | Runs | Preview on prod (SSO) + `rocha-cotizador-dev` Production pública |
+| push `main` | CI + Deploy workflow | Auto-deploy off; Actions ships prod |
 
 ## Agent
 
 - Always `gh pr create --draft` unless user says otherwise in that message
 - Never `gh pr ready` / undraft unless user ordered it
 - Draft: do not wait on `gh pr checks` (skipped on purpose)
-- No branch-only `deploymentEnabled` hacks
+- Ready: wait `gh pr checks` (Actions + Vercel Preview) — no merge without user sí
+- No branch-only `deploymentEnabled` hacks (`**` true; draft gate = ignore script)
 
 ## Vercel token
 
-Preview needs `GITHUB_TOKEN`/`GH_TOKEN` (`repo` / `pull_requests: read`) or ignore script fails closed.
+Preview on **`rocha-cotizador`** needs `GITHUB_TOKEN`/`GH_TOKEN` (`repo` / `pull_requests: read`) or ignore fails closed. Feature Previews **not** on `rocha-cotizador-dev`.
 
-Refs: `.github/workflows/ci.yml`, `scripts/vercel-ignore-draft-pr.sh`, `docs/ci.md`
+Refs: `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `scripts/vercel-ignore-draft-pr.sh`, `docs/ci.md`
