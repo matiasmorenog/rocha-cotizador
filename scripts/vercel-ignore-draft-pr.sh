@@ -10,8 +10,9 @@
 set -u
 
 # Production Vercel project — `main` ships only via GitHub Actions (`vercel deploy --prod`).
-# Git Preview is allowed solely for branch `development` (Neon development via branch env).
-# Feature PRs still skip here to save preview minutes.
+# Git Preview on this project: only branch `development` (Neon development via branch env).
+# Feature / ready PR previews run on the *dev* project (`rocha-cotizador-dev`); this script
+# still cancels them here so prod-project minutes stay on development + Actions.
 PROD_PROJECT_ID="prj_q87cwzCd7xVN7eDPzm81fDmjLKNz"
 
 proceed() {

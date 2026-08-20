@@ -4,7 +4,7 @@
     "deploymentEnabled": {
       "main": false,
       "development": true,
-      "**": false
+      "**": true
     }
   },
   "ignoreCommand": "bash scripts/vercel-ignore-draft-pr.sh"
