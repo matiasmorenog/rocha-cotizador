@@ -1068,7 +1068,7 @@ html[data-admin-theme="dark"] .shadow-sm {
   - rounded-lg|xl + border + bg-white: cards, tables, skeletons, sidebar
     Skip .inline-flex (tab bars).
   - button/a.shadow-sm + button.btn-primary: CTAs outside cards (same token; size-8 icon actions stay this lift)
-  - Descendants inside card surfaces: no glow (forms, filters, table icon buttons)
+  - Descendants inside card surfaces: no shadow/glow (forms, filters, nested CTAs)
 */
 html[data-admin-theme="dark"] .shadow-md,
 html[data-admin-theme="dark"] .shadow-lg,
@@ -1083,9 +1083,11 @@ html[data-admin-theme="dark"] button.btn-primary {
   box-shadow: var(--admin-card-shadow);
 }
 
-/* Strip nested control glow — card wrapper keeps --admin-card-shadow above. */
-html[data-admin-theme="dark"]
-  :is(.rounded-lg, .rounded-xl).border.bg-white:not(.inline-flex)
+/*
+  Nested controls: card owns elevation. Light + dark — strips Tailwind
+  button shadows and admin glow on descendants of white card surfaces.
+*/
+:is(.rounded-lg, .rounded-xl).border.bg-white:not(.inline-flex)
   :is(
     button:not(.data-table-scroll-btn),
     a.shadow-sm,
