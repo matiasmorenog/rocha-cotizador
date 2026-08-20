@@ -50,11 +50,11 @@ export function StaffPreviewControl({
   return (
     <label
       className={cn(
-        "flex w-full min-w-0 items-center gap-2 text-xs text-neutral-600",
+        "flex w-full min-w-0 flex-col gap-1.5 text-xs text-neutral-600",
         className,
       )}
     >
-      <span className="inline-flex shrink-0 items-center gap-1.5">
+      <span className="inline-flex items-center gap-1.5">
         <Eye className="h-3.5 w-3.5 shrink-0 text-current" aria-hidden />
         Ver como
       </span>
@@ -64,7 +64,7 @@ export function StaffPreviewControl({
         value={activePreset}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "h-8 min-w-0 flex-1 truncate rounded-md border px-2 text-xs shadow-none",
+          "h-8 w-full min-w-0 truncate rounded-md border px-2 text-xs shadow-none",
           isPreviewActive
             ? "border-amber-200 bg-amber-50 text-amber-950"
             : "border-neutral-200 bg-white text-neutral-800",
