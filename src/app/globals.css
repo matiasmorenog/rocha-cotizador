@@ -1108,7 +1108,8 @@ html[data-admin-theme="dark"] .shadow-sm {
   - rounded-lg|xl + border + bg-white: cards, tables, skeletons, sidebar
     Skip .inline-flex (tab bars).
   - button/a.shadow-sm + button.btn-primary: CTAs outside cards (same token; size-8 icon actions stay this lift)
-  - Descendants inside card surfaces: no shadow/glow (forms, filters, nested CTAs)
+  - Descendants inside card surfaces: no shadow/glow (forms, filters, nested
+    CTAs, nested tables / DataTableScroll / inner rounded-lg|xl cards)
 */
 html[data-admin-theme="dark"] .shadow-md,
 html[data-admin-theme="dark"] .shadow-lg,
@@ -1124,8 +1125,10 @@ html[data-admin-theme="dark"] button.btn-primary {
 }
 
 /*
-  Nested controls: card owns elevation. Light + dark — strips Tailwind
-  button shadows and admin glow on descendants of white card surfaces.
+  Nested controls / surfaces: card owns elevation. Light + dark — strips
+  Tailwind shadows and admin glow on descendants of white card surfaces
+  (controls + nested rounded-lg|xl border bg-white tables/cards).
+  Top-level cards, sidebar, standalone tables keep elevation.
 */
 :is(.rounded-lg, .rounded-xl).border.bg-white:not(.inline-flex)
   :is(
@@ -1134,7 +1137,9 @@ html[data-admin-theme="dark"] button.btn-primary {
     select,
     input,
     textarea,
-    [role="combobox"]
+    [role="combobox"],
+    .rounded-lg.border.bg-white,
+    .rounded-xl.border.bg-white
   ) {
   box-shadow: none;
 }
