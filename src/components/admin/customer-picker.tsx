@@ -346,20 +346,23 @@ export function CustomerPicker({
   }
 
   if (value) {
+    const note = value.nameNote?.trim();
     return (
       <div
         className={cn(
-          "quote-customer-selected flex flex-wrap items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm",
+          "quote-customer-selected flex flex-wrap items-start justify-between gap-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm",
           exiting && "quote-customer-exit pointer-events-none",
         )}
         aria-hidden={exiting || undefined}
       >
-        <div>
-          <p className="text-sm font-medium text-neutral-900">
-            {value.code} —{" "}
-            <AdminCustomerName name={value.name} nameNote={value.nameNote} />
+        <div className="min-w-0 flex-1 text-left">
+          <p className="truncate text-sm font-medium text-neutral-900">
+            {value.code} — {value.name}
           </p>
-          <p className="text-xs text-neutral-500">
+          {note ? (
+            <p className="truncate text-xs text-neutral-500">{note}</p>
+          ) : null}
+          <p className="text-xs text-neutral-400">
             Lista: {value.priceListName ?? "Precio base"}
           </p>
         </div>
@@ -367,6 +370,7 @@ export function CustomerPicker({
           type="button"
           variant="outline"
           size="sm"
+          className="shrink-0"
           disabled={exiting}
           onClick={() => onChange(null)}
         >

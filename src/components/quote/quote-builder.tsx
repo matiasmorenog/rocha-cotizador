@@ -354,122 +354,125 @@ export function QuoteBuilder({
         </div>
       ) : null}
 
-      <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-        <div ref={tableHeightLockRef}>
-          <DataTableScroll className="rounded-none border-0 bg-transparent shadow-none">
-            <table className="quote-draft-table w-full min-w-[40rem] text-sm">
-              <colgroup>
-                <col className="quote-draft-col-code" />
-                <col className="quote-draft-col-product" />
-                <col className="quote-draft-col-qty" />
-                <col className="quote-draft-col-measure" />
-                <col className="quote-draft-col-price" />
-                <col className="quote-draft-col-amount" />
-                <col className="quote-draft-col-actions" />
-              </colgroup>
-              <thead className="text-left text-neutral-600">
-                <tr className="border-b border-neutral-200">
-                  <th className="px-3 py-2.5 font-medium">Código</th>
-                  <th className="px-3 py-2.5 font-medium">Producto</th>
-                  <th className="px-3 py-2.5 font-medium">Cant.</th>
-                  <th className="px-3 py-2.5 font-medium">Medida</th>
-                  <th className="px-3 py-2.5 font-medium">Precio</th>
-                  <th className="px-3 py-2.5 font-medium">Importe</th>
-                  <th className="px-3 py-2.5" />
-                </tr>
-              </thead>
-              <tbody>
-              {emptyPhase !== "hidden" ? (
-                <QuoteDraftEmptyRow
-                  exiting={emptyPhase === "exiting"}
-                  onExitComplete={completeEmptyExit}
-                />
-              ) : null}
-              {animatedRows.map(({ line: l, exiting, animateEnter, softExit }) => (
-                <QuoteDraftAnimatedRow
-                  key={l.id}
-                  exiting={exiting}
-                  softExit={softExit}
-                  animateEnter={animateEnter}
-                  onExitComplete={() => completeExit(l.id)}
-                  onEnterComplete={() => completeEnter(l.id)}
-                  className={cn(
-                    "transition-colors duration-200 motion-reduce:transition-none",
-                    l.orderByUnit
-                      ? "border-t border-amber-200 bg-amber-50"
-                      : "border-t border-neutral-100",
-                  )}
-                >
-                  <td className="px-3 py-2 font-mono text-xs">{l.code}</td>
-                  <td className="px-3 py-2">
-                    <div>{l.name}</div>
-                    {l.orderByUnit ? (
-                      <p className="mt-0.5 text-xs text-amber-800">
-                        {UNIT_ORDER_PRICE_WARNING}
-                      </p>
-                    ) : null}
-                  </td>
-                  <td className="px-3 py-2">
-                    <ArNumberValueInput
-                      className="h-8 w-24 font-mono"
-                      value={l.qty}
-                      onValueChange={(n) => setQty(l.id, n)}
-                      maxFractionDigits={3}
-                      min={0.001}
-                      aria-label={quoteLineQtyAriaLabel(
-                        l.orderByUnit,
-                        l.allowsUnitOrder,
-                      )}
-                    />
-                  </td>
-                  <td className="px-3 py-2">
-                    {l.allowsUnitOrder ? (
-                      <MeasureSelect
-                        size="sm"
-                        className="w-[7.5rem]"
-                        value={l.orderByUnit ? "unit" : "kg"}
-                        onChange={(v) => setOrderByUnit(l.id, v === "unit")}
-                        aria-label="Medida"
-                      />
-                    ) : (
-                      <span className="text-neutral-500">
-                        {quoteLineMeasureLabel(
+      {/* Outer card: shadow-sm + admin dark glow. Inner DataTableScroll flat. */}
+      <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg">
+          <div ref={tableHeightLockRef}>
+            <DataTableScroll className="rounded-none border-0 bg-transparent shadow-none">
+              <table className="quote-draft-table w-full min-w-[40rem] text-sm">
+                <colgroup>
+                  <col className="quote-draft-col-code" />
+                  <col className="quote-draft-col-product" />
+                  <col className="quote-draft-col-qty" />
+                  <col className="quote-draft-col-measure" />
+                  <col className="quote-draft-col-price" />
+                  <col className="quote-draft-col-amount" />
+                  <col className="quote-draft-col-actions" />
+                </colgroup>
+                <thead className="text-left text-neutral-600">
+                  <tr className="border-b border-neutral-200">
+                    <th className="px-3 py-2.5 font-medium">Código</th>
+                    <th className="px-3 py-2.5 font-medium">Producto</th>
+                    <th className="px-3 py-2.5 font-medium">Cant.</th>
+                    <th className="px-3 py-2.5 font-medium">Medida</th>
+                    <th className="px-3 py-2.5 font-medium">Precio</th>
+                    <th className="px-3 py-2.5 font-medium">Importe</th>
+                    <th className="px-3 py-2.5" />
+                  </tr>
+                </thead>
+                <tbody>
+                {emptyPhase !== "hidden" ? (
+                  <QuoteDraftEmptyRow
+                    exiting={emptyPhase === "exiting"}
+                    onExitComplete={completeEmptyExit}
+                  />
+                ) : null}
+                {animatedRows.map(({ line: l, exiting, animateEnter, softExit }) => (
+                  <QuoteDraftAnimatedRow
+                    key={l.id}
+                    exiting={exiting}
+                    softExit={softExit}
+                    animateEnter={animateEnter}
+                    onExitComplete={() => completeExit(l.id)}
+                    onEnterComplete={() => completeEnter(l.id)}
+                    className={cn(
+                      "transition-colors duration-200 motion-reduce:transition-none",
+                      l.orderByUnit
+                        ? "border-t border-amber-200 bg-amber-50"
+                        : "border-t border-neutral-100",
+                    )}
+                  >
+                    <td className="px-3 py-2 font-mono text-xs">{l.code}</td>
+                    <td className="px-3 py-2">
+                      <div>{l.name}</div>
+                      {l.orderByUnit ? (
+                        <p className="mt-0.5 text-xs text-amber-800">
+                          {UNIT_ORDER_PRICE_WARNING}
+                        </p>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-2">
+                      <ArNumberValueInput
+                        className="h-8 w-24 font-mono"
+                        value={l.qty}
+                        onValueChange={(n) => setQty(l.id, n)}
+                        maxFractionDigits={3}
+                        min={0.001}
+                        aria-label={quoteLineQtyAriaLabel(
                           l.orderByUnit,
                           l.allowsUnitOrder,
                         )}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    {formatPrice(effectiveUnitPrice(l))}
-                  </td>
-                  <td className="px-3 py-2 font-medium">
-                    {formatPrice(effectiveLineTotal(l))}
-                  </td>
-                  <td className="px-3 py-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      className="px-2 hover:border-red-400 hover:bg-red-50 hover:text-red-700"
-                      onClick={() => remove(l.id)}
-                      aria-label="Quitar"
-                      title="Quitar"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden />
-                    </Button>
-                  </td>
-                </QuoteDraftAnimatedRow>
-              ))}
-              </tbody>
-            </table>
-          </DataTableScroll>
-        </div>
-        <div className="flex items-center justify-between border-t border-neutral-200 px-4 py-3">
-          <p className="text-sm text-neutral-600">{lines.length} ítem(s)</p>
-          <p className="text-lg font-semibold text-neutral-900">
-            Total {formatPrice(draftTotal)}
-          </p>
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      {l.allowsUnitOrder ? (
+                        <MeasureSelect
+                          size="sm"
+                          className="w-[7.5rem]"
+                          value={l.orderByUnit ? "unit" : "kg"}
+                          onChange={(v) => setOrderByUnit(l.id, v === "unit")}
+                          aria-label="Medida"
+                        />
+                      ) : (
+                        <span className="text-neutral-500">
+                          {quoteLineMeasureLabel(
+                            l.orderByUnit,
+                            l.allowsUnitOrder,
+                          )}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      {formatPrice(effectiveUnitPrice(l))}
+                    </td>
+                    <td className="px-3 py-2 font-medium">
+                      {formatPrice(effectiveLineTotal(l))}
+                    </td>
+                    <td className="px-3 py-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="px-2 hover:border-red-400 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => remove(l.id)}
+                        aria-label="Quitar"
+                        title="Quitar"
+                      >
+                        <Trash2 className="h-4 w-4" aria-hidden />
+                      </Button>
+                    </td>
+                  </QuoteDraftAnimatedRow>
+                ))}
+                </tbody>
+              </table>
+            </DataTableScroll>
+          </div>
+          <div className="flex items-center justify-between border-t border-neutral-200 px-4 py-3">
+            <p className="text-sm text-neutral-600">{lines.length} ítem(s)</p>
+            <p className="text-lg font-semibold text-neutral-900">
+              Total {formatPrice(draftTotal)}
+            </p>
+          </div>
         </div>
       </div>
 
