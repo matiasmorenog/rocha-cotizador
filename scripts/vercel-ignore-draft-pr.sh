@@ -3,9 +3,10 @@
 # Exit 0 = cancel build; exit 1 = proceed.
 # Docs: https://vercel.com/docs/project-configuration/vercel-json#ignorecommand
 #
-# Feature / ready PR previews: only on the production Vercel project
-# (`rocha-cotizador`). Demo project (`rocha-cotizador-dev`) keeps Git for
-# `development` / its Production alias only — no feature Preview URLs there.
+# Feature / ready PR previews: only on production Vercel project
+# `rocha-cotizador` (prj_q87cwzCd…). Demo `rocha-cotizador-dev`
+# (prj_Oagw7Pq3…): Git Production on push/merge to `development` only —
+# never feature/ready PR Previews (portfolio URL stays that alias).
 #
 # Requires Preview env var GITHUB_TOKEN (or GH_TOKEN) with repo / pull_requests:read
 # on the *prod* project so the GitHub API can see draft status on this private repo.

@@ -7,9 +7,9 @@ alwaysApply: true
 
 | State | Actions | Vercel |
 |-------|---------|--------|
-| **draft** | Skipped (`ci.yml` `if`) | Ignore cancela feature deploy |
-| **ready** | lint/typecheck | Preview en **`rocha-cotizador`** (ignore procede) |
-| push `development` | Runs | Preview on prod project (SSO) + `rocha-cotizador-dev` public |
+| **draft** | Skipped (`ci.yml` `if`) | Ignore cancela feature deploy (ambos proyectos) |
+| **ready** | lint/typecheck | Preview **solo** `rocha-cotizador`; **no** en `rocha-cotizador-dev` |
+| push `development` | Runs | Preview on prod (SSO) + `rocha-cotizador-dev` Production pública |
 | push `main` | CI + Deploy workflow | Auto-deploy off; Actions ships prod |
 
 ## Agent

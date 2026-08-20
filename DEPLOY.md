@@ -152,11 +152,10 @@ Build command (Vercel): `npm run build` → `prisma generate && next build` (`po
 
 - Auto-deploy Vercel en **`main` está OFF** (`vercel.json`).
 - Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production** (incluye **pre-deploy schema sync** + **post-deploy smoke**: `/api/health` + homepage + **post-deploy cache revalidate**: CDN + Data + tags + brand images).
-- Push a `development` → Git Preview en **`rocha-cotizador`** (SSO; `DATABASE_URL`/`AUTH_URL` override `gitBranch=development` → Neon development) **y** Git Production en **`rocha-cotizador-dev`** (público). Después Actions **post-deploy-cache-development** (purge contra el proyecto demo).
+- Push a `development` → Git Preview en **`rocha-cotizador`** (SSO; `DATABASE_URL`/`AUTH_URL` override `gitBranch=development` → Neon development) **y** Git Production en **`rocha-cotizador-dev`** (público, portfolio). Después Actions **post-deploy-cache-development** (purge contra el proyecto demo).
+- Ready feature PRs → Preview **solo** en **`rocha-cotizador`**. **`rocha-cotizador-dev`** no lanza Preview de PRs (ignore cancela; solo actualiza al merge a `development`).
 - Secrets en GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (ver [`docs/ci.md`](docs/ci.md)).
 - Opcional pero recomendado: `DATABASE_URL_PRODUCTION` (Neon `main`, preferible URL **direct**) para el gate de schema sin depender solo de `vercel pull`.
-
-Previews de `development` / PRs siguen con el deploy automático de Vercel.
 
 ## Client production (obligatorio)
 
