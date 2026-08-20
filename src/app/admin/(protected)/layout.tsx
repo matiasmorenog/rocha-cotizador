@@ -18,7 +18,7 @@ export default async function AdminLayout({
           permissions={permissions}
           userName={session.user.name}
           userEmail={session.user.email}
-          staffPreviewLabel={session.user.staffPreview?.label}
+          isSuperuser={Boolean(session.user.isSuperuser)}
         />
         <div className="min-w-0 flex-1">
           <AdminPageSafe>{children}</AdminPageSafe>
