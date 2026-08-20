@@ -57,16 +57,16 @@ export function RemitoAdminTable({ quoteId, lines, canDeleteLine }: Props) {
     <DataTableScroll className="data-table-rows-2l rounded-none border-0 bg-transparent shadow-none">
       <table ref={tableRef} className="w-full min-w-[28rem] text-sm">
         <thead>
-          <tr className="border-b border-neutral-300 text-left text-neutral-600">
-            <th className="py-2 pl-2 pr-2 font-medium">Cód.</th>
-            <th className="py-2 pr-2 font-medium">Cant.</th>
-            <th className="py-2 pr-2 font-medium">Artículo</th>
-            <th className="py-2 pr-2 text-right font-medium">Precio</th>
-            <th className="py-2 pr-2 text-right font-medium">Importe</th>
+          <tr className="border-b border-neutral-200 text-left text-neutral-600">
+            <th className="py-2.5 pl-2 pr-2 font-medium">Cód.</th>
+            <th className="py-2.5 pr-2 font-medium">Cant.</th>
+            <th className="py-2.5 pr-2 font-medium">Artículo</th>
+            <th className="py-2.5 pr-2 text-right font-medium">Precio</th>
+            <th className="py-2.5 pr-2 text-right font-medium">Importe</th>
             {showEditChrome ? (
               <th
                 className={cn(
-                  "w-0 py-2 pl-1 pr-2 print:hidden",
+                  "w-0 py-2.5 pl-1 pr-2 print:hidden",
                   editExiting && "overflow-hidden",
                 )}
                 aria-label="Acciones"
@@ -75,7 +75,7 @@ export function RemitoAdminTable({ quoteId, lines, canDeleteLine }: Props) {
             ) : null}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-neutral-100">
           {lines.map((line) => (
             <RemitoAdminItemRows
               key={line.itemId}

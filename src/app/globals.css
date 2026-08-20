@@ -255,6 +255,15 @@ body {
   the white card. Kill admin-list hover/selection fills that read as gray
   banding; weigh-pending amber + inset selection box-shadow stay.
 */
+.print-remito .data-table-scroll {
+  box-shadow: none;
+  background-color: transparent;
+}
+
+.print-remito tbody tr {
+  box-shadow: none;
+}
+
 .print-remito .admin-table-row:hover {
   background-color: transparent;
 }

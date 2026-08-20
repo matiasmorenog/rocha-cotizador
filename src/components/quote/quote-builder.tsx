@@ -356,7 +356,7 @@ export function QuoteBuilder({
 
       <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
         <div ref={tableHeightLockRef}>
-          <DataTableScroll className="rounded-none border-0">
+          <DataTableScroll className="rounded-none border-0 bg-transparent shadow-none">
             <table className="quote-draft-table w-full min-w-[40rem] text-sm">
               <colgroup>
                 <col className="quote-draft-col-code" />
