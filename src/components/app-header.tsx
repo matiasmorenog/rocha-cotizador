@@ -4,7 +4,6 @@ import { signOut } from "@/lib/auth";
 import { getOptionalSession } from "@/lib/session";
 import { PinChangeHint } from "@/components/account/pin-change-hint";
 import { AdminMenuButton } from "@/components/admin/admin-menu-button";
-import { StaffPreviewControl } from "@/components/admin/staff-preview-ui";
 import { AdminThemeToggle } from "@/components/admin/admin-theme-toggle";
 import { HeaderProgressLine } from "@/components/header-progress-line";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
@@ -15,7 +14,6 @@ export async function AppHeader() {
   const session = await getOptionalSession();
   const isCustomer = session?.user?.role === "CUSTOMER";
   const isStaff = isAdminPanelRole(session?.user?.role);
-  const isSuperuser = Boolean(session?.user?.isSuperuser);
   const staffHome = isStaff
     ? staffHomeHref(session?.user?.permissions, session?.user?.role)
     : "/admin";
@@ -69,7 +67,6 @@ export async function AppHeader() {
                 </>
               ) : (
                 <div className="flex items-center gap-4">
-                  <StaffPreviewControl isSuperuser={isSuperuser} />
                   <AdminThemeToggle />
                   <span
                     className="h-5 w-px shrink-0 bg-neutral-300/70"

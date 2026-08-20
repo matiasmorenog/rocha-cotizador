@@ -108,8 +108,8 @@ export function RemitoAdminItemRows({
   const chromeInteractive = editMode && !editExiting && !panelExiting;
 
   const rowClass = cn(
-    "border-b border-neutral-100",
-    showAmber && "border-amber-100 bg-amber-50",
+    "bg-transparent shadow-none",
+    showAmber && "bg-amber-50",
   );
 
   /** Match quote draft table: secondary + red hover on delete. */

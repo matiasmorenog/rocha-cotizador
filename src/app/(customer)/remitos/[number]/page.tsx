@@ -313,18 +313,18 @@ export default async function RemitoDetailPage({
             canDeleteLine={canDeleteLine}
           />
         ) : (
-          <DataTableScroll className="data-table-rows-2l rounded-none border-0 bg-transparent">
+          <DataTableScroll className="data-table-rows-2l rounded-none border-0 bg-transparent shadow-none">
             <table className="w-full min-w-[28rem] text-sm">
               <thead>
-                <tr className="border-b border-neutral-300 text-left text-neutral-600">
-                  <th className="py-2 pl-2 pr-2 font-medium">Cód.</th>
-                  <th className="py-2 pr-2 font-medium">Cant.</th>
-                  <th className="py-2 pr-2 font-medium">Artículo</th>
-                  <th className="py-2 pr-2 text-right font-medium">Precio</th>
-                  <th className="py-2 pr-2 text-right font-medium">Importe</th>
+                <tr className="border-b border-neutral-200 text-left text-neutral-600">
+                  <th className="py-2.5 pl-2 pr-2 font-medium">Cód.</th>
+                  <th className="py-2.5 pr-2 font-medium">Cant.</th>
+                  <th className="py-2.5 pr-2 font-medium">Artículo</th>
+                  <th className="py-2.5 pr-2 text-right font-medium">Precio</th>
+                  <th className="py-2.5 pr-2 text-right font-medium">Importe</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-neutral-100">
                 {quote.items.map((item) => {
                   const allowsUnitOrder = item.productId
                     ? (allowsUnitOrderByProductId.get(item.productId) ?? false)
@@ -341,19 +341,17 @@ export default async function RemitoDetailPage({
                     <tr
                       key={item.id}
                       className={
-                        showAmber
-                          ? "border-b border-amber-100 bg-amber-50"
-                          : "border-b border-neutral-100"
+                        showAmber ? "bg-amber-50" : "bg-transparent"
                       }
                     >
-                      <td className="py-2 pl-2 pr-2 align-middle font-mono text-xs">
+                      <td className="py-2.5 pl-2 pr-2 align-middle font-mono text-xs">
                         {item.productCode}
                       </td>
-                      <td className="py-2 pr-2 align-middle">
+                      <td className="py-2.5 pr-2 align-middle">
                         {formatQty(item.qty)}{" "}
                         <span className="text-neutral-500">{measureLabel}</span>
                       </td>
-                      <td className="py-2 pr-2 align-middle">
+                      <td className="py-2.5 pr-2 align-middle">
                         <TruncatedName
                           name={item.productName}
                           lines={needsWeighPrice ? 1 : 2}
@@ -365,10 +363,10 @@ export default async function RemitoDetailPage({
                           </p>
                         ) : null}
                       </td>
-                      <td className="py-2 pr-2 text-right align-middle">
+                      <td className="py-2.5 pr-2 text-right align-middle">
                         {formatPrice(item.unitPrice)}
                       </td>
-                      <td className="py-2 pr-2 text-right align-middle font-medium">
+                      <td className="py-2.5 pr-2 text-right align-middle font-medium">
                         {formatPrice(item.lineTotal)}
                       </td>
                     </tr>
@@ -379,8 +377,15 @@ export default async function RemitoDetailPage({
           </DataTableScroll>
         )}
 
+        <div className="mt-5 flex items-baseline justify-end gap-2 border-t border-neutral-200 pt-4">
+          <span className="text-sm font-medium text-neutral-500">Total</span>
+          <span className="text-xl font-semibold tabular-nums text-neutral-900">
+            {formatPrice(quote.total)}
+          </span>
+        </div>
+
         {quote.notes ? (
-          <div className="mt-6 border-t border-neutral-200 pt-4">
+          <div className="mt-5 border-t border-neutral-100 pt-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
               Observaciones
             </p>
@@ -389,12 +394,6 @@ export default async function RemitoDetailPage({
             </p>
           </div>
         ) : null}
-
-        <div className="mt-6 flex justify-end">
-          <p className="text-lg font-semibold">
-            Total: {formatPrice(quote.total)}
-          </p>
-        </div>
       </article>
     </div>
   );

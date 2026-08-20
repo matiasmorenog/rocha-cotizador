@@ -8,6 +8,7 @@ import {
   useExitPresence,
   QUOTE_PICKER_FLOAT_MS,
 } from "@/hooks/use-exit-presence";
+import { StaffPreviewControl } from "@/components/admin/staff-preview-ui";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import type { StaffPermission } from "@/lib/staff-permissions";
 import { cn } from "@/lib/utils";
@@ -89,26 +90,56 @@ function NavLinks({
   );
 }
 
+function AdminSidebarUserInfo({
+  name,
+  email,
+  isSuperuser,
+}: {
+  name?: string | null;
+  email?: string | null;
+  isSuperuser?: boolean;
+}) {
+  const primary = name?.trim() || email?.trim() || "Usuario";
+  const showEmailSecondary = Boolean(name?.trim() && email?.trim());
+
+  return (
+    <div className="mb-3 border-b border-neutral-200 pb-3">
+      <p className="truncate text-sm font-medium text-neutral-900">{primary}</p>
+      {showEmailSecondary ? (
+        <p className="truncate text-xs text-neutral-500">{email}</p>
+      ) : null}
+      {isSuperuser ? (
+        <div className="mt-2">
+          <StaffPreviewControl isSuperuser />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function AdminSidebarPanel({
   pathname,
   onNavigate,
   showCloseButton = false,
   onClose,
   permissions,
+  userName,
+  userEmail,
+  isSuperuser,
 }: {
   pathname: string;
   onNavigate?: () => void;
   showCloseButton?: boolean;
   onClose?: () => void;
   permissions: StaffPermission[];
+  userName?: string | null;
+  userEmail?: string | null;
+  isSuperuser?: boolean;
 }) {
   return (
     <div className="flex h-auto flex-col">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-neutral-500">
-          Administración
-        </p>
-        {showCloseButton ? (
+      {showCloseButton ? (
+        <div className="mb-3 flex justify-end">
           <button
             type="button"
             onClick={onClose}
@@ -120,8 +151,13 @@ function AdminSidebarPanel({
           >
             <X className="h-5 w-5" />
           </button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
+      <AdminSidebarUserInfo
+        name={userName}
+        email={userEmail}
+        isSuperuser={isSuperuser}
+      />
       <NavLinks
         pathname={pathname}
         onNavigate={onNavigate}
@@ -134,9 +170,15 @@ function AdminSidebarPanel({
 function AdminMobileDrawer({
   pathname,
   permissions,
+  userName,
+  userEmail,
+  isSuperuser,
 }: {
   pathname: string;
   permissions: StaffPermission[];
+  userName?: string | null;
+  userEmail?: string | null;
+  isSuperuser?: boolean;
 }) {
   const open = useAdminNavStore((s) => s.open);
   const setOpen = useAdminNavStore((s) => s.setOpen);
@@ -206,6 +248,9 @@ function AdminMobileDrawer({
           showCloseButton
           onClose={close}
           permissions={permissions}
+          userName={userName}
+          userEmail={userEmail}
+          isSuperuser={isSuperuser}
         />
       </aside>
     </div>
@@ -214,18 +259,36 @@ function AdminMobileDrawer({
 
 export function AdminNav({
   permissions,
+  userName,
+  userEmail,
+  isSuperuser,
 }: {
   permissions: StaffPermission[];
+  userName?: string | null;
+  userEmail?: string | null;
+  isSuperuser?: boolean;
 }) {
   const pathname = usePathname();
 
   return (
     <>
       <aside className="admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 shadow-sm print:hidden">
-        <AdminSidebarPanel pathname={pathname} permissions={permissions} />
+        <AdminSidebarPanel
+          pathname={pathname}
+          permissions={permissions}
+          userName={userName}
+          userEmail={userEmail}
+          isSuperuser={isSuperuser}
+        />
       </aside>
 
-      <AdminMobileDrawer pathname={pathname} permissions={permissions} />
+      <AdminMobileDrawer
+        pathname={pathname}
+        permissions={permissions}
+        userName={userName}
+        userEmail={userEmail}
+        isSuperuser={isSuperuser}
+      />
     </>
   );
 }

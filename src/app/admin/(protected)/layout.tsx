@@ -14,7 +14,12 @@ export default async function AdminLayout({
     <>
       <AdminPushSafe />
       <div className="admin-shell">
-        <AdminNav permissions={permissions} />
+        <AdminNav
+          permissions={permissions}
+          userName={session.user.name}
+          userEmail={session.user.email}
+          isSuperuser={Boolean(session.user.isSuperuser)}
+        />
         <div className="min-w-0 flex-1">
           <AdminPageSafe>{children}</AdminPageSafe>
         </div>

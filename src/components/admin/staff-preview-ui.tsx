@@ -50,19 +50,21 @@ export function StaffPreviewControl({
   return (
     <label
       className={cn(
-        "flex items-center gap-2 text-xs text-neutral-600",
+        "flex w-full min-w-0 flex-col gap-1.5 text-xs text-neutral-600",
         className,
       )}
     >
-      <Eye className="h-3.5 w-3.5 shrink-0 text-current" aria-hidden />
-      <span className="hidden sm:inline">Ver como</span>
+      <span className="inline-flex items-center gap-1.5">
+        <Eye className="h-3.5 w-3.5 shrink-0 text-current" aria-hidden />
+        Ver como
+      </span>
       <select
         aria-label="Vista previa de permisos de staff"
         disabled={pending}
         value={activePreset}
         onChange={(e) => onChange(e.target.value)}
         className={cn(
-          "h-8 max-w-[10.5rem] truncate rounded-md border px-2 text-xs",
+          "h-8 w-full min-w-0 truncate rounded-md border px-2 text-xs shadow-none",
           isPreviewActive
             ? "border-amber-200 bg-amber-50 text-amber-950"
             : "border-neutral-200 bg-white text-neutral-800",
