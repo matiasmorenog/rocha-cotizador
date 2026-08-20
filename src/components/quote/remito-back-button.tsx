@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useRouteLoading } from "@/lib/route-loading-context";
 
-/** Remito header back control — same outline Button as Imprimir / Editar. */
+/** Remito header back control — same outline Button as print / Editar. */
 export function RemitoBackButton({ href }: { href?: string }) {
   const router = useRouter();
   const { startLoading } = useRouteLoading();
