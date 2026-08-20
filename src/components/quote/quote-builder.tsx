@@ -369,15 +369,15 @@ export function QuoteBuilder({
                   <col className="quote-draft-col-amount" />
                   <col className="quote-draft-col-actions" />
                 </colgroup>
-                <thead className="bg-neutral-50 text-left text-neutral-600">
-                  <tr>
-                    <th className="px-3 py-2 font-medium">Código</th>
-                    <th className="px-3 py-2 font-medium">Producto</th>
-                    <th className="px-3 py-2 font-medium">Cant.</th>
-                    <th className="px-3 py-2 font-medium">Medida</th>
-                    <th className="px-3 py-2 font-medium">Precio</th>
-                    <th className="px-3 py-2 font-medium">Importe</th>
-                    <th className="px-3 py-2" />
+                <thead className="text-left text-neutral-600">
+                  <tr className="border-b border-neutral-200">
+                    <th className="px-3 py-2.5 font-medium">Código</th>
+                    <th className="px-3 py-2.5 font-medium">Producto</th>
+                    <th className="px-3 py-2.5 font-medium">Cant.</th>
+                    <th className="px-3 py-2.5 font-medium">Medida</th>
+                    <th className="px-3 py-2.5 font-medium">Precio</th>
+                    <th className="px-3 py-2.5 font-medium">Importe</th>
+                    <th className="px-3 py-2.5" />
                   </tr>
                 </thead>
                 <tbody>
@@ -467,7 +467,7 @@ export function QuoteBuilder({
               </table>
             </DataTableScroll>
           </div>
-          <div className="flex items-center justify-between border-t border-neutral-200 bg-neutral-50 px-4 py-3">
+          <div className="flex items-center justify-between border-t border-neutral-200 px-4 py-3">
             <p className="text-sm text-neutral-600">{lines.length} ítem(s)</p>
             <p className="text-lg font-semibold text-neutral-900">
               Total {formatPrice(draftTotal)}
