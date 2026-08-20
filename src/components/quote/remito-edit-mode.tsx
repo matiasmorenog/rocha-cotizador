@@ -34,7 +34,7 @@ export function useRemitoEditMode(): RemitoEditModeContextValue {
   return ctx;
 }
 
-/** Outside remito card, next to Imprimir — toggles interactive edit UI. */
+/** Outside remito card, next to print actions — toggles interactive edit UI. */
 export function RemitoEditModeToggle() {
   const { editMode, setEditMode } = useRemitoEditMode();
   return (

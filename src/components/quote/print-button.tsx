@@ -1,5 +1,6 @@
 "use client";
 
+import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type PrintMode = "normal" | "thermal";
@@ -38,15 +39,19 @@ type PrintButtonProps = {
 
 export function PrintButton({ mode = "normal" }: PrintButtonProps) {
   const isThermal = mode === "thermal";
+  const label = isThermal ? "Imprimir térmica" : "Imprimir PDF";
 
   return (
     <Button
       type="button"
       variant={isThermal ? "primary" : "outline"}
-      className="print:hidden"
+      className="print:hidden gap-1.5"
       onClick={() => printWithMode(mode)}
+      aria-label={label}
+      title={label}
     >
-      {isThermal ? "Imprimir térmica" : "Imprimir PDF"}
+      <Printer className="size-4" aria-hidden />
+      <span>{isThermal ? "Térmica" : "PDF"}</span>
     </Button>
   );
 }
