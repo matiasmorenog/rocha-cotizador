@@ -250,6 +250,37 @@ body {
   filter: brightness(0.97);
 }
 
+/*
+  Remito document card (`/remitos/[number]`): body rows stay transparent like
+  the white card. Kill admin-list hover/selection fills that read as gray
+  banding; weigh-pending amber + inset selection box-shadow stay.
+*/
+.print-remito .admin-table-row:hover {
+  background-color: transparent;
+}
+
+.print-remito .admin-table-row[data-selected="true"],
+.print-remito .admin-table-row[data-selected="true"]:hover {
+  filter: none;
+  background-color: transparent;
+}
+
+.print-remito .admin-table-row[data-weigh-pending="true"]:hover {
+  background-color: #fef3c7; /* amber-100 — same as global weigh hover */
+}
+
+.print-remito
+  .admin-table-row[data-weigh-pending="true"][data-selected="true"],
+.print-remito
+  .admin-table-row[data-weigh-pending="true"][data-selected="true"]:hover {
+  filter: none;
+  background-color: color-mix(
+    in srgb,
+    var(--brand-primary-soft) 65%,
+    #fef3c7 35%
+  );
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admin-table-row {
     transition: none;
@@ -1123,6 +1154,39 @@ html[data-admin-theme="dark"] .admin-table-row[data-weigh-pending="true"]:hover 
 
 html[data-admin-theme="dark"]
   .admin-table-row[data-weigh-pending="true"][data-selected="true"] {
+  background-color: color-mix(
+    in srgb,
+    var(--brand-primary-soft) 65%,
+    #4a4028 35%
+  );
+}
+
+/* Remito document in admin dark: no list hover/selection fill on body rows. */
+html[data-admin-theme="dark"] .print-remito .admin-table-row:hover {
+  background-color: transparent;
+}
+
+html[data-admin-theme="dark"] .print-remito .admin-table-row[data-selected="true"],
+html[data-admin-theme="dark"]
+  .print-remito
+  .admin-table-row[data-selected="true"]:hover {
+  filter: none;
+  background-color: transparent;
+}
+
+html[data-admin-theme="dark"]
+  .print-remito
+  .admin-table-row[data-weigh-pending="true"]:hover {
+  background-color: #4a4028;
+}
+
+html[data-admin-theme="dark"]
+  .print-remito
+  .admin-table-row[data-weigh-pending="true"][data-selected="true"],
+html[data-admin-theme="dark"]
+  .print-remito
+  .admin-table-row[data-weigh-pending="true"][data-selected="true"]:hover {
+  filter: none;
   background-color: color-mix(
     in srgb,
     var(--brand-primary-soft) 65%,

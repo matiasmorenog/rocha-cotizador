@@ -108,7 +108,7 @@ export function RemitoAdminItemRows({
   const chromeInteractive = editMode && !editExiting && !panelExiting;
 
   const rowClass = cn(
-    "border-b border-neutral-100",
+    "border-b border-neutral-100 bg-transparent",
     showAmber && "border-amber-100 bg-amber-50",
   );
 

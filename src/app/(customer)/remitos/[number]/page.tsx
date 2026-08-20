@@ -313,7 +313,7 @@ export default async function RemitoDetailPage({
             canDeleteLine={canDeleteLine}
           />
         ) : (
-          <DataTableScroll className="data-table-rows-2l rounded-none border-0 bg-transparent">
+          <DataTableScroll className="data-table-rows-2l rounded-none border-0 bg-transparent shadow-none">
             <table className="w-full min-w-[28rem] text-sm">
               <thead>
                 <tr className="border-b border-neutral-300 text-left text-neutral-600">
@@ -343,7 +343,7 @@ export default async function RemitoDetailPage({
                       className={
                         showAmber
                           ? "border-b border-amber-100 bg-amber-50"
-                          : "border-b border-neutral-100"
+                          : "border-b border-neutral-100 bg-transparent"
                       }
                     >
                       <td className="py-2 pl-2 pr-2 align-middle font-mono text-xs">
