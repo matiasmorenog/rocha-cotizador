@@ -1,5 +1,7 @@
 /** Client-safe types/helpers for admin quote activity chart. */
 
+import { addCalendarDaysYmd } from "@/lib/delivery-date";
+
 export type QuoteActivityPeriod = "week" | "month" | "year";
 
 export type QuoteActivityPoint = {
@@ -75,19 +77,12 @@ export function aggregateQuoteActivityIntoWeeks(
   return weeks;
 }
 
-function nextArgentinaDayKey(dayKey: string): string {
-  // Noon UTC-3 + 24h stays on the next calendar day (no DST in Argentina).
-  const [y, m, d] = dayKey.split("-").map(Number);
-  const noonUtcMs = Date.UTC(y, m - 1, d, 15, 0, 0); // 12:00 AR = 15:00 UTC
-  const next = new Date(noonUtcMs + 24 * 60 * 60 * 1000);
-  const yyyy = next.getUTCFullYear();
-  const mm = String(next.getUTCMonth() + 1).padStart(2, "0");
-  const dd = String(next.getUTCDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
 /**
  * Half-open `[desde 00:00, hasta+1 00:00)` Argentina wall time for cotizaciones filters.
+ *
+ * Build the query string with raw `YYYY-MM-DDTHH:mm` (do not use URLSearchParams).
+ * Percent-encoding `:` as `%3A` has caused soft-nav to land with the URL bar
+ * updated while the cotizaciones page fell back to the default range.
  */
 export function buildAdminQuotesHrefFromActivityPoint(
   point: QuoteActivityPoint,
@@ -96,7 +91,6 @@ export function buildAdminQuotesHrefFromActivityPoint(
 
   const endDay = point.hasta ?? point.desde;
   const from = `${point.desde}T00:00`;
-  const to = `${nextArgentinaDayKey(endDay)}T00:00`;
-  const params = new URLSearchParams({ from, to });
-  return `/admin/cotizaciones?${params.toString()}`;
+  const to = `${addCalendarDaysYmd(endDay, 1)}T00:00`;
+  return `/admin/cotizaciones?from=${from}&to=${to}`;
 }

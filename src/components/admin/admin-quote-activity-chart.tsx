@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { easeOutExpo, useCountUp } from "@/components/admin/use-count-up";
 import {
   QUOTE_ACTIVITY_PERIOD_LABELS,
@@ -314,7 +313,6 @@ export function AdminQuoteActivityChart({
   summaryLabel,
   emptyLabel,
 }: AdminQuoteActivityChartProps) {
-  const router = useRouter();
   const [activeKey, setActiveKey] = useState<string | null>(null);
   const [chartPhase, setChartPhase] = useState<ChartPhase>("waiting");
   const isMobile = useIsMobile();
@@ -461,7 +459,10 @@ export function AdminQuoteActivityChart({
                       onMouseEnter={() => setActiveKey(plot.point.key)}
                       onMouseLeave={() => setActiveKey(null)}
                       onClick={() => {
-                        if (quotesHref) router.push(quotesHref);
+                        if (!quotesHref) return;
+                        // Full navigation so cotizaciones always receives from/to
+                        // (soft-nav has dropped encoded datetime query params).
+                        window.location.assign(quotesHref);
                       }}
                       aria-label={`${plot.point.label}: ${formatPrice(plot.point.revenue)}, ${plot.point.quotes} cotizaciones${isClickable ? ". Ver cotizaciones" : ""}`}
                       aria-hidden={!showDot}

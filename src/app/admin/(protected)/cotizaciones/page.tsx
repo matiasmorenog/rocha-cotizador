@@ -6,6 +6,9 @@ import { getAdminCotizacionesQuotes } from "@/lib/admin-cotizaciones-data";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
+/** Always honor `from`/`to` query (dashboard chart deep-links). */
+export const dynamic = "force-dynamic";
+
 export default async function AdminCotizacionesPage({
   searchParams,
 }: {
