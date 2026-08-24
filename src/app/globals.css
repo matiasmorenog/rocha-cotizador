@@ -1125,11 +1125,18 @@ html[data-admin-theme="dark"] button.btn-primary {
 }
 
 /*
-  Dashboard-only dark experiment: flat cards (no white glow). Scoped when
-  data-admin-dashboard-no-glow is on <html> (pathname /admin). Light unchanged.
+  Dashboard-only dark experiment: flat cards + flat backdrop (no white glow).
+  Scoped when data-admin-dashboard-no-glow is on <html> (pathname /admin).
+  Light unchanged.
 */
 html[data-admin-theme="dark"][data-admin-dashboard-no-glow] {
   --admin-card-shadow: none;
+}
+
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] body,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] .brand-page-atmosphere,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] main {
+  background-image: none;
 }
 
 html[data-admin-theme="dark"][data-admin-dashboard-no-glow] .shadow-sm,
