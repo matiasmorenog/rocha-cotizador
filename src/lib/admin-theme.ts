@@ -6,6 +6,11 @@ function isAdminLoginPath(path: string): boolean {
   return path === "/admin/login" || path.startsWith("/admin/login/");
 }
 
+/** Exact admin dashboard route (`/admin` only). */
+export function isAdminDashboardPath(path: string): boolean {
+  return path === "/admin";
+}
+
 /** `/admin` shell except login. Customer auth stays light. */
 export function isAdminThemePath(path: string): boolean {
   if (isAdminLoginPath(path)) return false;

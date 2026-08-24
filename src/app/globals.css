@@ -1125,6 +1125,31 @@ html[data-admin-theme="dark"] button.btn-primary {
 }
 
 /*
+  Dashboard-only dark experiment: flat cards (no white glow). Scoped when
+  data-admin-dashboard-no-glow is on <html> (pathname /admin). Light unchanged.
+*/
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] {
+  --admin-card-shadow: none;
+}
+
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] .shadow-sm,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] .shadow-md,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] .shadow-lg,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] .shadow-xl,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] .admin-toast-enter,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] .admin-toast-exit,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow]
+  .rounded-lg.border.bg-white:not(.inline-flex),
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] .rounded-xl.border.bg-white,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] button.shadow-sm,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] a.shadow-sm,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] button.btn-primary,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] .data-table-scroll-btn,
+html[data-admin-theme="dark"][data-admin-dashboard-no-glow] .data-table-scroll-btn:hover {
+  box-shadow: none;
+}
+
+/*
   Nested controls / surfaces: card owns elevation. Light + dark — strips
   Tailwind shadows and admin glow on descendants of white card surfaces
   (controls + nested rounded-lg|xl border bg-white tables/cards).
