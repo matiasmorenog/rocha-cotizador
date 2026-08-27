@@ -134,12 +134,21 @@ function buildBuckets(
   return { buckets, rangeStart: argentinaDayStart(startKey), grain: "day" };
 }
 
+/**
+ * Prisma stores `DateTime` as `timestamp without time zone` with UTC wall clock.
+ * Correct Argentina calendar day:
+ *   (createdAt AT TIME ZONE 'UTC') AT TIME ZONE 'America/Argentina/Buenos_Aires'
+ * A single `AT TIME ZONE 'America/Argentina/Buenos_Aires'` wrongly treats the UTC
+ * naive value as already-Argentina local and shifts evening AR quotes into the
+ * next UTC calendar day (e.g. R-000026 Sun 19:45 AR → Mon bucket).
+ */
 async function fetchQuoteActivityRows(rangeStart: Date, grain: ActivityGrain) {
   if (grain === "month") {
     return db.$queryRaw<{ bucketKey: string; quotes: number; revenue: number }[]>`
       SELECT
         to_char(
-          (q."createdAt" AT TIME ZONE 'America/Argentina/Buenos_Aires'),
+          (q."createdAt" AT TIME ZONE 'UTC')
+            AT TIME ZONE 'America/Argentina/Buenos_Aires',
           'YYYY-MM'
         ) AS "bucketKey",
         COUNT(*)::int AS quotes,
@@ -153,7 +162,8 @@ async function fetchQuoteActivityRows(rangeStart: Date, grain: ActivityGrain) {
   return db.$queryRaw<{ bucketKey: string; quotes: number; revenue: number }[]>`
     SELECT
       to_char(
-        (q."createdAt" AT TIME ZONE 'America/Argentina/Buenos_Aires'),
+        (q."createdAt" AT TIME ZONE 'UTC')
+          AT TIME ZONE 'America/Argentina/Buenos_Aires',
         'YYYY-MM-DD'
       ) AS "bucketKey",
       COUNT(*)::int AS quotes,
