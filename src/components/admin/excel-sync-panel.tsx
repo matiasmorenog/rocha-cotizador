@@ -6,14 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { notifyCatalogStale } from "@/lib/client-catalog-cache";
+import {
+  importHadMutations,
+  importNetworkFatalMessage,
+  importSummaryHeadline,
+  parseImportResponse,
+  type ImportFeedback,
+} from "@/lib/import-feedback";
+import {
+  ImportFatalFeedbackBox,
+  ImportRowErrorsBox,
+  ImportSuccessFeedbackBox,
+} from "@/components/admin/import-feedback-box";
 import { cn } from "@/lib/utils";
-
-type ImportSummary = {
-  created: number;
-  updated: number;
-  skipped: number;
-  errors: Array<{ row: number; message: string }>;
-};
 
 type ExcelSyncPanelProps = {
   exportUrl: string;
@@ -33,53 +38,56 @@ export function ExcelSyncPanel({
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<ImportFeedback | null>(null);
 
   async function onImport(e: FormEvent) {
     e.preventDefault();
     if (!file) {
-      setError("Elegí un archivo .xlsx");
+      setFeedback({
+        kind: "fatal",
+        title: "Falta archivo",
+        detail: "Elegí un archivo .xlsx antes de sincronizar.",
+      });
       return;
     }
     setLoading(true);
-    setError(null);
-    setMessage(null);
+    setFeedback(null);
 
     const body = new FormData();
     body.set("file", file);
 
-    const res = await fetch(importUrl, { method: "POST", body });
-    setLoading(false);
-    const data = (await res.json().catch(() => ({}))) as ImportSummary & {
-      error?: string;
-    };
+    try {
+      const res = await fetch(importUrl, { method: "POST", body });
+      const parsed = await parseImportResponse(res, entityLabel);
+      setFeedback(parsed);
 
-    if (!res.ok) {
-      setError(data.error ?? "Error al importar");
-      return;
-    }
+      if (parsed.kind === "result") {
+        const { summary } = parsed;
+        const hadErrors = summary.errors.length > 0;
+        const hadMutations = importHadMutations(summary);
 
-    const errCount = data.errors?.length ?? 0;
-    const parts = [
-      `Creados: ${data.created}`,
-      `actualizados: ${data.updated}`,
-      `omitidos: ${data.skipped}`,
-    ];
-    if (errCount > 0) {
-      parts.push(`errores: ${errCount}`);
-      const sample = data.errors
-        .slice(0, 5)
-        .map((x) => `fila ${x.row}: ${x.message}`)
-        .join("; ");
-      setError(sample + (errCount > 5 ? "…" : ""));
+        if (!hadErrors || hadMutations) {
+          setFile(null);
+          if (inputRef.current) inputRef.current.value = "";
+        }
+        if (hadMutations && broadcastCatalogStale) notifyCatalogStale();
+        if (hadMutations) router.refresh();
+      }
+    } catch {
+      setFeedback(importNetworkFatalMessage());
+    } finally {
+      setLoading(false);
     }
-    setMessage(`Sincronización ${entityLabel}: ${parts.join(", ")}`);
-    setFile(null);
-    if (inputRef.current) inputRef.current.value = "";
-    if (broadcastCatalogStale) notifyCatalogStale();
-    router.refresh();
   }
+
+  const resultFeedback = feedback?.kind === "result" ? feedback : null;
+  const fatalFeedback = feedback?.kind === "fatal" ? feedback : null;
+  const rowErrors = resultFeedback?.summary.errors ?? [];
+  const hasRowErrors = rowErrors.length > 0;
+  const partialResult =
+    resultFeedback != null && hasRowErrors && importHadMutations(resultFeedback.summary);
+  const failedResult =
+    resultFeedback != null && hasRowErrors && !importHadMutations(resultFeedback.summary);
 
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
@@ -147,12 +155,32 @@ export function ExcelSyncPanel({
         </div>
       </div>
 
-      {(message || error) && (
-        <div className="mt-3 space-y-1 border-t border-neutral-100 pt-3 text-sm">
-          {message && <p className="text-green-700">{message}</p>}
-          {error && <p className="text-red-600">{error}</p>}
+      {feedback ? (
+        <div className="mt-3 space-y-2 border-t border-neutral-100 pt-3">
+          {fatalFeedback ? <ImportFatalFeedbackBox feedback={fatalFeedback} /> : null}
+
+          {resultFeedback && !failedResult ? (
+            <ImportSuccessFeedbackBox
+              headline={importSummaryHeadline(resultFeedback.summary, entityLabel)}
+              partial={partialResult}
+            />
+          ) : null}
+
+          {resultFeedback && failedResult ? (
+            <ImportFatalFeedbackBox
+              feedback={{
+                kind: "fatal",
+                title: "Ninguna fila importada",
+                detail: importSummaryHeadline(resultFeedback.summary, entityLabel),
+              }}
+            />
+          ) : null}
+
+          {hasRowErrors ? (
+            <ImportRowErrorsBox errors={rowErrors} tone={failedResult ? "error" : "warning"} />
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

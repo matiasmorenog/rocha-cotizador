@@ -22,6 +22,16 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
+  try {
+    return await runCustomersImport(req);
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Error interno al importar";
+    console.error("[customers/import]", e);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+async function runCustomersImport(req: NextRequest) {
   if (!(await requireStaffApi("customers"))) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
