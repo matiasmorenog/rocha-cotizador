@@ -435,7 +435,7 @@ export function ExcelSyncPanel({
                 />
               )}
 
-              {validated.ok && validationWarnings.length > 0 ? (
+              {validationWarnings.length > 0 ? (
                 <ImportDuplicateWarningsBox warnings={validationWarnings} />
               ) : null}
             </div>
