@@ -1,9 +1,10 @@
 import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type {
-  ImportDuplicateWarning,
-  ImportFatalFeedback,
-  ImportRowError,
+import {
+  summarizeImportRowErrors,
+  type ImportDuplicateWarning,
+  type ImportFatalFeedback,
+  type ImportRowError,
 } from "@/lib/import-feedback";
 
 type Tone = "success" | "warning" | "error";
@@ -90,19 +91,11 @@ export function ImportRowErrorsBox({
   if (errors.length === 0) return null;
 
   const title =
-    tone === "error"
-      ? `${errors.length} fila${errors.length === 1 ? "" : "s"} con error`
-      : `${errors.length} fila${errors.length === 1 ? "" : "s"} no importada${errors.length === 1 ? "" : "s"}`;
+    tone === "error" ? "Error de importación" : "Filas no importadas";
 
   return (
     <FeedbackShell tone={tone} title={title}>
-      <ul className="max-h-48 list-none space-y-1 overflow-y-auto pr-1">
-        {errors.map((item) => (
-          <li key={`${item.row}-${item.message}`}>
-            <span className="font-medium">Fila {item.row}:</span> {item.message}
-          </li>
-        ))}
-      </ul>
+      <p>{summarizeImportRowErrors(errors)}</p>
     </FeedbackShell>
   );
 }
@@ -119,14 +112,14 @@ export function ImportDuplicateWarningsBox({
       ? "1 código duplicado en el archivo"
       : `${warnings.length} códigos duplicados en el archivo`;
 
+  const summary =
+    warnings.length === 1
+      ? warnings[0]!.message
+      : `${warnings.map((w) => w.message).join(" ")}`;
+
   return (
     <FeedbackShell tone="warning" title={title}>
-      <p>La última fila de cada código es la que se importará.</p>
-      <ul className="max-h-48 list-none space-y-1 overflow-y-auto pr-1">
-        {warnings.map((item) => (
-          <li key={`${item.code}-${item.rows.join("-")}`}>{item.message}</li>
-        ))}
-      </ul>
+      <p>{summary}</p>
     </FeedbackShell>
   );
 }
@@ -151,7 +144,7 @@ export function ImportSuccessFeedbackBox({
     >
       <p>{headline}</p>
       {partial ? (
-        <p>Algunas filas se guardaron; revisá los errores de fila abajo.</p>
+        <p>Algunas filas se guardaron; el resto quedó con error.</p>
       ) : null}
     </FeedbackShell>
   );

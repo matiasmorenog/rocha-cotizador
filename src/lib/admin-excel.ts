@@ -100,11 +100,10 @@ export function duplicateCodeWarnings(
   for (const [code, rows] of byCode) {
     if (rows.length < 2) continue;
     const sorted = [...rows].sort((a, b) => a - b);
-    const last = sorted[sorted.length - 1]!;
     warnings.push({
       code,
       rows: sorted,
-      message: `Código ${code} duplicado en filas ${formatRowListSpanish(sorted)}. Se importará la fila ${last}.`,
+      message: `Código ${code} duplicado en filas ${formatRowListSpanish(sorted)}: se va a sobreescribir (última fila gana).`,
     });
   }
 

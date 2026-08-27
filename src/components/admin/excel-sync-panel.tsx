@@ -12,13 +12,13 @@ import {
   importSummaryHeadline,
   parseImportResponse,
   parseValidationResponse,
+  summarizeImportRowErrors,
   type ImportFeedback,
   type ImportValidationResult,
 } from "@/lib/import-feedback";
 import {
   ImportDuplicateWarningsBox,
   ImportFatalFeedbackBox,
-  ImportRowErrorsBox,
   ImportSuccessFeedbackBox,
 } from "@/components/admin/import-feedback-box";
 import { cn } from "@/lib/utils";
@@ -170,8 +170,8 @@ export function ExcelSyncPanel({
 
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between md:gap-8">
-        <div className="min-w-0 space-y-1 md:max-w-sm">
+      <div className="space-y-3">
+        <div className="min-w-0 space-y-1">
           <p className="text-sm font-medium text-neutral-900">Excel</p>
           <p className="text-xs text-neutral-500">
             Descargá la lista o subí un .xlsx. Primero validá el archivo; después
@@ -179,70 +179,68 @@ export function ExcelSyncPanel({
           </p>
         </div>
 
-        <div className="flex w-full flex-col gap-4 sm:w-[22rem] sm:shrink-0">
-          <a
-            href={exportUrl}
-            className={cn(
-              "inline-flex h-10 w-full items-center justify-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-50",
-              FOCUS_BRAND_BORDER,
-            )}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <a
+              href={exportUrl}
+              className={cn(
+                "inline-flex h-10 shrink-0 items-center justify-center rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-50",
+                FOCUS_BRAND_BORDER,
+              )}
+            >
+              Descargar Excel
+            </a>
+          </div>
+
+          <form
+            onSubmit={onValidate}
+            className="flex min-w-0 flex-wrap items-center gap-2"
           >
-            Descargar Excel
-          </a>
-
-          <div className="space-y-3 border-t border-neutral-100 pt-4">
-            <p className="text-xs font-medium text-neutral-600">
-              Importar / sincronizar
-            </p>
-
-            <form onSubmit={onValidate} className="flex flex-col gap-3">
-              <input
-                ref={inputRef}
-                type="file"
-                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                className="sr-only"
-                onChange={(ev) => onFileChange(ev.target.files?.[0] ?? null)}
-              />
-
-              <div className="flex min-w-0 items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10 shrink-0"
-                  onClick={() => inputRef.current?.click()}
-                  disabled={busy}
-                >
-                  Elegir archivo
-                </Button>
-                <span
-                  className="min-w-0 flex-1 truncate text-sm text-neutral-500"
-                  title={file?.name}
-                >
-                  {file?.name ?? "Ningún archivo"}
-                </span>
-              </div>
-
-              <Button
-                type="submit"
-                variant="secondary"
-                className="h-10 w-full"
-                disabled={busy || !file}
-              >
-                {validating ? (
-                  <>
-                    <Spinner className="mr-2" />
-                    Validando…
-                  </>
-                ) : (
-                  "Validar archivo"
-                )}
-              </Button>
-            </form>
+            <input
+              ref={inputRef}
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="sr-only"
+              onChange={(ev) => onFileChange(ev.target.files?.[0] ?? null)}
+            />
 
             <Button
               type="button"
+              variant="outline"
+              className="h-10 shrink-0"
+              onClick={() => inputRef.current?.click()}
+              disabled={busy}
+            >
+              Elegir archivo
+            </Button>
+            <span
+              className="min-w-0 max-w-[12rem] truncate text-sm text-neutral-500 sm:max-w-[16rem]"
+              title={file?.name}
+            >
+              {file?.name ?? "Ningún archivo"}
+            </span>
+            <Button
+              type="submit"
+              variant="secondary"
+              className="h-10 shrink-0"
+              disabled={busy || !file}
+            >
+              {validating ? (
+                <>
+                  <Spinner className="mr-2" />
+                  Validando…
+                </>
+              ) : (
+                "Validar archivo"
+              )}
+            </Button>
+          </form>
+
+          <div>
+            <Button
+              type="button"
               variant="primary"
-              className="h-10 w-full"
+              className="h-10 w-full sm:w-auto"
               disabled={!canConfirm}
               onClick={() => void onConfirmImport()}
             >
@@ -282,16 +280,18 @@ export function ExcelSyncPanel({
               feedback={{
                 kind: "fatal",
                 title: "Validación con errores",
-                detail: `Corregí el Excel antes de sincronizar. ${validated.rowCount} fila${validated.rowCount === 1 ? "" : "s"} válida${validated.rowCount === 1 ? "" : "s"}, ${validationErrors.length} con error.`,
+                detail: [
+                  "Corregí el Excel antes de sincronizar.",
+                  `${validated.rowCount} fila${validated.rowCount === 1 ? "" : "s"} válida${validated.rowCount === 1 ? "" : "s"}, ${validationErrors.length} con error.`,
+                  summarizeImportRowErrors(validationErrors),
+                ]
+                  .filter(Boolean)
+                  .join(" "),
               }}
             />
           )}
 
-          {validationErrors.length > 0 ? (
-            <ImportRowErrorsBox errors={validationErrors} tone="error" />
-          ) : null}
-
-          {validationWarnings.length > 0 ? (
+          {validated.ok && validationWarnings.length > 0 ? (
             <ImportDuplicateWarningsBox warnings={validationWarnings} />
           ) : null}
         </div>
@@ -305,7 +305,11 @@ export function ExcelSyncPanel({
 
           {resultFeedback && !failedResult ? (
             <ImportSuccessFeedbackBox
-              headline={importSummaryHeadline(resultFeedback.summary, entityLabel)}
+              headline={
+                partialResult
+                  ? `${importSummaryHeadline(resultFeedback.summary, entityLabel)} ${summarizeImportRowErrors(rowErrors)}`
+                  : importSummaryHeadline(resultFeedback.summary, entityLabel)
+              }
               partial={partialResult}
             />
           ) : null}
@@ -315,13 +319,14 @@ export function ExcelSyncPanel({
               feedback={{
                 kind: "fatal",
                 title: "Ninguna fila importada",
-                detail: importSummaryHeadline(resultFeedback.summary, entityLabel),
+                detail: [
+                  importSummaryHeadline(resultFeedback.summary, entityLabel),
+                  summarizeImportRowErrors(rowErrors),
+                ]
+                  .filter(Boolean)
+                  .join(" "),
               }}
             />
-          ) : null}
-
-          {hasRowErrors ? (
-            <ImportRowErrorsBox errors={rowErrors} tone={failedResult ? "error" : "warning"} />
           ) : null}
         </div>
       ) : null}
