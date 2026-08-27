@@ -7,6 +7,14 @@ export type ImportSummary = {
   errors: ImportRowError[];
 };
 
+export type ImportValidationResult = {
+  ok: boolean;
+  rowCount: number;
+  skipped: number;
+  errors: ImportRowError[];
+  warnings: ImportRowError[];
+};
+
 export type ImportFatalFeedback = {
   kind: "fatal";
   title: string;
@@ -178,4 +186,60 @@ export function importSummaryHeadline(
 
 export function importHadMutations(summary: ImportSummary): boolean {
   return summary.created > 0 || summary.updated > 0;
+}
+
+type ValidationJsonBody = {
+  error?: string;
+  ok?: boolean;
+  rowCount?: number;
+  skipped?: number;
+  errors?: ImportRowError[];
+  warnings?: ImportRowError[];
+};
+
+function isImportValidationResult(
+  data: ValidationJsonBody,
+): data is ImportValidationResult {
+  return (
+    typeof data.ok === "boolean" &&
+    typeof data.rowCount === "number" &&
+    typeof data.skipped === "number" &&
+    Array.isArray(data.errors) &&
+    Array.isArray(data.warnings)
+  );
+}
+
+export async function parseValidationResponse(
+  res: Response,
+): Promise<
+  | { kind: "validation"; result: ImportValidationResult }
+  | ImportFatalFeedback
+> {
+  const contentType = res.headers.get("content-type") ?? "";
+  let data: ValidationJsonBody = {};
+
+  if (contentType.includes("application/json")) {
+    data = (await res.json().catch(() => ({}))) as ValidationJsonBody;
+  } else if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    if (text.trim()) {
+      data = { error: text.slice(0, 280) };
+    }
+  }
+
+  if (!res.ok) {
+    return importHttpFatalMessage(res.status, data);
+  }
+
+  if (!isImportValidationResult(data)) {
+    return {
+      kind: "fatal",
+      status: res.status,
+      title: "Respuesta inválida",
+      detail:
+        data.error ?? "El servidor no devolvió un resultado de validación.",
+    };
+  }
+
+  return { kind: "validation", result: data };
 }

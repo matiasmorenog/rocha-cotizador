@@ -1,22 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 import { requireStaffApi } from "@/lib/api-auth";
-import { db } from "@/lib/db";
-import { invalidateAfterCustomerMutation } from "@/lib/cache-tags";
-import { normalizePhone } from "@/lib/phone-contact";
-import { padCustomerCode, pinFromCustomerCode } from "@/lib/utils";
 import {
-  cellText,
-  emptyToNull,
-  getCellByHeader,
-  headerIndexMap,
-  parseBool,
-  workbookFromBuffer,
-  type ImportSummary,
-} from "@/lib/admin-excel";
-import { isBasePriceListLabel } from "@/lib/pricing";
-import { getBasePriceList } from "@/lib/price-list-resolve";
-import { emptyToNullNameNote } from "@/lib/customer-name-note";
+  executeCustomersImport,
+  loadCustomersImportFromBuffer,
+  validateCustomersImport,
+} from "@/lib/customers-excel-import";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -45,184 +33,16 @@ async function runCustomersImport(req: NextRequest) {
     );
   }
 
-  const summary: ImportSummary = {
-    created: 0,
-    updated: 0,
-    skipped: 0,
-    errors: [],
-  };
-
-  let workbook;
-  try {
-    workbook = await workbookFromBuffer(await file.arrayBuffer());
-  } catch {
-    return NextResponse.json(
-      { error: "No se pudo leer el Excel" },
-      { status: 400 },
-    );
+  const loaded = await loadCustomersImportFromBuffer(await file.arrayBuffer());
+  if (!loaded.ok) {
+    return NextResponse.json({ error: loaded.error }, { status: loaded.status });
   }
 
-  const sheet = workbook.worksheets[0];
-  if (!sheet || sheet.rowCount < 2) {
-    return NextResponse.json(
-      { error: "Hoja vacía o sin datos" },
-      { status: 400 },
-    );
+  const mode = req.nextUrl.searchParams.get("mode");
+  if (mode === "validate") {
+    return NextResponse.json(validateCustomersImport(loaded.ctx));
   }
 
-  const headers = headerIndexMap(sheet.getRow(1));
-  if (!headers.has("código") || !headers.has("nombre")) {
-    return NextResponse.json(
-      {
-        error:
-          "Cabeceras requeridas: código, nombre (ver export clientes.xlsx)",
-      },
-      { status: 400 },
-    );
-  }
-
-  const priceLists = await db.priceList.findMany({
-    select: { id: true, name: true },
-  });
-  const listByName = new Map(
-    priceLists.map((l) => [l.name.trim().toLowerCase(), l.id]),
-  );
-  const baseList = await getBasePriceList();
-
-  for (let r = 2; r <= sheet.rowCount; r++) {
-    const row = sheet.getRow(r);
-    const codeRaw = cellText(getCellByHeader(row, headers, "código"));
-    const name = cellText(getCellByHeader(row, headers, "nombre"));
-    const nameNote = emptyToNullNameNote(
-      cellText(getCellByHeader(row, headers, "aclaración")),
-    );
-
-    if (!codeRaw && !name) {
-      summary.skipped += 1;
-      continue;
-    }
-
-    if (!codeRaw) {
-      summary.errors.push({ row: r, message: "Falta código" });
-      continue;
-    }
-    if (!name) {
-      summary.errors.push({ row: r, message: "Falta nombre" });
-      continue;
-    }
-
-    const code = padCustomerCode(codeRaw);
-    if (!/^\d{3}$/.test(code)) {
-      summary.errors.push({ row: r, message: `Código inválido: ${codeRaw}` });
-      continue;
-    }
-
-    const listRaw = cellText(
-      getCellByHeader(row, headers, "listaprecios"),
-    ).trim();
-    let priceListId: string | null = baseList?.id ?? null;
-    if (!isBasePriceListLabel(listRaw)) {
-      const id = listByName.get(listRaw.toLowerCase());
-      if (!id) {
-        summary.errors.push({
-          row: r,
-          message: `Lista desconocida: ${listRaw}`,
-        });
-        continue;
-      }
-      priceListId = id;
-    }
-
-    const phoneRaw = emptyToNull(
-      cellText(getCellByHeader(row, headers, "teléfono")),
-    );
-    const phone = phoneRaw ? normalizePhone(phoneRaw) : null;
-    const email = emptyToNull(cellText(getCellByHeader(row, headers, "email")));
-    const address = emptyToNull(
-      cellText(getCellByHeader(row, headers, "dirección")),
-    );
-    const paymentTerms = emptyToNull(
-      cellText(getCellByHeader(row, headers, "condicionesPago")),
-    );
-    const deliveryHours = emptyToNull(
-      cellText(getCellByHeader(row, headers, "horarioEntrega")),
-    );
-    const notes = emptyToNull(cellText(getCellByHeader(row, headers, "notas")));
-    const active = parseBool(getCellByHeader(row, headers, "activo"), true);
-    const resetPin = parseBool(
-      getCellByHeader(row, headers, "resetearPin"),
-      false,
-    );
-
-    try {
-      const existing = await db.customer.findUnique({ where: { code } });
-
-      if (existing) {
-        const data: {
-          name: string;
-          nameNote: string | null;
-          priceListId: string | null;
-          address: string | null;
-          phone: string | null;
-          email: string | null;
-          notes: string | null;
-          paymentTerms: string | null;
-          deliveryHours: string | null;
-          active: boolean;
-          passwordHash?: string;
-          mustChangePassword?: boolean;
-        } = {
-          name,
-          nameNote,
-          priceListId,
-          address,
-          phone,
-          email,
-          notes,
-          paymentTerms,
-          deliveryHours,
-          active,
-        };
-
-        if (resetPin) {
-          const pin = pinFromCustomerCode(code);
-          data.passwordHash = await bcrypt.hash(pin, 10);
-          data.mustChangePassword = true;
-        }
-
-        await db.customer.update({ where: { code }, data });
-        summary.updated += 1;
-      } else {
-        const pin = pinFromCustomerCode(code);
-        const passwordHash = await bcrypt.hash(pin, 10);
-        await db.customer.create({
-          data: {
-            code,
-            name,
-            nameNote,
-            passwordHash,
-            mustChangePassword: true,
-            priceListId,
-            address,
-            phone,
-            email,
-            notes,
-            paymentTerms,
-            deliveryHours,
-            active,
-          },
-        });
-        summary.created += 1;
-      }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Error al guardar";
-      summary.errors.push({ row: r, message });
-    }
-  }
-
-  if (summary.created > 0 || summary.updated > 0) {
-    invalidateAfterCustomerMutation();
-  }
-
+  const summary = await executeCustomersImport(loaded.ctx);
   return NextResponse.json(summary);
 }

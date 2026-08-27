@@ -50,11 +50,22 @@ export const PRODUCT_BASE_COLUMNS = [
 /** @deprecated Prefer PRODUCT_BASE_COLUMNS + dynamic list names. */
 export const PRODUCT_COLUMNS = PRODUCT_BASE_COLUMNS;
 
+export type ImportRowIssue = { row: number; message: string };
+
 export type ImportSummary = {
   created: number;
   updated: number;
   skipped: number;
-  errors: Array<{ row: number; message: string }>;
+  errors: ImportRowIssue[];
+};
+
+/** Dry-run validation result (no DB writes). */
+export type ImportValidationResult = {
+  ok: boolean;
+  rowCount: number;
+  skipped: number;
+  errors: ImportRowIssue[];
+  warnings: ImportRowIssue[];
 };
 
 export function cellText(value: ExcelJS.CellValue): string {

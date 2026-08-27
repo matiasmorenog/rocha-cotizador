@@ -11,7 +11,9 @@ import {
   importNetworkFatalMessage,
   importSummaryHeadline,
   parseImportResponse,
+  parseValidationResponse,
   type ImportFeedback,
+  type ImportValidationResult,
 } from "@/lib/import-feedback";
 import {
   ImportFatalFeedbackBox,
@@ -28,6 +30,12 @@ type ExcelSyncPanelProps = {
   broadcastCatalogStale?: boolean;
 };
 
+type ValidationState =
+  | { status: "idle" }
+  | { status: "validating" }
+  | { status: "validated"; result: ImportValidationResult }
+  | { status: "failed"; feedback: ImportFeedback };
+
 export function ExcelSyncPanel({
   exportUrl,
   importUrl,
@@ -37,21 +45,74 @@ export function ExcelSyncPanel({
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [feedback, setFeedback] = useState<ImportFeedback | null>(null);
+  const [validation, setValidation] = useState<ValidationState>({
+    status: "idle",
+  });
+  const [importing, setImporting] = useState(false);
+  const [importFeedback, setImportFeedback] = useState<ImportFeedback | null>(
+    null,
+  );
 
-  async function onImport(e: FormEvent) {
+  function resetValidation() {
+    setValidation({ status: "idle" });
+    setImportFeedback(null);
+  }
+
+  function onFileChange(next: File | null) {
+    setFile(next);
+    resetValidation();
+  }
+
+  async function onValidate(e: FormEvent) {
     e.preventDefault();
     if (!file) {
-      setFeedback({
-        kind: "fatal",
-        title: "Falta archivo",
-        detail: "Elegí un archivo .xlsx antes de sincronizar.",
+      setValidation({
+        status: "failed",
+        feedback: {
+          kind: "fatal",
+          title: "Falta archivo",
+          detail: "Elegí un archivo .xlsx antes de validar.",
+        },
       });
       return;
     }
-    setLoading(true);
-    setFeedback(null);
+
+    setValidation({ status: "validating" });
+    setImportFeedback(null);
+
+    const body = new FormData();
+    body.set("file", file);
+
+    try {
+      const res = await fetch(`${importUrl}?mode=validate`, {
+        method: "POST",
+        body,
+      });
+      const parsed = await parseValidationResponse(res);
+      if (parsed.kind === "fatal") {
+        setValidation({ status: "failed", feedback: parsed });
+        return;
+      }
+      setValidation({ status: "validated", result: parsed.result });
+    } catch {
+      setValidation({
+        status: "failed",
+        feedback: importNetworkFatalMessage(),
+      });
+    }
+  }
+
+  async function onConfirmImport() {
+    if (!file) return;
+    if (
+      validation.status !== "validated" ||
+      !validation.result.ok
+    ) {
+      return;
+    }
+
+    setImporting(true);
+    setImportFeedback(null);
 
     const body = new FormData();
     body.set("file", file);
@@ -59,7 +120,7 @@ export function ExcelSyncPanel({
     try {
       const res = await fetch(importUrl, { method: "POST", body });
       const parsed = await parseImportResponse(res, entityLabel);
-      setFeedback(parsed);
+      setImportFeedback(parsed);
 
       if (parsed.kind === "result") {
         const { summary } = parsed;
@@ -69,19 +130,33 @@ export function ExcelSyncPanel({
         if (!hadErrors || hadMutations) {
           setFile(null);
           if (inputRef.current) inputRef.current.value = "";
+          resetValidation();
         }
         if (hadMutations && broadcastCatalogStale) notifyCatalogStale();
         if (hadMutations) router.refresh();
       }
     } catch {
-      setFeedback(importNetworkFatalMessage());
+      setImportFeedback(importNetworkFatalMessage());
     } finally {
-      setLoading(false);
+      setImporting(false);
     }
   }
 
-  const resultFeedback = feedback?.kind === "result" ? feedback : null;
-  const fatalFeedback = feedback?.kind === "fatal" ? feedback : null;
+  const validating = validation.status === "validating";
+  const busy = validating || importing;
+  const validated =
+    validation.status === "validated" ? validation.result : null;
+  const validationFailed =
+    validation.status === "failed" ? validation.feedback : null;
+  const canConfirm =
+    validated?.ok === true && !importing && !validating && file != null;
+
+  const resultFeedback = importFeedback?.kind === "result" ? importFeedback : null;
+  const importFatalFeedback =
+    importFeedback?.kind === "fatal" ? importFeedback : null;
+  const validationFatalFeedback =
+    validationFailed?.kind === "fatal" ? validationFailed : null;
+
   const rowErrors = resultFeedback?.summary.errors ?? [];
   const hasRowErrors = rowErrors.length > 0;
   const partialResult =
@@ -89,13 +164,17 @@ export function ExcelSyncPanel({
   const failedResult =
     resultFeedback != null && hasRowErrors && !importHadMutations(resultFeedback.summary);
 
+  const validationErrors = validated?.errors ?? [];
+  const validationWarnings = validated?.warnings ?? [];
+
   return (
     <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
         <div className="min-w-0 space-y-1 md:max-w-sm">
           <p className="text-sm font-medium text-neutral-900">Excel</p>
           <p className="text-xs text-neutral-500">
-            Descargá la lista o subí un .xlsx para sincronizar (upsert por código).
+            Descargá la lista o subí un .xlsx. Primero validá el archivo; después
+            confirmá la sincronización (upsert por código).
           </p>
         </div>
 
@@ -111,7 +190,7 @@ export function ExcelSyncPanel({
           </a>
 
           <form
-            onSubmit={onImport}
+            onSubmit={onValidate}
             className="flex flex-col gap-2 sm:flex-row sm:items-center"
           >
             <input
@@ -119,14 +198,14 @@ export function ExcelSyncPanel({
               type="file"
               accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               className="sr-only"
-              onChange={(ev) => setFile(ev.target.files?.[0] ?? null)}
+              onChange={(ev) => onFileChange(ev.target.files?.[0] ?? null)}
             />
             <Button
               type="button"
               variant="outline"
               className="w-full shrink-0 sm:w-auto"
               onClick={() => inputRef.current?.click()}
-              disabled={loading}
+              disabled={busy}
             >
               Elegir archivo
             </Button>
@@ -140,24 +219,76 @@ export function ExcelSyncPanel({
               type="submit"
               variant="secondary"
               className="w-full shrink-0 sm:w-auto"
-              disabled={loading || !file}
+              disabled={busy || !file}
             >
-              {loading ? (
+              {validating ? (
                 <>
                   <Spinner className="mr-2" />
-                  Subiendo…
+                  Validando…
                 </>
               ) : (
-                "Sincronizar"
+                "Validar archivo"
               )}
             </Button>
           </form>
+
+          <Button
+            type="button"
+            variant="primary"
+            className="w-full sm:w-auto"
+            disabled={!canConfirm}
+            onClick={() => void onConfirmImport()}
+          >
+            {importing ? (
+              <>
+                <Spinner className="mr-2" />
+                Sincronizando…
+              </>
+            ) : (
+              "Confirmar sincronización"
+            )}
+          </Button>
         </div>
       </div>
 
-      {feedback ? (
+      {validationFatalFeedback ? (
         <div className="mt-3 space-y-2 border-t border-neutral-100 pt-3">
-          {fatalFeedback ? <ImportFatalFeedbackBox feedback={fatalFeedback} /> : null}
+          <ImportFatalFeedbackBox feedback={validationFatalFeedback} />
+        </div>
+      ) : null}
+
+      {validated ? (
+        <div className="mt-3 space-y-2 border-t border-neutral-100 pt-3">
+          {validated.ok ? (
+            <ImportSuccessFeedbackBox
+              headline={`Listo para importar ${validated.rowCount} fila${validated.rowCount === 1 ? "" : "s"}${validated.skipped > 0 ? ` (${validated.skipped} fila${validated.skipped === 1 ? "" : "s"} vacía${validated.skipped === 1 ? "" : "s"} omitida${validated.skipped === 1 ? "" : "s"})` : ""}.`}
+              partial={validationWarnings.length > 0}
+            />
+          ) : (
+            <ImportFatalFeedbackBox
+              feedback={{
+                kind: "fatal",
+                title: "Validación con errores",
+                detail: `Corregí el Excel antes de sincronizar. ${validated.rowCount} fila${validated.rowCount === 1 ? "" : "s"} válida${validated.rowCount === 1 ? "" : "s"}, ${validationErrors.length} con error.`,
+              }}
+            />
+          )}
+
+          {validationErrors.length > 0 ? (
+            <ImportRowErrorsBox errors={validationErrors} tone="error" />
+          ) : null}
+
+          {validationWarnings.length > 0 ? (
+            <ImportRowErrorsBox errors={validationWarnings} tone="warning" />
+          ) : null}
+        </div>
+      ) : null}
+
+      {importFeedback ? (
+        <div className="mt-3 space-y-2 border-t border-neutral-100 pt-3">
+          {importFatalFeedback ? (
+            <ImportFatalFeedbackBox feedback={importFatalFeedback} />
+          ) : null}
 
           {resultFeedback && !failedResult ? (
             <ImportSuccessFeedbackBox
