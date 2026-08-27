@@ -125,21 +125,13 @@ function SkeletonTableRows({
 
 function SkeletonExcelSyncPanel() {
   return (
-    <div className={cn(ADMIN_SKELETON_CARD, "p-4")}>
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between md:gap-6">
-        <div className="space-y-2 md:max-w-sm">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-3 w-56" />
-          <Skeleton className="h-3 w-48" />
+    <div className={cn(ADMIN_SKELETON_CARD, "px-4 py-3")}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="space-y-1.5">
+          <Skeleton className="h-4 w-14" />
+          <Skeleton className="h-3 w-44" />
         </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[18rem]">
-          <Skeleton className="h-10 w-full rounded-md sm:w-40" />
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Skeleton className="h-10 w-full rounded-md sm:w-32" />
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-10 w-full rounded-md sm:w-28" />
-          </div>
-        </div>
+        <Skeleton className="size-4 shrink-0 rounded-sm" />
       </div>
     </div>
   );
