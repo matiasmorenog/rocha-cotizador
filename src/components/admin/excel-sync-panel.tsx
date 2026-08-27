@@ -32,10 +32,15 @@ import {
 import {
   ImportDuplicateWarningsBox,
   ImportFatalFeedbackBox,
+  ImportFeedbackReveal,
   ImportRowErrorsBox,
   ImportSuccessFeedbackBox,
 } from "@/components/admin/import-feedback-box";
+import { useExitPresence } from "@/hooks/use-exit-presence";
 import { cn } from "@/lib/utils";
+
+/** Same exit window as admin payment/customer form collapse. */
+const PANEL_EXIT_MS = 250;
 
 type ExcelSyncPanelProps = {
   exportUrl: string;
@@ -73,6 +78,11 @@ export function ExcelSyncPanel({
   const panelId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
+  const {
+    present: bodyPresent,
+    exiting: bodyExiting,
+    animKey: bodyAnimKey,
+  } = useExitPresence(open, PANEL_EXIT_MS);
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [validation, setValidation] = useState<ValidationState>({
@@ -234,21 +244,8 @@ export function ExcelSyncPanel({
   const canConfirm =
     validated?.ok === true && !importing && !validating && file != null;
 
-  const resultFeedback = importFeedback?.kind === "result" ? importFeedback : null;
-  const importFatalFeedback =
-    importFeedback?.kind === "fatal" ? importFeedback : null;
   const validationFatalFeedback =
     validationFailed?.kind === "fatal" ? validationFailed : null;
-
-  const rowErrors = resultFeedback?.summary.errors ?? [];
-  const hasRowErrors = rowErrors.length > 0;
-  const partialResult =
-    resultFeedback != null && hasRowErrors && importHadMutations(resultFeedback.summary);
-  const failedResult =
-    resultFeedback != null && hasRowErrors && !importHadMutations(resultFeedback.summary);
-
-  const validationErrors = validated?.errors ?? [];
-  const validationWarnings = validated?.warnings ?? [];
 
   return (
     <div className="rounded-lg border border-neutral-200 bg-white shadow-sm">
@@ -265,8 +262,8 @@ export function ExcelSyncPanel({
         className={cn(
           "flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-neutral-50",
           FOCUS_BRAND_BORDER,
-          open && "rounded-t-lg",
-          !open && "rounded-lg",
+          bodyPresent && "rounded-t-lg",
+          !bodyPresent && "rounded-lg",
         )}
       >
         <span className="min-w-0">
@@ -288,188 +285,235 @@ export function ExcelSyncPanel({
         />
       </button>
 
-      {open ? (
-        <div id={panelId} className="space-y-3 border-t border-neutral-100 px-4 pb-4 pt-3">
-          <p className="text-xs text-neutral-500">
-            Descargá la lista o subí un .xlsx. Primero validá el archivo; después
-            confirmá la sincronización (upsert por código).
-          </p>
-
-          <form onSubmit={onValidate} className="space-y-3">
-            <input
-              ref={inputRef}
-              type="file"
-              accept={XLSX_ACCEPT}
-              className="sr-only"
-              onChange={(ev) => pickFile(ev.target.files?.[0] ?? null)}
-            />
-
+      <div
+        className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
+        style={{
+          gridTemplateRows: bodyPresent && !bodyExiting ? "1fr" : "0fr",
+        }}
+      >
+        <div className="min-h-0 overflow-hidden">
+          {bodyPresent ? (
             <div
-              role="button"
-              tabIndex={busy ? -1 : 0}
-              aria-disabled={busy}
-              aria-label={
-                file
-                  ? `Archivo seleccionado: ${file.name}. Clic o soltá otro .xlsx para cambiar.`
-                  : "Arrastrá un archivo .xlsx o hacé clic para elegir"
-              }
-              onClick={() => {
-                if (!busy) inputRef.current?.click();
-              }}
-              onKeyDown={onDropzoneKeyDown}
-              onDragOver={onDragOver}
-              onDragLeave={onDragLeave}
-              onDrop={onDrop}
+              id={panelId}
+              key={bodyAnimKey}
               className={cn(
-                "flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border border-dashed px-4 py-6 text-center transition-colors",
-                FOCUS_BRAND_BORDER,
-                dragOver
-                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]"
-                  : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100/80",
-                busy && "pointer-events-none cursor-not-allowed opacity-50",
+                "space-y-3 border-t border-neutral-100 px-4 pb-4 pt-3",
+                bodyExiting ? "payment-form-exit" : "payment-form-enter",
               )}
             >
-              <FileSpreadsheet
-                className={cn(
-                  "size-8 shrink-0",
-                  dragOver
-                    ? "text-[var(--brand-primary)]"
-                    : "text-neutral-400",
-                )}
-                aria-hidden
-              />
-              <p className="text-sm font-medium text-neutral-800">
-                {file ? file.name : "Arrastrá un .xlsx acá"}
-              </p>
               <p className="text-xs text-neutral-500">
-                {file
-                  ? "Clic o soltá otro archivo para cambiar"
-                  : "o hacé clic para elegir archivo"}
+                Descargá la lista o subí un .xlsx. Primero validá el archivo;
+                después confirmá la sincronización (upsert por código).
               </p>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <a
-                href={exportUrl}
-                className={cn(
-                  "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-50",
-                  FOCUS_BRAND_BORDER,
-                )}
-              >
-                <Download className="size-4 shrink-0" aria-hidden />
-                Descargar Excel
-              </a>
+              <form onSubmit={onValidate} className="space-y-3">
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept={XLSX_ACCEPT}
+                  className="sr-only"
+                  onChange={(ev) => pickFile(ev.target.files?.[0] ?? null)}
+                />
 
-              <Button
-                type="submit"
-                variant="secondary"
-                className="h-10 shrink-0 gap-1.5"
-                disabled={busy || !file}
-              >
-                {validating ? (
-                  <>
-                    <Spinner className="size-4" />
-                    Validando…
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="size-4 shrink-0" aria-hidden />
-                    Validar archivo
-                  </>
-                )}
-              </Button>
-
-              <Button
-                type="button"
-                variant="primary"
-                className="h-10 shrink-0 gap-1.5"
-                disabled={!canConfirm}
-                onClick={() => void onConfirmImport()}
-              >
-                {importing ? (
-                  <>
-                    <Spinner className="size-4" />
-                    Sincronizando…
-                  </>
-                ) : (
-                  <>
-                    <RefreshCw className="size-4 shrink-0" aria-hidden />
-                    Confirmar sincronización
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-
-          {validationFatalFeedback ? (
-            <div className="space-y-2 border-t border-neutral-100 pt-3">
-              <ImportFatalFeedbackBox feedback={validationFatalFeedback} />
-            </div>
-          ) : null}
-
-          {validated ? (
-            <div className="space-y-2 border-t border-neutral-100 pt-3">
-              {validated.ok ? (
-                <ImportSuccessFeedbackBox
-                  headline={`Listo para importar ${validated.rowCount} fila${validated.rowCount === 1 ? "" : "s"}${validated.skipped > 0 ? ` (${validated.skipped} fila${validated.skipped === 1 ? "" : "s"} vacía${validated.skipped === 1 ? "" : "s"} omitida${validated.skipped === 1 ? "" : "s"})` : ""}${validationWarnings.length > 0 ? `. ${validationWarnings.length} advertencia${validationWarnings.length === 1 ? "" : "s"} de código duplicado` : ""}.`}
-                  partial={false}
-                  title={
-                    validationWarnings.length > 0
-                      ? "Validación correcta con advertencias"
-                      : "Validación correcta"
+                <div
+                  role="button"
+                  tabIndex={busy ? -1 : 0}
+                  aria-disabled={busy}
+                  aria-label={
+                    file
+                      ? `Archivo seleccionado: ${file.name}. Clic o soltá otro .xlsx para cambiar.`
+                      : "Arrastrá un archivo .xlsx o hacé clic para elegir"
                   }
-                />
-              ) : (
-                <ImportRowErrorsBox
-                  tone="error"
-                  title="Validación con errores"
-                  intro={`Corregí el Excel antes de sincronizar. ${validated.rowCount} fila${validated.rowCount === 1 ? "" : "s"} válida${validated.rowCount === 1 ? "" : "s"}, ${validationErrors.length} con error.`}
-                  errors={validationErrors}
-                />
-              )}
-
-              {validationWarnings.length > 0 ? (
-                <ImportDuplicateWarningsBox warnings={validationWarnings} />
-              ) : null}
-            </div>
-          ) : null}
-
-          {importFeedback ? (
-            <div className="space-y-2 border-t border-neutral-100 pt-3">
-              {importFatalFeedback ? (
-                <ImportFatalFeedbackBox feedback={importFatalFeedback} />
-              ) : null}
-
-              {resultFeedback && !failedResult ? (
-                <>
-                  <ImportSuccessFeedbackBox
-                    headline={importSummaryHeadline(
-                      resultFeedback.summary,
-                      entityLabel,
-                    )}
-                    partial={partialResult}
-                  />
-                  {partialResult && rowErrors.length > 0 ? (
-                    <ImportRowErrorsBox tone="warning" errors={rowErrors} />
-                  ) : null}
-                </>
-              ) : null}
-
-              {resultFeedback && failedResult ? (
-                <ImportRowErrorsBox
-                  tone="error"
-                  title="Ninguna fila importada"
-                  intro={importSummaryHeadline(
-                    resultFeedback.summary,
-                    entityLabel,
+                  onClick={() => {
+                    if (!busy) inputRef.current?.click();
+                  }}
+                  onKeyDown={onDropzoneKeyDown}
+                  onDragOver={onDragOver}
+                  onDragLeave={onDragLeave}
+                  onDrop={onDrop}
+                  className={cn(
+                    "flex w-full cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border border-dashed px-4 py-6 text-center transition-colors",
+                    FOCUS_BRAND_BORDER,
+                    dragOver
+                      ? "border-[var(--brand-primary)] bg-[var(--brand-primary-soft)]"
+                      : "border-neutral-300 bg-neutral-50 hover:border-neutral-400 hover:bg-neutral-100/80",
+                    busy &&
+                      "pointer-events-none cursor-not-allowed opacity-50",
                   )}
-                  errors={rowErrors}
-                />
-              ) : null}
+                >
+                  <FileSpreadsheet
+                    className={cn(
+                      "size-8 shrink-0",
+                      dragOver
+                        ? "text-[var(--brand-primary)]"
+                        : "text-neutral-400",
+                    )}
+                    aria-hidden
+                  />
+                  <p className="text-sm font-medium text-neutral-800">
+                    {file ? file.name : "Arrastrá un .xlsx acá"}
+                  </p>
+                  <p className="text-xs text-neutral-500">
+                    {file
+                      ? "Clic o soltá otro archivo para cambiar"
+                      : "o hacé clic para elegir archivo"}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={exportUrl}
+                    className={cn(
+                      "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-50",
+                      FOCUS_BRAND_BORDER,
+                    )}
+                  >
+                    <Download className="size-4 shrink-0" aria-hidden />
+                    Descargar Excel
+                  </a>
+
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    className="h-10 shrink-0 gap-1.5"
+                    disabled={busy || !file}
+                  >
+                    {validating ? (
+                      <>
+                        <Spinner className="size-4" />
+                        Validando…
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="size-4 shrink-0" aria-hidden />
+                        Validar archivo
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="primary"
+                    className="h-10 shrink-0 gap-1.5"
+                    disabled={!canConfirm}
+                    onClick={() => void onConfirmImport()}
+                  >
+                    {importing ? (
+                      <>
+                        <Spinner className="size-4" />
+                        Sincronizando…
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="size-4 shrink-0" aria-hidden />
+                        Confirmar sincronización
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </form>
+
+              <ImportFeedbackReveal value={validationFatalFeedback}>
+                {(fatal) => (
+                  <div className="space-y-2 border-t border-neutral-100 pt-3">
+                    <ImportFatalFeedbackBox feedback={fatal} />
+                  </div>
+                )}
+              </ImportFeedbackReveal>
+
+              <ImportFeedbackReveal value={validated}>
+                {(result) => {
+                  const errors = result.errors;
+                  const warnings = result.warnings;
+                  return (
+                    <div className="space-y-2 border-t border-neutral-100 pt-3">
+                      {result.ok ? (
+                        <ImportSuccessFeedbackBox
+                          headline={`Listo para importar ${result.rowCount} fila${result.rowCount === 1 ? "" : "s"}${result.skipped > 0 ? ` (${result.skipped} fila${result.skipped === 1 ? "" : "s"} vacía${result.skipped === 1 ? "" : "s"} omitida${result.skipped === 1 ? "" : "s"})` : ""}${warnings.length > 0 ? `. ${warnings.length} advertencia${warnings.length === 1 ? "" : "s"} de código duplicado` : ""}.`}
+                          partial={false}
+                          title={
+                            warnings.length > 0
+                              ? "Validación correcta con advertencias"
+                              : "Validación correcta"
+                          }
+                        />
+                      ) : (
+                        <ImportRowErrorsBox
+                          tone="error"
+                          title="Validación con errores"
+                          intro={`Corregí el Excel antes de sincronizar. ${result.rowCount} fila${result.rowCount === 1 ? "" : "s"} válida${result.rowCount === 1 ? "" : "s"}, ${errors.length} con error.`}
+                          errors={errors}
+                        />
+                      )}
+
+                      {warnings.length > 0 ? (
+                        <ImportDuplicateWarningsBox warnings={warnings} />
+                      ) : null}
+                    </div>
+                  );
+                }}
+              </ImportFeedbackReveal>
+
+              <ImportFeedbackReveal value={importFeedback}>
+                {(feedback) => {
+                  const fatal =
+                    feedback.kind === "fatal" ? feedback : null;
+                  const result =
+                    feedback.kind === "result" ? feedback : null;
+                  const errors = result?.summary.errors ?? [];
+                  const hasErrors = errors.length > 0;
+                  const partial =
+                    result != null &&
+                    hasErrors &&
+                    importHadMutations(result.summary);
+                  const failed =
+                    result != null &&
+                    hasErrors &&
+                    !importHadMutations(result.summary);
+
+                  return (
+                    <div className="space-y-2 border-t border-neutral-100 pt-3">
+                      {fatal ? (
+                        <ImportFatalFeedbackBox feedback={fatal} />
+                      ) : null}
+
+                      {result && !failed ? (
+                        <>
+                          <ImportSuccessFeedbackBox
+                            headline={importSummaryHeadline(
+                              result.summary,
+                              entityLabel,
+                            )}
+                            partial={partial}
+                          />
+                          {partial && errors.length > 0 ? (
+                            <ImportRowErrorsBox
+                              tone="warning"
+                              errors={errors}
+                            />
+                          ) : null}
+                        </>
+                      ) : null}
+
+                      {result && failed ? (
+                        <ImportRowErrorsBox
+                          tone="error"
+                          title="Ninguna fila importada"
+                          intro={importSummaryHeadline(
+                            result.summary,
+                            entityLabel,
+                          )}
+                          errors={errors}
+                        />
+                      ) : null}
+                    </div>
+                  );
+                }}
+              </ImportFeedbackReveal>
             </div>
           ) : null}
         </div>
-      ) : null}
+      </div>
     </div>
   );
 }

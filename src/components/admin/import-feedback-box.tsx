@@ -1,10 +1,17 @@
+"use client";
+
+import { type ReactNode, useState } from "react";
 import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { useExitPresence } from "@/hooks/use-exit-presence";
 import { cn } from "@/lib/utils";
 import {
   type ImportDuplicateWarning,
   type ImportFatalFeedback,
   type ImportRowError,
 } from "@/lib/import-feedback";
+
+/** Same exit window as admin payment/customer form collapse. */
+const IMPORT_FEEDBACK_EXIT_MS = 250;
 
 type Tone = "success" | "warning" | "error";
 
@@ -31,6 +38,54 @@ const toneStyles: Record<
     body: "text-red-800",
   },
 };
+
+/**
+ * Height + fade/slide enter/exit for import alert boxes (same language as
+ * admin form collapse: 0fr↔1fr + payment-form-enter/exit).
+ * Keeps last non-null `value` while exiting so mid-validate unmount still
+ * animates out.
+ */
+export function ImportFeedbackReveal<T>({
+  value,
+  className,
+  children,
+}: {
+  value: T | null;
+  className?: string;
+  children: (snapshot: T) => ReactNode;
+}) {
+  const show = value != null;
+  const { present, exiting, animKey } = useExitPresence(
+    show,
+    IMPORT_FEEDBACK_EXIT_MS,
+  );
+  const [snap, setSnap] = useState<T | null>(value);
+  if (value != null && !Object.is(value, snap)) {
+    setSnap(value);
+  }
+  const display = value ?? snap;
+
+  if (!present || display == null) return null;
+
+  return (
+    <div
+      className={cn(
+        "grid transition-[grid-template-rows] duration-[250ms] ease-in",
+        className,
+      )}
+      style={{ gridTemplateRows: !exiting ? "1fr" : "0fr" }}
+    >
+      <div className="min-h-0 overflow-hidden">
+        <div
+          key={animKey}
+          className={cn(exiting ? "payment-form-exit" : "payment-form-enter")}
+        >
+          {children(display)}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ToneIcon({ tone }: { tone: Tone }) {
   const className = cn("mt-0.5 size-4 shrink-0", toneStyles[tone].icon);
