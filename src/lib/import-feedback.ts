@@ -190,26 +190,6 @@ export function importSummaryHeadline(
   return `Sincronización ${entityLabel}: ${parts.join(", ")}.`;
 }
 
-/** One compact Spanish line for many row errors (count + first examples). */
-export function summarizeImportRowErrors(
-  errors: ImportRowError[],
-  maxExamples = 2,
-): string {
-  if (errors.length === 0) return "";
-
-  const examples = errors
-    .slice(0, maxExamples)
-    .map((e) => `Fila ${e.row}: ${e.message}`);
-  const more = errors.length - examples.length;
-  const joined = examples.join("; ");
-
-  if (errors.length === 1) return joined;
-
-  const head = `${errors.length} filas con error. ${joined}`;
-  if (more > 0) return `${head}; y ${more} más.`;
-  return `${head}.`;
-}
-
 export function importHadMutations(summary: ImportSummary): boolean {
   return summary.created > 0 || summary.updated > 0;
 }

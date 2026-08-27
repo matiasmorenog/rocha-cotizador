@@ -26,13 +26,13 @@ import {
   importSummaryHeadline,
   parseImportResponse,
   parseValidationResponse,
-  summarizeImportRowErrors,
   type ImportFeedback,
   type ImportValidationResult,
 } from "@/lib/import-feedback";
 import {
   ImportDuplicateWarningsBox,
   ImportFatalFeedbackBox,
+  ImportRowErrorsBox,
   ImportSuccessFeedbackBox,
 } from "@/components/admin/import-feedback-box";
 import { cn } from "@/lib/utils";
@@ -420,18 +420,11 @@ export function ExcelSyncPanel({
                   }
                 />
               ) : (
-                <ImportFatalFeedbackBox
-                  feedback={{
-                    kind: "fatal",
-                    title: "Validación con errores",
-                    detail: [
-                      "Corregí el Excel antes de sincronizar.",
-                      `${validated.rowCount} fila${validated.rowCount === 1 ? "" : "s"} válida${validated.rowCount === 1 ? "" : "s"}, ${validationErrors.length} con error.`,
-                      summarizeImportRowErrors(validationErrors),
-                    ]
-                      .filter(Boolean)
-                      .join(" "),
-                  }}
+                <ImportRowErrorsBox
+                  tone="error"
+                  title="Validación con errores"
+                  intro={`Corregí el Excel antes de sincronizar. ${validated.rowCount} fila${validated.rowCount === 1 ? "" : "s"} válida${validated.rowCount === 1 ? "" : "s"}, ${validationErrors.length} con error.`}
+                  errors={validationErrors}
                 />
               )}
 
@@ -448,28 +441,29 @@ export function ExcelSyncPanel({
               ) : null}
 
               {resultFeedback && !failedResult ? (
-                <ImportSuccessFeedbackBox
-                  headline={
-                    partialResult
-                      ? `${importSummaryHeadline(resultFeedback.summary, entityLabel)} ${summarizeImportRowErrors(rowErrors)}`
-                      : importSummaryHeadline(resultFeedback.summary, entityLabel)
-                  }
-                  partial={partialResult}
-                />
+                <>
+                  <ImportSuccessFeedbackBox
+                    headline={importSummaryHeadline(
+                      resultFeedback.summary,
+                      entityLabel,
+                    )}
+                    partial={partialResult}
+                  />
+                  {partialResult && rowErrors.length > 0 ? (
+                    <ImportRowErrorsBox tone="warning" errors={rowErrors} />
+                  ) : null}
+                </>
               ) : null}
 
               {resultFeedback && failedResult ? (
-                <ImportFatalFeedbackBox
-                  feedback={{
-                    kind: "fatal",
-                    title: "Ninguna fila importada",
-                    detail: [
-                      importSummaryHeadline(resultFeedback.summary, entityLabel),
-                      summarizeImportRowErrors(rowErrors),
-                    ]
-                      .filter(Boolean)
-                      .join(" "),
-                  }}
+                <ImportRowErrorsBox
+                  tone="error"
+                  title="Ninguna fila importada"
+                  intro={importSummaryHeadline(
+                    resultFeedback.summary,
+                    entityLabel,
+                  )}
+                  errors={rowErrors}
                 />
               ) : null}
             </div>

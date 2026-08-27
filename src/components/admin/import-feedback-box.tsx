@@ -1,7 +1,6 @@
 import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  summarizeImportRowErrors,
   type ImportDuplicateWarning,
   type ImportFatalFeedback,
   type ImportRowError,
@@ -60,13 +59,24 @@ function FeedbackShell({
         <div className="min-w-0 flex-1 space-y-1">
           <p className={cn("font-medium", styles.title)}>{title}</p>
           {children ? (
-            <div className={cn("space-y-2 text-xs leading-relaxed", styles.body)}>
+            <div className={cn("space-y-1.5 text-xs leading-relaxed", styles.body)}>
               {children}
             </div>
           ) : null}
         </div>
       </div>
     </div>
+  );
+}
+
+function FeedbackBulletList({ items }: { items: string[] }) {
+  if (items.length === 0) return null;
+  return (
+    <ul className="list-disc space-y-0.5 pl-4">
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -84,18 +94,26 @@ export function ImportFatalFeedbackBox({ feedback }: { feedback: ImportFatalFeed
 export function ImportRowErrorsBox({
   errors,
   tone = "warning",
+  title,
+  intro,
 }: {
   errors: ImportRowError[];
   tone?: "warning" | "error";
+  title?: string;
+  intro?: string;
 }) {
   if (errors.length === 0) return null;
 
-  const title =
-    tone === "error" ? "Error de importación" : "Filas no importadas";
+  const boxTitle =
+    title ??
+    (tone === "error" ? "Error de importación" : "Filas no importadas");
 
   return (
-    <FeedbackShell tone={tone} title={title}>
-      <p>{summarizeImportRowErrors(errors)}</p>
+    <FeedbackShell tone={tone} title={boxTitle}>
+      {intro ? <p>{intro}</p> : null}
+      <FeedbackBulletList
+        items={errors.map((e) => `Fila ${e.row}: ${e.message}`)}
+      />
     </FeedbackShell>
   );
 }
@@ -112,14 +130,9 @@ export function ImportDuplicateWarningsBox({
       ? "1 código duplicado en el archivo"
       : `${warnings.length} códigos duplicados en el archivo`;
 
-  const summary =
-    warnings.length === 1
-      ? warnings[0]!.message
-      : `${warnings.map((w) => w.message).join(" ")}`;
-
   return (
     <FeedbackShell tone="warning" title={title}>
-      <p>{summary}</p>
+      <FeedbackBulletList items={warnings.map((w) => w.message)} />
     </FeedbackShell>
   );
 }
