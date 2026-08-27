@@ -1,6 +1,10 @@
 import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ImportFatalFeedback, ImportRowError } from "@/lib/import-feedback";
+import type {
+  ImportDuplicateWarning,
+  ImportFatalFeedback,
+  ImportRowError,
+} from "@/lib/import-feedback";
 
 type Tone = "success" | "warning" | "error";
 
@@ -103,17 +107,47 @@ export function ImportRowErrorsBox({
   );
 }
 
+export function ImportDuplicateWarningsBox({
+  warnings,
+}: {
+  warnings: ImportDuplicateWarning[];
+}) {
+  if (warnings.length === 0) return null;
+
+  const title =
+    warnings.length === 1
+      ? "1 código duplicado en el archivo"
+      : `${warnings.length} códigos duplicados en el archivo`;
+
+  return (
+    <FeedbackShell tone="warning" title={title}>
+      <p>La última fila de cada código es la que se importará.</p>
+      <ul className="max-h-48 list-none space-y-1 overflow-y-auto pr-1">
+        {warnings.map((item) => (
+          <li key={`${item.code}-${item.rows.join("-")}`}>{item.message}</li>
+        ))}
+      </ul>
+    </FeedbackShell>
+  );
+}
+
 export function ImportSuccessFeedbackBox({
   headline,
   partial,
+  title,
 }: {
   headline: string;
   partial?: boolean;
+  title?: string;
 }) {
+  const boxTitle =
+    title ??
+    (partial ? "Importación parcial" : "Importación completada");
+
   return (
     <FeedbackShell
       tone={partial ? "warning" : "success"}
-      title={partial ? "Importación parcial" : "Importación completada"}
+      title={boxTitle}
     >
       <p>{headline}</p>
       {partial ? (

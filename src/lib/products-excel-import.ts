@@ -5,6 +5,7 @@ import { syncBaseListItemForProduct } from "@/lib/price-list-resolve";
 import {
   cellNumber,
   cellText,
+  duplicateCodeWarnings,
   emptyToNull,
   getCellByHeader,
   headerIndexMap,
@@ -132,11 +133,24 @@ export function validateProductsImport(
     warnings: [],
   };
 
+  const codeRows: Array<{ row: number; code: string }> = [];
+
   for (let r = 2; r <= ctx.sheet.rowCount; r++) {
     const row = ctx.sheet.getRow(r);
+    const codeRaw = cellText(getCellByHeader(row, ctx.headers, "código"));
+    const name = cellText(getCellByHeader(row, ctx.headers, "nombre"));
+
+    if (!codeRaw && !name) {
+      result.skipped += 1;
+      continue;
+    }
+
+    if (codeRaw.trim()) {
+      codeRows.push({ row: r, code: codeRaw.trim() });
+    }
+
     const outcome = validateProductsRow(row, r, ctx);
     if (outcome.skip) {
-      result.skipped += 1;
       continue;
     }
     if (outcome.error) {
@@ -146,6 +160,7 @@ export function validateProductsImport(
     result.rowCount += 1;
   }
 
+  result.warnings = duplicateCodeWarnings(codeRows);
   result.ok = result.errors.length === 0;
   return result;
 }

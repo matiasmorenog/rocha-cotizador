@@ -6,6 +6,7 @@ import { normalizePhone } from "@/lib/phone-contact";
 import { padCustomerCode, pinFromCustomerCode } from "@/lib/utils";
 import {
   cellText,
+  duplicateCodeWarnings,
   emptyToNull,
   getCellByHeader,
   headerIndexMap,
@@ -108,6 +109,12 @@ function validateCustomersRow(
   return { skip: false };
 }
 
+function customerImportCodeKey(codeRaw: string): string {
+  const padded = padCustomerCode(codeRaw);
+  if (/^\d{3}$/.test(padded)) return padded;
+  return codeRaw.trim();
+}
+
 export function validateCustomersImport(
   ctx: CustomersImportContext,
 ): ImportValidationResult {
@@ -119,11 +126,24 @@ export function validateCustomersImport(
     warnings: [],
   };
 
+  const codeRows: Array<{ row: number; code: string }> = [];
+
   for (let r = 2; r <= ctx.sheet.rowCount; r++) {
     const row = ctx.sheet.getRow(r);
+    const codeRaw = cellText(getCellByHeader(row, ctx.headers, "código"));
+    const name = cellText(getCellByHeader(row, ctx.headers, "nombre"));
+
+    if (!codeRaw && !name) {
+      result.skipped += 1;
+      continue;
+    }
+
+    if (codeRaw.trim()) {
+      codeRows.push({ row: r, code: customerImportCodeKey(codeRaw) });
+    }
+
     const outcome = validateCustomersRow(row, ctx);
     if (outcome.skip) {
-      result.skipped += 1;
       continue;
     }
     if (outcome.error) {
@@ -133,6 +153,7 @@ export function validateCustomersImport(
     result.rowCount += 1;
   }
 
+  result.warnings = duplicateCodeWarnings(codeRows);
   result.ok = result.errors.length === 0;
   return result;
 }

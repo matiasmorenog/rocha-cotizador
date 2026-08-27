@@ -16,6 +16,7 @@ import {
   type ImportValidationResult,
 } from "@/lib/import-feedback";
 import {
+  ImportDuplicateWarningsBox,
   ImportFatalFeedbackBox,
   ImportRowErrorsBox,
   ImportSuccessFeedbackBox,
@@ -261,8 +262,13 @@ export function ExcelSyncPanel({
         <div className="mt-3 space-y-2 border-t border-neutral-100 pt-3">
           {validated.ok ? (
             <ImportSuccessFeedbackBox
-              headline={`Listo para importar ${validated.rowCount} fila${validated.rowCount === 1 ? "" : "s"}${validated.skipped > 0 ? ` (${validated.skipped} fila${validated.skipped === 1 ? "" : "s"} vacía${validated.skipped === 1 ? "" : "s"} omitida${validated.skipped === 1 ? "" : "s"})` : ""}.`}
-              partial={validationWarnings.length > 0}
+              headline={`Listo para importar ${validated.rowCount} fila${validated.rowCount === 1 ? "" : "s"}${validated.skipped > 0 ? ` (${validated.skipped} fila${validated.skipped === 1 ? "" : "s"} vacía${validated.skipped === 1 ? "" : "s"} omitida${validated.skipped === 1 ? "" : "s"})` : ""}${validationWarnings.length > 0 ? `. ${validationWarnings.length} advertencia${validationWarnings.length === 1 ? "" : "s"} de código duplicado` : ""}.`}
+              partial={false}
+              title={
+                validationWarnings.length > 0
+                  ? "Validación correcta con advertencias"
+                  : "Validación correcta"
+              }
             />
           ) : (
             <ImportFatalFeedbackBox
@@ -279,7 +285,7 @@ export function ExcelSyncPanel({
           ) : null}
 
           {validationWarnings.length > 0 ? (
-            <ImportRowErrorsBox errors={validationWarnings} tone="warning" />
+            <ImportDuplicateWarningsBox warnings={validationWarnings} />
           ) : null}
         </div>
       ) : null}

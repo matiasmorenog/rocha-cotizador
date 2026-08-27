@@ -1,5 +1,11 @@
 export type ImportRowError = { row: number; message: string };
 
+export type ImportDuplicateWarning = {
+  code: string;
+  rows: number[];
+  message: string;
+};
+
 export type ImportSummary = {
   created: number;
   updated: number;
@@ -12,7 +18,7 @@ export type ImportValidationResult = {
   rowCount: number;
   skipped: number;
   errors: ImportRowError[];
-  warnings: ImportRowError[];
+  warnings: ImportDuplicateWarning[];
 };
 
 export type ImportFatalFeedback = {
@@ -194,8 +200,19 @@ type ValidationJsonBody = {
   rowCount?: number;
   skipped?: number;
   errors?: ImportRowError[];
-  warnings?: ImportRowError[];
+  warnings?: ImportDuplicateWarning[];
 };
+
+function isDuplicateWarning(value: unknown): value is ImportDuplicateWarning {
+  if (!value || typeof value !== "object") return false;
+  const w = value as ImportDuplicateWarning;
+  return (
+    typeof w.code === "string" &&
+    Array.isArray(w.rows) &&
+    w.rows.every((r) => typeof r === "number") &&
+    typeof w.message === "string"
+  );
+}
 
 function isImportValidationResult(
   data: ValidationJsonBody,
@@ -205,7 +222,8 @@ function isImportValidationResult(
     typeof data.rowCount === "number" &&
     typeof data.skipped === "number" &&
     Array.isArray(data.errors) &&
-    Array.isArray(data.warnings)
+    Array.isArray(data.warnings) &&
+    data.warnings.every(isDuplicateWarning)
   );
 }
 
