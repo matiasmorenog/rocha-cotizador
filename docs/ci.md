@@ -23,6 +23,24 @@ Los PRs en **draft** no deben consumir CI ni previews:
 
 **Vercel:** Preview env en **`rocha-cotizador`** necesita `GITHUB_TOKEN` o `GH_TOKEN` (`repo` / `pull_requests: read`). Sin token → fail-closed.
 
+### Troubleshooting: preview “Canceled by Ignored Build Step”
+
+| Síntoma | Causa | Qué hacer |
+|---------|--------|-----------|
+| Check verde pero descripción **Canceled by Ignored Build Step** en **`rocha-cotizador-dev`** en un feature PR | Esperado: ignore cancela previews de feature en el proyecto demo | Ignorar; el preview útil es **`rocha-cotizador`**. |
+| **`rocha-cotizador`** cancelado; marcaste **Ready** sin push nuevo | El último build fue en **draft** (ignore canceló). Vercel Git solo buildea en **push**; `ready_for_review` no re-dispara Git hasta [`preview-on-ready.yml`](../.github/workflows/preview-on-ready.yml) esté en `development`. | Mergear el fix de preview-on-ready, o push vacío / **Redeploy** en Vercel; luego marcar ready de nuevo si hace falta. |
+| **Todos** los feature PR ready cancelan en **`rocha-cotizador`** (incluso con push después de ready) | Falta o inválido `GITHUB_TOKEN`/`GH_TOKEN` en **Preview** del proyecto prod | Vercel → rocha-cotizador → Settings → Environment Variables: agregar `GITHUB_TOKEN` (PAT con **Contents: read** + **Pull requests: read**) solo en **Preview**. Redeploy. |
+
+Probar ignore local (exit **1** = build procede):
+
+```bash
+export GITHUB_TOKEN="$(gh auth token)"
+VERCEL_ENV=preview VERCEL_PROJECT_ID=prj_q87cwzCd7xVN7eDPzm81fDmjLKNz \
+  VERCEL_GIT_COMMIT_REF=<branch> VERCEL_GIT_REPO_OWNER=matiasmorenog \
+  VERCEL_GIT_REPO_SLUG=rocha-cotizador VERCEL_GIT_PULL_REQUEST_ID=<n> \
+  bash scripts/vercel-ignore-draft-pr.sh; echo exit=$?
+```
+
 WIP → abrí **draft** (`gh pr create --draft`). Al marcar **Ready for review**: Actions (`lint-and-typecheck`) + job `vercel-preview` (API → build en **`rocha-cotizador`**). Pushes posteriores en ready siguen por Git integration.
 
 ## Job `lint-and-typecheck` (CI)
@@ -95,15 +113,24 @@ Sin `DATABASE_URL_PRODUCTION`, el gate intenta leer `DATABASE_URL` del `vercel p
 
 ## Branch protection
 
-Repo **privado Free**: GitHub **no** permite rulesets / branch protection (`403` Pro).
+Verificado vía API (`GET .../branches/{development,main}/protection`): **ninguna** rama protegida (404). Rulesets del repo: `[]`. En plan **privado Free**, GitHub no ofrece enforcement real de “block merge on conflicts” ni required checks sin **Pro** (o repo público).
 
-Opciones:
+### Qué pasó (ago 2026)
 
-1. **GitHub Pro** (o repo público) → Settings → Branches / Rulesets → require
-   `lint-and-typecheck` en `development` y `main`.
-2. Hasta entonces: **no mergear** PRs con `lint-and-typecheck` rojo (regla de equipo + agente).
+Varios PR (#106–#109) salieron del mismo `base` (`83c540a`, #103) y se mergearon seguidos. En la UI algunos quedaron **desactualizados** respecto a `development` mientras otro mergeaba el mismo archivo (`excel-sync-panel.tsx` en #107 vs #108). Sin branch protection, GitHub **no** exige “branch up to date” ni bloquea por política de repo; el squash se aplicó en cadena (`107` → `108` → `106` → `109`). **No** hay marcadores `<<<<<<<` en `development`; `tsc` y `lint` pasan. El riesgo es mergear con base vieja y perder hunks (GitHub a veces resuelve en silencio en squash), no un árbol roto con conflict markers.
 
-Prod igual queda protegida: sin CI verde **no hay** deploy a `main` vía Actions; además el schema gate + health frenan drift.
+**Antes de mergear:** `Update branch` / mergear `development` en el feature branch y esperar CI verde. Evitá mergear varios PR que tocan los mismos archivos en paralelo.
+
+### Mitigación en CI (sin Pro)
+
+Job **`merge-conflict-gate`** en [`ci.yml`](../.github/workflows/ci.yml): en PRs **ready**, falla si `mergeable_state` es `dirty`. No reemplaza branch protection (un admin puede mergear igual), pero deja el conflicto en rojo en checks.
+
+### Opciones con Pro
+
+1. Settings → Branches / Rulesets en `development` y `main`: require status checks `lint-and-typecheck` + `merge-conflict-gate`, y **Require branches to be up to date before merging**.
+2. Hasta entonces: **no mergear** con checks rojos ni con banner de conflictos (regla de equipo + agente).
+
+Prod sigue acotada por Actions: sin `lint-and-typecheck` verde en el workflow de deploy no hay ship a `main`; schema gate + health frenan drift.
 
 ## Vercel Deployment Checks (opcional extra)
 

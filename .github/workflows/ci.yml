@@ -50,3 +50,41 @@ jobs:
       # `hidden lg:block`, which can vanish from the prod CSS singleton chunk).
       - name: Admin chrome guards
         run: npm run ci:check-admin-chrome
+
+  merge-conflict-gate:
+    name: merge-conflict-gate
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    steps:
+      - name: Fail if PR conflicts with base branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pr="${{ github.event.pull_request.number }}"
+          repo="${{ github.repository }}"
+          for attempt in $(seq 1 15); do
+            state=$(gh api "repos/${repo}/pulls/${pr}" --jq .mergeable_state)
+            echo "mergeable_state=${state} (attempt ${attempt}/15)"
+            case "${state}" in
+              clean)
+                echo "PR is mergeable with base branch."
+                exit 0
+                ;;
+              dirty)
+                echo "::error::PR has merge conflicts with the base branch. Update the branch (merge or rebase development) before merging."
+                exit 1
+                ;;
+              unknown)
+                sleep 4
+                ;;
+              *)
+                echo "Unexpected mergeable_state=${state}"
+                sleep 4
+                ;;
+            esac
+          done
+          echo "::error::GitHub did not compute mergeability in time; retry CI or check the PR conflict banner."
+          exit 1
