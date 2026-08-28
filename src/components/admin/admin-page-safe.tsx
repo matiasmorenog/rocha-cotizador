@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { AdminClientSafe } from "@/components/admin/admin-client-safe";
 import { RoutePendingShell } from "@/components/route-pending-shell";
@@ -34,8 +35,14 @@ function AdminPageFallback() {
 
 /** Isolate admin page body so a crash cannot unmount the sidebar. */
 export function AdminPageSafe({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+
   return (
-    <AdminClientSafe label="admin-page" fallback={<AdminPageFallback />}>
+    <AdminClientSafe
+      label="admin-page"
+      resetKey={pathname}
+      fallback={<AdminPageFallback />}
+    >
       <RoutePendingShell variant="admin" coverGutters={false}>
         {children}
       </RoutePendingShell>
