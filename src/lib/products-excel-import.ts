@@ -14,6 +14,12 @@ import {
   type ImportSummary,
   type ImportValidationResult,
 } from "@/lib/admin-excel";
+import {
+  PRODUCT_CODE_HEADER_ALIASES,
+  PRODUCT_NAME_HEADER_ALIASES,
+  PRODUCT_RUBRO_HEADER_ALIASES,
+  resolveProductHeaderColumn,
+} from "@/lib/rocha-lista-precios-products";
 
 export type ProductsImportContext = {
   sheet: ExcelJS.Worksheet;
@@ -39,12 +45,36 @@ export async function loadProductsImportFromBuffer(
     return { ok: false, error: "Hoja vacía o sin datos", status: 400 };
   }
 
-  const headers = headerIndexMap(sheet.getRow(1));
+  const rawHeaders = headerIndexMap(sheet.getRow(1));
+  const headers = new Map(rawHeaders);
+  const codeCol = resolveProductHeaderColumn(
+    rawHeaders,
+    PRODUCT_CODE_HEADER_ALIASES,
+  );
+  const nameCol = resolveProductHeaderColumn(
+    rawHeaders,
+    PRODUCT_NAME_HEADER_ALIASES,
+  );
+  const rubroCol = resolveProductHeaderColumn(
+    rawHeaders,
+    PRODUCT_RUBRO_HEADER_ALIASES,
+  );
+  if (codeCol) headers.set("código", codeCol);
+  if (nameCol) headers.set("nombre", nameCol);
+  if (rubroCol) headers.set("rubro", rubroCol);
+
   if (!headers.has("código") || !headers.has("nombre")) {
     return {
       ok: false,
       error:
-        "Cabeceras requeridas: código, nombre (ver export productos.xlsx)",
+        "Cabeceras requeridas: código, nombre (o Detalle Articulo — ver export productos.xlsx)",
+      status: 400,
+    };
+  }
+  if (nameCol && rubroCol && nameCol === rubroCol) {
+    return {
+      ok: false,
+      error: "Las columnas nombre y rubro/tipo no pueden ser la misma",
       status: 400,
     };
   }

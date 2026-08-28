@@ -13,6 +13,7 @@
  * Products (`productos.xlsx`):
  *   código | nombre | rubro | precioBase | <nombre de cada PriceList>… |
  *   permitePedidoUnidad | activo
+ *   - Import also accepts rocha_data headers: Detalle Articulo → nombre, Rubro/tipo → rubro.
  *   - `precioBase` = Product.basePrice (precio base del producto).
  *   - `permitePedidoUnidad`: sí/no — kg o unidades (precio al pesar en unidades); no = cantidad fija.
  *   - Extra columns match PriceList.name (case-insensitive). Empty cell clears that list price.

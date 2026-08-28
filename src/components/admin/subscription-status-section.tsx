@@ -3,15 +3,17 @@ import type { RochaSubscriptionStatus } from "@/lib/subscription-payments";
 
 export function SubscriptionStatusSection({
   status,
-  isSuperuser,
+  canViewPayments,
+  canRegisterPayments,
 }: {
   status: RochaSubscriptionStatus;
-  isSuperuser?: boolean;
+  canViewPayments?: boolean;
+  canRegisterPayments?: boolean;
 }) {
   const { current } = status;
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+    <section className="max-w-2xl rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
@@ -21,12 +23,12 @@ export function SubscriptionStatusSection({
             Estado del abono mensual de la plataforma.
           </p>
         </div>
-        {isSuperuser ? (
+        {canViewPayments ? (
           <Link
             href="/admin/plataforma"
             className="shrink-0 rounded-md border border-neutral-300 bg-white px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
           >
-            Gestionar pagos
+            {canRegisterPayments ? "Gestionar pagos" : "Ver pagos"}
           </Link>
         ) : null}
       </div>

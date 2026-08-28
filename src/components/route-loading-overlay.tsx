@@ -19,6 +19,11 @@ function isSameRoute(
   return current === next;
 }
 
+/** Same pathname, different query — layout/tabs stay; page slot uses loading.tsx. */
+function isQueryOnlyNavigation(pathname: string, target: URL): boolean {
+  return target.pathname === pathname;
+}
+
 function shouldStartNavigation(
   event: MouseEvent,
   anchor: HTMLAnchorElement,
@@ -180,16 +185,21 @@ export function RouteLoadingOverlay() {
       const anchor = (event.target as HTMLElement).closest("a");
       if (!anchor) return;
       if (!shouldStartNavigation(event, anchor, pathname, search)) return;
-      let nextPath: string | null = null;
+      let url: URL;
       try {
-        nextPath = new URL(anchor.href, window.location.href).pathname;
+        url = new URL(anchor.href, window.location.href);
       } catch {
-        nextPath = null;
+        return;
       }
-      beginNavigation(nextPath);
+      if (isQueryOnlyNavigation(pathname, url)) return;
+      beginNavigation(url.pathname);
     };
 
-    const onPopState = () => beginNavigation(window.location.pathname);
+    const onPopState = () => {
+      if (window.location.pathname !== pathname) {
+        beginNavigation(window.location.pathname);
+      }
+    };
 
     document.addEventListener("click", onClick, true);
     window.addEventListener("popstate", onPopState);

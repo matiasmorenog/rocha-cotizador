@@ -45,6 +45,7 @@ next-env.d.ts
 
 # Seed secrets (PINs for customers)
 prisma/data/seed-pins.csv
+prisma/data/seed-pins-dev.csv
 
 # local dev server logs (npm run dev:log)
 .logs/

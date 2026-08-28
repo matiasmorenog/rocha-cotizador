@@ -23,6 +23,10 @@ import {
   EXCEL_PRICE_LIST_DEFAULTS,
 } from "../src/lib/pricing";
 import { cellNumber, cellText } from "../src/lib/admin-excel";
+import {
+  LISTA_PRECIOS_COL,
+  parseListaPreciosProductRow,
+} from "../src/lib/rocha-lista-precios-products";
 import { revalidateAppCache } from "./revalidate-app-cache";
 
 const PROD_HOST = "ep-cool-mud-a6k5vosf";
@@ -90,18 +94,16 @@ async function main() {
     };
     const byCode = new Map<string, ExcelRow>();
 
-    for (let r = 5; r <= sheet.rowCount; r++) {
+    for (let r = LISTA_PRECIOS_COL.DATA_START_ROW; r <= sheet.rowCount; r++) {
       const row = sheet.getRow(r);
-      const codeRaw = cellText(row.getCell(1).value);
-      if (!/^\d+$/.test(codeRaw)) continue;
-      const code = normalizeCode(codeRaw);
-      if (!want.has(code) && !want.has(codeRaw)) continue;
+      const parsed = parseListaPreciosProductRow(row);
+      if (!parsed || !want.has(parsed.code)) continue;
+      const code = parsed.code;
 
-      const name = cellText(row.getCell(3).value);
-      if (!name) continue;
-      const rubro = cellText(row.getCell(2).value) || null;
       // Yellow unit-order SKUs often have empty / $0 until weighed.
-      const baseRaw = cellNumber(row.getCell(5).value);
+      const baseRaw = cellNumber(
+        row.getCell(LISTA_PRECIOS_COL.MAYORISTA).value,
+      );
       const basePrice = baseRaw !== null && baseRaw >= 0 ? baseRaw : 0;
 
       const listPrices: Record<string, number> = {
@@ -113,7 +115,13 @@ async function main() {
           unitPrice !== null && unitPrice > 0 ? unitPrice : basePrice;
       }
 
-      byCode.set(code, { code, name, rubro, basePrice, listPrices });
+      byCode.set(code, {
+        code,
+        name: parsed.name,
+        rubro: parsed.rubro,
+        basePrice,
+        listPrices,
+      });
     }
 
     const missingExcel = TARGET_CODES.filter((c) => !byCode.has(c));

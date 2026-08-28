@@ -7,18 +7,21 @@ import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password";
+import { cn } from "@/lib/utils";
 
 type Props = {
   apiPath?: string;
   /** Customer PIN hint under current password. */
   showPinHint?: boolean;
   onSuccess?: () => void | Promise<void>;
+  className?: string;
 };
 
 export function ChangePasswordForm({
   apiPath = "/api/account/password",
   showPinHint = true,
   onSuccess,
+  className,
 }: Props) {
   const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState("");
@@ -59,7 +62,7 @@ export function ChangePasswordForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className={cn("space-y-4", className)}>
       <div className="space-y-1.5">
         <Label htmlFor="current">Contraseña actual</Label>
         <PasswordInput
@@ -100,19 +103,21 @@ export function ChangePasswordForm({
       </div>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
-      <Button
-        type="submit"
-        disabled={loading || newPassword.length < MIN_PASSWORD_LENGTH}
-      >
-        {loading ? (
-          <>
-            <Spinner className="mr-2 text-white" />
-            Guardando…
-          </>
-        ) : (
-          "Cambiar contraseña"
-        )}
-      </Button>
+      <div className="flex justify-end">
+        <Button
+          type="submit"
+          disabled={loading || newPassword.length < MIN_PASSWORD_LENGTH}
+        >
+          {loading ? (
+            <>
+              <Spinner className="mr-2 text-white" />
+              Guardando…
+            </>
+          ) : (
+            "Cambiar contraseña"
+          )}
+        </Button>
+      </div>
     </form>
   );
 }

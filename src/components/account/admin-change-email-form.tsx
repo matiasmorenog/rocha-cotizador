@@ -6,15 +6,17 @@ import { saveLastAdminEmail } from "@/lib/last-login";
 
 type Props = {
   currentEmail: string;
+  className?: string;
 };
 
 /** Admin account email change — refreshes JWT after success. */
-export function AdminChangeEmailForm({ currentEmail }: Props) {
+export function AdminChangeEmailForm({ currentEmail, className }: Props) {
   const { update } = useSession();
 
   return (
     <ChangeEmailForm
       currentEmail={currentEmail}
+      className={className}
       apiPath="/api/admin/account/email"
       onSuccess={async (email) => {
         const next = await update({ email });

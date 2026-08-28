@@ -68,13 +68,29 @@ api="https://api.github.com"
 auth=(-H "Authorization: Bearer ${token}" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28")
 
 json_is_draft() {
+  # stdin: GitHub PR JSON object → echo "true", "false", or "error" (fail closed)
   if command -v python3 >/dev/null 2>&1; then
-    python3 -c 'import json,sys; d=json.load(sys.stdin); print("true" if d.get("draft") is True else "false")' 2>/dev/null || echo "false"
+    python3 -c '
+import json, sys
+try:
+    d = json.load(sys.stdin)
+except Exception:
+    print("error")
+    raise SystemExit(0)
+if not isinstance(d, dict):
+    print("error")
+elif d.get("draft") is True:
+    print("true")
+else:
+    print("false")
+' 2>/dev/null || echo "error"
   else
     if grep -Eq '"draft"[[:space:]]*:[[:space:]]*true'; then
       echo "true"
-    else
+    elif grep -Eq '"draft"[[:space:]]*:[[:space:]]*false'; then
       echo "false"
+    else
+      echo "error"
     fi
   fi
 }
@@ -96,6 +112,9 @@ if [[ -n "$pr_id" ]]; then
   if [[ "$draft" == "true" ]]; then
     skip "draft PR #${pr_id}"
   fi
+  if [[ "$draft" != "false" ]]; then
+    skip "GitHub API parse error for PR #${pr_id} (fail closed)"
+  fi
   proceed "ready PR #${pr_id}"
 fi
 
@@ -108,9 +127,11 @@ import json, sys
 try:
     items = json.load(sys.stdin)
 except Exception:
-    print("none")
+    print("error")
     raise SystemExit(0)
-if not isinstance(items, list) or not items:
+if not isinstance(items, list):
+    print("error")
+elif not items:
     print("none")
 elif any(p.get("draft") is True for p in items):
     print("draft")
@@ -130,5 +151,6 @@ fi
 case "$result" in
   draft) skip "open draft PR for ${ref}" ;;
   ready) proceed "open ready PR for ${ref}" ;;
-  *) skip "no open ready PR for ${ref} (fail closed)" ;;
+  none) skip "no open ready PR for ${ref} (fail closed)" ;;
+  *) skip "GitHub API parse error for ${ref} (fail closed)" ;;
 esac

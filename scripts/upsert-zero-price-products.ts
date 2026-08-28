@@ -15,27 +15,11 @@ import {
 } from "../src/lib/unit-order-products";
 import { revalidateAppCache } from "./revalidate-app-cache";
 
-function cellText(value: ExcelJS.CellValue): string {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "object" && "text" in value && typeof value.text === "string") {
-    return value.text.trim();
-  }
-  if (typeof value === "object" && "result" in value) {
-    return cellText((value as { result?: ExcelJS.CellValue }).result as ExcelJS.CellValue);
-  }
-  return String(value).trim();
-}
-
-function cellNumber(value: ExcelJS.CellValue): number {
-  if (value !== null && typeof value === "object" && "result" in value) {
-    const r = (value as { result?: unknown }).result;
-    if (typeof r === "number" && Number.isFinite(r)) return r;
-    return cellNumber(r as ExcelJS.CellValue);
-  }
-  const raw = cellText(value).replace(",", ".");
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : 0;
-}
+import { cellNumber } from "../src/lib/admin-excel";
+import {
+  LISTA_PRECIOS_COL,
+  parseListaPreciosProductRow,
+} from "../src/lib/rocha-lista-precios-products";
 
 async function main() {
   assertSafeDestructiveDb();
@@ -62,18 +46,20 @@ async function main() {
     { name: string; rubro: string | null; basePrice: number }
   >();
 
-  for (let r = 5; r <= sheet.rowCount; r++) {
+  for (let r = LISTA_PRECIOS_COL.DATA_START_ROW; r <= sheet.rowCount; r++) {
     const row = sheet.getRow(r);
-    const codeRaw = cellText(row.getCell(1).value);
-    if (!/^\d+$/.test(codeRaw)) continue;
-    const code = codeRaw.padStart(4, "0");
-    if (!want.has(code) && !want.has(codeRaw)) continue;
+    const parsed = parseListaPreciosProductRow(row);
+    if (!parsed || !want.has(parsed.code)) continue;
 
-    const name = cellText(row.getCell(3).value);
-    const rubro = cellText(row.getCell(2).value) || null;
-    const basePrice = cellNumber(row.getCell(5).value);
-    if (!name || basePrice < 0) continue;
-    byCode.set(code, { name, rubro, basePrice });
+    const baseRaw = cellNumber(
+      row.getCell(LISTA_PRECIOS_COL.MAYORISTA).value,
+    );
+    const basePrice = baseRaw !== null && baseRaw >= 0 ? baseRaw : 0;
+    byCode.set(parsed.code, {
+      name: parsed.name,
+      rubro: parsed.rubro,
+      basePrice,
+    });
   }
 
   let created = 0;

@@ -44,6 +44,7 @@ Abrí [http://localhost:3000](http://localhost:3000).
 | `npm run lint` | ESLint `src/` |
 | `npm run db:push` | Sync schema |
 | `npm run db:seed` | Seed admin + Excel (requires `SEED_TARGET=development` or `ALLOW_DESTRUCTIVE_DB=1`; refuses Neon main) |
+| `npm run dev:wipe-customers` | Wipe customer PII on Neon **development** only; seeds fictitious clients (`SEED_TARGET=development`; refuses production/main) |
 | `npm run db:studio` | Prisma Studio |
 
 ## Precios
