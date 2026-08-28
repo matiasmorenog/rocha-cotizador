@@ -20,6 +20,7 @@ import {
 } from "@/lib/stock-units";
 import { cn } from "@/lib/utils";
 import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
+import { dispatchAdminStockSummaryRefresh } from "@/lib/admin-stock-summary-refresh";
 import { productMatchesStockModule } from "@/lib/stock-rubros-shared";
 
 export type StockRecountCustomer = {
@@ -233,6 +234,7 @@ export function StockRecountForm({
       return;
     }
     setMessage("Guardado");
+    dispatchAdminStockSummaryRefresh();
     router.refresh();
   }
 
