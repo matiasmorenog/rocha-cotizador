@@ -1,5 +1,5 @@
 import { requireStaffSession } from "@/lib/session";
-import { AdminDashboardNoGlow } from "@/components/admin/admin-dashboard-no-glow";
+import { AdminSoberDark } from "@/components/admin/admin-sober-dark";
 import { AdminNav } from "@/components/admin/admin-nav";
 import { AdminPageSafe } from "@/components/admin/admin-page-safe";
 import { AdminPushSafe } from "@/components/admin/admin-push-safe";
@@ -13,7 +13,7 @@ export default async function AdminLayout({
 
   return (
     <>
-      <AdminDashboardNoGlow />
+      <AdminSoberDark />
       <AdminPushSafe />
       <div className="admin-shell">
         <AdminNav
