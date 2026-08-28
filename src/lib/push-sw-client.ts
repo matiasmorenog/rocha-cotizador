@@ -32,6 +32,22 @@ function scriptUrl(reg: ServiceWorkerRegistration): string {
 }
 
 /**
+ * Read push subscription without `update()` — fast path for settings UI.
+ * Admin layout already registers `/sw.js` via AdminPushSwRegister.
+ */
+export async function getExistingPushSubscription(): Promise<PushSubscription | null> {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    return null;
+  }
+
+  const reg = await navigator.serviceWorker.getRegistration("/");
+  if (!reg) return null;
+
+  await navigator.serviceWorker.ready;
+  return reg.pushManager.getSubscription();
+}
+
+/**
  * Register `/sw.js` if missing. Always `update()` so a same-tab refresh
  * picks up a new worker (sessionStorage used to skip this after first load).
  */
