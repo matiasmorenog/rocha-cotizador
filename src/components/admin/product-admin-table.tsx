@@ -48,7 +48,8 @@ export type ProductTableRow = {
   name: string;
   rubro: string | null;
   basePrice: number;
-  active: boolean;
+  available: boolean;
+  stockKind: "MERMA" | "CONSUMABLE" | "LOCAL_ASSET" | null;
   allowsUnitOrder: boolean;
   /** priceListId → unitPrice */
   listPrices: Record<string, number>;
@@ -101,7 +102,7 @@ function ProductEditRow({
     }
     return init;
   });
-  const [active, setActive] = useState(product.active);
+  const [available, setAvailable] = useState(product.available);
   const [allowsUnitOrder, setAllowsUnitOrder] = useState(product.allowsUnitOrder);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -146,7 +147,7 @@ function ProductEditRow({
         name,
         rubro,
         basePrice: base,
-        active,
+        available,
         allowsUnitOrder,
         listPrices: listPricePayload,
       }),
@@ -226,14 +227,14 @@ function ProductEditRow({
       <td className="px-3 py-2">
         <label
           className="inline-flex cursor-pointer items-center gap-2"
-          title={active ? "Activo" : "Inactivo"}
+          title={available ? "Disponible" : "No disponible"}
         >
           <Switch
             form={formId}
-            checked={active}
-            onChange={(e) => setActive(e.target.checked)}
+            checked={available}
+            onChange={(e) => setAvailable(e.target.checked)}
             disabled={loading}
-            aria-label="Activo"
+            aria-label="Disponible"
           />
         </label>
         {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
@@ -307,8 +308,8 @@ function ProductViewRow({
         );
       })}
       <td className="px-3 py-2">
-        <Badge variant={product.active ? "success" : "danger"}>
-          {product.active ? "Activo" : "Inactivo"}
+        <Badge variant={product.available ? "success" : "danger"}>
+          {product.available ? "Disponible" : "No disponible"}
         </Badge>
       </td>
       <td className="px-3 py-2">
@@ -441,7 +442,7 @@ export function ProductAdminTable({
                     {l.name}
                   </th>
                 ))}
-                <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2">Disponible</th>
                 <th className="px-3 py-2">Medida</th>
                 <th className="px-3 py-2" />
               </tr>

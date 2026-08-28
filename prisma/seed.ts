@@ -24,6 +24,7 @@ import {
 } from "../src/lib/rocha-lista-precios-products";
 import { padCustomerCode, pinFromCustomerCode } from "../src/lib/utils";
 import { seedCustomerModuleAccess } from "../src/lib/customer-modules";
+import { migrateStaffRolesToAdmin } from "../scripts/migrate-staff-roles-to-admin";
 import { seedStockSampleData } from "../src/lib/stock-seed";
 import { parsePlatformOwnerEmails } from "../src/lib/platform-owner";
 import { assertSafeDestructiveDb } from "./assert-safe-db";
@@ -257,14 +258,14 @@ async function seedFromExcel(xlsxPath: string) {
             rubro: row.rubro,
             basePrice: row.basePrice,
             allowsUnitOrder,
-            active: true,
+            available: true,
           },
           update: {
             name: row.name,
             rubro: row.rubro,
             basePrice: row.basePrice,
             allowsUnitOrder,
-            active: true,
+            available: true,
           },
         });
 
@@ -461,6 +462,8 @@ async function main() {
     console.log(
       `Stock sample: merma lines=${stock.mermaLines}, consumibles lines=${stock.consumableLines}, merma=${stock.mermaCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
     );
+    const staffMigrated = await migrateStaffRolesToAdmin();
+    console.log(`Staff roles migrated to ADMIN: ${staffMigrated}`);
     return;
   }
   await seedFromExcel(xlsxPath);
@@ -472,6 +475,8 @@ async function main() {
   console.log(
     `Stock sample: merma lines=${stock.mermaLines}, consumibles lines=${stock.consumableLines}, merma=${stock.mermaCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
   );
+  const staffMigrated = await migrateStaffRolesToAdmin();
+  console.log(`Staff roles migrated to ADMIN: ${staffMigrated}`);
 }
 
 main()

@@ -17,6 +17,7 @@ import { emptyToNullNameNote } from "@/lib/customer-name-note";
 const moduleFlagsSchema = z.object({
   MERMAS: z.boolean(),
   CONSUMABLES: z.boolean(),
+  ACTIVOS: z.boolean(),
 });
 
 export async function GET(req: NextRequest) {

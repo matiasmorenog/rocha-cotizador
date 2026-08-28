@@ -7,4 +7,4 @@ export type SuperuserRole = "SUPERUSER";
 /** JWT / session role — staff, platform owner, or customer. */
 export type AppRole = StaffRole | SuperuserRole | "CUSTOMER";
 
-export type CustomerModuleSession = "MERMAS" | "CONSUMABLES";
+export type CustomerModuleSession = "MERMAS" | "CONSUMABLES" | "ACTIVOS";
