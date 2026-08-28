@@ -11,7 +11,9 @@ import { ChangePasswordForm } from "@/components/account/change-password-form";
 export default async function AdminConfigPage() {
   const session = await requireStaffPermission("account");
   const canEditAppSettings = staffHasPermission(session.user.permissions, "settings");
-  const isSuperuser = Boolean(session.user.isSuperuser);
+  const canViewPayments = canEditAppSettings;
+  const canRegisterPayments =
+    Boolean(session.user.isSuperuser) && !session.user.staffPreview;
   const [whatsappNotifyPhone, subscriptionStatus] = await Promise.all([
     canEditAppSettings ? getWhatsAppNotifyDigits() : Promise.resolve(null),
     getRochaSubscriptionStatus(),
@@ -49,7 +51,8 @@ export default async function AdminConfigPage() {
 
       <SubscriptionStatusSection
         status={subscriptionStatus}
-        isSuperuser={isSuperuser}
+        canViewPayments={canViewPayments}
+        canRegisterPayments={canRegisterPayments}
       />
 
       <section
