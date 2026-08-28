@@ -6,6 +6,7 @@ import { StockPageHeader } from "@/components/admin/stock-page-header";
 import { StockPanelFilters } from "@/components/admin/stock-panel-filters";
 import { StockTabs } from "@/components/admin/stock-tabs";
 import {
+  loadActivosEntries,
   loadConsumiblesEntries,
   loadElaboradosEntries,
   moduleCustomers,
@@ -59,7 +60,9 @@ function StockPanel({
         <p className="text-sm text-neutral-600">
           {tab === "consumibles"
             ? "Recuentos guardados por sucursal (módulo Consumibles)."
-            : "Cargas guardadas por sucursal (módulo Elaborados)."}{" "}
+            : tab === "activos"
+              ? "Recuentos de activos del local guardados por sucursal."
+              : "Cargas de bajas del día guardadas por sucursal."}{" "}
           Hasta {STOCK_HISTORY_LIMIT} por consulta — filtrá por sucursal o
           fechas.
         </p>
@@ -85,14 +88,22 @@ async function StockHistorial({
   const entries =
     tab === "consumibles"
       ? await loadConsumiblesEntries(from, to, customerId || undefined)
-      : await loadElaboradosEntries(from, to, customerId || undefined);
+      : tab === "activos"
+        ? await loadActivosEntries(from, to, customerId || undefined)
+        : await loadElaboradosEntries(from, to, customerId || undefined);
 
   return (
     <AdminStockReports
       entries={entries}
       customers={customers}
       customerId={customerId}
-      kindLabel={tab === "consumibles" ? "Recuento" : "Elaborado"}
+      kindLabel={
+        tab === "consumibles"
+          ? "Recuento"
+          : tab === "activos"
+            ? "Activo"
+            : "Baja del día"
+      }
     />
   );
 }
@@ -113,25 +124,43 @@ export default async function AdminStockPage({
   ]);
   const tab: StockTab = parseStockTab(params.tab);
   const { from, to } = resolveStockDateRange(params.from, params.to);
-  const stockModule = tab === "consumibles" ? "CONSUMABLES" : "MERMAS";
+  const stockModule =
+    tab === "consumibles"
+      ? "CONSUMABLES"
+      : tab === "activos"
+        ? "ACTIVOS"
+        : "MERMAS";
   const customers = await moduleCustomers(stockModule);
   const customerId = resolveStockCustomerId(customers, params.customer);
-  const consumibles = tab === "consumibles";
 
   return (
     <div className="space-y-6">
       <StockPageHeader
         title="Stock"
-        description="Elaborados y consumibles por sucursal."
-        formTitle={consumibles ? "Recuento de consumibles" : "Carga de elaborados"}
-        formDescription={
-          consumibles
-            ? "Stock invertido (gaseosas, insumos, etc.) por sucursal. No son elaborados diarios."
-            : "Recuento fin de día de panes y masas por sucursal. Buscá productos y cargá cantidades a tirar."
+        description="Bajas del día, consumibles y activos del local por sucursal."
+        formTitle={
+          tab === "consumibles"
+            ? "Recuento de consumibles"
+            : tab === "activos"
+              ? "Recuento de activos del local"
+              : "Carga de bajas del día"
         }
-        apiPath={consumibles ? "/api/admin/consumibles" : "/api/admin/mermas"}
+        formDescription={
+          tab === "consumibles"
+            ? "Gaseosas, insumos y stock invertido por sucursal. No son bajas del día ni se «tiran» como merma."
+            : tab === "activos"
+              ? "Carritos, bandejas y otros activos del local. La fecha suele ser mensual pero podés elegir cualquier día."
+              : "Recuento fin de día de panes y masas por sucursal. Buscá productos y cargá cantidades a tirar."
+        }
+        apiPath={
+          tab === "consumibles"
+            ? "/api/admin/consumibles"
+            : tab === "activos"
+              ? "/api/admin/activos"
+              : "/api/admin/mermas"
+        }
         customers={customers}
-        stockModule={consumibles ? "CONSUMABLES" : "MERMAS"}
+        stockModule={stockModule}
       />
 
       <StockTabs active={tab} from={from} to={to} customerId={customerId} />
