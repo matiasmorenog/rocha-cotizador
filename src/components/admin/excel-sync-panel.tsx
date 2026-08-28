@@ -327,7 +327,11 @@ export function ExcelSyncPanel({
         )}
       >
         <span className="min-w-0">
-          <span className="block text-sm font-medium text-neutral-900">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-neutral-900">
+            <FileSpreadsheet
+              className="size-4 shrink-0 text-neutral-500"
+              aria-hidden
+            />
             Excel
           </span>
           <span className="mt-0.5 block text-xs font-normal text-neutral-500">
