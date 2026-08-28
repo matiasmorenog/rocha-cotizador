@@ -18,6 +18,20 @@ import { cn } from "@/lib/utils";
 /** Keep in sync with `.quote-route-exit` duration in globals.css */
 const CONFIG_TAB_EXIT_MS = 200;
 
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+function scrollConfigTabToTop() {
+  window.scrollTo({
+    top: 0,
+    behavior: prefersReducedMotion() ? "auto" : "smooth",
+  });
+}
+
 type ConfigTabCtx = {
   navigateWithExit: (href: string) => void;
   isExiting: boolean;
@@ -42,6 +56,7 @@ export function ConfigTabTransition({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [exitTarget, setExitTarget] = useState<string | null>(null);
   const exitGenRef = useRef(0);
+  const skipScrollOnMountRef = useRef(true);
 
   const isExiting = exitTarget !== null && exitTarget !== routeKey;
 
@@ -49,10 +64,7 @@ export function ConfigTabTransition({ children }: { children: ReactNode }) {
     (href: string) => {
       if (href === routeKey || isExiting) return;
 
-      const reduced =
-        typeof window !== "undefined" &&
-        window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      if (reduced) {
+      if (prefersReducedMotion()) {
         router.push(href);
         return;
       }
@@ -69,10 +81,18 @@ export function ConfigTabTransition({ children }: { children: ReactNode }) {
     const href = exitTarget;
     const t = window.setTimeout(() => {
       if (gen !== exitGenRef.current) return;
-      router.push(href);
+      router.push(href, { scroll: false });
     }, CONFIG_TAB_EXIT_MS);
     return () => window.clearTimeout(t);
   }, [isExiting, exitTarget, router]);
+
+  useEffect(() => {
+    if (skipScrollOnMountRef.current) {
+      skipScrollOnMountRef.current = false;
+      return;
+    }
+    scrollConfigTabToTop();
+  }, [routeKey]);
 
   return (
     <ConfigTabContext.Provider value={{ navigateWithExit, isExiting, routeKey }}>
