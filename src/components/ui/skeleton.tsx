@@ -337,7 +337,7 @@ export function SkeletonAdminConfigPage() {
     >
       <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-72" />
 
-      <div className="inline-flex rounded-lg border border-neutral-200 bg-white p-1">
+      <div className="inline-flex gap-1 rounded-lg border border-neutral-200 bg-white p-1">
         <Skeleton className="h-9 w-32 rounded-md" />
         <Skeleton className="h-9 w-24 rounded-md" />
         <Skeleton className="h-9 w-20 rounded-md" />

@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
-import type { ConfigTab } from "@/lib/admin-config-tabs";
+import { parseConfigTab, type ConfigTab } from "@/lib/admin-config-tabs";
 import { cn } from "@/lib/utils";
 
 const TABS: Array<{ id: ConfigTab; label: string }> = [
@@ -13,7 +16,10 @@ function tabHref(tab: ConfigTab) {
   return `/admin/configuracion?tab=${tab}`;
 }
 
-export function ConfigTabs({ active }: { active: ConfigTab }) {
+export function ConfigTabs() {
+  const searchParams = useSearchParams();
+  const active = parseConfigTab(searchParams.get("tab") ?? undefined);
+
   return (
     <div
       role="tablist"

@@ -31,7 +31,7 @@ export function StockTabs({
     <div
       role="tablist"
       aria-label="Stock"
-      className="inline-flex rounded-lg border border-neutral-200 bg-white p-1"
+      className="inline-flex gap-1 rounded-lg border border-neutral-200 bg-white p-1"
     >
       {TABS.map((tab) => {
         const selected = active === tab.id;
