@@ -4,7 +4,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   SkeletonAccountPage,
-  SkeletonAdminConfigPage,
+  SkeletonAdminConfigPanel,
   SkeletonAdminDashboardPage,
   SkeletonAdminListPage,
   SkeletonAdminNewQuotePage,
@@ -71,7 +71,7 @@ function adminSkeletonFor(path: string) {
     return <SkeletonAdminQuotesPage />;
   }
   if (path.startsWith("/admin/configuracion")) {
-    return <SkeletonAdminConfigPage />;
+    return <SkeletonAdminConfigPanel />;
   }
   if (path.startsWith("/admin/stock")) {
     return <SkeletonAdminStockPage />;

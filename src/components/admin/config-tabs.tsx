@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { ConfigTabLink } from "@/components/admin/config-tab-transition";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { parseConfigTab, type ConfigTab } from "@/lib/admin-config-tabs";
 import { cn } from "@/lib/utils";
@@ -24,12 +24,12 @@ export function ConfigTabs() {
     <div
       role="tablist"
       aria-label="Configuración"
-      className="inline-flex rounded-lg border border-neutral-200 bg-white p-1"
+      className="inline-flex gap-1 rounded-lg border border-neutral-200 bg-white p-1"
     >
       {TABS.map((tab) => {
         const selected = active === tab.id;
         return (
-          <Link
+          <ConfigTabLink
             key={tab.id}
             href={tabHref(tab.id)}
             role="tab"
@@ -43,7 +43,7 @@ export function ConfigTabs() {
             )}
           >
             {tab.label}
-          </Link>
+          </ConfigTabLink>
         );
       })}
     </div>
