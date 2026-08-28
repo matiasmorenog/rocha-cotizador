@@ -123,7 +123,7 @@ Varios PR (#106–#109) salieron del mismo `base` (`83c540a`, #103) y se mergear
 
 ### Mitigación en CI (sin Pro)
 
-Job **`merge-conflict-gate`** en [`ci.yml`](../.github/workflows/ci.yml): en PRs **ready**, falla si `mergeable_state` es `dirty`. No reemplaza branch protection (un admin puede mergear igual), pero deja el conflicto en rojo en checks.
+Job **`merge-conflict-gate`** en [`ci.yml`](../.github/workflows/ci.yml): en PRs **ready**, falla solo si `mergeable_state` es `dirty` (conflictos de merge). Estados como `unstable` (checks fallando/pendientes) o `behind` no implican conflictos y pasan el gate. No reemplaza branch protection (un admin puede mergear igual), pero deja el conflicto en rojo en checks.
 
 ### Opciones con Pro
 

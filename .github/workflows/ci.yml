@@ -77,6 +77,10 @@ jobs:
                 echo "::error::PR has merge conflicts with the base branch. Update the branch (merge or rebase development) before merging."
                 exit 1
                 ;;
+              unstable|behind|blocked)
+                echo "PR has no merge conflicts (mergeable_state=${state})."
+                exit 0
+                ;;
               unknown)
                 sleep 4
                 ;;
