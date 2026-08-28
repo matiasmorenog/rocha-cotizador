@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 
 /** Keep in sync with `.quote-route-exit` duration in globals.css */
 const CONFIG_TAB_EXIT_MS = 200;
+/** Skip scroll-to-top when already near the top (avoids jarring jump on short tabs). */
+const CONFIG_TAB_SCROLL_TOP_THRESHOLD = 50;
 
 function prefersReducedMotion(): boolean {
   return (
@@ -26,6 +28,7 @@ function prefersReducedMotion(): boolean {
 }
 
 function scrollConfigTabToTop() {
+  if (window.scrollY <= CONFIG_TAB_SCROLL_TOP_THRESHOLD) return;
   window.scrollTo({
     top: 0,
     behavior: prefersReducedMotion() ? "auto" : "smooth",
@@ -65,7 +68,7 @@ export function ConfigTabTransition({ children }: { children: ReactNode }) {
       if (href === routeKey || isExiting) return;
 
       if (prefersReducedMotion()) {
-        router.push(href);
+        router.push(href, { scroll: false });
         return;
       }
 
