@@ -938,6 +938,7 @@ select:not([multiple]):disabled {
   localStorage. Applied on /admin/* and on remito detail when the viewer is
   staff. Customer routes (incl. remito as CUSTOMER) stay light.
   Palette tuned toward WhatsApp dark (#111b21 / #202c33 / #00a884 accent).
+  Sober admin routes override accent to muted sage via data-admin-sober-dark.
   Screen-only: print (PDF + thermal) must keep light :root tokens without
   stripping data-admin-theme from the live document (that flashed the UI).
 */
@@ -946,6 +947,7 @@ html[data-admin-theme="dark"] {
   --background: #111b21;
   --foreground: #e9edef;
   --brand-primary: #00a884;
+  --brand-primary-deep: #005c4b;
   --brand-primary-soft: #202c33;
   --admin-destructive: #c96a5f;
   --admin-destructive-border: color-mix(
@@ -969,19 +971,19 @@ html[data-admin-theme="dark"] .brand-page-atmosphere {
   background-image:
     radial-gradient(
       ellipse 80% 50% at 10% -10%,
-      color-mix(in srgb, #00a884 21%, transparent) 0%,
+      color-mix(in srgb, var(--brand-primary) 21%, transparent) 0%,
       transparent 64%
     ),
     radial-gradient(
       ellipse 60% 40% at 100% 0%,
-      color-mix(in srgb, #005c4b 30%, transparent) 0%,
+      color-mix(in srgb, var(--brand-primary-deep) 30%, transparent) 0%,
       transparent 60%
     );
   color: var(--foreground);
 }
 
 html[data-admin-theme="dark"] header {
-  border-bottom-color: color-mix(in srgb, #00a884 28%, transparent);
+  border-bottom-color: color-mix(in srgb, var(--brand-primary) 28%, transparent);
   background-color: #202c33;
 }
 
@@ -1126,13 +1128,15 @@ html[data-admin-theme="dark"] button.btn-primary {
 
 /*
   Admin dark sober experiment — flat chrome on all protected /admin/* routes.
-  Set via data-admin-sober-dark on <html> (layout + blocking script). Keeps teal
-  accents; strips white/teal glow and radial backdrop washes. Elevation = borders
-  (+ optional subtle black shadow-sm). Nested no-shadow rules below unchanged.
-  Staff remito detail keeps glow (no sober attr). Customer UI light-only.
+  Set via data-admin-sober-dark on <html> (layout + blocking script). Muted sage
+  accent (#6b9080 / #4a7c6f) instead of neon teal; strips glow and radial washes.
+  Elevation = borders (+ optional subtle black shadow-sm). Nested no-shadow rules
+  below unchanged. Staff remito detail keeps neon accent. Customer UI light-only.
 */
 html[data-admin-theme="dark"][data-admin-sober-dark] {
   --admin-card-shadow: none;
+  --brand-primary: #6b9080;
+  --brand-primary-deep: #4a7c6f;
 }
 
 html[data-admin-theme="dark"][data-admin-sober-dark] body,
@@ -1179,13 +1183,13 @@ html[data-admin-theme="dark"][data-admin-sober-dark] .data-table-scroll-btn:hove
 
 /* Sidebar nav — active bg must differ from sidebar surface (#202c33) in dark. */
 html[data-admin-theme="dark"] .admin-nav-link-active {
-  background-color: color-mix(in srgb, #00a884 18%, #202c33);
-  color: #00a884;
+  background-color: color-mix(in srgb, var(--brand-primary) 18%, #202c33);
+  color: var(--brand-primary);
 }
 
 html[data-admin-theme="dark"] .admin-nav-link-active:hover {
-  background-color: color-mix(in srgb, #00a884 24%, #202c33);
-  color: #00a884;
+  background-color: color-mix(in srgb, var(--brand-primary) 24%, #202c33);
+  color: var(--brand-primary);
 }
 
 html[data-admin-theme="dark"] .admin-table-row:hover {
@@ -1193,20 +1197,20 @@ html[data-admin-theme="dark"] .admin-table-row:hover {
 }
 
 html[data-admin-theme="dark"] .admin-table-row[data-selected="true"] {
-  background-color: color-mix(in srgb, #00a884 16%, #202c33);
+  background-color: color-mix(in srgb, var(--brand-primary) 16%, #202c33);
 }
 
 html[data-admin-theme="dark"] .admin-table-row[data-selected="true"]:hover {
   filter: none;
-  background-color: color-mix(in srgb, #00a884 22%, #202c33);
+  background-color: color-mix(in srgb, var(--brand-primary) 22%, #202c33);
 }
 
 /* Selection inset rules use light-mode brand colors; tone down in dark lists/tables. */
 html[data-admin-theme="dark"] .admin-table-row:focus-visible,
 html[data-admin-theme="dark"] .admin-table-row[data-selected="true"] {
   box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #00a884 55%, #2a3942),
-    inset 0 -1px 0 color-mix(in srgb, #00a884 55%, #2a3942);
+    inset 0 1px 0 color-mix(in srgb, var(--brand-primary) 55%, #2a3942),
+    inset 0 -1px 0 color-mix(in srgb, var(--brand-primary) 55%, #2a3942);
 }
 
 html[data-admin-theme="dark"] .admin-table-row[data-weigh-pending="true"] {
