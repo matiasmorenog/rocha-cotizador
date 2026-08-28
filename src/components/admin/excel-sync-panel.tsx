@@ -68,6 +68,42 @@ function isXlsxFile(file: File) {
   );
 }
 
+function parseAttachmentFilename(contentDisposition: string | null) {
+  if (!contentDisposition) return null;
+  const quoted = /filename="([^"]+)"/.exec(contentDisposition);
+  if (quoted?.[1]) return quoted[1];
+  const bare = /filename=([^;]+)/.exec(contentDisposition);
+  return bare?.[1]?.trim() ?? null;
+}
+
+async function downloadExportFile(url: string) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    let detail = "No se pudo descargar el Excel.";
+    try {
+      const data = (await res.json()) as { error?: string };
+      if (data.error) detail = data.error;
+    } catch {
+      // keep default detail
+    }
+    throw new Error(detail);
+  }
+
+  const blob = await res.blob();
+  const filename =
+    parseAttachmentFilename(res.headers.get("Content-Disposition")) ??
+    "export.xlsx";
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
 export function ExcelSyncPanel({
   exportUrl,
   importUrl,
@@ -89,6 +125,7 @@ export function ExcelSyncPanel({
     status: "idle",
   });
   const [importing, setImporting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [importFeedback, setImportFeedback] = useState<ImportFeedback | null>(
     null,
   );
@@ -195,6 +232,29 @@ export function ExcelSyncPanel({
     }
   }
 
+  async function onDownloadExport() {
+    setDownloading(true);
+    setImportFeedback(null);
+
+    try {
+      await downloadExportFile(exportUrl);
+    } catch (err) {
+      setValidation({
+        status: "failed",
+        feedback: {
+          kind: "fatal",
+          title: "Error al descargar",
+          detail:
+            err instanceof Error
+              ? err.message
+              : "No se pudo descargar el Excel.",
+        },
+      });
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   async function onConfirmImport() {
     if (!file) return;
     if (
@@ -236,7 +296,7 @@ export function ExcelSyncPanel({
   }
 
   const validating = validation.status === "validating";
-  const busy = validating || importing;
+  const busy = validating || importing || downloading;
   const validated =
     validation.status === "validated" ? validation.result : null;
   const validationFailed =
@@ -361,16 +421,25 @@ export function ExcelSyncPanel({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <a
-                    href={exportUrl}
-                    className={cn(
-                      "inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-md border border-neutral-300 bg-white px-4 text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-50",
-                      FOCUS_BRAND_BORDER,
-                    )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-10 shrink-0 gap-1.5"
+                    disabled={busy}
+                    onClick={() => void onDownloadExport()}
                   >
-                    <Download className="size-4 shrink-0" aria-hidden />
-                    Descargar Excel
-                  </a>
+                    {downloading ? (
+                      <>
+                        <Spinner className="size-4" />
+                        Descargando…
+                      </>
+                    ) : (
+                      <>
+                        <Download className="size-4 shrink-0" aria-hidden />
+                        Descargar Excel
+                      </>
+                    )}
+                  </Button>
 
                   <Button
                     type="submit"
