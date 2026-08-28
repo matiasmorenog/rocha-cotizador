@@ -12,13 +12,12 @@
  *   With SEED_TARGET=development, DATABASE_URL must be the Neon development endpoint.
  *
  * Requires:
- *   CONFIRM_DEV_WIPE_CUSTOMERS=1
  *   SEED_TARGET=development (set automatically by npm run dev:wipe-customers)
  *   DATABASE_URL = Neon development only (direct or pooler)
  *
  * Usage:
  *   npm run dev:wipe-customers
- *   # or: CONFIRM_DEV_WIPE_CUSTOMERS=1 SEED_TARGET=development npx tsx scripts/dev-wipe-customers.ts
+ *   # or: SEED_TARGET=development npx tsx scripts/dev-wipe-customers.ts
  *
  * Optional:
  *   DEV_FAKE_CUSTOMERS=minimal — only 3 general clients (001–003)
@@ -238,10 +237,6 @@ async function seedFakeCustomers(specs: FakeCustomerSpec[]) {
 }
 
 async function main() {
-  if (process.env.CONFIRM_DEV_WIPE_CUSTOMERS !== "1") {
-    throw new Error("Set CONFIRM_DEV_WIPE_CUSTOMERS=1 to run this script");
-  }
-
   // Blocks Neon production / branch main — prisma/assert-safe-db.ts
   assertSafeDestructiveDb();
 

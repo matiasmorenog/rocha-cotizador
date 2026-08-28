@@ -20,7 +20,7 @@
     "ci:post-deploy-smoke": "bash scripts/post-deploy-smoke.sh",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "dev:wipe-customers": "CONFIRM_DEV_WIPE_CUSTOMERS=1 SEED_TARGET=development tsx scripts/dev-wipe-customers.ts"
+    "dev:wipe-customers": "SEED_TARGET=development tsx scripts/dev-wipe-customers.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
