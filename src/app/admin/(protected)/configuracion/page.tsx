@@ -20,8 +20,9 @@ export default async function AdminConfigPage({
   const tab = parseConfigTab(params.tab);
   const session = await requireStaffPermission("account");
   const canEditAppSettings = staffHasPermission(session.user.permissions, "settings");
-  const isSuperuser = Boolean(session.user.isSuperuser);
-
+  const canViewPayments = canEditAppSettings;
+  const canRegisterPayments =
+    Boolean(session.user.isSuperuser) && !session.user.staffPreview;
   const [whatsappNotifyPhone, subscriptionStatus] = await Promise.all([
     tab === "notificaciones" && canEditAppSettings
       ? getWhatsAppNotifyDigits()
@@ -58,7 +59,8 @@ export default async function AdminConfigPage({
     return (
       <SubscriptionStatusSection
         status={subscriptionStatus}
-        isSuperuser={isSuperuser}
+        canViewPayments={canViewPayments}
+        canRegisterPayments={canRegisterPayments}
       />
     );
   }

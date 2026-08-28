@@ -1159,6 +1159,10 @@ html[data-admin-theme="dark"][data-admin-sober-dark] .data-table-scroll-btn:hove
   box-shadow: none;
 }
 
+html[data-admin-theme="dark"][data-admin-sober-dark] .admin-notification-toast {
+  box-shadow: none;
+}
+
 /*
   Nested controls / surfaces: card owns elevation. Light + dark — strips
   Tailwind shadows and admin glow on descendants of white card surfaces
