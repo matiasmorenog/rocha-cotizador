@@ -118,19 +118,22 @@ export function RoutePendingShell({
   const { pending, pendingPath } = useRouteLoading();
   const pathname = usePathname();
   const path = pendingPath ?? pathname;
+  const showPendingOverlay = pending && pendingPath !== pathname;
   const skeleton =
     variant === "admin" ? adminSkeletonFor(path) : customerSkeletonFor(path);
 
   return (
-    <div className={cn("relative min-w-0", pending && "min-h-[12rem]")}>
+    <div className={cn("relative min-w-0", showPendingOverlay && "min-h-[12rem]")}>
       <div
-        className={cn(pending && "invisible pointer-events-none select-none")}
-        aria-hidden={pending || undefined}
-        {...(pending ? { inert: true } : {})}
+        className={cn(
+          showPendingOverlay && "invisible pointer-events-none select-none",
+        )}
+        aria-hidden={showPendingOverlay || undefined}
+        {...(showPendingOverlay ? { inert: true } : {})}
       >
         {children}
       </div>
-      {pending ? (
+      {showPendingOverlay ? (
         <>
           {variant === "customer" ? (
             <div

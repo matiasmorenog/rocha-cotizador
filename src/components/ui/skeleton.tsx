@@ -326,6 +326,35 @@ export function SkeletonAccountPage() {
   );
 }
 
+/** Active tab panel only — used by `configuracion/loading.tsx` on `?tab=` switches. */
+export function SkeletonAdminConfigPanel() {
+  return (
+    <SkeletonRegion label="Cargando panel" className="max-w-2xl">
+      <section className={cn(ADMIN_SKELETON_CARD, "p-5")}>
+        <Skeleton className="mb-3 h-3 w-32" />
+        <div className="space-y-4">
+          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
+            <Skeleton className="h-4 w-28" />
+            <Skeleton className="h-3 w-full" />
+            <div className="mt-3 space-y-4">
+              <Skeleton className="h-10 w-full rounded-md" />
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+          </div>
+          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
+            <Skeleton className="h-4 w-36" />
+            <Skeleton className="h-3 w-full" />
+            <div className="mt-3 space-y-4">
+              <Skeleton className="h-10 w-full rounded-md" />
+              <Skeleton className="h-10 w-full rounded-md" />
+            </div>
+          </div>
+        </div>
+      </section>
+    </SkeletonRegion>
+  );
+}
+
 /**
  * Admin `/admin/configuracion` — tab bar + active panel (default: cuenta).
  */

@@ -1,5 +1,5 @@
-import { SkeletonAdminConfigPage } from "@/components/ui/skeleton";
+import { SkeletonAdminConfigPanel } from "@/components/ui/skeleton";
 
 export default function Loading() {
-  return <SkeletonAdminConfigPage />;
+  return <SkeletonAdminConfigPanel />;
 }
