@@ -1,0 +1,95 @@
+name: Preview on ready
+
+# Vercel Git only builds on push. Draft pushes are cancelled by ignoreCommand;
+# marking a PR ready does not push, so trigger preview here via Vercel API.
+on:
+  pull_request:
+    branches: [development, main]
+    types: [ready_for_review]
+
+concurrency:
+  group: preview-on-ready-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  vercel-preview:
+    name: vercel-preview
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+
+    steps:
+      - name: Trigger Vercel preview (rocha-cotizador)
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${VERCEL_TOKEN:-}" || -z "${VERCEL_ORG_ID:-}" || -z "${VERCEL_PROJECT_ID:-}" ]]; then
+            echo "error: VERCEL_TOKEN, VERCEL_ORG_ID, and VERCEL_PROJECT_ID secrets are required." >&2
+            exit 1
+          fi
+
+          repo_id="$(curl -fsS \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}" | jq -r '.id')"
+
+          if [[ -z "$repo_id" || "$repo_id" == "null" ]]; then
+            echo "error: could not resolve GitHub repo id for ${GITHUB_REPOSITORY}" >&2
+            exit 1
+          fi
+
+          payload="$(jq -n \
+            --arg project "$VERCEL_PROJECT_ID" \
+            --arg ref "$PR_HEAD_REF" \
+            --arg sha "$PR_HEAD_SHA" \
+            --argjson repoId "$repo_id" \
+            '{
+              project: $project,
+              target: "preview",
+              gitSource: {
+                type: "github",
+                ref: $ref,
+                sha: $sha,
+                repoId: $repoId
+              }
+            }')"
+
+          response="$(curl -fsS -X POST \
+            "https://api.vercel.com/v13/deployments?teamId=${VERCEL_ORG_ID}" \
+            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "$payload")"
+
+          deployment_id="$(echo "$response" | jq -r '.id // empty')"
+          inspector_url="$(echo "$response" | jq -r '.inspectorUrl // empty')"
+          preview_url="$(echo "$response" | jq -r '.url // empty')"
+
+          if [[ -z "$deployment_id" ]]; then
+            echo "error: Vercel API did not return a deployment id" >&2
+            echo "$response" >&2
+            exit 1
+          fi
+
+          echo "Triggered preview deployment ${deployment_id} for ${PR_HEAD_REF}@${PR_HEAD_SHA:0:7}"
+          if [[ -n "$preview_url" ]]; then
+            echo "Preview URL: https://${preview_url}"
+          fi
+          if [[ -n "$inspector_url" ]]; then
+            echo "Inspector: ${inspector_url}"
+          fi
+
+          {
+            echo "### Vercel preview triggered"
+            echo ""
+            echo "- Branch: \`${PR_HEAD_REF}\`"
+            echo "- Commit: \`${PR_HEAD_SHA:0:7}\`"
+            [[ -n "$preview_url" ]] && echo "- URL: https://${preview_url}"
+            [[ -n "$inspector_url" ]] && echo "- Inspector: ${inspector_url}"
+          } >> "$GITHUB_STEP_SUMMARY"

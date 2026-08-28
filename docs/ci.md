@@ -2,6 +2,7 @@
 
 Workflows:
 - [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) — lint/typecheck (PRs ready + push)
+- [`.github/workflows/preview-on-ready.yml`](../.github/workflows/preview-on-ready.yml) — Vercel preview when PR leaves draft (`ready_for_review`)
 - [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) — push only (`main` ship + `development` cache purge)
 
 ## Draft PRs (sin checks)
@@ -11,8 +12,9 @@ Los PRs en **draft** no deben consumir CI ni previews:
 | Superficie | Comportamiento |
 |------------|----------------|
 | GitHub Actions | Job `lint-and-typecheck` con `if: … draft == false`. También escucha `ready_for_review`. |
-| Vercel Git | `git.deploymentEnabled`: `development` + `**` (feature) on; `main` off. |
-| Vercel ignore | [`scripts/vercel-ignore-draft-pr.sh`](../scripts/vercel-ignore-draft-pr.sh): draft cancela; ready procede en **`rocha-cotizador`**; **`rocha-cotizador-dev`** sin feature Preview (solo `development` / Production). |
+| Vercel Git (push) | `git.deploymentEnabled`: `development` + `**` (feature) on; `main` off. Draft push → ignore cancela build. |
+| Vercel preview on ready | Job `vercel-preview` en [`preview-on-ready.yml`](../.github/workflows/preview-on-ready.yml): en `ready_for_review` dispara deploy preview vía API de Vercel (solo **`rocha-cotizador`**, `VERCEL_PROJECT_ID`). Cubre el caso “último push fue en draft”. |
+| Vercel ignore | [`scripts/vercel-ignore-draft-pr.sh`](../scripts/vercel-ignore-draft-pr.sh): draft cancela; ready procede en **`rocha-cotizador`**; **`rocha-cotizador-dev`** sin feature Preview (solo `development` / Production). Sigue activo en builds por push y en los disparados por Actions. |
 | Push a `development` / `main` | CI en push. `development` Git-deploya Preview en **`rocha-cotizador`** (SSO) y Production en **`rocha-cotizador-dev`** (público). Prod `main` = Actions. |
 
 **Proyecto prod** (`rocha-cotizador` / `prj_q87cwzCd…`): ready feature PR → Preview URL (Neon **development** vía Preview env). Draft → cancel. Push `development` → Preview (SSO). `main` = Actions-only (no Git auto-deploy).
@@ -21,7 +23,7 @@ Los PRs en **draft** no deben consumir CI ni previews:
 
 **Vercel:** Preview env en **`rocha-cotizador`** necesita `GITHUB_TOKEN` o `GH_TOKEN` (`repo` / `pull_requests: read`). Sin token → fail-closed.
 
-WIP → abrí **draft** (`gh pr create --draft`). Al marcar **Ready for review**: Actions + Preview en **`rocha-cotizador`**.
+WIP → abrí **draft** (`gh pr create --draft`). Al marcar **Ready for review**: Actions (`lint-and-typecheck`) + job `vercel-preview` (API → build en **`rocha-cotizador`**). Pushes posteriores en ready siguen por Git integration.
 
 ## Job `lint-and-typecheck` (CI)
 
