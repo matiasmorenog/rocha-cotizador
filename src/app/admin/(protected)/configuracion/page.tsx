@@ -56,7 +56,7 @@ export default async function AdminConfigPage({
   }
 
   return (
-    <section className="w-fit max-w-sm rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+    <section className="w-full max-w-lg rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
       <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
         Mi cuenta
       </h2>
@@ -72,7 +72,10 @@ export default async function AdminConfigPage({
           </p>
           <div className="mt-3">
             {session.user.email ? (
-              <AdminChangeEmailForm currentEmail={session.user.email} />
+              <AdminChangeEmailForm
+                currentEmail={session.user.email}
+                className="w-full"
+              />
             ) : (
               <p className="text-sm text-neutral-500">
                 No hay email asociado a esta cuenta.
@@ -89,6 +92,7 @@ export default async function AdminConfigPage({
             <ChangePasswordForm
               apiPath="/api/admin/account/password"
               showPinHint={false}
+              className="w-full"
             />
           </div>
         </div>
