@@ -6,6 +6,8 @@ import { invalidateAfterProductMutation } from "@/lib/cache-tags";
 import { syncBaseListItemForProduct } from "@/lib/price-list-resolve";
 import { normalizeRubro } from "@/lib/stock-rubros";
 
+const stockKindSchema = z.enum(["MERMA", "CONSUMABLE", "LOCAL_ASSET"]).nullable();
+
 const schema = z.object({
   id: z.string().optional(),
   code: z.string().min(1),
@@ -13,7 +15,8 @@ const schema = z.object({
   rubro: z.string().optional().nullable(),
   basePrice: z.number().nonnegative(),
   allowsUnitOrder: z.boolean().optional(),
-  active: z.boolean().optional(),
+  available: z.boolean().optional(),
+  stockKind: stockKindSchema.optional(),
   listPrices: z
     .array(
       z.object({
@@ -41,7 +44,10 @@ export async function POST(req: NextRequest) {
     name: parsed.data.name.trim(),
     rubro,
     basePrice: parsed.data.basePrice,
-    active: parsed.data.active ?? true,
+    available: parsed.data.available ?? true,
+    ...(parsed.data.stockKind !== undefined
+      ? { stockKind: parsed.data.stockKind }
+      : {}),
     ...(parsed.data.allowsUnitOrder !== undefined
       ? { allowsUnitOrder: parsed.data.allowsUnitOrder }
       : parsed.data.id

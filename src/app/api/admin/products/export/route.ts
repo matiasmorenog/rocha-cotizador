@@ -27,7 +27,8 @@ export async function GET() {
         rubro: true,
         basePrice: true,
         allowsUnitOrder: true,
-        active: true,
+        available: true,
+        stockKind: true,
         priceListItems: {
           select: { priceListId: true, unitPrice: true },
         },
@@ -48,6 +49,7 @@ export async function GET() {
     ...orderedLists.map((l) => l.name),
     PRODUCT_BASE_COLUMNS[4],
     PRODUCT_BASE_COLUMNS[5],
+    PRODUCT_BASE_COLUMNS[6],
   ];
 
   const workbook = new ExcelJS.Workbook();
@@ -69,7 +71,8 @@ export async function GET() {
         return v != null ? v : "";
       }),
       formatBool(p.allowsUnitOrder),
-      formatBool(p.active),
+      formatBool(p.available),
+      p.stockKind ?? "",
     ]);
   }
 

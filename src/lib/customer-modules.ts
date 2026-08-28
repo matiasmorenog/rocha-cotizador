@@ -4,17 +4,23 @@ import { db } from "@/lib/db";
 export type { CustomerModule };
 
 export const CUSTOMER_MODULE_LABELS: Record<CustomerModule, string> = {
-  MERMAS: "Elaborados",
+  MERMAS: "Bajas del día",
   CONSUMABLES: "Consumibles",
+  ACTIVOS: "Activos del local",
 };
 
-export const CUSTOMER_MODULES: CustomerModule[] = ["MERMAS", "CONSUMABLES"];
+export const CUSTOMER_MODULES: CustomerModule[] = [
+  "MERMAS",
+  "CONSUMABLES",
+  "ACTIVOS",
+];
 
 export type CustomerModuleFlags = Record<CustomerModule, boolean>;
 
 export const DEFAULT_CUSTOMER_MODULE_FLAGS: CustomerModuleFlags = {
   MERMAS: false,
   CONSUMABLES: false,
+  ACTIVOS: false,
 };
 
 export function modulesFromAccess(
@@ -26,6 +32,9 @@ export function modulesFromAccess(
     ),
     CONSUMABLES: Boolean(
       rows.find((m) => m.module === "CONSUMABLES" && m.enabled),
+    ),
+    ACTIVOS: Boolean(
+      rows.find((m) => m.module === "ACTIVOS" && m.enabled),
     ),
   };
 }

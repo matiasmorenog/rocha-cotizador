@@ -1,9 +1,9 @@
 /**
- * Stock module split by Product.rubro — client/server safe (no DB/cache).
- * Mermas = panes/masas (waste). Consumibles = inventory (gaseosas, insumos, etc.).
+ * Legacy rubro helpers — client/server safe (no DB/cache).
+ * Stock module membership prefers Product.stockKind; rubro is fallback only.
  */
 
-/** Rubros that appear in consumibles recount (rest → mermas). */
+/** Rubros that matched consumibles before stockKind existed. */
 export const CONSUMABLE_RUBROS = ["INSUMOS", "REGALO"] as const;
 
 export function normalizeRubro(rubro: string | null | undefined): string | null {
@@ -19,15 +19,12 @@ export function isConsumableRubro(rubro: string | null | undefined): boolean {
   );
 }
 
-/** Client/server guard: product rubro allowed in mermas vs consumibles recount. */
-export function productMatchesStockModule(
-  rubro: string | null | undefined,
-  module: "MERMAS" | "CONSUMABLES",
-): boolean {
-  return module === "CONSUMABLES"
-    ? isConsumableRubro(rubro)
-    : !isConsumableRubro(rubro);
-}
+export {
+  productMatchesStockModule,
+  stockKindForModule,
+  type ProductStockKindValue,
+  type StockModuleKey,
+} from "@/lib/stock-product-kind-shared";
 
 /** Unique sorted non-empty rubro values from an in-memory product list. */
 export function uniqRubrosFromProducts(

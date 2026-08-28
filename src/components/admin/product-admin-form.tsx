@@ -33,7 +33,7 @@ export function ProductAdminForm({
   const [name, setName] = useState("");
   const [rubro, setRubro] = useState("");
   const [basePrice, setBasePrice] = useState("");
-  const [active, setActive] = useState(true);
+  const [available, setAvailable] = useState(true);
   const [allowsUnitOrder, setAllowsUnitOrder] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -60,7 +60,7 @@ export function ProductAdminForm({
         name,
         rubro,
         basePrice: price,
-        active,
+        available,
         allowsUnitOrder,
       }),
     });
@@ -76,7 +76,7 @@ export function ProductAdminForm({
     setName("");
     setRubro("");
     setBasePrice("");
-    setActive(true);
+    setAvailable(true);
     setAllowsUnitOrder(false);
     router.refresh();
   }
@@ -119,15 +119,15 @@ export function ProductAdminForm({
       </div>
 
       <label
-        htmlFor="product-active-create"
+        htmlFor="product-available-create"
         className="flex cursor-pointer items-center gap-2.5 text-sm"
       >
         <Switch
-          id="product-active-create"
-          checked={active}
-          onChange={(e) => setActive(e.target.checked)}
+          id="product-available-create"
+          checked={available}
+          onChange={(e) => setAvailable(e.target.checked)}
         />
-        Activo
+        Disponible en catálogo
       </label>
       <label
         htmlFor="product-unit-order-create"

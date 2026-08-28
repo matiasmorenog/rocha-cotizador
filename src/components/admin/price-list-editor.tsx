@@ -29,7 +29,7 @@ type ItemRow = {
     name: string;
     rubro: string | null;
     basePrice: number;
-    active: boolean;
+    available: boolean;
   };
 };
 
@@ -300,8 +300,8 @@ export function PriceListEditor({
                     <span className="admin-table-name-2l max-w-[18rem]">
                       {i.product.name}
                     </span>
-                    {!i.product.active ? (
-                      <span className="ml-2 text-xs text-red-600">inactivo</span>
+                    {!i.product.available ? (
+                      <span className="ml-2 text-xs text-red-600">no disponible</span>
                     ) : null}
                   </td>
                   {!isBase ? (
