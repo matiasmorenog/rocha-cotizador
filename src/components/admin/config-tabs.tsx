@@ -1,0 +1,45 @@
+import Link from "next/link";
+import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
+import type { ConfigTab } from "@/lib/admin-config-tabs";
+import { cn } from "@/lib/utils";
+
+const TABS: Array<{ id: ConfigTab; label: string }> = [
+  { id: "notificaciones", label: "Notificaciones" },
+  { id: "servicio", label: "Servicio" },
+  { id: "cuenta", label: "Cuenta" },
+];
+
+function tabHref(tab: ConfigTab) {
+  return `/admin/configuracion?tab=${tab}`;
+}
+
+export function ConfigTabs({ active }: { active: ConfigTab }) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Configuración"
+      className="inline-flex rounded-lg border border-neutral-200 bg-white p-1"
+    >
+      {TABS.map((tab) => {
+        const selected = active === tab.id;
+        return (
+          <Link
+            key={tab.id}
+            href={tabHref(tab.id)}
+            role="tab"
+            aria-selected={selected}
+            className={cn(
+              "rounded-md px-4 py-2 text-sm font-medium transition-colors",
+              FOCUS_BRAND_OUTLINE,
+              selected
+                ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
+                : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900",
+            )}
+          >
+            {tab.label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
