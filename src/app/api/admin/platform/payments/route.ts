@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import { requireSuperuserApi } from "@/lib/api-auth";
+import { requireStaffApi, requireSuperuserApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { parseArgentinaDateTime } from "@/lib/argentina-time";
 import { invalidateAfterSubscriptionPaymentMutation } from "@/lib/cache-tags";
@@ -38,7 +38,7 @@ const createSchema = z.object({
 });
 
 export async function GET() {
-  if (!(await requireSuperuserApi())) return notFound();
+  if (!(await requireStaffApi("settings"))) return notFound();
   const payments = await getSubscriptionPayments();
   return NextResponse.json({ payments });
 }

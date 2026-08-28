@@ -1,9 +1,11 @@
-import { requireSuperuser } from "@/lib/session";
+import { requireStaffPermission } from "@/lib/session";
 import { getSubscriptionPayments } from "@/lib/subscription-payments";
 import { PlatformPaymentsPanel } from "@/components/admin/platform-payments-panel";
 
 export default async function PlatformPaymentsPage() {
-  await requireSuperuser();
+  const session = await requireStaffPermission("settings");
+  const canRegister =
+    Boolean(session.user.isSuperuser) && !session.user.staffPreview;
   const payments = await getSubscriptionPayments();
 
   return (
@@ -13,10 +15,12 @@ export default async function PlatformPaymentsPage() {
           Pagos de plataforma
         </h1>
         <p className="text-sm text-neutral-600">
-          Registro interno del abono mensual. No figura en el menú.
+          {canRegister
+            ? "Registro interno del abono mensual. No figura en el menú."
+            : "Historial del abono mensual (solo lectura)."}
         </p>
       </div>
-      <PlatformPaymentsPanel payments={payments} />
+      <PlatformPaymentsPanel payments={payments} canRegister={canRegister} />
     </div>
   );
 }
