@@ -373,7 +373,7 @@ export function SkeletonAdminConfigPage() {
       </div>
 
       {/* Cuenta (default tab) */}
-      <section className={cn(ADMIN_SKELETON_CARD, "max-w-2xl p-5")}>
+      <section className={cn(ADMIN_SKELETON_CARD, "w-fit max-w-sm p-5")}>
         <Skeleton className="mb-1 h-3 w-24" />
         <Skeleton className="mb-4 h-4 w-56" />
         <div className="space-y-4">
