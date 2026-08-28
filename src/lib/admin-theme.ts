@@ -30,7 +30,7 @@ export function shouldApplyAdminTheme(path: string, isStaff: boolean): boolean {
 export function adminThemeBlockingScript(isStaff: boolean): string {
   const staff = isStaff ? "true" : "false";
   const key = JSON.stringify(ADMIN_THEME_STORAGE_KEY);
-  return `(function(){try{var p=location.pathname;var strip=function(){document.documentElement.removeAttribute("data-admin-theme")};if(p==="/admin/login"||p.indexOf("/admin/login/")===0){strip();return}var admin=p==="/admin"||p.indexOf("/admin/")===0;var remito=p.indexOf("/remitos/")===0;if(!admin&&!(${staff}&&remito)){strip();return}if(localStorage.getItem(${key})==="dark"){document.documentElement.setAttribute("data-admin-theme","dark")}else{strip()}}catch(e){}})();`;
+  return `(function(){try{var p=location.pathname;var strip=function(){document.documentElement.removeAttribute("data-admin-theme");document.documentElement.removeAttribute("data-admin-sober-dark")};if(p==="/admin/login"||p.indexOf("/admin/login/")===0){strip();return}var admin=p==="/admin"||p.indexOf("/admin/")===0;var remito=p.indexOf("/remitos/")===0;if(!admin&&!(${staff}&&remito)){strip();return}if(localStorage.getItem(${key})==="dark"){document.documentElement.setAttribute("data-admin-theme","dark");if(admin){document.documentElement.setAttribute("data-admin-sober-dark","")}}else{strip()}}catch(e){}})();`;
 }
 
 export function readStoredAdminTheme(): AdminTheme {
