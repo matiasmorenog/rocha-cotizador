@@ -45,7 +45,7 @@ function parseYmdToDate(ymd: string): Date {
 async function resolveProductId(spec: SeedStockSpec): Promise<string | null> {
   if (spec.code) {
     const byCode = await db.product.findFirst({
-      where: { code: spec.code, active: true },
+      where: { code: spec.code, available: true },
       select: { id: true },
     });
     if (byCode) return byCode.id;
@@ -53,7 +53,7 @@ async function resolveProductId(spec: SeedStockSpec): Promise<string | null> {
   if (spec.nameIncludes) {
     const byName = await db.product.findFirst({
       where: {
-        active: true,
+        available: true,
         name: { contains: spec.nameIncludes, mode: "insensitive" },
       },
       orderBy: { code: "asc" },

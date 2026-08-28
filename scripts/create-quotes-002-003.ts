@@ -33,7 +33,7 @@ async function createQuoteForCustomer(code: string, productOffset: number) {
   if (!customer) throw new Error(`Customer ${code} not found`);
 
   const products = await db.product.findMany({
-    where: { active: true, basePrice: { gt: 0 } },
+    where: { available: true, basePrice: { gt: 0 } },
     orderBy: { code: "asc" },
     take: 8,
   });

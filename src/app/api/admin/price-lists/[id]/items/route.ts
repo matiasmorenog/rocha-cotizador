@@ -98,7 +98,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   }
 
   const products = await db.product.findMany({
-    where: { active: true },
+    where: { available: true },
     select: { id: true, basePrice: true },
   });
 

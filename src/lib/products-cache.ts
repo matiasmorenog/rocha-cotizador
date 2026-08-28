@@ -15,7 +15,7 @@ import {
 export type { ProductBase } from "@/lib/product-base";
 
 /**
- * Version for client invalidation: any Product row change (incl. active toggle)
+ * Version for client invalidation: any Product row change (incl. available toggle)
  * bumps `updatedAt`, so MAX covers create/update/deactivate/reactivate.
  * Cached under products + price-lists tags — skip 3 aggregates when ETag/`?v=`
  * matches and nothing mutated since last compute.
@@ -46,7 +46,10 @@ export async function getProductsCatalogVersion(): Promise<string> {
 
 async function fetchActiveProductsBaseUncached(): Promise<ProductBase[]> {
   const rows = await db.product.findMany({
-    where: { active: true },
+    where: {
+      available: true,
+      OR: [{ stockKind: null }, { stockKind: "MERMA" }],
+    },
     orderBy: [{ code: "asc" }],
     select: {
       id: true,
