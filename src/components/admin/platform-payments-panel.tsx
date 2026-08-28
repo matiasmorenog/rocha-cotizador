@@ -62,8 +62,10 @@ function yearOptions(currentYear: number) {
 
 export function PlatformPaymentsPanel({
   payments: initial,
+  canRegister = false,
 }: {
   payments: SubscriptionPaymentDto[];
+  canRegister?: boolean;
 }) {
   const router = useRouter();
   const { year: currentYear, month: currentMonth } = argentinaYearMonth();
@@ -80,12 +82,11 @@ export function PlatformPaymentsPanel({
         <p className="text-sm text-neutral-600">
           Mes calendario (Argentina).
         </p>
-        <Button
-          type="button"
-          onClick={() => setCreating(true)}
-        >
-          Registrar pago
-        </Button>
+        {canRegister ? (
+          <Button type="button" onClick={() => setCreating(true)}>
+            Registrar pago
+          </Button>
+        ) : null}
       </div>
 
       <div
