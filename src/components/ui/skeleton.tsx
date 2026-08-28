@@ -326,33 +326,176 @@ export function SkeletonAccountPage() {
   );
 }
 
-/** Active tab panel only — used by `configuracion/loading.tsx` on `?tab=` switches. */
-export function SkeletonAdminConfigPanel() {
+const ADMIN_CONFIG_SECTION = cn(ADMIN_SKELETON_CARD, "max-w-2xl p-5");
+const ADMIN_CONFIG_CUENTA_SECTION = cn(ADMIN_SKELETON_CARD, "w-full max-w-lg p-5");
+
+function SkeletonConfigFormField({ labelWidth = "w-28" }: { labelWidth?: string }) {
   return (
-    <SkeletonRegion label="Cargando panel">
-      <section className={cn(ADMIN_SKELETON_CARD, "w-full max-w-lg p-5")}>
-        <Skeleton className="mb-3 h-3 w-32" />
-        <div className="space-y-4">
-          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-3 w-full" />
-            <div className="mt-3 space-y-4">
-              <Skeleton className="h-10 w-full rounded-md" />
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-          </div>
-          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
-            <Skeleton className="h-4 w-36" />
-            <Skeleton className="h-3 w-full" />
-            <div className="mt-3 space-y-4">
-              <Skeleton className="h-10 w-full rounded-md" />
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-          </div>
+    <div className="space-y-1.5">
+      <Skeleton className={cn("h-4", labelWidth)} />
+      <Skeleton className="h-10 w-full rounded-md" />
+    </div>
+  );
+}
+
+/** Nested neutral-50 block — matches config cards (WhatsApp, email, push, etc.). */
+export function SkeletonConfigNestedCard({
+  titleWidth = "w-28",
+  descLines = 1,
+  fields = 0,
+  submitButton = false,
+  fieldsFullWidth = false,
+  className,
+}: {
+  titleWidth?: string;
+  descLines?: number;
+  fields?: number;
+  submitButton?: boolean;
+  fieldsFullWidth?: boolean;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3",
+        className,
+      )}
+    >
+      <Skeleton className={cn("h-4", titleWidth)} />
+      {Array.from({ length: descLines }, (_, i) => (
+        <Skeleton
+          key={i}
+          className={cn("h-3", i === 0 ? "w-full" : "w-4/5")}
+        />
+      ))}
+      {fields > 0 || submitButton ? (
+        <div
+          className={cn(
+            "mt-3 space-y-4",
+            fieldsFullWidth ? "w-full" : "max-w-md",
+          )}
+        >
+          {Array.from({ length: fields }, (_, i) => (
+            <SkeletonConfigFormField key={i} />
+          ))}
+          {submitButton ? <Skeleton className="h-10 w-full rounded-md" /> : null}
         </div>
-      </section>
+      ) : null}
+    </div>
+  );
+}
+
+function SkeletonConfigNotificationBlock({ large = false }: { large?: boolean }) {
+  return (
+    <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
+      <Skeleton className="h-4 w-44" />
+      <Skeleton className="h-3 w-full" />
+      <Skeleton className="h-4 w-52" />
+      {large ? (
+        <>
+          <Skeleton className="h-8 w-64 max-w-full rounded-md" />
+          <Skeleton className="h-4 w-56" />
+          <Skeleton className="h-16 w-full rounded-md" />
+        </>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        <Skeleton className="h-10 w-full rounded-md sm:w-56" />
+        <Skeleton className="h-10 w-full rounded-md sm:w-56" />
+      </div>
+    </div>
+  );
+}
+
+function SkeletonAdminConfigCuentaSection() {
+  return (
+    <section className={ADMIN_CONFIG_CUENTA_SECTION}>
+      <Skeleton className="mb-1 h-3 w-24" />
+      <Skeleton className="mb-4 h-4 w-56" />
+      <div className="space-y-4">
+        <SkeletonConfigNestedCard
+          titleWidth="w-32"
+          descLines={1}
+          fields={2}
+          submitButton
+          fieldsFullWidth
+        />
+        <SkeletonConfigNestedCard
+          titleWidth="w-40"
+          descLines={1}
+          fields={3}
+          submitButton
+          fieldsFullWidth
+        />
+      </div>
+    </section>
+  );
+}
+
+function SkeletonAdminConfigNotificacionesSection() {
+  return (
+    <section className={ADMIN_CONFIG_SECTION}>
+      <Skeleton className="mb-3 h-3 w-32" />
+      <div className="space-y-4">
+        <SkeletonConfigNestedCard
+          titleWidth="w-24"
+          descLines={1}
+          fields={1}
+          submitButton
+        />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-4/5" />
+        <SkeletonConfigNotificationBlock />
+        <SkeletonConfigNotificationBlock large />
+      </div>
+    </section>
+  );
+}
+
+function SkeletonAdminConfigServicioSection() {
+  return (
+    <section className={ADMIN_CONFIG_SECTION}>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <Skeleton className="h-3 w-20" />
+          <Skeleton className="h-4 w-56" />
+        </div>
+        <Skeleton className="h-8 w-28 shrink-0 rounded-md" />
+      </div>
+      <SkeletonConfigNestedCard titleWidth="w-36" descLines={2} />
+    </section>
+  );
+}
+
+/** Cuenta tab panel — matches `AdminConfigPage` default tab. */
+export function SkeletonAdminConfigCuentaPanel() {
+  return (
+    <SkeletonRegion label="Cargando cuenta">
+      <SkeletonAdminConfigCuentaSection />
     </SkeletonRegion>
   );
+}
+
+/** Notificaciones tab panel. */
+export function SkeletonAdminConfigNotificacionesPanel() {
+  return (
+    <SkeletonRegion label="Cargando notificaciones">
+      <SkeletonAdminConfigNotificacionesSection />
+    </SkeletonRegion>
+  );
+}
+
+/** Servicio tab panel. */
+export function SkeletonAdminConfigServicioPanel() {
+  return (
+    <SkeletonRegion label="Cargando servicio">
+      <SkeletonAdminConfigServicioSection />
+    </SkeletonRegion>
+  );
+}
+
+/** Active tab panel — default cuenta; prefer `ConfigPanelSkeleton` for `?tab=`. */
+export function SkeletonAdminConfigPanel() {
+  return <SkeletonAdminConfigCuentaPanel />;
 }
 
 /**
@@ -372,51 +515,7 @@ export function SkeletonAdminConfigPage() {
         <Skeleton className="h-9 w-20 rounded-md" />
       </div>
 
-      {/* Cuenta (default tab) */}
-      <section className={cn(ADMIN_SKELETON_CARD, "w-full max-w-lg p-5")}>
-        <Skeleton className="mb-1 h-3 w-24" />
-        <Skeleton className="mb-4 h-4 w-56" />
-        <div className="space-y-4">
-          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
-            <Skeleton className="h-4 w-28" />
-            <Skeleton className="h-3 w-full" />
-            <div className="mt-3 space-y-4">
-              <div className="space-y-1.5">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-10 w-full rounded-md" />
-              </div>
-              <div className="space-y-1.5">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-10 w-full rounded-md" />
-              </div>
-              <div className="space-y-1.5">
-                <Skeleton className="h-4 w-36" />
-                <Skeleton className="h-10 w-full rounded-md" />
-              </div>
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-          </div>
-          <div className="space-y-3 rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3">
-            <Skeleton className="h-4 w-36" />
-            <Skeleton className="h-3 w-full" />
-            <div className="mt-3 space-y-4">
-              <div className="space-y-1.5">
-                <Skeleton className="h-4 w-36" />
-                <Skeleton className="h-10 w-full rounded-md" />
-              </div>
-              <div className="space-y-1.5">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-10 w-full rounded-md" />
-              </div>
-              <div className="space-y-1.5">
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-10 w-full rounded-md" />
-              </div>
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-          </div>
-        </div>
-      </section>
+      <SkeletonAdminConfigCuentaSection />
     </SkeletonRegion>
   );
 }
