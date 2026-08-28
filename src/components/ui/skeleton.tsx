@@ -333,7 +333,7 @@ export function SkeletonAdminConfigPage() {
   return (
     <SkeletonRegion
       label="Cargando configuración"
-      className="mx-auto max-w-lg space-y-6"
+      className="space-y-6"
     >
       <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-72" />
 
@@ -344,7 +344,7 @@ export function SkeletonAdminConfigPage() {
       </div>
 
       {/* Cuenta (default tab) */}
-      <section className={cn(ADMIN_SKELETON_CARD, "p-5")}>
+      <section className={cn(ADMIN_SKELETON_CARD, "max-w-2xl p-5")}>
         <Skeleton className="mb-1 h-3 w-24" />
         <Skeleton className="mb-4 h-4 w-56" />
         <div className="space-y-4">

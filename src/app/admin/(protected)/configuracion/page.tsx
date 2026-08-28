@@ -33,7 +33,7 @@ export default async function AdminConfigPage({
   ]);
 
   return (
-    <div className="mx-auto max-w-lg space-y-6">
+    <div className="space-y-6">
       <Suspense fallback={null}>
         <ConfigHashRedirect />
       </Suspense>
@@ -48,7 +48,7 @@ export default async function AdminConfigPage({
       <ConfigTabs active={tab} />
 
       {tab === "notificaciones" ? (
-        <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+        <section className="max-w-2xl rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
             Notificaciones
           </h2>
@@ -78,7 +78,7 @@ export default async function AdminConfigPage({
       ) : null}
 
       {tab === "cuenta" ? (
-        <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+        <section className="max-w-2xl rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
           <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">
             Mi cuenta
           </h2>
