@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -62,9 +62,22 @@ export function PriceListEditor({
   const [filter, setFilter] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [savingMeta, setSavingMeta] = useState(false);
-  const [savingPrices, setSavingPrices] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [filling, setFilling] = useState(false);
+
+  const metaDirty =
+    name.trim() !== priceList.name || active !== priceList.active;
+
+  const pricesDirty = useMemo(() => {
+    for (const item of priceList.items) {
+      const raw = prices[item.productId] ?? "";
+      const original = formatArInput(item.unitPrice, 2, AR_PRICE_FORMAT);
+      if (raw !== original) return true;
+    }
+    return false;
+  }, [prices, priceList.items]);
+
+  const isDirty = metaDirty || pricesDirty;
 
   const filtered = useMemo(
     () =>
@@ -89,56 +102,66 @@ export function PriceListEditor({
 
   const colSpan = isBase ? 3 : 4;
 
-  async function saveMeta(e: FormEvent) {
-    e.preventDefault();
-    setSavingMeta(true);
+  async function saveChanges() {
+    if (!isDirty || saving) return;
+
+    setSaving(true);
     setError(null);
     setMessage(null);
-    const res = await fetch(`/api/admin/price-lists/${priceList.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), active }),
-    });
-    setSavingMeta(false);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "No se pudo guardar");
-      return;
-    }
-    setMessage("Lista actualizada");
-    router.refresh();
-  }
 
-  async function savePrices() {
-    setSavingPrices(true);
-    setError(null);
-    setMessage(null);
-    const items = Object.entries(prices)
-      .map(([productId, raw]) => ({
-        productId,
-        unitPrice: parseArNumber(String(raw)),
-      }))
-      .filter((i) => Number.isFinite(i.unitPrice) && i.unitPrice >= 0);
+    try {
+      if (metaDirty) {
+        const trimmedName = name.trim();
+        if (!trimmedName) {
+          setError("El nombre es obligatorio");
+          return;
+        }
 
-    if (items.length === 0) {
-      setError("No hay precios para guardar");
-      setSavingPrices(false);
-      return;
-    }
+        const res = await fetch(`/api/admin/price-lists/${priceList.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: trimmedName, active }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setError(data.error ?? "No se pudo guardar la lista");
+          return;
+        }
+      }
 
-    const res = await fetch(`/api/admin/price-lists/${priceList.id}/items`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items }),
-    });
-    setSavingPrices(false);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "No se pudieron guardar precios");
-      return;
+      if (pricesDirty) {
+        const items = Object.entries(prices)
+          .map(([productId, raw]) => ({
+            productId,
+            unitPrice: parseArNumber(String(raw)),
+          }))
+          .filter((i) => Number.isFinite(i.unitPrice) && i.unitPrice >= 0);
+
+        if (items.length === 0) {
+          setError("No hay precios válidos para guardar");
+          return;
+        }
+
+        const res = await fetch(
+          `/api/admin/price-lists/${priceList.id}/items`,
+          {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ items }),
+          },
+        );
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setError(data.error ?? "No se pudieron guardar precios");
+          return;
+        }
+      }
+
+      setMessage("Cambios guardados");
+      router.refresh();
+    } finally {
+      setSaving(false);
     }
-    setMessage(`Precios guardados (${items.length})`);
-    router.refresh();
   }
 
   async function fillFromBase() {
@@ -191,10 +214,7 @@ export function PriceListEditor({
 
   return (
     <div className="space-y-6">
-      <form
-        onSubmit={saveMeta}
-        className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
-      >
+      <div className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
           <div className="min-w-0 flex-1 space-y-1">
             <Label htmlFor="list-name">Nombre</Label>
@@ -223,11 +243,8 @@ export function PriceListEditor({
               </label>
             </div>
           </div>
-          <Button type="submit" className="shrink-0" disabled={savingMeta}>
-            {savingMeta ? "Guardando…" : "Guardar nombre"}
-          </Button>
         </div>
-      </form>
+      </div>
 
       <div className="flex flex-wrap justify-end gap-2">
         {!isBase ? (
@@ -235,7 +252,7 @@ export function PriceListEditor({
             type="button"
             variant="outline"
             onClick={() => void fillFromBase()}
-            disabled={filling}
+            disabled={filling || saving}
           >
             {filling ? "Rellenando…" : "Rellenar desde precio base"}
           </Button>
@@ -245,6 +262,7 @@ export function PriceListEditor({
             type="button"
             variant="destructive"
             onClick={() => void deleteList()}
+            disabled={saving}
             className="h-10 w-10 px-0"
             aria-label="Eliminar lista"
             title="Eliminar lista"
@@ -252,17 +270,7 @@ export function PriceListEditor({
             <Trash2 className="h-4 w-4" aria-hidden />
           </Button>
         ) : null}
-        <Button
-          type="button"
-          onClick={() => void savePrices()}
-          disabled={savingPrices}
-        >
-          {savingPrices ? "Guardando precios…" : "Guardar precios"}
-        </Button>
       </div>
-
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {message ? <p className="text-sm text-green-700">{message}</p> : null}
 
       <div className="space-y-2">
         <Input
@@ -333,6 +341,18 @@ export function PriceListEditor({
             Sin precios. Usá “Rellenar desde precio base” o el seed Excel.
           </p>
         ) : null}
+      </div>
+
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {message ? <p className="text-sm text-green-700">{message}</p> : null}
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button
+          type="button"
+          onClick={() => void saveChanges()}
+          disabled={saving || !isDirty}
+        >
+          {saving ? "Guardando…" : "Guardar cambios"}
+        </Button>
       </div>
     </div>
   );
