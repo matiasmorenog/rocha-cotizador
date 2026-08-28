@@ -18,6 +18,10 @@ import {
   UNIT_ORDER_PRODUCT_CODES,
   productAllowsUnitOrderByCode,
 } from "../src/lib/unit-order-products";
+import {
+  LISTA_PRECIOS_COL,
+  parseListaPreciosProductRow,
+} from "../src/lib/rocha-lista-precios-products";
 import { padCustomerCode, pinFromCustomerCode } from "../src/lib/utils";
 import { seedCustomerModuleAccess } from "../src/lib/customer-modules";
 import { seedStockSampleData } from "../src/lib/stock-seed";
@@ -211,22 +215,22 @@ async function seedFromExcel(xlsxPath: string) {
     listPrices: Record<string, number>;
   }> = [];
 
-  for (let r = 5; r <= pricesSheet.rowCount; r++) {
+  for (let r = LISTA_PRECIOS_COL.DATA_START_ROW; r <= pricesSheet.rowCount; r++) {
     const row = pricesSheet.getRow(r);
-    const codeRaw = cellText(row.getCell(1).value);
-    if (!/^\d+$/.test(codeRaw)) continue;
+    const parsed = parseListaPreciosProductRow(row);
+    if (!parsed) continue;
 
-    const code = codeRaw.padStart(4, "0");
-    const rubro = cellText(row.getCell(2).value) || null;
-    const name = cellText(row.getCell(3).value);
+    const { code, name, rubro } = parsed;
     // Col 5 (Excel "Mayorista") → Product.basePrice + base list item.
     // Col 4 ("Minorista") ignored — not a PriceList.
     // Allow basePrice 0 only for unit-order SKUs (yellow LPM); other $0 rows
     // are placeholders and must stay out of the catalog.
-    const basePrice = cellNumber(row.getCell(5).value);
+    const basePrice = cellNumber(
+      row.getCell(LISTA_PRECIOS_COL.MAYORISTA).value,
+    );
     const allowsUnitOrder = productAllowsUnitOrderByCode(code);
 
-    if (!name || basePrice < 0) continue;
+    if (basePrice < 0) continue;
     if (basePrice === 0 && !allowsUnitOrder) continue;
 
     const listPrices: Record<string, number> = {
