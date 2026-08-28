@@ -13,7 +13,7 @@ export function SubscriptionStatusSection({
   const { current } = status;
 
   return (
-    <section className="rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+    <section className="max-w-2xl rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="mb-1 text-sm font-semibold uppercase tracking-wide text-neutral-500">

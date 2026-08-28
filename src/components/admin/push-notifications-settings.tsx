@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import {
   ensureFreshServiceWorker,
+  getExistingPushSubscription,
   resetServiceWorker,
   dispatchAdminInAppToast,
 } from "@/lib/push-sw-client";
@@ -268,8 +269,7 @@ export function PushNotificationsSettings() {
       }
 
       try {
-        const reg = await ensureFreshServiceWorker();
-        const existing = await reg.pushManager.getSubscription();
+        const existing = await getExistingPushSubscription();
         if (!cancelled) {
           setStatus(existing ? "subscribed" : "unsubscribed");
         }

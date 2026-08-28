@@ -52,6 +52,8 @@
 */
 html {
   background-color: var(--background);
+  /* Reserve scrollbar width so tab/content height changes do not shift layout. */
+  scrollbar-gutter: stable;
 }
 
 /*

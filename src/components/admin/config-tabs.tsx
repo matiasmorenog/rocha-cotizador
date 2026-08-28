@@ -1,44 +1,37 @@
-import Link from "next/link";
+"use client";
+
+import { useSearchParams } from "next/navigation";
+import { ConfigTabLink } from "@/components/admin/config-tab-transition";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
-import type { StockTab } from "@/lib/admin-stock-data";
+import { parseConfigTab, type ConfigTab } from "@/lib/admin-config-tabs";
 import { cn } from "@/lib/utils";
 
-const TABS: Array<{ id: StockTab; label: string }> = [
-  { id: "elaborados", label: "Elaborados" },
-  { id: "consumibles", label: "Consumibles" },
+const TABS: Array<{ id: ConfigTab; label: string }> = [
+  { id: "notificaciones", label: "Notificaciones" },
+  { id: "servicio", label: "Servicio" },
+  { id: "cuenta", label: "Cuenta" },
 ];
 
-function tabHref(tab: StockTab, from: string, to: string, customerId: string) {
-  const params = new URLSearchParams({ tab });
-  if (from) params.set("from", from);
-  if (to) params.set("to", to);
-  if (customerId) params.set("customer", customerId);
-  return `/admin/stock?${params}`;
+function tabHref(tab: ConfigTab) {
+  return `/admin/configuracion?tab=${tab}`;
 }
 
-export function StockTabs({
-  active,
-  from,
-  to,
-  customerId,
-}: {
-  active: StockTab;
-  from: string;
-  to: string;
-  customerId: string;
-}) {
+export function ConfigTabs() {
+  const searchParams = useSearchParams();
+  const active = parseConfigTab(searchParams.get("tab") ?? undefined);
+
   return (
     <div
       role="tablist"
-      aria-label="Stock"
+      aria-label="Configuración"
       className="inline-flex gap-1 rounded-lg border border-neutral-200 bg-white p-1"
     >
       {TABS.map((tab) => {
         const selected = active === tab.id;
         return (
-          <Link
+          <ConfigTabLink
             key={tab.id}
-            href={tabHref(tab.id, from, to, customerId)}
+            href={tabHref(tab.id)}
             role="tab"
             aria-selected={selected}
             className={cn(
@@ -50,7 +43,7 @@ export function StockTabs({
             )}
           >
             {tab.label}
-          </Link>
+          </ConfigTabLink>
         );
       })}
     </div>
