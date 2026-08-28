@@ -938,7 +938,7 @@ select:not([multiple]):disabled {
   localStorage. Applied on /admin/* and on remito detail when the viewer is
   staff. Customer routes (incl. remito as CUSTOMER) stay light.
   Palette tuned toward WhatsApp dark (#111b21 / #202c33 / #00a884 accent).
-  Sober admin routes override accent/surfaces via data-admin-sober-dark.
+  Sober admin routes strip glow/radial wash via data-admin-sober-dark (original palette).
   Screen-only: print (PDF + thermal) must keep light :root tokens without
   stripping data-admin-theme from the live document (that flashed the UI).
 */
@@ -1127,116 +1127,20 @@ html[data-admin-theme="dark"] button.btn-primary {
 }
 
 /*
-  Admin dark sober experiment — flat chrome on all protected /admin/* routes.
-  Set via data-admin-sober-dark on <html> (layout + blocking script). Warmer
-  muted teal-forest accent (#5a9a88 / #3d7a6a), lifted warm surfaces, flat
-  backdrop (no radial wash). No glow; borders for elevation. Customer light-only.
+  Admin dark sober experiment — no glow on protected /admin/* routes.
+  Set via data-admin-sober-dark on <html> (layout + blocking script). Keeps
+  original admin dark palette (#00a884 accent, standard surfaces); strips white
+  glow and radial backdrop washes. Elevation = borders (+ subtle black shadow-sm).
+  Staff remito detail keeps glow. Customer UI light-only.
 */
 html[data-admin-theme="dark"][data-admin-sober-dark] {
   --admin-card-shadow: none;
-  --background: #1a2220;
-  --foreground: #eef2f0;
-  --brand-primary: #5a9a88;
-  --brand-primary-deep: #3d7a6a;
-  --brand-primary-soft: #2d4039;
-  --admin-sober-surface: #242f2d;
-  --admin-sober-surface-muted: #1f2826;
-  --admin-sober-surface-hover: #2f3d39;
-  --admin-sober-border: #3a4a46;
 }
 
 html[data-admin-theme="dark"][data-admin-sober-dark] body,
 html[data-admin-theme="dark"][data-admin-sober-dark] .brand-page-atmosphere,
 html[data-admin-theme="dark"][data-admin-sober-dark] main {
   background-image: none;
-  background-color: var(--background);
-  color: var(--foreground);
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] header {
-  background-color: var(--admin-sober-surface);
-  border-bottom-color: color-mix(in srgb, var(--brand-primary) 32%, transparent);
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .bg-white {
-  background-color: var(--admin-sober-surface);
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .bg-neutral-50 {
-  background-color: var(--admin-sober-surface-muted);
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .bg-neutral-50\/60 {
-  background-color: color-mix(in srgb, var(--admin-sober-surface-muted) 60%, transparent);
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .bg-neutral-50\/40,
-html[data-admin-theme="dark"][data-admin-sober-dark] .bg-amber-50\/40,
-html[data-admin-theme="dark"][data-admin-sober-dark] .bg-amber-50\/50 {
-  background-color: color-mix(in srgb, #4a4028 45%, var(--admin-sober-surface-muted));
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .bg-neutral-100 {
-  background-color: var(--admin-sober-surface-hover);
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .hover\:bg-neutral-50:hover {
-  background-color: var(--admin-sober-surface-hover);
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .hover\:bg-neutral-100:hover {
-  background-color: #364842;
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .border-neutral-100,
-html[data-admin-theme="dark"][data-admin-sober-dark] .border-neutral-200 {
-  border-color: var(--admin-sober-border);
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .border-neutral-300 {
-  border-color: #455850;
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .divide-neutral-100 > :not(:last-child),
-html[data-admin-theme="dark"][data-admin-sober-dark]
-  .divide-neutral-100
-  > :not([hidden])
-  ~ :not([hidden]),
-html[data-admin-theme="dark"][data-admin-sober-dark] .divide-neutral-200 > :not(:last-child),
-html[data-admin-theme="dark"][data-admin-sober-dark]
-  .divide-neutral-200
-  > :not([hidden])
-  ~ :not([hidden]) {
-  border-color: var(--admin-sober-border);
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .admin-nav-link-active {
-  background-color: color-mix(in srgb, var(--brand-primary) 24%, var(--admin-sober-surface));
-  color: var(--brand-primary);
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .admin-nav-link-active:hover {
-  background-color: color-mix(in srgb, var(--brand-primary) 32%, var(--admin-sober-surface));
-  color: color-mix(in srgb, var(--brand-primary) 92%, #f0faf6);
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .admin-table-row:hover {
-  background-color: var(--admin-sober-surface-hover);
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .admin-table-row[data-selected="true"] {
-  background-color: color-mix(in srgb, var(--brand-primary) 20%, var(--admin-sober-surface));
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .admin-table-row[data-selected="true"]:hover {
-  background-color: color-mix(in srgb, var(--brand-primary) 28%, var(--admin-sober-surface));
-}
-
-html[data-admin-theme="dark"][data-admin-sober-dark] .admin-table-row:focus-visible,
-html[data-admin-theme="dark"][data-admin-sober-dark] .admin-table-row[data-selected="true"] {
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--brand-primary) 60%, var(--admin-sober-border)),
-    inset 0 -1px 0 color-mix(in srgb, var(--brand-primary) 60%, var(--admin-sober-border));
 }
 
 html[data-admin-theme="dark"][data-admin-sober-dark] .shadow-md,
