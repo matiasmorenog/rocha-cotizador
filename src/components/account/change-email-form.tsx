@@ -7,17 +7,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 
 type Props = {
   currentEmail: string;
   apiPath?: string;
   onSuccess?: (email: string) => void | Promise<void>;
+  className?: string;
 };
 
 export function ChangeEmailForm({
   currentEmail,
   apiPath = "/api/admin/account/email",
   onSuccess,
+  className,
 }: Props) {
   const router = useRouter();
   const [newEmail, setNewEmail] = useState("");
@@ -65,7 +68,7 @@ export function ChangeEmailForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className={cn("space-y-4", className)}>
       <div className="space-y-1.5">
         <Label htmlFor="current-email">Email actual</Label>
         <Input
@@ -103,19 +106,21 @@ export function ChangeEmailForm({
       </div>
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
       {message ? <p className="text-sm text-green-700">{message}</p> : null}
-      <Button
-        type="submit"
-        disabled={loading || !newEmail.trim() || !currentPassword}
-      >
-        {loading ? (
-          <>
-            <Spinner className="mr-2 text-white" />
-            Guardando…
-          </>
-        ) : (
-          "Cambiar email"
-        )}
-      </Button>
+      <div className="flex justify-end">
+        <Button
+          type="submit"
+          disabled={loading || !newEmail.trim() || !currentPassword}
+        >
+          {loading ? (
+            <>
+              <Spinner className="mr-2 text-white" />
+              Guardando…
+            </>
+          ) : (
+            "Cambiar email"
+          )}
+        </Button>
+      </div>
     </form>
   );
 }
