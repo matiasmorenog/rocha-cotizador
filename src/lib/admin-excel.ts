@@ -50,12 +50,65 @@ export const PRODUCT_BASE_COLUMNS = [
 /** @deprecated Prefer PRODUCT_BASE_COLUMNS + dynamic list names. */
 export const PRODUCT_COLUMNS = PRODUCT_BASE_COLUMNS;
 
+export type ImportRowIssue = { row: number; message: string };
+
+export type ImportDuplicateWarning = {
+  code: string;
+  rows: number[];
+  message: string;
+};
+
 export type ImportSummary = {
   created: number;
   updated: number;
   skipped: number;
-  errors: Array<{ row: number; message: string }>;
+  errors: ImportRowIssue[];
 };
+
+/** Dry-run validation result (no DB writes). */
+export type ImportValidationResult = {
+  ok: boolean;
+  rowCount: number;
+  skipped: number;
+  errors: ImportRowIssue[];
+  warnings: ImportDuplicateWarning[];
+};
+
+/** Spanish row list: "166 y 179" / "166, 179 y 411". */
+export function formatRowListSpanish(rows: number[]): string {
+  if (rows.length === 0) return "";
+  if (rows.length === 1) return String(rows[0]);
+  if (rows.length === 2) return `${rows[0]} y ${rows[1]}`;
+  const head = rows.slice(0, -1).join(", ");
+  return `${head} y ${rows[rows.length - 1]}`;
+}
+
+/** Warn when the same import key (e.g. código) appears on multiple rows; last row wins on import. */
+export function duplicateCodeWarnings(
+  entries: Array<{ row: number; code: string }>,
+): ImportDuplicateWarning[] {
+  const byCode = new Map<string, number[]>();
+  for (const { row, code } of entries) {
+    const key = code.trim();
+    if (!key) continue;
+    const rows = byCode.get(key) ?? [];
+    rows.push(row);
+    byCode.set(key, rows);
+  }
+
+  const warnings: ImportDuplicateWarning[] = [];
+  for (const [code, rows] of byCode) {
+    if (rows.length < 2) continue;
+    const sorted = [...rows].sort((a, b) => a - b);
+    warnings.push({
+      code,
+      rows: sorted,
+      message: `Código ${code} duplicado en filas ${formatRowListSpanish(sorted)}: se va a sobreescribir (última fila gana).`,
+    });
+  }
+
+  return warnings.sort((a, b) => a.rows[0]! - b.rows[0]!);
+}
 
 export function cellText(value: ExcelJS.CellValue): string {
   if (value === null || value === undefined) return "";
