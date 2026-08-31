@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
+import { SolapasTabLink, SolapasTabList } from "@/components/ui/solapas-tabs";
 import type { StockTab } from "@/lib/admin-stock-data";
 import { customerStockTabLabel } from "@/lib/customer-stock-shared";
-import { cn } from "@/lib/utils";
 
 export function CustomerStockTabs({
   active,
@@ -20,34 +18,21 @@ export function CustomerStockTabs({
   if (tabs.length <= 1) return null;
 
   return (
-    <div
-      role="tablist"
-      aria-label="Stock"
-      className="inline-flex gap-1 rounded-lg border border-neutral-200 bg-white p-1"
-    >
+    <SolapasTabList activeKey={active} aria-label="Stock">
       {tabs.map((tab) => {
-        const selected = active === tab;
         const params = new URLSearchParams({ tab });
         if (from) params.set("from", from);
         if (to) params.set("to", to);
         return (
-          <Link
+          <SolapasTabLink
             key={tab}
             href={`/stock?${params.toString()}`}
-            role="tab"
-            aria-selected={selected}
-            className={cn(
-              "rounded-md px-4 py-2 text-sm font-medium transition-colors",
-              FOCUS_BRAND_OUTLINE,
-              selected
-                ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
-                : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900",
-            )}
+            selected={active === tab}
           >
             {customerStockTabLabel(tab)}
-          </Link>
+          </SolapasTabLink>
         );
       })}
-    </div>
+    </SolapasTabList>
   );
 }

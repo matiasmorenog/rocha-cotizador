@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
@@ -20,6 +19,7 @@ import {
   QUOTE_PICKER_FLOAT_MS,
 } from "@/hooks/use-exit-presence";
 import { StaffPreviewControl } from "@/components/admin/staff-preview-ui";
+import { SolapasNavLink, SolapasNavList } from "@/components/ui/solapas-tabs";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import type { StaffPermission } from "@/lib/staff-permissions";
 import { cn } from "@/lib/utils";
@@ -80,10 +80,7 @@ function NavLinks({
   const filtered = links.filter((l) => permissions.includes(l.permission));
 
   return (
-    <nav
-      aria-label="Navegación de administración"
-      className="flex flex-col gap-1 text-sm"
-    >
+    <SolapasNavList activeKey={pathname} aria-label="Navegación de administración">
       {filtered.map((l) => {
         const active = isActive(
           pathname,
@@ -92,24 +89,18 @@ function NavLinks({
         );
         const Icon = l.icon;
         return (
-          <Link
+          <SolapasNavLink
             key={l.href}
             href={l.href}
+            active={active}
             onClick={onNavigate}
-            className={cn(
-              "admin-nav-link inline-flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
-              FOCUS_BRAND_OUTLINE,
-              active
-                ? "admin-nav-link-active bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
-                : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900",
-            )}
           >
             <Icon className="h-4 w-4 shrink-0" aria-hidden />
             <span>{l.label}</span>
-          </Link>
+          </SolapasNavLink>
         );
       })}
-    </nav>
+    </SolapasNavList>
   );
 }
 

@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
-import { getEnabledModulesForCustomer } from "@/lib/customer-modules";
+import { getEnabledModulesForCustomer, normalizeCustomerModules, resolveCustomerModulesForSession } from "@/lib/customer-modules";
 import {
   ALL_PERMISSIONS,
   isAdminPanelRole,
@@ -20,7 +20,7 @@ import {
   isPlatformOwnerEmail,
   isSuperuserRole,
 } from "@/lib/platform-owner";
-import type { AppRole, CustomerModuleSession, StaffRole } from "@/types/auth";
+import type { AppRole, StaffRole } from "@/types/auth";
 import type { JWT } from "next-auth/jwt";
 
 export type { AppRole };
@@ -230,9 +230,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const valid = await bcrypt.compare(password, customer.passwordHash);
         if (!valid) return null;
 
-        const modules = customer.moduleAccess.map(
-          (r) => r.module,
-        ) as CustomerModuleSession[];
+        const modules = normalizeCustomerModules(
+          customer.moduleAccess.map((r) => r.module),
+        );
 
         return {
           id: customer.id,
@@ -275,9 +275,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
           token.mustChangePassword = customer?.mustChangePassword ?? false;
           try {
-            token.modules = (await getEnabledModulesForCustomer(
-              String(token.customerId),
-            )) as CustomerModuleSession[];
+            token.modules = normalizeCustomerModules(
+              await getEnabledModulesForCustomer(String(token.customerId)),
+            );
           } catch {
             // keep existing
           }
@@ -359,23 +359,29 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           ? staffPreviewSessionFromPresetId(previewId)
           : null;
 
+      const customerId =
+        typeof token.customerId === "string" ? token.customerId : null;
+      const modules =
+        role === "CUSTOMER" && customerId
+          ? await resolveCustomerModulesForSession(customerId, token.modules)
+          : Array.isArray(token.modules)
+            ? normalizeCustomerModules(token.modules.map(String))
+            : [];
+
       return {
         ...session,
         user: {
           ...session.user,
           id: token.sub ?? "",
           role,
-          customerId:
-            typeof token.customerId === "string" ? token.customerId : null,
+          customerId,
           customerCode:
             typeof token.customerCode === "string" ? token.customerCode : null,
           mustChangePassword: Boolean(token.mustChangePassword),
           inAppNotificationsEnabled: token.inAppNotificationsEnabled !== false,
           email: typeof token.email === "string" ? token.email : null,
           name: typeof token.name === "string" ? token.name : null,
-          modules: Array.isArray(token.modules)
-            ? (token.modules as CustomerModuleSession[])
-            : [],
+          modules,
           permissions: isStaffRole(role)
             ? Array.isArray(token.permissions)
               ? (token.permissions as StaffPermission[])
