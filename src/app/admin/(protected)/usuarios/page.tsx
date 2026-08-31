@@ -11,7 +11,7 @@ export default async function AdminUsuariosPage() {
       <div>
         <h1 className="text-2xl font-semibold text-neutral-900">Usuarios</h1>
         <p className="text-sm text-neutral-600">
-          Alta y permisos del equipo interno (Administración, Cotización, Stock).
+          Administradores internos con acceso completo al panel.
         </p>
       </div>
       <StaffUsersPanel users={users} currentUserId={session.user.id} />

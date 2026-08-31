@@ -176,10 +176,10 @@ export function StockRecountForm({
   );
 
   const moduleMismatchMessage =
-    stockModule === "MERMAS"
+    stockModule === "DESPERDICIOS"
       ? "Ese producto es insumo/consumible — cargalo en Consumibles"
       : stockModule === "CONSUMABLES"
-        ? "Ese producto no es consumible — cargalo en Bajas del día o Activos"
+        ? "Ese producto no es consumible — cargalo en Desperdicios o Activos"
         : "Ese producto no es un activo del local — revisá el tipo de stock del producto";
 
   function addProduct(product: CatalogSearchProduct) {
@@ -352,8 +352,8 @@ export function StockRecountForm({
           }}
         />
         <p className="text-xs text-neutral-500">
-          {stockModule === "MERMAS"
-            ? "Solo panes, masas y rubros de merma (no insumos ni regalo)."
+          {stockModule === "DESPERDICIOS"
+            ? "Solo panes, masas y rubros de desperdicio (no insumos ni regalo)."
             : stockModule === "CONSUMABLES"
               ? "Solo insumos y regalo (gaseosas, etc.) — no son bajas del día."
               : "Solo productos marcados como activo del local (carritos, bandejas, etc.)."}

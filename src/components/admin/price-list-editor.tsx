@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/ar-number-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ENTITY_ENABLED_FEMININE_LABELS } from "@/lib/entity-status-labels";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { formatArInput, formatPrice, parseArNumber } from "@/lib/utils";
@@ -227,7 +228,7 @@ export function PriceListEditor({
           </div>
           <div className="space-y-1">
             <Label htmlFor="list-active" className="invisible select-none">
-              Activa
+              {ENTITY_ENABLED_FEMININE_LABELS.enabled}
             </Label>
             <div className="flex h-10 items-center gap-2.5">
               <Switch
@@ -239,7 +240,7 @@ export function PriceListEditor({
                 htmlFor="list-active"
                 className="cursor-pointer text-sm whitespace-nowrap text-neutral-700"
               >
-                Activa
+                {ENTITY_ENABLED_FEMININE_LABELS.enabled}
               </label>
             </div>
           </div>
@@ -301,7 +302,9 @@ export function PriceListEditor({
                       {i.product.name}
                     </span>
                     {!i.product.available ? (
-                      <span className="ml-2 text-xs text-red-600">no disponible</span>
+                      <span className="ml-2 text-xs text-red-600">
+                        deshabilitado en catálogo
+                      </span>
                     ) : null}
                   </td>
                   {!isBase ? (

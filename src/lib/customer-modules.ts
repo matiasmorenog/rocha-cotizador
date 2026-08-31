@@ -1,16 +1,29 @@
 import type { CustomerModule } from "@prisma/client";
 import { db } from "@/lib/db";
+import { ENTITY_ENABLED_FEMININE_LABELS } from "@/lib/entity-status-labels";
 
 export type { CustomerModule };
 
 export const CUSTOMER_MODULE_LABELS: Record<CustomerModule, string> = {
-  MERMAS: "Bajas del día",
+  DESPERDICIOS: "Desperdicios",
   CONSUMABLES: "Consumibles",
   ACTIVOS: "Activos del local",
 };
 
+export const CUSTOMER_MODULE_DESCRIPTIONS: Record<CustomerModule, string> = {
+  DESPERDICIOS:
+    "Panes, masas y comida que se tira al cierre del día porque no se vende al día siguiente.",
+  CONSUMABLES:
+    "Gaseosas, insumos y stock invertido. No son desperdicios de elaborados.",
+  ACTIVOS:
+    "Carritos, bandejas y otros activos del local. El recuento puede ser mensual u otro día.",
+};
+
+/** Customer.account access flag — not the ACTIVOS stock module. */
+export const CUSTOMER_ACCOUNT_STATUS_LABELS = ENTITY_ENABLED_FEMININE_LABELS;
+
 export const CUSTOMER_MODULES: CustomerModule[] = [
-  "MERMAS",
+  "DESPERDICIOS",
   "CONSUMABLES",
   "ACTIVOS",
 ];
@@ -18,7 +31,7 @@ export const CUSTOMER_MODULES: CustomerModule[] = [
 export type CustomerModuleFlags = Record<CustomerModule, boolean>;
 
 export const DEFAULT_CUSTOMER_MODULE_FLAGS: CustomerModuleFlags = {
-  MERMAS: false,
+  DESPERDICIOS: false,
   CONSUMABLES: false,
   ACTIVOS: false,
 };
@@ -27,8 +40,8 @@ export function modulesFromAccess(
   rows: { module: CustomerModule; enabled: boolean }[],
 ): CustomerModuleFlags {
   return {
-    MERMAS: Boolean(
-      rows.find((m) => m.module === "MERMAS" && m.enabled),
+    DESPERDICIOS: Boolean(
+      rows.find((m) => m.module === "DESPERDICIOS" && m.enabled),
     ),
     CONSUMABLES: Boolean(
       rows.find((m) => m.module === "CONSUMABLES" && m.enabled),
@@ -58,8 +71,8 @@ export async function syncCustomerModuleFlags(
   }
 }
 
-/** Seed codes that should have Mermas enabled. */
-export const MERMAS_SEED_CODES = [
+/** Seed codes that should have Desperdicios enabled. */
+export const DESPERDICIOS_SEED_CODES = [
   "007",
   "077",
   "200",
@@ -100,13 +113,13 @@ export async function customerHasModule(
 
 /** Upsert enabled flags for the known seed customer codes. Idempotent. */
 export async function seedCustomerModuleAccess(): Promise<{
-  mermas: number;
+  desperdicios: number;
   consumables: number;
 }> {
-  let mermas = 0;
+  let desperdicios = 0;
   let consumables = 0;
 
-  for (const code of MERMAS_SEED_CODES) {
+  for (const code of DESPERDICIOS_SEED_CODES) {
     const customer = await db.customer.findUnique({
       where: { code },
       select: { id: true },
@@ -114,16 +127,16 @@ export async function seedCustomerModuleAccess(): Promise<{
     if (!customer) continue;
     await db.customerModuleAccess.upsert({
       where: {
-        customerId_module: { customerId: customer.id, module: "MERMAS" },
+        customerId_module: { customerId: customer.id, module: "DESPERDICIOS" },
       },
       create: {
         customerId: customer.id,
-        module: "MERMAS",
+        module: "DESPERDICIOS",
         enabled: true,
       },
       update: { enabled: true },
     });
-    mermas += 1;
+    desperdicios += 1;
   }
 
   for (const code of CONSUMABLES_SEED_CODES) {
@@ -149,5 +162,5 @@ export async function seedCustomerModuleAccess(): Promise<{
     consumables += 1;
   }
 
-  return { mermas, consumables };
+  return { desperdicios, consumables };
 }

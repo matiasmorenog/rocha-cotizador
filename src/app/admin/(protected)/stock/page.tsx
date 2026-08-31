@@ -8,7 +8,7 @@ import { StockTabs } from "@/components/admin/stock-tabs";
 import {
   loadActivosEntries,
   loadConsumiblesEntries,
-  loadElaboradosEntries,
+  loadDesperdiciosEntries,
   moduleCustomers,
   parseStockTab,
   resolveStockCustomerId,
@@ -62,7 +62,7 @@ function StockPanel({
             ? "Recuentos guardados por sucursal (módulo Consumibles)."
             : tab === "activos"
               ? "Recuentos de activos del local guardados por sucursal."
-              : "Cargas de bajas del día guardadas por sucursal."}{" "}
+              : "Cargas de desperdicios guardadas por sucursal."}{" "}
           Hasta {STOCK_HISTORY_LIMIT} por consulta — filtrá por sucursal o
           fechas.
         </p>
@@ -90,7 +90,7 @@ async function StockHistorial({
       ? await loadConsumiblesEntries(from, to, customerId || undefined)
       : tab === "activos"
         ? await loadActivosEntries(from, to, customerId || undefined)
-        : await loadElaboradosEntries(from, to, customerId || undefined);
+        : await loadDesperdiciosEntries(from, to, customerId || undefined);
 
   return (
     <AdminStockReports
@@ -101,8 +101,8 @@ async function StockHistorial({
         tab === "consumibles"
           ? "Recuento"
           : tab === "activos"
-            ? "Activo"
-            : "Baja del día"
+            ? "Activo del local"
+            : "Desperdicio"
       }
     />
   );
@@ -129,7 +129,7 @@ export default async function AdminStockPage({
       ? "CONSUMABLES"
       : tab === "activos"
         ? "ACTIVOS"
-        : "MERMAS";
+        : "DESPERDICIOS";
   const customers = await moduleCustomers(stockModule);
   const customerId = resolveStockCustomerId(customers, params.customer);
 
@@ -137,17 +137,17 @@ export default async function AdminStockPage({
     <div className="space-y-6">
       <StockPageHeader
         title="Stock"
-        description="Bajas del día, consumibles y activos del local por sucursal."
+        description="Desperdicios, consumibles y activos del local por sucursal."
         formTitle={
           tab === "consumibles"
             ? "Recuento de consumibles"
             : tab === "activos"
               ? "Recuento de activos del local"
-              : "Carga de bajas del día"
+              : "Carga de desperdicios"
         }
         formDescription={
           tab === "consumibles"
-            ? "Gaseosas, insumos y stock invertido por sucursal. No son bajas del día ni se «tiran» como merma."
+            ? "Gaseosas, insumos y stock invertido por sucursal. No son desperdicios ni se «tiran» como pan del día."
             : tab === "activos"
               ? "Carritos, bandejas y otros activos del local. La fecha suele ser mensual pero podés elegir cualquier día."
               : "Recuento fin de día de panes y masas por sucursal. Buscá productos y cargá cantidades a tirar."
@@ -157,7 +157,7 @@ export default async function AdminStockPage({
             ? "/api/admin/consumibles"
             : tab === "activos"
               ? "/api/admin/activos"
-              : "/api/admin/mermas"
+              : "/api/admin/desperdicios"
         }
         customers={customers}
         stockModule={stockModule}

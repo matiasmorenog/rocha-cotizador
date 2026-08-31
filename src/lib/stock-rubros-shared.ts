@@ -1,10 +1,15 @@
 /**
- * Legacy rubro helpers — client/server safe (no DB/cache).
- * Stock module membership prefers Product.stockKind; rubro is fallback only.
+ * Rubro helpers — client/server safe (no DB/cache).
+ * Stock module membership uses Product.stockKind.
  */
 
-/** Rubros that matched consumibles before stockKind existed. */
-export const CONSUMABLE_RUBROS = ["INSUMOS", "REGALO"] as const;
+import {
+  DEFAULT_PRODUCT_STOCK_KIND,
+  type ProductStockKindValue,
+} from "@/lib/stock-product-kind-shared";
+
+/** Rubros que van al módulo Consumibles (stockKind CONSUMABLE). */
+export const CONSUMABLE_RUBROS = ["GASEOSAS", "INSUMOS", "REGALO"] as const;
 
 export function normalizeRubro(rubro: string | null | undefined): string | null {
   const t = (rubro ?? "").trim();
@@ -25,6 +30,13 @@ export {
   type ProductStockKindValue,
   type StockModuleKey,
 } from "@/lib/stock-product-kind-shared";
+
+/** Default stockKind for new/imported products from rubro (GASEOSAS → consumible). */
+export function inferStockKindFromRubro(
+  rubro: string | null | undefined,
+): ProductStockKindValue {
+  return isConsumableRubro(rubro) ? "CONSUMABLE" : DEFAULT_PRODUCT_STOCK_KIND;
+}
 
 /** Unique sorted non-empty rubro values from an in-memory product list. */
 export function uniqRubrosFromProducts(

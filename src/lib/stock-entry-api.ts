@@ -62,8 +62,8 @@ export async function loadStockEntryForDate(
   if (!entryDate) return null;
 
   const [entry, catalog] = await Promise.all([
-    module === "MERMAS"
-      ? db.mermaEntry.findUnique({
+    module === "DESPERDICIOS"
+      ? db.desperdicioEntry.findUnique({
           where: { customerId_entryDate: { customerId, entryDate } },
           select: stockEntryDateSelect,
         })
@@ -108,8 +108,8 @@ export async function upsertStockEntry(
 
   const productIds = [...new Set(body.lines.map((l) => l.productId))];
   const moduleKey: StockModuleKey =
-    module === "MERMAS"
-      ? "MERMAS"
+    module === "DESPERDICIOS"
+      ? "DESPERDICIOS"
       : module === "CONSUMABLES"
         ? "CONSUMABLES"
         : "ACTIVOS";
@@ -130,8 +130,8 @@ export async function upsertStockEntry(
         : [];
     const codes = invalidRows.map((p) => p.code).join(", ");
     const moduleLabel =
-      module === "MERMAS"
-        ? "bajas del día"
+      module === "DESPERDICIOS"
+        ? "desperdicios"
         : module === "CONSUMABLES"
           ? "consumibles"
           : "activos del local";
@@ -164,15 +164,15 @@ export async function upsertStockEntry(
     });
   }
 
-  if (module === "MERMAS") {
+  if (module === "DESPERDICIOS") {
     const entry = await db.$transaction(async (tx) => {
-      const existing = await tx.mermaEntry.findUnique({
+      const existing = await tx.desperdicioEntry.findUnique({
         where: { customerId_entryDate: { customerId, entryDate } },
         select: { id: true },
       });
       if (existing) {
-        await tx.mermaLine.deleteMany({ where: { entryId: existing.id } });
-        return tx.mermaEntry.update({
+        await tx.desperdicioLine.deleteMany({ where: { entryId: existing.id } });
+        return tx.desperdicioEntry.update({
           where: { id: existing.id },
           data: {
             notes: body.notes?.trim() || null,
@@ -182,7 +182,7 @@ export async function upsertStockEntry(
           select: { id: true },
         });
       }
-      return tx.mermaEntry.create({
+      return tx.desperdicioEntry.create({
         data: {
           customerId,
           entryDate,

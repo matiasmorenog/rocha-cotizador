@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     where: { id: customerId },
   });
   if (!customer || !customer.active) {
-    return NextResponse.json({ error: "Cliente inactivo" }, { status: 403 });
+    return NextResponse.json({ error: "Cliente deshabilitado" }, { status: 403 });
   }
 
   const productIds = parsed.data.items.map((i) => i.productId);

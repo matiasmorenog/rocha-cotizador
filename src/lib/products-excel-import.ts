@@ -14,6 +14,7 @@ import {
   type ImportSummary,
   type ImportValidationResult,
 } from "@/lib/admin-excel";
+import { inferStockKindFromRubro } from "@/lib/stock-rubros-shared";
 import {
   PRODUCT_CODE_HEADER_ALIASES,
   PRODUCT_NAME_HEADER_ALIASES,
@@ -27,13 +28,27 @@ function parseStockKindFromCell(
 ): ProductStockKind | null | "invalid" {
   const t = cellText(raw).trim().toUpperCase();
   if (!t) return null;
-  if (["MERMA", "BAJAS", "BAJAS DEL DIA", "ELABORADOS", "ELABORADO"].includes(t)) {
-    return "MERMA";
+  if (
+    [
+      "DESPERDICIO",
+      "MERMA",
+      "DESPERDICIOS",
+      "BAJAS",
+      "BAJAS DEL DIA",
+      "ELABORADOS",
+      "ELABORADO",
+    ].includes(t)
+  ) {
+    return "DESPERDICIO";
   }
   if (["CONSUMABLE", "CONSUMIBLE", "CONSUMIBLES"].includes(t)) {
     return "CONSUMABLE";
   }
-  if (["LOCAL_ASSET", "ACTIVO", "ACTIVOS", "ACTIVO_LOCAL"].includes(t)) {
+  if (
+    ["LOCAL_ASSET", "ACTIVO", "ACTIVOS", "ACTIVO_LOCAL", "ACTIVO LOCAL"].includes(
+      t,
+    )
+  ) {
     return "LOCAL_ASSET";
   }
   return "invalid";
@@ -80,8 +95,11 @@ export async function loadProductsImportFromBuffer(
   if (codeCol) headers.set("código", codeCol);
   if (nameCol) headers.set("nombre", nameCol);
   if (rubroCol) headers.set("rubro", rubroCol);
-  if (headers.has("activo") && !headers.has("disponible")) {
-    headers.set("disponible", headers.get("activo")!);
+  if (headers.has("disponible") && !headers.has("habilitado")) {
+    headers.set("habilitado", headers.get("disponible")!);
+  }
+  if (headers.has("activo") && !headers.has("habilitado")) {
+    headers.set("habilitado", headers.get("activo")!);
   }
 
   if (!headers.has("código") || !headers.has("nombre")) {
@@ -121,6 +139,7 @@ export async function loadProductsImportFromBuffer(
         "permitipedidounidad",
         "activo",
         "disponible",
+        "habilitado",
         "tipostock",
       ].includes(header)
     ) {
@@ -252,8 +271,7 @@ export async function executeProductsImport(
     const rubro = emptyToNull(cellText(getCellByHeader(row, ctx.headers, "rubro")));
     const priceRaw = cellNumber(getCellByHeader(row, ctx.headers, "precioBase"))!;
     const available = parseBool(
-      getCellByHeader(row, ctx.headers, "disponible") ??
-        getCellByHeader(row, ctx.headers, "activo"),
+      getCellByHeader(row, ctx.headers, "habilitado"),
       true,
     );
     const stockKindRaw = parseStockKindFromCell(
@@ -262,7 +280,7 @@ export async function executeProductsImport(
     if (stockKindRaw === "invalid") {
       summary.errors.push({
         row: r,
-        message: "tipoStock inválido (MERMA, CONSUMABLE, LOCAL_ASSET o vacío)",
+        message: "tipoStock inválido (ELABORADO, CONSUMIBLE, ACTIVO_LOCAL o vacío)",
       });
       continue;
     }
@@ -280,7 +298,7 @@ export async function executeProductsImport(
         basePrice: priceRaw,
         allowsUnitOrder,
         available,
-        ...(stockKindRaw !== null ? { stockKind: stockKindRaw } : {}),
+        stockKind: stockKindRaw ?? inferStockKindFromRubro(rubro),
       };
 
       const product = existing

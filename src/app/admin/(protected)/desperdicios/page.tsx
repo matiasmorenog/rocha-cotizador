@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-export default async function AdminMermasRedirect({
+export default async function AdminDesperdiciosRedirect({
   searchParams,
 }: {
   searchParams: Promise<{ from?: string; to?: string }>;

@@ -3,7 +3,8 @@
  *
  * Customers (`clientes.xlsx`):
  *   código | nombre | email | teléfono | dirección | condicionesPago |
- *   horarioEntrega | notas | listaPrecios | activo | resetearPin
+ *   horarioEntrega | notas | listaPrecios | habilitado | resetearPin
+ *   - Import also accepts legacy header `activo` for habilitado.
  *   - `listaPrecios`: name of PriceList or "Precio base" / empty for base.
  *     (Legacy exports may say "Minorista (base)" / "Mayorista (base)" — import still accepts those.)
  *   - `resetearPin` exported empty; on import, truthy values reset PIN via pinFromCustomerCode.
@@ -12,8 +13,9 @@
  *
  * Products (`productos.xlsx`):
  *   código | nombre | rubro | precioBase | <nombre de cada PriceList>… |
- *   permitePedidoUnidad | disponible | tipoStock
- *   - Import also accepts legacy header `activo` for disponible.
+ *   permitePedidoUnidad | habilitado | tipoStock
+ *   - tipoStock: ELABORADO | CONSUMIBLE | ACTIVO_LOCAL (vacío = elaborado).
+ *   - Import also accepts legacy headers `disponible` and `activo` for habilitado.
  *   - `precioBase` = Product.basePrice (precio base del producto).
  *   - `permitePedidoUnidad`: sí/no — kg o unidades (precio al pesar en unidades); no = cantidad fija.
  *   - Extra columns match PriceList.name (case-insensitive). Empty cell clears that list price.
@@ -34,7 +36,7 @@ export const CUSTOMER_COLUMNS = [
   "horarioEntrega",
   "notas",
   "listaPrecios",
-  "activo",
+  "habilitado",
   "resetearPin",
 ] as const;
 
@@ -45,7 +47,7 @@ export const PRODUCT_BASE_COLUMNS = [
   "rubro",
   "precioBase",
   "permitePedidoUnidad",
-  "disponible",
+  "habilitado",
   "tipoStock",
 ] as const;
 
@@ -135,15 +137,21 @@ export function cellNumber(value: ExcelJS.CellValue): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** Parse activo / sí / no / 1 / 0 / true / false. Empty → defaultValue. */
+/** Parse habilitado / sí / no / 1 / 0 / true / false. Empty → defaultValue. */
 export function parseBool(
   value: ExcelJS.CellValue,
   defaultValue: boolean,
 ): boolean {
   const raw = cellText(value).toLowerCase();
   if (!raw) return defaultValue;
-  if (["1", "true", "sí", "si", "yes", "activo", "x"].includes(raw)) return true;
-  if (["0", "false", "no", "inactivo"].includes(raw)) return false;
+  if (
+    ["1", "true", "sí", "si", "yes", "activo", "habilitado", "x"].includes(raw)
+  ) {
+    return true;
+  }
+  if (["0", "false", "no", "inactivo", "deshabilitado"].includes(raw)) {
+    return false;
+  }
   return defaultValue;
 }
 

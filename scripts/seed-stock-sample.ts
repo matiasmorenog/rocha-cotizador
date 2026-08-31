@@ -1,5 +1,5 @@
 /**
- * Idempotent sample data for stock catalog + 1 merma + 1 consumible entry.
+ * Idempotent sample data for stock catalog + 1 desperdicio + 1 consumible entry.
  * Dev Neon only (assertSafeDestructiveDb).
  *
  *   SEED_TARGET=development npx tsx scripts/seed-stock-sample.ts
@@ -15,11 +15,11 @@ async function main() {
   assertSafeDestructiveDb();
   const modules = await seedCustomerModuleAccess();
   console.log(
-    `Customer modules: Mermas=${modules.mermas}, Consumibles=${modules.consumables}`,
+    `Customer modules: Desperdicios=${modules.desperdicios}, Consumibles=${modules.consumables}`,
   );
   const stock = await seedStockSampleData();
   console.log(
-    `Stock sample: merma lines=${stock.mermaLines}, consumibles lines=${stock.consumableLines}, merma customer=${stock.mermaCustomer ?? "n/a"}, consumibles customer=${stock.consumableCustomer ?? "n/a"}`,
+    `Stock sample: desperdicio lines=${stock.desperdicioLines}, consumibles lines=${stock.consumableLines}, desperdicios customer=${stock.desperdiciosCustomer ?? "n/a"}, consumibles customer=${stock.consumableCustomer ?? "n/a"}`,
   );
 }
 

@@ -84,11 +84,13 @@ export async function POST(req: NextRequest) {
 
   const email = parsed.data.email.trim().toLowerCase();
   const name = parsed.data.name?.trim() || null;
-  const staffFields = staffFieldsFromSwitches({
-    isAdmin: parsed.data.isAdmin,
-    canQuotes: parsed.data.canQuotes,
-    canStock: parsed.data.canStock,
-  });
+  const staffFields = parsed.data.id
+    ? staffFieldsFromSwitches({
+        isAdmin: parsed.data.isAdmin,
+        canQuotes: parsed.data.canQuotes,
+        canStock: parsed.data.canStock,
+      })
+    : { role: "ADMIN" as const, canQuotes: true, canStock: true };
 
   if (parsed.data.id) {
     const existing = await db.user.findUnique({
@@ -107,7 +109,7 @@ export async function POST(req: NextRequest) {
       parsed.data.active === false
     ) {
       return NextResponse.json(
-        { error: "No podés desactivar tu propia cuenta" },
+        { error: "No podés deshabilitar tu propia cuenta" },
         { status: 400 },
       );
     }

@@ -2,17 +2,21 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FormSection } from "@/components/admin/form-section";
+import { FormToggleCard } from "@/components/admin/form-toggle-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
+  CUSTOMER_ACCOUNT_STATUS_LABELS,
+  CUSTOMER_MODULE_DESCRIPTIONS,
   CUSTOMER_MODULE_LABELS,
   CUSTOMER_MODULES,
   DEFAULT_CUSTOMER_MODULE_FLAGS,
   type CustomerModuleFlags,
 } from "@/lib/customer-modules";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
+import { dispatchAdminInAppToast } from "@/lib/push-sw-client";
 import { cn } from "@/lib/utils";
 
 type PriceListOption = {
@@ -68,7 +72,6 @@ export function CustomerAdminForm({
     customer?.modules ?? DEFAULT_CUSTOMER_MODULE_FLAGS,
   );
   const [resetPin, setResetPin] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const isEdit = Boolean(customer);
@@ -77,41 +80,70 @@ export function CustomerAdminForm({
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setMessage(null);
-    const res = await fetch("/api/admin/customers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: customer?.id,
-        code,
-        name,
-        nameNote,
-        priceListId: priceListId || baseListId || null,
-        address,
-        phone,
-        email,
-        paymentTerms,
-        deliveryHours,
-        notes,
-        active,
-        modules,
-        resetPin: customer ? resetPin : true,
-      }),
-    });
-    setLoading(false);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setError(data.error ?? "Error al guardar");
-      return;
+    try {
+      const res = await fetch("/api/admin/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: customer?.id,
+          code,
+          name,
+          nameNote,
+          priceListId: priceListId || baseListId || null,
+          address,
+          phone,
+          email,
+          paymentTerms,
+          deliveryHours,
+          notes,
+          active,
+          modules,
+          resetPin: customer ? resetPin : true,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail =
+          typeof data.error === "string" && data.error.trim()
+            ? data.error
+            : `No se pudo guardar el cliente (HTTP ${res.status}).`;
+        setError(detail);
+        dispatchAdminInAppToast({
+          title: "Error al guardar cliente",
+          body: detail,
+          tone: "error",
+        });
+        return;
+      }
+
+      const savedLabel = `${name.trim()} (${code.trim()})`;
+      if (data.pin) {
+        const detail = `PIN inicial: ${data.pin}. El cliente debe cambiarlo por una contraseña.`;
+        dispatchAdminInAppToast({
+          title: "Cliente creado",
+          body: `${savedLabel}. ${detail}`,
+          tone: "success",
+        });
+      } else {
+        dispatchAdminInAppToast({
+          title: isEdit ? "Cliente actualizado" : "Cliente creado",
+          body: savedLabel,
+          tone: "success",
+        });
+      }
+      router.refresh();
+      onCancel?.();
+    } catch {
+      const detail = "No se pudo conectar con el servidor. Revisá tu conexión.";
+      setError(detail);
+      dispatchAdminInAppToast({
+        title: "Error al guardar cliente",
+        body: detail,
+        tone: "error",
+      });
+    } finally {
+      setLoading(false);
     }
-    if (data.pin) {
-      setMessage(
-        `Guardado. PIN inicial: ${data.pin} (el cliente debe cambiarlo por una contraseña)`,
-      );
-    } else {
-      setMessage("Guardado");
-    }
-    router.refresh();
   }
 
   const activeLists = priceLists.filter((l) => l.active);
@@ -128,87 +160,101 @@ export function CustomerAdminForm({
       <p className="text-sm font-medium text-neutral-800">
         {isEdit ? "Editar cliente" : "Nuevo cliente"}
       </p>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-        <div className="shrink-0 space-y-1">
-          <Label htmlFor="customer-code">Código</Label>
-          <Input
-            id="customer-code"
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            required
-            inputMode="numeric"
-            maxLength={3}
-            className="w-20 max-w-[4rem]"
-          />
-        </div>
-        <div className="min-w-0 flex-1 space-y-1">
-          <Label htmlFor="customer-name">Nombre</Label>
-          <Input
-            id="customer-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-        <div className="min-w-0 flex-1 space-y-1">
-          <Label htmlFor="customer-name-note">Aclaración</Label>
-          <Input
-            id="customer-name-note"
-            value={nameNote}
-            onChange={(e) => setNameNote(e.target.value)}
-            placeholder="Opcional — ej. contacto o sucursal"
-            aria-describedby="customer-name-note-hint"
-          />
-          <p
-            id="customer-name-note-hint"
-            className="text-xs text-neutral-500"
-          >
-            Solo visible en admin; el cliente ve únicamente el nombre.
-          </p>
-        </div>
-      </div>
 
-      <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-          Contacto
-        </p>
+      <FormSection
+        title="Identificación"
+        description="Código de ingreso y nombre que ve el cliente al cotizar."
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+          <div className="shrink-0 space-y-1">
+            <Label htmlFor="customer-code">Código</Label>
+            <Input
+              id="customer-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              required
+              inputMode="numeric"
+              maxLength={3}
+              className="w-20 max-w-[4rem]"
+            />
+          </div>
+          <div className="min-w-0 flex-1 space-y-1">
+            <Label htmlFor="customer-name">Nombre</Label>
+            <Input
+              id="customer-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <div className="min-w-0 flex-1 space-y-1">
+            <Label htmlFor="customer-name-note">Aclaración</Label>
+            <Input
+              id="customer-name-note"
+              value={nameNote}
+              onChange={(e) => setNameNote(e.target.value)}
+              placeholder="Opcional — ej. contacto o sucursal"
+              aria-describedby="customer-name-note-hint"
+            />
+            <p
+              id="customer-name-note-hint"
+              className="text-xs text-neutral-500"
+            >
+              Solo visible en admin; el cliente ve únicamente el nombre.
+            </p>
+          </div>
+        </div>
+      </FormSection>
+
+      <FormSection title="Contacto">
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
-            <Label>Email</Label>
+            <Label htmlFor="customer-email">Email</Label>
             <Input
+              id="customer-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
           <div className="space-y-1">
-            <Label>Teléfono</Label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
+            <Label htmlFor="customer-phone">Teléfono</Label>
+            <Input
+              id="customer-phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+            />
           </div>
         </div>
-      </div>
+      </FormSection>
 
-      <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-          Entrega y precio
-        </p>
+      <FormSection
+        title="Entrega y precio"
+        description="Datos operativos y lista de precios asignada al cliente."
+      >
         <div className="space-y-3">
           <div className="space-y-1">
-            <Label>Dirección</Label>
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} />
+            <Label htmlFor="customer-address">Dirección</Label>
+            <Input
+              id="customer-address"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+            />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <Label>Forma de pago</Label>
+              <Label htmlFor="customer-payment-terms">Forma de pago</Label>
               <Input
+                id="customer-payment-terms"
                 value={paymentTerms}
                 onChange={(e) => setPaymentTerms(e.target.value)}
                 placeholder="Ej. CC / Mensual / Efectivo"
               />
             </div>
             <div className="space-y-1">
-              <Label>Hs. entrega</Label>
+              <Label htmlFor="customer-delivery-hours">Hs. entrega</Label>
               <Input
+                id="customer-delivery-hours"
                 value={deliveryHours}
                 onChange={(e) => setDeliveryHours(e.target.value)}
                 placeholder="Ej. 8:00 hs"
@@ -216,8 +262,9 @@ export function CustomerAdminForm({
             </div>
           </div>
           <div className="space-y-1">
-            <Label>Lista de precios</Label>
+            <Label htmlFor="customer-price-list">Lista de precios</Label>
             <select
+              id="customer-price-list"
               value={priceListId}
               onChange={(e) => setPriceListId(e.target.value)}
               className={cn(
@@ -228,7 +275,7 @@ export function CustomerAdminForm({
             >
               {inactiveSelected ? (
                 <option value={inactiveSelected.id}>
-                  {inactiveSelected.name} (inactiva)
+                  {inactiveSelected.name} (deshabilitada)
                 </option>
               ) : null}
               {activeLists.map((l) => (
@@ -242,11 +289,17 @@ export function CustomerAdminForm({
             </p>
           </div>
         </div>
-      </div>
+      </FormSection>
 
-      <div className="space-y-1">
-        <Label>Observaciones</Label>
+      <FormSection
+        title="Observaciones"
+        description="Notas internas; el cliente no las ve."
+      >
+        <Label htmlFor="customer-notes" className="sr-only">
+          Observaciones
+        </Label>
         <textarea
+          id="customer-notes"
           rows={4}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
@@ -255,62 +308,75 @@ export function CustomerAdminForm({
             FOCUS_BRAND_BORDER,
           )}
         />
-      </div>
+      </FormSection>
 
-      <div className="space-y-2">
-        <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
-          Módulos
-        </p>
-        <div className="flex flex-col gap-2">
-          {CUSTOMER_MODULES.map((module) => (
-            <label
-              key={module}
-              htmlFor={`customer-module-${module}`}
-              className="flex cursor-pointer items-center gap-2.5 text-sm"
-            >
-              <Switch
+      <FormSection
+        title="Acceso y módulos"
+        description={
+          <>
+            Elegí qué secciones de stock ve el cliente en{" "}
+            <span className="font-medium">/stock</span>.
+          </>
+        }
+        className="space-y-6"
+      >
+        <div className="space-y-2">
+          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+            Módulos de stock
+          </p>
+          <div className="grid gap-3 lg:grid-cols-3">
+            {CUSTOMER_MODULES.map((module) => (
+              <FormToggleCard
+                key={module}
                 id={`customer-module-${module}`}
+                label={CUSTOMER_MODULE_LABELS[module]}
+                description={CUSTOMER_MODULE_DESCRIPTIONS[module]}
                 checked={modules[module]}
-                onChange={(e) =>
+                onChange={(checked) =>
                   setModules((prev) => ({
                     ...prev,
-                    [module]: e.target.checked,
+                    [module]: checked,
                   }))
                 }
               />
-              {CUSTOMER_MODULE_LABELS[module]}
-            </label>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
 
-      <label
-        htmlFor="customer-active"
-        className="flex cursor-pointer items-center gap-2.5 text-sm"
-      >
-        <Switch
-          id="customer-active"
-          checked={active}
-          onChange={(e) => setActive(e.target.checked)}
-        />
-        Activo
-      </label>
-      {customer ? (
-        <label
-          htmlFor="customer-reset-pin"
-          className="flex cursor-pointer items-center gap-2.5 text-sm"
-        >
-          <Switch
-            id="customer-reset-pin"
-            checked={resetPin}
-            onChange={(e) => setResetPin(e.target.checked)}
+        {customer ? (
+          <div className="space-y-2 border-t border-neutral-200 pt-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+              Seguridad
+            </p>
+            <FormToggleCard
+              id="customer-reset-pin"
+              label="Regenerar PIN"
+              description="Genera un PIN nuevo a partir del código del cliente. El cliente deberá cambiarlo al ingresar."
+              checked={resetPin}
+              onChange={setResetPin}
+            />
+          </div>
+        ) : null}
+
+        <div className="space-y-2 border-t border-neutral-200 pt-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+            Cuenta
+          </p>
+          <FormToggleCard
+            id="customer-enabled"
+            label={
+              active
+                ? `Cuenta ${CUSTOMER_ACCOUNT_STATUS_LABELS.enabled.toLowerCase()}`
+                : `Cuenta ${CUSTOMER_ACCOUNT_STATUS_LABELS.disabled.toLowerCase()}`
+            }
+            description="Si está deshabilitada, no puede iniciar sesión ni cotizar."
+            checked={active}
+            onChange={setActive}
           />
-          Regenerar PIN
-        </label>
-      ) : null}
+        </div>
+      </FormSection>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {message ? <p className="text-sm text-green-700">{message}</p> : null}
 
       <div className="flex flex-wrap justify-end gap-2">
         {onCancel ? (

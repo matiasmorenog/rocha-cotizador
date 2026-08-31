@@ -45,6 +45,9 @@ export async function loadCustomersImportFromBuffer(
   }
 
   const headers = headerIndexMap(sheet.getRow(1));
+  if (headers.has("activo") && !headers.has("habilitado")) {
+    headers.set("habilitado", headers.get("activo")!);
+  }
   if (!headers.has("código") || !headers.has("nombre")) {
     return {
       ok: false,
@@ -215,7 +218,10 @@ export async function executeCustomersImport(
       cellText(getCellByHeader(row, ctx.headers, "horarioEntrega")),
     );
     const notes = emptyToNull(cellText(getCellByHeader(row, ctx.headers, "notas")));
-    const active = parseBool(getCellByHeader(row, ctx.headers, "activo"), true);
+    const active = parseBool(
+      getCellByHeader(row, ctx.headers, "habilitado"),
+      true,
+    );
     const resetPin = parseBool(
       getCellByHeader(row, ctx.headers, "resetearPin"),
       false,
