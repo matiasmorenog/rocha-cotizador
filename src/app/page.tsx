@@ -33,7 +33,6 @@ async function HomeContent() {
       <CustomerShell showSidebar={false}>
         <CustomerHomeHub
           userName={session.user.name}
-          customerCode={session.user.customerCode}
           modules={modules}
         />
       </CustomerShell>

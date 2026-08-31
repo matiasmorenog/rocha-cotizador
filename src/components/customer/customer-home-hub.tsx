@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
+import { CustomerCatalogWarmup } from "@/components/customer/customer-catalog-warmup";
 import { buildCustomerHomeActions } from "@/lib/customer-nav-items";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import type { CustomerModuleSession } from "@/types/auth";
@@ -8,24 +9,19 @@ import { cn } from "@/lib/utils";
 
 export function CustomerHomeHub({
   userName,
-  customerCode,
   modules,
 }: {
   userName?: string | null;
-  customerCode?: string | null;
   modules: CustomerModuleSession[];
 }) {
   const actions = buildCustomerHomeActions(modules);
   const displayName = userName?.trim() || "Cliente";
-  const code = customerCode?.trim();
   const threeCol = actions.length === 3;
   const containerMax = threeCol ? "max-w-3xl" : "max-w-xl";
-  const oneColWidth = threeCol
-    ? "sm:max-w-[calc((100%-1.5rem)/3)]"
-    : "sm:max-w-[calc((100%-0.75rem)/2)]";
 
   return (
-    <BrandBackdrop className="flex w-full min-h-[min(calc(100vh-10rem),40rem)] flex-col items-center justify-center rounded-xl px-4 py-10 sm:py-12">
+    <BrandBackdrop className="flex w-full min-h-[min(calc(100vh-10rem),40rem)] flex-col items-center justify-start rounded-xl px-4 pb-10 pt-2 sm:pb-12 sm:pt-4">
+      <CustomerCatalogWarmup />
       <div className={cn("mx-auto w-full", containerMax)}>
         <div
           className={cn(
@@ -41,20 +37,14 @@ export function CustomerHomeHub({
           >
             <div
               className={cn(
-                "flex w-full flex-col items-center gap-3 rounded-2xl bg-white/95 px-5 py-4 text-center shadow-sm backdrop-blur-[2px]",
-                oneColWidth,
+                "flex w-full max-w-md flex-col items-center gap-5 rounded-2xl bg-white/95 px-6 py-12 text-center shadow-sm backdrop-blur-[2px] sm:gap-6 sm:py-14",
               )}
             >
-              <BrandLogo size="md" priority />
+              <BrandLogo size="xl" priority />
               <div className="space-y-0.5">
                 <h1 className="text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
                   Hola, {displayName}
                 </h1>
-                {code ? (
-                  <p className="text-sm font-medium text-neutral-800">
-                    Código {code}
-                  </p>
-                ) : null}
                 <p className="text-sm text-neutral-700">
                   Elegí qué querés hacer hoy.
                 </p>
@@ -69,7 +59,7 @@ export function CustomerHomeHub({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex w-full flex-col items-start gap-3 rounded-xl border border-[var(--brand-primary)]/20 bg-white/90 p-4 text-left shadow-sm backdrop-blur-[2px] transition-colors hover:border-[var(--brand-primary)]/35 hover:bg-white",
+                  "flex w-full flex-col items-start gap-3 rounded-xl border border-[var(--brand-primary)]/20 bg-white/90 p-4 text-left shadow-sm backdrop-blur-[2px] transition-colors hover:border-[var(--brand-primary)]/32 hover:bg-[color-mix(in_srgb,var(--brand-primary)_5%,var(--brand-primary-soft))]",
                   FOCUS_BRAND_OUTLINE,
                 )}
               >

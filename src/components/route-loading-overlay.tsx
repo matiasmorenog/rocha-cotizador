@@ -60,8 +60,10 @@ function shouldStartNavigation(
 }
 
 function hasPendingSkeleton(): boolean {
+  // Route loading boundaries only — not in-page busy UI (e.g. product picker
+  // aria-busy while catalog revalidates would keep the nav cover up for seconds).
   const nodes = document.querySelectorAll(
-    'main [aria-busy="true"], main .rocha-skeleton, [role="status"][aria-busy="true"]',
+    "main .rocha-skeleton, main [role=\"status\"][aria-busy=\"true\"]",
   );
   for (const node of nodes) {
     // Ignore our instant cover — otherwise settle never finishes.

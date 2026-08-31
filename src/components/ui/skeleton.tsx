@@ -201,15 +201,14 @@ export function SkeletonGuestHomePage() {
 export function SkeletonHomePage() {
   return (
     <SkeletonRegion label="Cargando inicio">
-      <BrandBackdrop className="flex w-full min-h-[min(calc(100vh-10rem),40rem)] flex-col items-center justify-center rounded-xl px-4 py-10 sm:py-12">
+      <BrandBackdrop className="flex w-full min-h-[min(calc(100vh-10rem),40rem)] flex-col items-center justify-start rounded-xl px-4 pb-10 pt-2 sm:pb-12 sm:pt-4">
         <div className="mx-auto w-full max-w-xl">
           <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="flex w-full justify-center sm:col-span-2">
-              <div className="flex w-full max-w-[calc((100%-0.75rem)/2)] flex-col items-center gap-3 rounded-2xl bg-white/95 px-5 py-4 text-center shadow-sm backdrop-blur-[2px] sm:max-w-[calc((100%-0.75rem)/2)]">
-                <SkeletonLogo size="md" />
+              <div className="flex w-full max-w-md flex-col items-center gap-5 rounded-2xl bg-white/95 px-6 py-12 text-center shadow-sm backdrop-blur-[2px] sm:gap-6 sm:py-14">
+                <SkeletonLogo size="xl" />
                 <div className="flex w-full flex-col items-center gap-1.5">
                   <Skeleton className="h-7 w-44 max-w-full" />
-                  <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-4 w-52 max-w-full" />
                 </div>
               </div>

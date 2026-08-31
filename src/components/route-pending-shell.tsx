@@ -1,7 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import type { ReactNode } from "react";
+import { CustomerNav } from "@/components/customer/customer-nav";
 import {
   SkeletonAdminConfigPage,
   SkeletonAdminDashboardPage,
@@ -20,22 +22,37 @@ import {
   SkeletonQuotePage,
   SkeletonRemitoDetailPage,
 } from "@/components/ui/skeleton";
+import { normalizeCustomerModules } from "@/lib/customer-modules-normalize";
 import { useRouteLoading } from "@/lib/route-loading-context";
 import { cn } from "@/lib/utils";
 
+function isCustomerModulePath(path: string): boolean {
+  return (
+    path.startsWith("/cotizar") ||
+    path.startsWith("/remitos") ||
+    path.startsWith("/stock") ||
+    path.startsWith("/cuenta")
+  );
+}
+
 function customerSkeletonFor(path: string) {
+  /** Layout + JWT already know nav — never skeleton the sidebar on module routes. */
+  const withShell = !isCustomerModulePath(path);
+
   if (path === "/" || path === "") return <SkeletonHomePage />;
-  if (path.startsWith("/cotizar")) return <SkeletonQuotePage />;
+  if (path.startsWith("/cotizar")) return <SkeletonQuotePage withShell={withShell} />;
   if (path.startsWith("/remitos/") && path !== "/remitos") {
-    return <SkeletonRemitoDetailPage />;
+    return <SkeletonRemitoDetailPage withShell={withShell} />;
   }
   if (path.startsWith("/remitos")) {
-    return <SkeletonCustomerRemitosPage />;
+    return <SkeletonCustomerRemitosPage withShell={withShell} />;
   }
   if (path.startsWith("/stock")) {
-    return <SkeletonCustomerStockPage />;
+    return <SkeletonCustomerStockPage withShell={withShell} />;
   }
-  if (path.startsWith("/cuenta")) return <SkeletonCustomerCuentaConfigPage />;
+  if (path.startsWith("/cuenta")) {
+    return <SkeletonCustomerCuentaConfigPage withShell={withShell} />;
+  }
   if (path.startsWith("/entrar")) return <SkeletonChooserPage />;
   if (path.startsWith("/login")) return <SkeletonLoginPage />;
   if (path.startsWith("/admin/login")) {
@@ -101,12 +118,8 @@ type RoutePendingShellProps = {
  * On soft-nav start (`pending`), cover children with a destination skeleton
  * immediately — do not wait for Next `loading.tsx` to swap the segment.
  *
- * Customer: full-bleed `.brand-page-atmosphere` (fixed) covers viewport gutters
- * outside `main.max-w-6xl`. Opaque bg only on the main column left a sharp
- * vertical edge where body wheat/latte radials showed on the right (remito
- * skeleton). Admin keeps column-local solid bg so the desktop sidebar stays
- * visible under a fixed layer. Do not paint a flat --background slab on the
- * overlay — body uses radial washes; a solid fill reads as a contrasting box.
+ * Customer modules: real sidebar from session (same items as home cards);
+ * only the content column skeletons while the route resolves.
  */
 export function RoutePendingShell({
   children,
@@ -115,17 +128,54 @@ export function RoutePendingShell({
 }: RoutePendingShellProps) {
   const { pending, pendingPath } = useRouteLoading();
   const pathname = usePathname();
+  const { data: session } = useSession();
   const path = pendingPath ?? pathname;
   const showPendingOverlay = pending;
   const skeleton =
     variant === "admin" ? adminSkeletonFor(path) : customerSkeletonFor(path);
 
+  const customerUser =
+    session?.user?.role === "CUSTOMER" && session.user.customerId
+      ? session.user
+      : null;
+  const showLiveCustomerNav =
+    variant === "customer" &&
+    showPendingOverlay &&
+    customerUser != null &&
+    isCustomerModulePath(path);
+
+  const pendingOverlay = (
+    <div
+      data-route-pending=""
+      className={cn(
+        "cursor-wait overflow-auto",
+        showLiveCustomerNav
+          ? "relative min-h-[12rem] min-w-0 flex-1"
+          : cn(
+              "absolute z-[5]",
+              coverGutters ? "-inset-x-4 -inset-y-6 px-4 py-6" : "inset-0",
+            ),
+      )}
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="Cargando página"
+    >
+      {skeleton}
+    </div>
+  );
+
   return (
-    <div className={cn("relative min-w-0", showPendingOverlay && "min-h-[12rem]")}>
+    <div
+      className={cn(
+        "relative min-w-0 w-full",
+        showPendingOverlay &&
+          !showLiveCustomerNav &&
+          "min-h-[min(calc(100vh-10rem),40rem)]",
+      )}
+    >
       <div
-        className={cn(
-          showPendingOverlay && "invisible pointer-events-none select-none",
-        )}
+        className={cn(showPendingOverlay && "hidden")}
         aria-hidden={showPendingOverlay || undefined}
         {...(showPendingOverlay ? { inert: true } : {})}
       >
@@ -133,27 +183,28 @@ export function RoutePendingShell({
       </div>
       {showPendingOverlay ? (
         <>
-          {variant === "customer" ? (
+          {variant === "customer" && !showLiveCustomerNav ? (
             <div
               aria-hidden
               className="brand-page-atmosphere pointer-events-none fixed inset-0 z-[4] print:hidden"
             />
           ) : null}
-          <div
-            data-route-pending=""
-            className={cn(
-              "absolute z-[5] cursor-wait overflow-auto",
-              coverGutters
-                ? "-inset-x-4 -inset-y-6 px-4 py-6"
-                : "inset-0",
-            )}
-            role="status"
-            aria-busy="true"
-            aria-live="polite"
-            aria-label="Cargando página"
-          >
-            {skeleton}
-          </div>
+          {showLiveCustomerNav ? (
+            <div className="w-full admin-shell">
+              <CustomerNav
+                modules={normalizeCustomerModules(
+                  (customerUser.modules ?? []).map(String),
+                )}
+                userName={customerUser.name}
+                customerCode={customerUser.customerCode}
+                activePathname={path}
+                showDesktopSidebar
+              />
+              {pendingOverlay}
+            </div>
+          ) : (
+            pendingOverlay
+          )}
         </>
       ) : null}
     </div>

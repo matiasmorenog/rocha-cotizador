@@ -215,14 +215,18 @@ export function CustomerNav({
   userName,
   customerCode,
   showDesktopSidebar = true,
+  activePathname,
 }: {
   modules: CustomerModuleSession[];
   userName?: string | null;
   customerCode?: string | null;
   /** Home hub uses full-width centering; drawer still available on mobile. */
   showDesktopSidebar?: boolean;
+  /** Soft-nav overlay: highlight destination before pathname updates. */
+  activePathname?: string;
 }) {
-  const pathname = usePathname();
+  const pathnameFromRouter = usePathname();
+  const pathname = activePathname ?? pathnameFromRouter;
 
   return (
     <>
