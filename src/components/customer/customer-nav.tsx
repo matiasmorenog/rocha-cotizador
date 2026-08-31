@@ -214,23 +214,28 @@ export function CustomerNav({
   modules,
   userName,
   customerCode,
+  showDesktopSidebar = true,
 }: {
   modules: CustomerModuleSession[];
   userName?: string | null;
   customerCode?: string | null;
+  /** Home hub uses full-width centering; drawer still available on mobile. */
+  showDesktopSidebar?: boolean;
 }) {
   const pathname = usePathname();
 
   return (
     <>
-      <aside className="admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 shadow-sm print:hidden">
-        <CustomerSidebarPanel
-          pathname={pathname}
-          modules={modules}
-          userName={userName}
-          customerCode={customerCode}
-        />
-      </aside>
+      {showDesktopSidebar ? (
+        <aside className="admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 shadow-sm print:hidden">
+          <CustomerSidebarPanel
+            pathname={pathname}
+            modules={modules}
+            userName={userName}
+            customerCode={customerCode}
+          />
+        </aside>
+      ) : null}
 
       <CustomerMobileDrawer
         pathname={pathname}

@@ -6,8 +6,11 @@ import type { CustomerModuleSession } from "@/types/auth";
 
 export async function CustomerShell({
   children,
+  showSidebar = true,
 }: {
   children: React.ReactNode;
+  /** False on `/` so the home hub can center in the full content width. */
+  showSidebar?: boolean;
 }) {
   const session = await getOptionalSession();
   const customerId = session?.user?.customerId;
@@ -24,16 +27,28 @@ export async function CustomerShell({
     session.user.modules,
   )) as CustomerModuleSession[];
 
+  const nav = (
+    <CustomerNav
+      modules={modules}
+      userName={session.user.name}
+      customerCode={session.user.customerCode}
+      showDesktopSidebar={showSidebar}
+    />
+  );
+
   return (
     <>
-      <div className="admin-shell">
-        <CustomerNav
-          modules={modules}
-          userName={session.user.name}
-          customerCode={session.user.customerCode}
-        />
-        <div className="min-w-0 w-full flex-1">{children}</div>
-      </div>
+      {showSidebar ? (
+        <div className="admin-shell">
+          {nav}
+          <div className="min-w-0 w-full flex-1">{children}</div>
+        </div>
+      ) : (
+        <>
+          {nav}
+          <div className="w-full">{children}</div>
+        </>
+      )}
       <CustomerPromoFooter />
     </>
   );

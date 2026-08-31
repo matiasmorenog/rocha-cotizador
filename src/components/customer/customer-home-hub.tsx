@@ -21,7 +21,7 @@ export function CustomerHomeHub({
 
   return (
     <BrandBackdrop className="flex w-full min-h-[min(calc(100vh-10rem),40rem)] flex-col items-center justify-center rounded-xl px-4 py-10 sm:py-12">
-      <div className="mx-auto w-full max-w-2xl space-y-8 text-center">
+      <div className="mx-auto w-full max-w-xl space-y-8 text-center">
         <div className="flex flex-col items-center gap-4">
           <BrandLogo size="xl" priority />
           <div className="space-y-1">
@@ -37,7 +37,7 @@ export function CustomerHomeHub({
           </div>
         </div>
 
-        <div className="flex flex-wrap justify-center gap-3">
+        <div className="mx-auto grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
           {actions.map((item) => {
             const Icon = item.icon;
             return (
@@ -45,7 +45,7 @@ export function CustomerHomeHub({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex w-full max-w-xs flex-col items-start gap-3 rounded-xl border border-[var(--brand-primary)]/20 bg-white/90 p-4 text-left shadow-sm backdrop-blur-[2px] transition-colors hover:border-[var(--brand-primary)]/35 hover:bg-white sm:w-[calc(50%-0.375rem)] sm:max-w-[17rem]",
+                  "flex w-full flex-col items-start gap-3 rounded-xl border border-[var(--brand-primary)]/20 bg-white/90 p-4 text-left shadow-sm backdrop-blur-[2px] transition-colors hover:border-[var(--brand-primary)]/35 hover:bg-white",
                   FOCUS_BRAND_OUTLINE,
                 )}
               >

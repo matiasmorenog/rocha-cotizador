@@ -3,7 +3,6 @@
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import {
-  SkeletonAccountPage,
   SkeletonAdminConfigPage,
   SkeletonAdminDashboardPage,
   SkeletonAdminListPage,
@@ -12,6 +11,7 @@ import {
   SkeletonAdminQuotesPage,
   SkeletonAdminStockPage,
   SkeletonChooserPage,
+  SkeletonCustomerCuentaConfigPage,
   SkeletonHomePage,
   SkeletonListPage,
   SkeletonLoginPage,
@@ -40,7 +40,7 @@ function customerSkeletonFor(path: string) {
   if (path.startsWith("/stock")) {
     return <SkeletonAdminStockPage />;
   }
-  if (path.startsWith("/cuenta")) return <SkeletonAccountPage />;
+  if (path.startsWith("/cuenta")) return <SkeletonCustomerCuentaConfigPage />;
   if (path.startsWith("/entrar")) return <SkeletonChooserPage />;
   if (path.startsWith("/login")) return <SkeletonLoginPage />;
   if (path.startsWith("/admin/login")) {
@@ -121,7 +121,7 @@ export function RoutePendingShell({
   const { pending, pendingPath } = useRouteLoading();
   const pathname = usePathname();
   const path = pendingPath ?? pathname;
-  const showPendingOverlay = pending && pendingPath !== pathname;
+  const showPendingOverlay = pending;
   const skeleton =
     variant === "admin" ? adminSkeletonFor(path) : customerSkeletonFor(path);
 
