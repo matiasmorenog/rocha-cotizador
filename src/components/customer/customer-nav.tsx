@@ -16,8 +16,8 @@ type NavItem = {
 };
 
 function stockNavItem(modules: CustomerModuleSession[]): NavItem | null {
-  if (modules.length === 0) return null;
   const tabs = customerStockTabsForModules(modules);
+  if (tabs.length === 0) return null;
   const href =
     tabs.length === 1
       ? `/stock?tab=${tabs[0]!.tab}`

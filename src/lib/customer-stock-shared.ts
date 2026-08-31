@@ -44,7 +44,9 @@ export function parseCustomerStockTab(
   const available = customerStockTabsForModules(modules);
   if (available.length === 0) return null;
   const normalized =
-    tabParam === "elaborados" ? "desperdicios" : tabParam;
+    tabParam === "elaborados" || tabParam === "mermas"
+      ? "desperdicios"
+      : tabParam;
   const match = available.find((row) => row.tab === normalized);
   return match ?? available[0]!;
 }

@@ -17,6 +17,7 @@ import {
   customerStockTabsForModules,
   parseCustomerStockTab,
 } from "@/lib/customer-stock-shared";
+import { resolveCustomerModulesForSession } from "@/lib/customer-modules";
 import { requireCustomerSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,10 @@ export default async function CustomerStockPage({
     requireCustomerSession(),
   ]);
 
-  const modules = session.user.modules ?? [];
+  const modules = await resolveCustomerModulesForSession(
+    session.user.customerId!,
+    session.user.modules,
+  );
   const availableTabs = customerStockTabsForModules(modules);
   if (availableTabs.length === 0) {
     notFound();
