@@ -43,52 +43,52 @@ export async function AppHeader() {
             <div className="min-w-0 flex-1" aria-hidden />
           )}
           {isCustomer || isStaff ? (
-              <div className="flex shrink-0 items-center gap-3 text-sm">
-                {isCustomer ? (
+            <div className="flex shrink-0 items-center gap-3 text-sm">
+              {isCustomer ? (
+                <form
+                  action={async () => {
+                    "use server";
+                    await signOut({ redirectTo: "/login" });
+                  }}
+                >
+                  <button
+                    type="submit"
+                    aria-label="Salir"
+                    title="Salir"
+                    className="cursor-pointer rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
+                  >
+                    <LogOut className="h-4 w-4" aria-hidden />
+                  </button>
+                </form>
+              ) : (
+                <div className="flex items-center gap-4">
+                  <AdminThemeToggle />
+                  <span
+                    className="h-5 w-px shrink-0 bg-neutral-300/70"
+                    aria-hidden
+                  />
                   <form
                     action={async () => {
                       "use server";
-                      await signOut({ redirectTo: "/login" });
+                      await signOut({ redirectTo: "/admin/login" });
                     }}
                   >
                     <button
                       type="submit"
                       aria-label="Salir"
                       title="Salir"
-                      className="cursor-pointer rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
+                      className={cn(
+                        "inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800",
+                        FOCUS_BRAND_OUTLINE,
+                      )}
                     >
                       <LogOut className="h-4 w-4" aria-hidden />
                     </button>
                   </form>
-                ) : (
-                  <div className="flex items-center gap-4">
-                    <AdminThemeToggle />
-                    <span
-                      className="h-5 w-px shrink-0 bg-neutral-300/70"
-                      aria-hidden
-                    />
-                    <form
-                      action={async () => {
-                        "use server";
-                        await signOut({ redirectTo: "/admin/login" });
-                      }}
-                    >
-                      <button
-                        type="submit"
-                        aria-label="Salir"
-                        title="Salir"
-                        className={cn(
-                          "inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-800",
-                          FOCUS_BRAND_OUTLINE,
-                        )}
-                      >
-                        <LogOut className="h-4 w-4" aria-hidden />
-                      </button>
-                    </form>
-                  </div>
-                )}
-              </div>
-            ) : null}
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
         <div className="absolute inset-x-0 bottom-0 translate-y-1/2">
           <HeaderProgressLine />
