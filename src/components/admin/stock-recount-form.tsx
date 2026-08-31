@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { ClipboardPlus, Trash2 } from "lucide-react";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 import { ProductPicker } from "@/components/quote/product-picker";
 import type { CatalogSearchProduct } from "@/components/quote/product-picker";
@@ -20,6 +20,8 @@ import {
 } from "@/lib/stock-units";
 import { cn } from "@/lib/utils";
 import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
+import { dispatchAdminStockSummaryRefresh } from "@/lib/admin-stock-summary-refresh";
+import type { StockModuleKey } from "@/lib/stock-product-kind-shared";
 import { productMatchesStockModule } from "@/lib/stock-rubros-shared";
 
 export type StockRecountCustomer = {
@@ -56,6 +58,9 @@ export function StockRecountForm({
   apiPath,
   customers,
   stockModule,
+  fixedCustomerId,
+  refreshAdminSummary = true,
+  customerStockModule,
   open: openProp,
   onOpenChange,
 }: {
@@ -63,12 +68,21 @@ export function StockRecountForm({
   description: string;
   apiPath: string;
   customers: StockRecountCustomer[];
-  stockModule: "MERMAS" | "CONSUMABLES";
+  stockModule: StockModuleKey;
+  /** Hide branch picker — customer self-service stock. */
+  fixedCustomerId?: string;
+  /** Admin summary chart/cards refresh after save. */
+  refreshAdminSummary?: boolean;
+  /** Use customer stock product search API in the picker. */
+  customerStockModule?: StockModuleKey;
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
 }) {
   const router = useRouter();
-  const [customerId, setCustomerId] = useState(customers[0]?.id ?? "");
+  const [customerId, setCustomerId] = useState(
+    fixedCustomerId ?? customers[0]?.id ?? "",
+  );
+  const activeCustomerId = fixedCustomerId ?? customerId;
   const [dateValue, setDateValue] = useState(() =>
     ymdToPickerValue(todayYmdAr()),
   );
@@ -82,7 +96,7 @@ export function StockRecountForm({
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!customerId || !date) return;
+    if (!activeCustomerId || !date) return;
 
     let cancelled = false;
 
@@ -91,10 +105,12 @@ export function StockRecountForm({
       setError(null);
       setMessage(null);
       const params = new URLSearchParams({
-        customerId,
         date,
         entryOnly: "1",
       });
+      if (!fixedCustomerId) {
+        params.set("customerId", activeCustomerId);
+      }
       const res = await fetch(`${apiPath}?${params}`);
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
@@ -135,7 +151,7 @@ export function StockRecountForm({
     return () => {
       cancelled = true;
     };
-  }, [apiPath, customerId, date]);
+  }, [apiPath, activeCustomerId, date, fixedCustomerId]);
 
   const sortedLines = useMemo(
     () =>
@@ -151,14 +167,20 @@ export function StockRecountForm({
 
   const filterProduct = useCallback(
     (product: CatalogSearchProduct) =>
-      productMatchesStockModule(product.rubro, stockModule),
+      productMatchesStockModule(
+        product.rubro,
+        stockModule,
+        product.stockKind,
+      ),
     [stockModule],
   );
 
   const moduleMismatchMessage =
-    stockModule === "MERMAS"
+    stockModule === "DESPERDICIOS"
       ? "Ese producto es insumo/consumible — cargalo en Consumibles"
-      : "Ese producto no es insumo/consumible — cargalo en Elaborados";
+      : stockModule === "CONSUMABLES"
+        ? "Ese producto no es consumible — cargalo en Desperdicios o Activos"
+        : "Ese producto no es un activo del local — revisá el tipo de stock del producto";
 
   function addProduct(product: CatalogSearchProduct) {
     if (!productMatchesStockModule(product.rubro, stockModule)) {
@@ -200,7 +222,7 @@ export function StockRecountForm({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!customerId) {
+    if (!activeCustomerId) {
       setError("Elegí una sucursal / cliente");
       return;
     }
@@ -216,7 +238,7 @@ export function StockRecountForm({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        customerId,
+        customerId: activeCustomerId,
         entryDate: date,
         notes,
         lines: positive.map((l) => ({
@@ -233,6 +255,9 @@ export function StockRecountForm({
       return;
     }
     setMessage("Guardado");
+    if (refreshAdminSummary) {
+      dispatchAdminStockSummaryRefresh();
+    }
     router.refresh();
   }
 
@@ -266,29 +291,31 @@ export function StockRecountForm({
         <p className="text-sm text-neutral-600">{description}</p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
-          <Label>Sucursal / cliente</Label>
-          <select
-            className={cn(
-              "h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm",
-              FOCUS_BRAND_BORDER,
-            )}
-            value={customerId}
-            onChange={(e) => setCustomerId(e.target.value)}
-            required
-          >
-            {customers.length === 0 ? (
-              <option value="">Sin clientes con módulo</option>
-            ) : (
-              customers.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.code} · {c.name}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
+      <div className={cn("grid gap-3", fixedCustomerId ? "" : "sm:grid-cols-2")}>
+        {!fixedCustomerId ? (
+          <div className="space-y-1">
+            <Label>Sucursal / cliente</Label>
+            <select
+              className={cn(
+                "h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm",
+                FOCUS_BRAND_BORDER,
+              )}
+              value={customerId}
+              onChange={(e) => setCustomerId(e.target.value)}
+              required
+            >
+              {customers.length === 0 ? (
+                <option value="">Sin clientes con módulo</option>
+              ) : (
+                customers.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.code} · {c.name}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+        ) : null}
         <div className="space-y-1">
           <Label>Fecha</Label>
           <DatetimeLocalPicker
@@ -316,6 +343,8 @@ export function StockRecountForm({
         <Label>Agregar producto</Label>
         <ProductPicker
           value={picked}
+          adminStockModule={customerStockModule ? undefined : stockModule}
+          customerStockModule={customerStockModule}
           filterProduct={filterProduct}
           onChange={(p) => {
             if (p) addProduct(p);
@@ -323,9 +352,11 @@ export function StockRecountForm({
           }}
         />
         <p className="text-xs text-neutral-500">
-          {stockModule === "MERMAS"
-            ? "Solo panes, masas y rubros de merma (no insumos ni regalo)."
-            : "Solo rubros Insumos y Regalo."}
+          {stockModule === "DESPERDICIOS"
+            ? "Solo panes, masas y rubros de desperdicio (no insumos ni regalo)."
+            : stockModule === "CONSUMABLES"
+              ? "Solo insumos y regalo (gaseosas, etc.) — no son bajas del día."
+              : "Solo productos marcados como activo del local (carritos, bandejas, etc.)."}
         </p>
       </div>
 
@@ -441,7 +472,7 @@ export function StockRecountTrigger({
 }) {
   return (
     <Button type="button" onClick={onClick}>
-      <Plus className="h-4 w-4" />
+      <ClipboardPlus className="mr-1.5 h-4 w-4" aria-hidden />
       Registrar stock
     </Button>
   );

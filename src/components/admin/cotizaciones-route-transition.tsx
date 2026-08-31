@@ -75,7 +75,7 @@ export function CotizacionesRouteTransition({
     <CotizacionesRouteContext.Provider value={{ navigateWithExit }}>
       <div
         key={pathname}
-        className={cn(isExiting ? "quote-route-exit" : "quote-route-enter")}
+        className={cn(isExiting && "quote-route-exit")}
       >
         {children}
       </div>

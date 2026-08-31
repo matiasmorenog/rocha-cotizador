@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 import { cn } from "@/lib/utils";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, UserPlus } from "lucide-react";
 import {
   AdminTableActions,
   AdminTableIconAction,
@@ -25,7 +25,10 @@ import {
 import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
 import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
 import { useSelectedRow } from "@/hooks/use-selected-row";
-import type { CustomerModuleFlags } from "@/lib/customer-modules";
+import {
+  CUSTOMER_ACCOUNT_STATUS_LABELS,
+  type CustomerModuleFlags,
+} from "@/lib/customer-modules";
 
 export type CustomerListRow = {
   id: string;
@@ -119,7 +122,7 @@ export function CustomersAdminPanel({
               setCreating(true);
             }}
           >
-            <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+            <UserPlus className="mr-1.5 h-4 w-4" aria-hidden />
             Nuevo cliente
           </Button>
         ) : null}
@@ -235,7 +238,9 @@ export function CustomersAdminPanel({
                         </td>
                         <td className="px-3 py-2">
                           <Badge variant={c.active ? "success" : "danger"}>
-                            {c.active ? "Activo" : "Inactivo"}
+                            {c.active
+                              ? CUSTOMER_ACCOUNT_STATUS_LABELS.enabled
+                              : CUSTOMER_ACCOUNT_STATUS_LABELS.disabled}
                           </Badge>
                         </td>
                         <td className="px-3 py-2 text-right">

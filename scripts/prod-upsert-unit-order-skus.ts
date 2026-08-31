@@ -157,7 +157,7 @@ async function main() {
           rubro: row.rubro,
           basePrice: row.basePrice,
           allowsUnitOrder: true,
-          active: true,
+          available: true,
         },
         update: {
           name: row.name,
@@ -169,7 +169,7 @@ async function main() {
             ? {}
             : { basePrice: row.basePrice }),
           allowsUnitOrder: true,
-          active: true,
+          available: true,
         },
       });
 
@@ -220,7 +220,7 @@ async function main() {
         id: true,
         code: true,
         allowsUnitOrder: true,
-        active: true,
+        available: true,
         _count: { select: { priceListItems: true } },
       },
       orderBy: { code: "asc" },

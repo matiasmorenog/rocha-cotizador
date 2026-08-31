@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { parseArgentinaDateTime } from "@/lib/argentina-time";
+import {
+  parseArgentinaDateOnlyEndExclusive,
+  parseArgentinaDateOnlyStart,
+} from "@/lib/argentina-time";
 import { getCustomerRemitos } from "@/lib/customer-remitos-data";
 import { customerRemitosDateRangeError } from "@/lib/customer-remitos-limits";
 
@@ -29,21 +32,21 @@ export async function GET(req: NextRequest) {
   if (fromParam || toParam) {
     if (!fromParam || !toParam) {
       return NextResponse.json(
-        { error: "Indicá fecha Desde y Hasta para filtrar por rango" },
+        { error: "Indicá un período para filtrar por rango" },
         { status: 400 },
       );
     }
-    from = parseArgentinaDateTime(fromParam);
-    to = parseArgentinaDateTime(toParam);
+    const rangeError = customerRemitosDateRangeError(fromParam, toParam);
+    if (rangeError) {
+      return NextResponse.json({ error: rangeError }, { status: 400 });
+    }
+    from = parseArgentinaDateOnlyStart(fromParam);
+    to = parseArgentinaDateOnlyEndExclusive(toParam);
     if (!from || !to) {
       return NextResponse.json(
         { error: "Fechas inválidas" },
         { status: 400 },
       );
-    }
-    const rangeError = customerRemitosDateRangeError(from, to);
-    if (rangeError) {
-      return NextResponse.json({ error: rangeError }, { status: 400 });
     }
   }
 

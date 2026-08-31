@@ -1,10 +1,7 @@
 import { requireStaffPermission } from "@/lib/session";
-import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-route-transition";
 import { QuotesAdminPanel } from "@/components/admin/quotes-admin-panel";
 import { resolveQuotesExportRange } from "@/lib/argentina-time";
 import { getAdminCotizacionesQuotes } from "@/lib/admin-cotizaciones-data";
-import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
-import { cn } from "@/lib/utils";
 
 /** Always honor `from`/`to` query (dashboard chart deep-links). */
 export const dynamic = "force-dynamic";
@@ -25,18 +22,7 @@ export default async function AdminCotizacionesPage({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-neutral-900">Cotizaciones</h1>
-        <CotizacionesTransitionLink
-          href="/admin/cotizaciones/nueva"
-          className={cn(
-            "inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white shadow-sm hover:opacity-90",
-            FOCUS_BRAND_PRIMARY,
-          )}
-        >
-          Nueva cotización
-        </CotizacionesTransitionLink>
-      </div>
+      <h1 className="text-2xl font-semibold text-neutral-900">Cotizaciones</h1>
 
       <QuotesAdminPanel
         key={`${fromLocal}_${toLocal}`}

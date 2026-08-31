@@ -1,14 +1,26 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import {
+  ClipboardList,
+  LayoutDashboard,
+  Package,
+  Settings,
+  Tags,
+  UserCog,
+  Users,
+  Warehouse,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import {
   useExitPresence,
   QUOTE_PICKER_FLOAT_MS,
 } from "@/hooks/use-exit-presence";
+import { useShellNavEnterOnce } from "@/hooks/use-shell-nav-enter-once";
 import { StaffPreviewControl } from "@/components/admin/staff-preview-ui";
+import { SolapasNavLink, SolapasNavList } from "@/components/ui/solapas-tabs";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import type { StaffPermission } from "@/lib/staff-permissions";
 import { cn } from "@/lib/utils";
@@ -17,27 +29,37 @@ import { useAdminNavStore } from "@/stores/admin-nav-store";
 const links: Array<{
   href: string;
   label: string;
+  icon: LucideIcon;
   exact?: boolean;
   permission: StaffPermission;
 }> = [
-  { href: "/admin", label: "Dashboard", exact: true, permission: "dashboard" },
-  { href: "/admin/clientes", label: "Clientes", permission: "customers" },
-  { href: "/admin/productos", label: "Productos", permission: "products" },
+  {
+    href: "/admin",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    exact: true,
+    permission: "dashboard",
+  },
+  { href: "/admin/clientes", label: "Clientes", icon: Users, permission: "customers" },
+  { href: "/admin/productos", label: "Productos", icon: Package, permission: "products" },
   {
     href: "/admin/listas-precios",
     label: "Listas de precios",
+    icon: Tags,
     permission: "priceLists",
   },
   {
     href: "/admin/cotizaciones",
     label: "Cotizaciones",
+    icon: ClipboardList,
     permission: "quotes",
   },
-  { href: "/admin/stock", label: "Stock", permission: "stockReports" },
-  { href: "/admin/usuarios", label: "Usuarios", permission: "users" },
+  { href: "/admin/stock", label: "Stock", icon: Warehouse, permission: "stockReports" },
+  { href: "/admin/usuarios", label: "Usuarios", icon: UserCog, permission: "users" },
   {
     href: "/admin/configuracion",
     label: "Configuración",
+    icon: Settings,
     permission: "account",
   },
 ];
@@ -59,34 +81,27 @@ function NavLinks({
   const filtered = links.filter((l) => permissions.includes(l.permission));
 
   return (
-    <nav
-      aria-label="Navegación de administración"
-      className="flex flex-col gap-1 text-sm"
-    >
+    <SolapasNavList activeKey={pathname} aria-label="Navegación de administración">
       {filtered.map((l) => {
         const active = isActive(
           pathname,
           l.href,
           "exact" in l ? l.exact : false,
         );
+        const Icon = l.icon;
         return (
-          <Link
+          <SolapasNavLink
             key={l.href}
             href={l.href}
+            active={active}
             onClick={onNavigate}
-            className={cn(
-              "admin-nav-link rounded-md px-2 py-1.5 transition-colors",
-              FOCUS_BRAND_OUTLINE,
-              active
-                ? "admin-nav-link-active bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
-                : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900",
-            )}
           >
-            {l.label}
-          </Link>
+            <Icon className="h-4 w-4 shrink-0" aria-hidden />
+            <span>{l.label}</span>
+          </SolapasNavLink>
         );
       })}
-    </nav>
+    </SolapasNavList>
   );
 }
 
@@ -269,10 +284,16 @@ export function AdminNav({
   isSuperuser?: boolean;
 }) {
   const pathname = usePathname();
+  const { animate: navAnimate } = useShellNavEnterOnce();
 
   return (
     <>
-      <aside className="admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 shadow-sm print:hidden">
+      <aside
+        className={cn(
+          "admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 shadow-sm print:hidden",
+          navAnimate && "route-view-enter",
+        )}
+      >
         <AdminSidebarPanel
           pathname={pathname}
           permissions={permissions}

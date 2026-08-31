@@ -1,21 +1,28 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
-import { SkeletonHomePage } from "@/components/ui/skeleton";
+import { CustomerHomeHub } from "@/components/customer/customer-home-hub";
+import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { getOptionalSession } from "@/lib/session";
 import { isAdminPanelRole, staffHomeHref } from "@/lib/staff-permissions";
-import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-async function HomeContent() {
+export default async function HomePage() {
   const session = await getOptionalSession();
-  if (session?.user?.role === "CUSTOMER") redirect("/cotizar");
   if (isAdminPanelRole(session?.user?.role)) {
     redirect(staffHomeHref(session?.user?.permissions, session?.user?.role));
+  }
+
+  if (session?.user?.role === "CUSTOMER" && session.user.customerId) {
+    return (
+      <CustomerHomeHub
+        userName={session.user.name}
+        modules={session.user.modules ?? []}
+      />
+    );
   }
 
   return (
@@ -47,13 +54,5 @@ async function HomeContent() {
         </div>
       </div>
     </BrandBackdrop>
-  );
-}
-
-export default function HomePage() {
-  return (
-    <Suspense fallback={<SkeletonHomePage />}>
-      <HomeContent />
-    </Suspense>
   );
 }

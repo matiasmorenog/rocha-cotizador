@@ -4,7 +4,14 @@ import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { invalidateAfterProductMutation } from "@/lib/cache-tags";
 import { syncBaseListItemForProduct } from "@/lib/price-list-resolve";
-import { normalizeRubro } from "@/lib/stock-rubros";
+import { normalizeRubro, inferStockKindFromRubro } from "@/lib/stock-rubros";
+import {
+  normalizeAllowsUnitOrder,
+  productSupportsUnitOrKgOrder,
+  type ProductStockKindValue,
+} from "@/lib/stock-product-kind-shared";
+
+const stockKindSchema = z.enum(["DESPERDICIO", "CONSUMABLE", "LOCAL_ASSET"]).nullable();
 
 const schema = z.object({
   id: z.string().optional(),
@@ -13,7 +20,8 @@ const schema = z.object({
   rubro: z.string().optional().nullable(),
   basePrice: z.number().nonnegative(),
   allowsUnitOrder: z.boolean().optional(),
-  active: z.boolean().optional(),
+  available: z.boolean().optional(),
+  stockKind: stockKindSchema.optional(),
   listPrices: z
     .array(
       z.object({
@@ -36,18 +44,55 @@ export async function POST(req: NextRequest) {
 
   const rubro = normalizeRubro(parsed.data.rubro ?? null);
 
-  const data = {
+  const stockKindInPayload = parsed.data.stockKind !== undefined;
+  const allowsInPayload = parsed.data.allowsUnitOrder !== undefined;
+
+  let effectiveStockKind: ProductStockKindValue;
+  if (stockKindInPayload) {
+    effectiveStockKind =
+      parsed.data.stockKind ?? inferStockKindFromRubro(rubro);
+  } else if (parsed.data.id) {
+    const existing = await db.product.findUnique({
+      where: { id: parsed.data.id },
+      select: { stockKind: true },
+    });
+    effectiveStockKind =
+      existing?.stockKind ?? inferStockKindFromRubro(rubro);
+  } else {
+    effectiveStockKind = inferStockKindFromRubro(rubro);
+  }
+
+  const data: {
+    code: string;
+    name: string;
+    rubro: string | null;
+    basePrice: number;
+    available: boolean;
+    stockKind?: ProductStockKindValue | null;
+    allowsUnitOrder?: boolean;
+  } = {
     code: parsed.data.code.trim(),
     name: parsed.data.name.trim(),
     rubro,
     basePrice: parsed.data.basePrice,
-    active: parsed.data.active ?? true,
-    ...(parsed.data.allowsUnitOrder !== undefined
-      ? { allowsUnitOrder: parsed.data.allowsUnitOrder }
+    available: parsed.data.available ?? true,
+    ...(stockKindInPayload
+      ? { stockKind: parsed.data.stockKind }
       : parsed.data.id
         ? {}
-        : { allowsUnitOrder: false }),
+        : { stockKind: inferStockKindFromRubro(rubro) }),
   };
+
+  if (allowsInPayload) {
+    data.allowsUnitOrder = normalizeAllowsUnitOrder(
+      effectiveStockKind,
+      parsed.data.allowsUnitOrder!,
+    );
+  } else if (stockKindInPayload && !productSupportsUnitOrKgOrder(effectiveStockKind)) {
+    data.allowsUnitOrder = false;
+  } else if (!parsed.data.id) {
+    data.allowsUnitOrder = false;
+  }
 
   const product = parsed.data.id
     ? await db.product.update({ where: { id: parsed.data.id }, data })

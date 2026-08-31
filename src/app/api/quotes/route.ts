@@ -74,13 +74,13 @@ export async function POST(req: NextRequest) {
     where: { id: customerId },
   });
   if (!customer || !customer.active) {
-    return NextResponse.json({ error: "Cliente inactivo" }, { status: 403 });
+    return NextResponse.json({ error: "Cliente deshabilitado" }, { status: 403 });
   }
 
   const productIds = parsed.data.items.map((i) => i.productId);
   const [products, discountListId] = await Promise.all([
     db.product.findMany({
-      where: { id: { in: productIds }, active: true },
+      where: { id: { in: productIds }, available: true },
     }),
     effectiveDiscountPriceListId(customer.priceListId),
   ]);

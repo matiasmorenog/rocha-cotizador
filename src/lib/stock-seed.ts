@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import {
   CONSUMABLES_SEED_CODES,
-  MERMAS_SEED_CODES,
+  DESPERDICIOS_SEED_CODES,
 } from "@/lib/customer-modules";
 import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
 import { productWhereForModule } from "@/lib/stock-rubros";
@@ -16,7 +16,7 @@ type SeedStockSpec = {
 
 /**
  * Real Product rows from Rocha catalog (dev Neon), not invented SKUs.
- * Module split (mermas vs consumibles) uses Product.rubro via productWhereForModule.
+ * Module split (desperdicios vs consumibles) uses Product.rubro via productWhereForModule.
  */
 export const SAMPLE_STOCK_FROM_PRODUCTS: SeedStockSpec[] = [
   { code: "1902", nameIncludes: "LEVADURA" },
@@ -45,7 +45,7 @@ function parseYmdToDate(ymd: string): Date {
 async function resolveProductId(spec: SeedStockSpec): Promise<string | null> {
   if (spec.code) {
     const byCode = await db.product.findFirst({
-      where: { code: spec.code, active: true },
+      where: { code: spec.code, available: true },
       select: { id: true },
     });
     if (byCode) return byCode.id;
@@ -53,7 +53,7 @@ async function resolveProductId(spec: SeedStockSpec): Promise<string | null> {
   if (spec.nameIncludes) {
     const byName = await db.product.findFirst({
       where: {
-        active: true,
+        available: true,
         name: { contains: spec.nameIncludes, mode: "insensitive" },
       },
       orderBy: { code: "asc" },
@@ -65,7 +65,7 @@ async function resolveProductId(spec: SeedStockSpec): Promise<string | null> {
 }
 
 async function resolveProductsForModule(
-  module: "MERMAS" | "CONSUMABLES",
+  module: "DESPERDICIOS" | "CONSUMABLES",
   limit: number,
 ): Promise<Array<{ id: string; unit: string }>> {
   const out: Array<{ id: string; unit: string }> = [];
@@ -108,11 +108,11 @@ async function resolveProductsForModule(
   return out;
 }
 
-/** Wipe sample merma/consumible entries (dev seed only). */
+/** Wipe sample desperdicio/consumible entries (dev seed only). */
 export async function clearStockSampleData(): Promise<void> {
-  await db.mermaLine.deleteMany({});
+  await db.desperdicioLine.deleteMany({});
   await db.consumableCountLine.deleteMany({});
-  await db.mermaEntry.deleteMany({});
+  await db.desperdicioEntry.deleteMany({});
   await db.consumableCount.deleteMany({});
 }
 
@@ -129,30 +129,32 @@ async function findFirstCustomerWithCode(
   return null;
 }
 
-/** Seed 1 sample MermaEntry + 1 ConsumableCount if customers/products exist. Idempotent. */
+/** Seed 1 sample DesperdicioEntry + 1 ConsumableCount if customers/products exist. Idempotent. */
 export async function seedSampleStockEntries(): Promise<{
-  merma: string | null;
+  desperdicios: string | null;
   consumable: string | null;
-  mermaLines: number;
+  desperdicioLines: number;
   consumableLines: number;
 }> {
   const entryDate = parseYmdToDate(todayYmdAr());
-  let merma: string | null = null;
+  let desperdicios: string | null = null;
   let consumable: string | null = null;
-  let mermaLines = 0;
+  let desperdicioLines = 0;
   let consumableLines = 0;
 
-  const mermaCustomer = await findFirstCustomerWithCode(MERMAS_SEED_CODES);
-  if (mermaCustomer) {
-    const products = await resolveProductsForModule("MERMAS", 6);
+  const desperdiciosCustomer = await findFirstCustomerWithCode(
+    DESPERDICIOS_SEED_CODES,
+  );
+  if (desperdiciosCustomer) {
+    const products = await resolveProductsForModule("DESPERDICIOS", 6);
     if (products.length > 0) {
       const qtys = [1.5, 0.5, 3, 2, 1, 0.25];
-      await db.mermaEntry.deleteMany({
-        where: { customerId: mermaCustomer.id, entryDate },
+      await db.desperdicioEntry.deleteMany({
+        where: { customerId: desperdiciosCustomer.id, entryDate },
       });
-      await db.mermaEntry.create({
+      await db.desperdicioEntry.create({
         data: {
-          customerId: mermaCustomer.id,
+          customerId: desperdiciosCustomer.id,
           entryDate,
           notes: "Carga de prueba (seed)",
           submittedBy: "seed",
@@ -165,8 +167,8 @@ export async function seedSampleStockEntries(): Promise<{
           },
         },
       });
-      merma = mermaCustomer.code;
-      mermaLines = products.length;
+      desperdicios = desperdiciosCustomer.code;
+      desperdicioLines = products.length;
     }
   }
 
@@ -200,21 +202,21 @@ export async function seedSampleStockEntries(): Promise<{
     }
   }
 
-  return { merma, consumable, mermaLines, consumableLines };
+  return { desperdicios, consumable, desperdicioLines, consumableLines };
 }
 
 export async function seedStockSampleData(): Promise<{
-  mermaLines: number;
+  desperdicioLines: number;
   consumableLines: number;
-  mermaCustomer: string | null;
+  desperdiciosCustomer: string | null;
   consumableCustomer: string | null;
 }> {
   await clearStockSampleData();
   const entries = await seedSampleStockEntries();
   return {
-    mermaLines: entries.mermaLines,
+    desperdicioLines: entries.desperdicioLines,
     consumableLines: entries.consumableLines,
-    mermaCustomer: entries.merma,
+    desperdiciosCustomer: entries.desperdicios,
     consumableCustomer: entries.consumable,
   };
 }

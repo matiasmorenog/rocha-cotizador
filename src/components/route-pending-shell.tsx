@@ -3,8 +3,7 @@
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import {
-  SkeletonAccountPage,
-  SkeletonAdminConfigPanel,
+  SkeletonAdminConfigPage,
   SkeletonAdminDashboardPage,
   SkeletonAdminListPage,
   SkeletonAdminNewQuotePage,
@@ -12,6 +11,9 @@ import {
   SkeletonAdminQuotesPage,
   SkeletonAdminStockPage,
   SkeletonChooserPage,
+  SkeletonCustomerCuentaConfigPage,
+  SkeletonCustomerRemitosPage,
+  SkeletonCustomerStockPage,
   SkeletonHomePage,
   SkeletonListPage,
   SkeletonLoginPage,
@@ -22,22 +24,23 @@ import { useRouteLoading } from "@/lib/route-loading-context";
 import { cn } from "@/lib/utils";
 
 function customerSkeletonFor(path: string) {
+  /** Live sidebar sits outside pending — skeleton content column only. */
+  const withShell = false;
+
   if (path === "/" || path === "") return <SkeletonHomePage />;
-  if (path.startsWith("/cotizar")) return <SkeletonQuotePage />;
+  if (path.startsWith("/cotizar")) return <SkeletonQuotePage withShell={withShell} />;
   if (path.startsWith("/remitos/") && path !== "/remitos") {
-    return <SkeletonRemitoDetailPage />;
+    return <SkeletonRemitoDetailPage withShell={withShell} />;
   }
   if (path.startsWith("/remitos")) {
-    return (
-      <SkeletonListPage
-        label="Cargando remitos"
-        titleWidth="w-36"
-        cols={4}
-        descriptionWidth={null}
-      />
-    );
+    return <SkeletonCustomerRemitosPage withShell={withShell} />;
   }
-  if (path.startsWith("/cuenta")) return <SkeletonAccountPage />;
+  if (path.startsWith("/stock")) {
+    return <SkeletonCustomerStockPage withShell={withShell} />;
+  }
+  if (path.startsWith("/cuenta")) {
+    return <SkeletonCustomerCuentaConfigPage withShell={withShell} />;
+  }
   if (path.startsWith("/entrar")) return <SkeletonChooserPage />;
   if (path.startsWith("/login")) return <SkeletonLoginPage />;
   if (path.startsWith("/admin/login")) {
@@ -71,7 +74,7 @@ function adminSkeletonFor(path: string) {
     return <SkeletonAdminQuotesPage />;
   }
   if (path.startsWith("/admin/configuracion")) {
-    return <SkeletonAdminConfigPanel />;
+    return <SkeletonAdminConfigPage />;
   }
   if (path.startsWith("/admin/stock")) {
     return <SkeletonAdminStockPage />;
@@ -97,65 +100,64 @@ type RoutePendingShellProps = {
    * table skeleton on `min-w-0` flex (remito → cotizaciones).
    */
   coverGutters?: boolean;
+  /** Home hub uses a full-width skeleton in CustomerLayoutFrame instead. */
+  suppressOverlay?: boolean;
 };
 
 /**
  * On soft-nav start (`pending`), cover children with a destination skeleton
  * immediately — do not wait for Next `loading.tsx` to swap the segment.
  *
- * Customer: full-bleed `.brand-page-atmosphere` (fixed) covers viewport gutters
- * outside `main.max-w-6xl`. Opaque bg only on the main column left a sharp
- * vertical edge where body wheat/latte radials showed on the right (remito
- * skeleton). Admin keeps column-local solid bg so the desktop sidebar stays
- * visible under a fixed layer. Do not paint a flat --background slab on the
- * overlay — body uses radial washes; a solid fill reads as a contrasting box.
+ * Customer module routes: live nav is outside this shell — content skeleton only.
  */
 export function RoutePendingShell({
   children,
   variant,
   coverGutters = true,
+  suppressOverlay = false,
 }: RoutePendingShellProps) {
   const { pending, pendingPath } = useRouteLoading();
   const pathname = usePathname();
   const path = pendingPath ?? pathname;
-  const showPendingOverlay = pending && pendingPath !== pathname;
+  const showPendingOverlay = pending && !suppressOverlay;
   const skeleton =
     variant === "admin" ? adminSkeletonFor(path) : customerSkeletonFor(path);
 
+  const pendingOverlay = (
+    <div
+      data-route-pending=""
+      className={cn(
+        "relative z-[5] cursor-wait",
+        coverGutters && "-mx-4 -my-6 px-4 py-6",
+      )}
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+      aria-label="Cargando página"
+    >
+      {skeleton}
+    </div>
+  );
+
   return (
-    <div className={cn("relative min-w-0", showPendingOverlay && "min-h-[12rem]")}>
+    <div className="relative min-w-0 w-full">
       <div
-        className={cn(
-          showPendingOverlay && "invisible pointer-events-none select-none",
-        )}
-        aria-hidden={showPendingOverlay || undefined}
-        {...(showPendingOverlay ? { inert: true } : {})}
+        data-route-content=""
+        className={cn(pending && "hidden")}
+        aria-hidden={pending || undefined}
+        {...(pending ? { inert: true } : {})}
       >
         {children}
       </div>
       {showPendingOverlay ? (
         <>
-          {variant === "customer" ? (
+          {variant === "customer" && coverGutters ? (
             <div
               aria-hidden
               className="brand-page-atmosphere pointer-events-none fixed inset-0 z-[4] print:hidden"
             />
           ) : null}
-          <div
-            data-route-pending=""
-            className={cn(
-              "absolute z-[5] cursor-wait overflow-auto",
-              coverGutters
-                ? "-inset-x-4 -inset-y-6 px-4 py-6"
-                : "inset-0",
-            )}
-            role="status"
-            aria-busy="true"
-            aria-live="polite"
-            aria-label="Cargando página"
-          >
-            {skeleton}
-          </div>
+          {pendingOverlay}
         </>
       ) : null}
     </div>

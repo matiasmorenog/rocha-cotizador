@@ -34,7 +34,7 @@ export default async function LoginPage({
   searchParams: Promise<{ callbackUrl?: string }>;
 }) {
   const { callbackUrl: rawCallback } = await searchParams;
-  const callbackUrl = safeCallbackUrl(rawCallback, "/cotizar");
+  const callbackUrl = safeCallbackUrl(rawCallback, "/");
   const session = await getOptionalSession();
   if (session?.user?.role === "CUSTOMER") redirect(callbackUrl);
   if (isAdminPanelRole(session?.user?.role) && session?.user) {

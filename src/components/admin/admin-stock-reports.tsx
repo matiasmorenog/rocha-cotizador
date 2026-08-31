@@ -27,18 +27,22 @@ export function AdminStockReports({
   customers,
   customerId,
   kindLabel,
+  hideCustomerColumn = false,
 }: {
   entries: StockReportEntry[];
   customers: StockModuleCustomer[];
   customerId: string;
   kindLabel: string;
+  /** Customer self-service: never show branch column. */
+  hideCustomerColumn?: boolean;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const selectedCustomer = customers.find((customer) => customer.id === customerId);
+  const singleCustomer = hideCustomerColumn || Boolean(customerId);
 
   return (
     <div className="space-y-4">
-      {selectedCustomer ? (
+      {selectedCustomer && !hideCustomerColumn ? (
         <p className="text-sm font-medium text-neutral-800">
           {selectedCustomer.code} · {selectedCustomer.name}
         </p>
@@ -48,7 +52,9 @@ export function AdminStockReports({
         <p className="text-sm text-neutral-500">
           {selectedCustomer
             ? "Sin cargas para esta sucursal con los filtros actuales."
-            : "Sin cargas todavía."}
+            : hideCustomerColumn
+              ? "Sin cargas con los filtros actuales."
+              : "Sin cargas todavía."}
         </p>
       ) : (
         <div className="space-y-2">
@@ -65,7 +71,7 @@ export function AdminStockReports({
                   onClick={() => setOpenId(open ? null : entry.id)}
                 >
                   <div className="min-w-0">
-                    {!selectedCustomer ? (
+                    {!singleCustomer ? (
                       <p className="truncate text-sm font-medium text-neutral-900">
                         {entry.customer.code} · {entry.customer.name}
                       </p>
@@ -73,7 +79,7 @@ export function AdminStockReports({
                     <p
                       className={cn(
                         "text-sm text-neutral-900",
-                        !selectedCustomer
+                        !singleCustomer
                           ? "text-xs text-neutral-500"
                           : "font-medium",
                       )}

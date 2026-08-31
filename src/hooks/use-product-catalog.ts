@@ -29,6 +29,7 @@ export type CatalogSearchProduct = {
   rubro: string | null;
   unitPrice: number;
   allowsUnitOrder: boolean;
+  stockKind?: "DESPERDICIO" | "CONSUMABLE" | "LOCAL_ASSET" | null;
 };
 
 type UseProductCatalogOptions = {

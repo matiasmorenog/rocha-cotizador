@@ -73,7 +73,7 @@ export type AdminPriceListDetailItem = {
     name: string;
     rubro: string | null;
     basePrice: number;
-    active: boolean;
+    available: boolean;
   };
 };
 
@@ -123,7 +123,7 @@ async function fetchAdminPriceListDetailUncached(
             name: true,
             rubro: true,
             basePrice: true,
-            active: true,
+            available: true,
           },
         })
       : [];
@@ -141,7 +141,7 @@ async function fetchAdminPriceListDetailUncached(
           name: product.name,
           rubro: product.rubro,
           basePrice: Number(product.basePrice),
-          active: product.active,
+          available: product.available,
         },
       };
     })

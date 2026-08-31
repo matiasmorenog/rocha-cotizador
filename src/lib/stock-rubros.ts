@@ -1,21 +1,27 @@
 /**
- * Server-side stock rubro helpers (DB/cache).
+ * Server-side stock product filters (DB/cache).
  */
 
 import type { Prisma } from "@prisma/client";
 import { getActiveProductsBase } from "@/lib/products-cache";
 import {
-  CONSUMABLE_RUBROS,
-  uniqRubrosFromProducts,
-} from "@/lib/stock-rubros-shared";
+  stockKindForModule,
+  type StockModuleKey,
+} from "@/lib/stock-product-kind-shared";
+import { uniqRubrosFromProducts } from "@/lib/stock-rubros-shared";
 
 export {
   CONSUMABLE_RUBROS,
   isConsumableRubro,
   normalizeRubro,
+  inferStockKindFromRubro,
   productMatchesStockModule,
+  stockKindForModule,
   uniqRubrosFromProducts,
+  type StockModuleKey,
 } from "@/lib/stock-rubros-shared";
+
+export { isProductQuotable } from "@/lib/stock-product-kind-shared";
 
 export async function listDistinctProductRubros(): Promise<string[]> {
   const products = await getActiveProductsBase();
@@ -23,31 +29,17 @@ export async function listDistinctProductRubros(): Promise<string[]> {
 }
 
 export function productWhereForModule(
-  module: "MERMAS" | "CONSUMABLES",
+  module: StockModuleKey,
 ): Prisma.ProductWhereInput {
-  if (module === "CONSUMABLES") {
+  const kind = stockKindForModule(module);
+  if (kind === "DESPERDICIO") {
     return {
-      active: true,
-      OR: CONSUMABLE_RUBROS.map((rubro) => ({
-        rubro: { equals: rubro, mode: "insensitive" as const },
-      })),
+      available: true,
+      OR: [{ stockKind: "DESPERDICIO" }, { stockKind: null }],
     };
   }
   return {
-    active: true,
-    AND: [
-      {
-        OR: [
-          { rubro: null },
-          {
-            NOT: {
-              OR: CONSUMABLE_RUBROS.map((rubro) => ({
-                rubro: { equals: rubro, mode: "insensitive" as const },
-              })),
-            },
-          },
-        ],
-      },
-    ],
+    available: true,
+    stockKind: kind,
   };
 }

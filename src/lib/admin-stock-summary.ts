@@ -118,7 +118,7 @@ function mapDailyRows(
   }));
 }
 
-async function loadElaboradosSummary(
+async function loadDesperdiciosSummary(
   fromDate: Date,
   toDate: Date,
   customerIds: string[],
@@ -140,7 +140,7 @@ async function loadElaboradosSummary(
   const [entryCountRow, productRows, dailyRows] = await Promise.all([
     db.$queryRaw<{ count: bigint }[]>`
       SELECT COUNT(*)::bigint AS count
-      FROM "MermaEntry" e
+      FROM "DesperdicioEntry" e
       WHERE ${entryWhere}
     `,
     db.$queryRaw<ProductAggRow[]>`
@@ -153,8 +153,8 @@ async function loadElaboradosSummary(
         MAX(p."basePrice")::float AS "basePrice",
         SUM(l.qty * p."basePrice")::float AS "totalCost",
         MAX(e."entryDate") AS "lastDate"
-      FROM "MermaLine" l
-      INNER JOIN "MermaEntry" e ON e.id = l."entryId"
+      FROM "DesperdicioLine" l
+      INNER JOIN "DesperdicioEntry" e ON e.id = l."entryId"
       INNER JOIN "Product" p ON p.id = l."productId"
       WHERE ${entryWhere}
       GROUP BY l."productId", l.unit
@@ -162,8 +162,8 @@ async function loadElaboradosSummary(
     `,
     db.$queryRaw<{ entryDate: Date; totalCost: number }[]>`
       SELECT e."entryDate", SUM(l.qty * p."basePrice")::float AS "totalCost"
-      FROM "MermaEntry" e
-      INNER JOIN "MermaLine" l ON l."entryId" = e.id
+      FROM "DesperdicioEntry" e
+      INNER JOIN "DesperdicioLine" l ON l."entryId" = e.id
       INNER JOIN "Product" p ON p.id = l."productId"
       WHERE ${entryWhere}
       GROUP BY e."entryDate"
@@ -244,6 +244,69 @@ async function loadConsumiblesSummary(
   });
 }
 
+async function loadActivosSummary(
+  fromDate: Date,
+  toDate: Date,
+  customerIds: string[],
+  from: string,
+  to: string,
+  dayCount: number,
+): Promise<Omit<StockSummaryPayload, "tab" | "from" | "to">> {
+  const customerFilter =
+    customerIds.length === 1
+      ? Prisma.sql`a."customerId" = ${customerIds[0]}`
+      : Prisma.sql`a."customerId" IN (${Prisma.join(customerIds)})`;
+
+  const entryWhere = Prisma.sql`
+    a."entryDate" >= ${fromDate}
+    AND a."entryDate" <= ${toDate}
+    AND ${customerFilter}
+  `;
+
+  const [entryCountRow, productRows, dailyRows] = await Promise.all([
+    db.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(*)::bigint AS count
+      FROM "LocalAssetCount" a
+      WHERE ${entryWhere}
+    `,
+    db.$queryRaw<ProductAggRow[]>`
+      SELECT
+        l."productId",
+        l.unit,
+        MAX(p.code) AS code,
+        MAX(p.name) AS name,
+        SUM(l.qty)::float AS "totalQty",
+        MAX(p."basePrice")::float AS "basePrice",
+        SUM(l.qty * p."basePrice")::float AS "totalCost",
+        MAX(a."entryDate") AS "lastDate"
+      FROM "LocalAssetCountLine" l
+      INNER JOIN "LocalAssetCount" a ON a.id = l."countId"
+      INNER JOIN "Product" p ON p.id = l."productId"
+      WHERE ${entryWhere}
+      GROUP BY l."productId", l.unit
+      ORDER BY "totalCost" DESC
+    `,
+    db.$queryRaw<{ entryDate: Date; totalCost: number }[]>`
+      SELECT a."entryDate", SUM(l.qty * p."basePrice")::float AS "totalCost"
+      FROM "LocalAssetCount" a
+      INNER JOIN "LocalAssetCountLine" l ON l."countId" = a.id
+      INNER JOIN "Product" p ON p.id = l."productId"
+      WHERE ${entryWhere}
+      GROUP BY a."entryDate"
+      ORDER BY a."entryDate"
+    `,
+  ]);
+
+  return assembleSummaryPayload({
+    dayCount,
+    entryCount: Number(entryCountRow[0]?.count ?? 0),
+    productRows,
+    dailyRows: mapDailyRows(dailyRows),
+    from,
+    to,
+  });
+}
+
 export async function getStockSummary(input: {
   tab: StockTab;
   from: string;
@@ -256,7 +319,12 @@ export async function getStockSummary(input: {
     throw new Error("Rango de fechas inválido");
   }
 
-  const stockModule = input.tab === "consumibles" ? "CONSUMABLES" : "MERMAS";
+  const stockModule =
+    input.tab === "consumibles"
+      ? "CONSUMABLES"
+      : input.tab === "activos"
+        ? "ACTIVOS"
+        : "DESPERDICIOS";
   const customers = await moduleCustomers(stockModule);
   const resolvedCustomerId = resolveStockCustomerId(
     customers,
@@ -287,14 +355,23 @@ export async function getStockSummary(input: {
           input.to,
           dayCount,
         )
-      : await loadElaboradosSummary(
-          fromDate,
-          toDate,
-          customerIds,
-          input.from,
-          input.to,
-          dayCount,
-        );
+      : input.tab === "activos"
+        ? await loadActivosSummary(
+            fromDate,
+            toDate,
+            customerIds,
+            input.from,
+            input.to,
+            dayCount,
+          )
+        : await loadDesperdiciosSummary(
+            fromDate,
+            toDate,
+            customerIds,
+            input.from,
+            input.to,
+            dayCount,
+          );
 
   return {
     tab: input.tab,

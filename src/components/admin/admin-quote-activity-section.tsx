@@ -3,11 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AdminQuoteActivityChart } from "@/components/admin/admin-quote-activity-chart";
 import {
+  SolapasTabButton,
+  SolapasTabContent,
+  SolapasTabList,
+} from "@/components/ui/solapas-tabs";
+import {
   QUOTE_ACTIVITY_PERIOD_LABELS,
   type QuoteActivityPeriod,
   type QuoteActivityPoint,
 } from "@/lib/admin-quote-activity-shared";
-import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 const PERIODS: QuoteActivityPeriod[] = ["week", "month", "year"];
@@ -98,44 +102,38 @@ export function AdminQuoteActivitySection({
           <h2 className="font-medium text-neutral-900">Actividad de cotizaciones</h2>
           <p className="mt-0.5 text-sm text-neutral-500">{labels.description}</p>
         </div>
-        <div
-          className="flex gap-1 rounded-lg border border-neutral-200 bg-neutral-50 p-1"
-          role="tablist"
+        <SolapasTabList
+          activeKey={activity.period}
           aria-label="Período del gráfico"
+          size="sm"
         >
           {PERIODS.map((value) => (
-            <button
+            <SolapasTabButton
               key={value}
-              type="button"
-              role="tab"
-              aria-selected={activity.period === value}
+              selected={activity.period === value}
               disabled={pendingPeriod === value}
               onClick={() => selectPeriod(value)}
-              className={cn(
-                "rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors sm:px-3 sm:text-sm",
-                FOCUS_BRAND_OUTLINE,
-                activity.period === value
-                  ? "bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
-                  : "text-neutral-600 hover:bg-white/70 hover:text-neutral-900",
-                pendingPeriod === value && "opacity-60",
-              )}
+              size="sm"
+              className={cn(pendingPeriod === value && "opacity-60")}
             >
               {QUOTE_ACTIVITY_PERIOD_LABELS[value].short}
-            </button>
+            </SolapasTabButton>
           ))}
-        </div>
+        </SolapasTabList>
       </div>
 
-      <div className={cn(pendingPeriod && "opacity-70 transition-opacity")}>
-        <AdminQuoteActivityChart
-          period={activity.period}
-          data={activity.points}
-          totalQuotes={activity.totalQuotes}
-          totalRevenue={activity.totalRevenue}
-          summaryLabel={labels.summary}
-          emptyLabel={labels.empty}
-        />
-      </div>
+      <SolapasTabContent tabKey={activity.period}>
+        <div className={cn(pendingPeriod && "opacity-70 transition-opacity")}>
+          <AdminQuoteActivityChart
+            period={activity.period}
+            data={activity.points}
+            totalQuotes={activity.totalQuotes}
+            totalRevenue={activity.totalRevenue}
+            summaryLabel={labels.summary}
+            emptyLabel={labels.empty}
+          />
+        </div>
+      </SolapasTabContent>
     </section>
   );
 }

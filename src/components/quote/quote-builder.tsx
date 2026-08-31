@@ -48,12 +48,9 @@ import {
 /** Keep in sync with `.quote-panel-enter` duration in globals.css */
 const QUOTE_PANEL_ENTER_MS = 200;
 
-function ymdToPickerValue(ymd: string): string {
-  return `${ymd}T00:00`;
-}
-
-function pickerValueToYmd(value: string): string {
-  return value.slice(0, 10);
+function deliveryDateToPickerValue(ymd: string): string {
+  const trimmed = ymd.trim();
+  return trimmed ? `${trimmed}T00:00` : "";
 }
 
 type QuoteBuilderProps = {
@@ -480,10 +477,12 @@ export function QuoteBuilder({
         <Label htmlFor="quote-delivery-date">Fecha de entrega</Label>
         <DatetimeLocalPicker
           id="quote-delivery-date"
-          value={ymdToPickerValue(deliveryDate)}
+          showPresets={false}
+          allowReset
+          resetValue={deliveryDateToPickerValue(minDeliveryDate)}
+          value={deliveryDateToPickerValue(deliveryDate)}
           onChange={(next) => {
-            const ymd = pickerValueToYmd(next);
-            if (ymd) setDeliveryDate(ymd);
+            setDeliveryDate(next.trim() ? next.trim().slice(0, 10) : minDeliveryDate);
           }}
           className="max-w-xs"
           aria-label="Fecha de entrega"

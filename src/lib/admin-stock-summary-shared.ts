@@ -1,8 +1,11 @@
-import { addCalendarDaysYmd, parseDateOnlyYmd } from "@/lib/delivery-date";
-import { ARGENTINA_TZ } from "@/lib/argentina-time";
+import { parseDateOnlyYmd } from "@/lib/delivery-date";
+import {
+  FILTER_DEFAULT_RANGE_DAYS,
+  defaultFilterDateRange,
+} from "@/lib/argentina-time";
 import type { StockTab } from "@/lib/admin-stock-data";
 
-export const STOCK_DEFAULT_RANGE_DAYS = 30;
+export const STOCK_DEFAULT_RANGE_DAYS = FILTER_DEFAULT_RANGE_DAYS;
 
 export type StockSummaryProductRow = {
   productId: string;
@@ -35,19 +38,11 @@ export type StockSummaryPayload = {
   daily: StockSummaryDailyPoint[];
 };
 
-export function argentinaTodayYmd(now = new Date()): string {
-  return now
-    .toLocaleDateString("en-CA", { timeZone: ARGENTINA_TZ })
-    .slice(0, 10);
-}
-
 export function defaultStockDateRange(now = new Date()): {
   from: string;
   to: string;
 } {
-  const to = argentinaTodayYmd(now);
-  const from = addCalendarDaysYmd(to, -(STOCK_DEFAULT_RANGE_DAYS - 1));
-  return { from, to };
+  return defaultFilterDateRange(now);
 }
 
 export function resolveStockDateRange(fromParam?: string, toParam?: string): {
@@ -81,6 +76,7 @@ export function formatStockDayLabel(ymd: string): string {
 }
 
 export function parseStockSummaryTab(tab?: string | null): StockTab | null {
-  if (tab === "elaborados" || tab === "consumibles") return tab;
+  if (tab === "desperdicios" || tab === "elaborados") return "desperdicios";
+  if (tab === "consumibles" || tab === "activos") return tab;
   return null;
 }

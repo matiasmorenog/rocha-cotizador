@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useRef, useState } from "react";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 import { useRouter } from "next/navigation";
-import { Check, Pencil, Plus, X } from "lucide-react";
+import { Check, PackagePlus, Pencil, X } from "lucide-react";
 import {
   AdminTableActions,
   AdminTableIconAction,
@@ -20,6 +20,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  ENTITY_ENABLED_LABELS,
+} from "@/lib/entity-status-labels";
+import {
   AR_PRICE_FORMAT,
   ArNumberInput,
 } from "@/components/ui/ar-number-input";
@@ -28,6 +31,18 @@ import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { cn, formatArInput, formatPrice, parseArNumber } from "@/lib/utils";
 import { notifyCatalogStale } from "@/lib/client-catalog-cache";
+import { dispatchAdminInAppToast } from "@/lib/push-sw-client";
+import {
+  PRODUCT_STOCK_KIND_LABELS,
+  PRODUCT_STOCK_KIND_OPTIONS,
+  resolveProductStockKind,
+} from "@/lib/stock-product-kind-labels";
+import type { ProductStockKindValue } from "@/lib/stock-product-kind-shared";
+import {
+  normalizeAllowsUnitOrder,
+  productSupportsUnitOrKgOrder,
+} from "@/lib/stock-product-kind-shared";
+import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { filterFoldedSearch } from "@/lib/search-fold";
 import {
   INCREMENTAL_REVEAL_INITIAL,
@@ -48,7 +63,8 @@ export type ProductTableRow = {
   name: string;
   rubro: string | null;
   basePrice: number;
-  active: boolean;
+  available: boolean;
+  stockKind: "DESPERDICIO" | "CONSUMABLE" | "LOCAL_ASSET" | null;
   allowsUnitOrder: boolean;
   /** priceListId → unitPrice */
   listPrices: Record<string, number>;
@@ -101,8 +117,17 @@ function ProductEditRow({
     }
     return init;
   });
-  const [active, setActive] = useState(product.active);
-  const [allowsUnitOrder, setAllowsUnitOrder] = useState(product.allowsUnitOrder);
+  const [available, setAvailable] = useState(product.available);
+  const [stockKind, setStockKind] = useState<ProductStockKindValue>(() =>
+    resolveProductStockKind(product.stockKind),
+  );
+  const [allowsUnitOrder, setAllowsUnitOrder] = useState(
+    () =>
+      normalizeAllowsUnitOrder(
+        resolveProductStockKind(product.stockKind),
+        product.allowsUnitOrder,
+      ),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -137,29 +162,59 @@ function ProductEditRow({
       return;
     }
 
-    const res = await fetch("/api/admin/products", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: product.id,
-        code: product.code,
-        name,
-        rubro,
-        basePrice: base,
-        active,
-        allowsUnitOrder,
-        listPrices: listPricePayload,
-      }),
-    });
-    setLoading(false);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setError(data.error ?? "Error al guardar");
-      return;
+    try {
+      const res = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: product.id,
+          code: product.code,
+          name,
+          rubro,
+          basePrice: base,
+          available,
+          stockKind,
+          allowsUnitOrder: productSupportsUnitOrKgOrder(stockKind)
+            ? allowsUnitOrder
+            : false,
+          listPrices: listPricePayload,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail =
+          typeof data.error === "string" && data.error.trim()
+            ? data.error
+            : `No se pudo guardar el producto (HTTP ${res.status}).`;
+        setError(detail);
+        dispatchAdminInAppToast({
+          title: "Error al guardar producto",
+          body: detail,
+          tone: "error",
+        });
+        return;
+      }
+
+      const savedLabel = `${name.trim()} (${product.code})`;
+      dispatchAdminInAppToast({
+        title: "Producto actualizado",
+        body: savedLabel,
+        tone: "success",
+      });
+      notifyCatalogStale();
+      onCancel();
+      router.refresh();
+    } catch {
+      const detail = "No se pudo conectar con el servidor. Revisá tu conexión.";
+      setError(detail);
+      dispatchAdminInAppToast({
+        title: "Error al guardar producto",
+        body: detail,
+        tone: "error",
+      });
+    } finally {
+      setLoading(false);
     }
-    notifyCatalogStale();
-    onCancel();
-    router.refresh();
   }
 
   return (
@@ -224,33 +279,66 @@ function ProductEditRow({
         </td>
       ))}
       <td className="px-3 py-2">
+        <select
+          form={formId}
+          value={stockKind}
+          onChange={(e) => {
+            const nextKind = e.target.value as ProductStockKindValue;
+            setStockKind(nextKind);
+            if (!productSupportsUnitOrKgOrder(nextKind)) {
+              setAllowsUnitOrder(false);
+            }
+          }}
+          disabled={loading}
+          aria-label="Tipo de stock"
+          className={cn(
+            "h-8 max-w-[9rem] rounded-md border border-neutral-300 bg-white px-2 text-xs",
+            FOCUS_BRAND_BORDER,
+          )}
+        >
+          {PRODUCT_STOCK_KIND_OPTIONS.map((kind) => (
+            <option key={kind} value={kind}>
+              {PRODUCT_STOCK_KIND_LABELS[kind]}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="px-3 py-2">
         <label
           className="inline-flex cursor-pointer items-center gap-2"
-          title={active ? "Activo" : "Inactivo"}
+          title={
+            available
+              ? ENTITY_ENABLED_LABELS.enabled
+              : ENTITY_ENABLED_LABELS.disabled
+          }
         >
           <Switch
             form={formId}
-            checked={active}
-            onChange={(e) => setActive(e.target.checked)}
+            checked={available}
+            onChange={(e) => setAvailable(e.target.checked)}
             disabled={loading}
-            aria-label="Activo"
+            aria-label={ENTITY_ENABLED_LABELS.enabled}
           />
         </label>
         {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
       </td>
       <td className="px-3 py-2">
-        <label
-          className="inline-flex cursor-pointer items-center gap-2"
-          title={productOrderModeDescription(allowsUnitOrder)}
-        >
-          <Switch
-            form={formId}
-            checked={allowsUnitOrder}
-            onChange={(e) => setAllowsUnitOrder(e.target.checked)}
-            disabled={loading}
-            aria-label="Permite pedido por unidades"
-          />
-        </label>
+        {productSupportsUnitOrKgOrder(stockKind) ? (
+          <label
+            className="inline-flex cursor-pointer items-center gap-2"
+            title={productOrderModeDescription(allowsUnitOrder)}
+          >
+            <Switch
+              form={formId}
+              checked={allowsUnitOrder}
+              onChange={(e) => setAllowsUnitOrder(e.target.checked)}
+              disabled={loading}
+              aria-label="Permite pedido por unidades"
+            />
+          </label>
+        ) : (
+          <span className="text-xs text-neutral-400">—</span>
+        )}
       </td>
       <td className="px-3 py-2 text-right">
         <AdminTableActions className="justify-end">
@@ -307,14 +395,29 @@ function ProductViewRow({
         );
       })}
       <td className="px-3 py-2">
-        <Badge variant={product.active ? "success" : "danger"}>
-          {product.active ? "Activo" : "Inactivo"}
+        <Badge variant="default">
+          {PRODUCT_STOCK_KIND_LABELS[resolveProductStockKind(product.stockKind)]}
         </Badge>
       </td>
       <td className="px-3 py-2">
-        <Badge variant={product.allowsUnitOrder ? "success" : "default"}>
-          {productOrderModeBadge(product.allowsUnitOrder)}
+        <Badge variant={product.available ? "success" : "danger"}>
+          {product.available
+            ? ENTITY_ENABLED_LABELS.enabled
+            : ENTITY_ENABLED_LABELS.disabled}
         </Badge>
+      </td>
+      <td className="px-3 py-2">
+        {(() => {
+          const effectiveAllows = normalizeAllowsUnitOrder(
+            resolveProductStockKind(product.stockKind),
+            product.allowsUnitOrder,
+          );
+          return (
+            <Badge variant={effectiveAllows ? "success" : "default"}>
+              {productOrderModeBadge(effectiveAllows)}
+            </Badge>
+          );
+        })()}
       </td>
       <td className="px-3 py-2 text-right">
         <AdminTableActions className="justify-end">
@@ -377,7 +480,7 @@ export function ProductAdminTable({
   useSmoothColumnWidths(tableRef, `${query}|${visible.length}`);
   const { rowProps } = useSelectedRow(visible.map((p) => p.id));
 
-  const colSpan = 6 + activeLists.length;
+  const colSpan = 7 + activeLists.length;
   const {
     present: formPresent,
     exiting: formExiting,
@@ -386,25 +489,6 @@ export function ProductAdminTable({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar código, nombre o tipo…"
-          aria-label="Buscar productos"
-          className="min-w-0 flex-1"
-        />
-        {!creating ? (
-          <Button
-            type="button"
-            className="w-full shrink-0 sm:w-auto"
-            onClick={() => setCreating(true)}
-          >
-            <Plus className="mr-1.5 h-4 w-4" aria-hidden />
-            Nuevo producto
-          </Button>
-        ) : null}
-      </div>
       <div
         className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
         style={{
@@ -427,6 +511,25 @@ export function ProductAdminTable({
           ) : null}
         </div>
       </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar código, nombre o tipo…"
+          aria-label="Buscar productos"
+          className="min-w-0 flex-1"
+        />
+        {!creating ? (
+          <Button
+            type="button"
+            className="w-full shrink-0 sm:w-auto"
+            onClick={() => setCreating(true)}
+          >
+            <PackagePlus className="mr-1.5 h-4 w-4" aria-hidden />
+            Nuevo producto
+          </Button>
+        ) : null}
+      </div>
       <div ref={tableHeightLockRef}>
         <DataTableScroll className="data-table-rows-2l">
           <table ref={tableRef} className="w-full min-w-[36rem] text-sm">
@@ -441,7 +544,8 @@ export function ProductAdminTable({
                     {l.name}
                   </th>
                 ))}
-                <th className="px-3 py-2">Estado</th>
+                <th className="px-3 py-2">Stock</th>
+                <th className="px-3 py-2">Habilitado</th>
                 <th className="px-3 py-2">Medida</th>
                 <th className="px-3 py-2" />
               </tr>

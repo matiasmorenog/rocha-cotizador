@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { AdminClientSafe } from "@/components/admin/admin-client-safe";
 import { RoutePendingShell } from "@/components/route-pending-shell";
+import { RouteViewEnter } from "@/components/route-view-enter";
 import { Button } from "@/components/ui/button";
 import { forceReloadApp } from "@/lib/force-reload-app";
 
@@ -44,7 +45,7 @@ export function AdminPageSafe({ children }: { children: ReactNode }) {
       fallback={<AdminPageFallback />}
     >
       <RoutePendingShell variant="admin" coverGutters={false}>
-        {children}
+        <RouteViewEnter>{children}</RouteViewEnter>
       </RoutePendingShell>
     </AdminClientSafe>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
+import { SolapasTabButton, SolapasTabList } from "@/components/ui/solapas-tabs";
 import { Spinner } from "@/components/ui/spinner";
 import {
   ensureFreshServiceWorker,
@@ -38,6 +39,13 @@ const OS_GUIDE_LABEL: Record<OsGuide, string> = {
   macos: "Cómo permitir notificaciones en macOS",
   android: "Cómo permitir notificaciones en Android",
   ios: "Cómo permitir notificaciones en iOS",
+};
+
+const OS_TAB_LABEL: Record<OsGuide, string> = {
+  windows: "Windows",
+  macos: "macOS",
+  android: "Android",
+  ios: "iOS",
 };
 
 function urlBase64ToUint8Array(base64String: string): BufferSource {
@@ -700,33 +708,27 @@ export function PushNotificationsSettings() {
           ) : null}
         </p>
 
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-xs font-medium uppercase tracking-wide text-neutral-500">
+        <div className="mt-3 flex flex-wrap items-end gap-2">
+          <span className="pb-1.5 text-xs font-medium uppercase tracking-wide text-neutral-500">
             Instrucciones OS:
           </span>
-          <div className="inline-flex flex-wrap rounded-md border border-neutral-300 bg-white p-0.5">
+          <SolapasTabList
+            activeKey={osGuide}
+            aria-label="Sistema operativo"
+            size="sm"
+            className="flex-wrap"
+          >
             {osTabs.map((tab) => (
-              <button
+              <SolapasTabButton
                 key={tab}
-                type="button"
-                className={`rounded px-2.5 py-1 text-xs font-medium ${
-                  osGuide === tab
-                    ? "bg-neutral-900 text-white"
-                    : "text-neutral-600 hover:bg-neutral-100"
-                }`}
+                selected={osGuide === tab}
+                size="sm"
                 onClick={() => setOsGuide(tab)}
-                aria-pressed={osGuide === tab}
               >
-                {tab === "windows"
-                  ? "Windows"
-                  : tab === "macos"
-                    ? "macOS"
-                    : tab === "android"
-                      ? "Android"
-                      : "iOS"}
-              </button>
+                {OS_TAB_LABEL[tab]}
+              </SolapasTabButton>
             ))}
-          </div>
+          </SolapasTabList>
         </div>
 
         <p className="mt-2 font-medium text-neutral-900">

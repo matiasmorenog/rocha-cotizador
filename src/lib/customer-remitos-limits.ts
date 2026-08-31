@@ -1,7 +1,8 @@
 import {
-  parseArgentinaDateTime,
-  toArgentinaDatetimeLocal,
+  parseArgentinaDateOnlyEndExclusive,
+  parseArgentinaDateOnlyStart,
 } from "@/lib/argentina-time";
+import { addCalendarDaysYmd } from "@/lib/delivery-date";
 
 /** Default rows on /remitos before the customer applies filters or search. */
 export const CUSTOMER_REMITOS_DEFAULT_LIMIT = 5;
@@ -18,13 +19,19 @@ const MAX_RANGE_MS =
 export const CUSTOMER_REMITOS_RANGE_TOO_LONG_ERROR = `El rango no puede superar ${CUSTOMER_REMITOS_MAX_RANGE_DAYS} días. Elegí un período más corto.`;
 
 export function customerRemitosDateRangeError(
-  from: Date,
-  to: Date,
+  fromYmd: string,
+  toYmd: string,
 ): string | null {
-  if (from.getTime() >= to.getTime()) {
-    return "El rango es inválido: 'Desde' debe ser anterior a 'Hasta'";
+  const from = parseArgentinaDateOnlyStart(fromYmd);
+  const toStart = parseArgentinaDateOnlyStart(toYmd);
+  const toExclusive = parseArgentinaDateOnlyEndExclusive(toYmd);
+  if (!from || !toStart || !toExclusive) {
+    return "Fechas inválidas";
   }
-  if (to.getTime() - from.getTime() > MAX_RANGE_MS) {
+  if (from.getTime() > toStart.getTime()) {
+    return "El rango es inválido: 'Desde' debe ser anterior o igual a 'Hasta'";
+  }
+  if (toExclusive.getTime() - from.getTime() > MAX_RANGE_MS) {
     return CUSTOMER_REMITOS_RANGE_TOO_LONG_ERROR;
   }
   return null;
@@ -32,12 +39,12 @@ export function customerRemitosDateRangeError(
 
 /** If Hasta is more than max days after Desde, snap Hasta to Desde + max. */
 export function clampCustomerRemitosHasta(
-  fromLocal: string,
-  toLocal: string,
+  fromYmd: string,
+  toYmd: string,
 ): string {
-  const from = parseArgentinaDateTime(fromLocal);
-  const to = parseArgentinaDateTime(toLocal);
-  if (!from || !to) return toLocal;
-  if (to.getTime() - from.getTime() <= MAX_RANGE_MS) return toLocal;
-  return toArgentinaDatetimeLocal(new Date(from.getTime() + MAX_RANGE_MS));
+  const from = parseArgentinaDateOnlyStart(fromYmd);
+  const toExclusive = parseArgentinaDateOnlyEndExclusive(toYmd);
+  if (!from || !toExclusive) return toYmd;
+  if (toExclusive.getTime() - from.getTime() <= MAX_RANGE_MS) return toYmd;
+  return addCalendarDaysYmd(fromYmd, CUSTOMER_REMITOS_MAX_RANGE_DAYS);
 }

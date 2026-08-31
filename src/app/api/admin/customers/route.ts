@@ -15,8 +15,9 @@ import { padCustomerCode, pinFromCustomerCode } from "@/lib/utils";
 import { emptyToNullNameNote } from "@/lib/customer-name-note";
 
 const moduleFlagsSchema = z.object({
-  MERMAS: z.boolean(),
+  DESPERDICIOS: z.boolean(),
   CONSUMABLES: z.boolean(),
+  ACTIVOS: z.boolean(),
 });
 
 export async function GET(req: NextRequest) {
@@ -85,7 +86,12 @@ export async function POST(req: NextRequest) {
 
   const parsed = upsertSchema.safeParse(await req.json());
   if (!parsed.success) {
-    return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+    const firstIssue = parsed.error.issues[0];
+    const detail = firstIssue?.message ?? "Revisá los campos del formulario.";
+    return NextResponse.json(
+      { error: `Datos inválidos: ${detail}` },
+      { status: 400 },
+    );
   }
 
   const code = padCustomerCode(parsed.data.code);
@@ -126,14 +132,52 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (parsed.data.id) {
-    const customer = await db.customer.update({
-      where: { id: parsed.data.id },
+  try {
+    if (parsed.data.id) {
+      const customer = await db.customer.update({
+        where: { id: parsed.data.id },
+        data: {
+          code,
+          name: parsed.data.name,
+          nameNote,
+          ...(priceListId !== undefined ? { priceListId } : {}),
+          address,
+          phone,
+          email,
+          notes,
+          paymentTerms,
+          deliveryHours,
+          active: parsed.data.active ?? true,
+          ...(passwordHash
+            ? { passwordHash, mustChangePassword: true }
+            : {}),
+        },
+      });
+      const moduleFlags: CustomerModuleFlags =
+        parsed.data.modules ?? DEFAULT_CUSTOMER_MODULE_FLAGS;
+      await syncCustomerModuleFlags(customer.id, moduleFlags);
+      invalidateAfterCustomerMutation();
+      return NextResponse.json({ customer, pin: pin ?? null });
+    }
+
+    if (!passwordHash || !pin) {
+      pin = pinFromCustomerCode(code);
+      passwordHash = await bcrypt.hash(pin, 10);
+    }
+
+    if (priceListId === undefined) {
+      const base = await getBasePriceList();
+      priceListId = base?.id ?? null;
+    }
+
+    const customer = await db.customer.create({
       data: {
         code,
         name: parsed.data.name,
         nameNote,
-        ...(priceListId !== undefined ? { priceListId } : {}),
+        passwordHash,
+        mustChangePassword: true,
+        priceListId: priceListId ?? null,
         address,
         phone,
         email,
@@ -141,50 +185,19 @@ export async function POST(req: NextRequest) {
         paymentTerms,
         deliveryHours,
         active: parsed.data.active ?? true,
-        ...(passwordHash
-          ? { passwordHash, mustChangePassword: true }
-          : {}),
       },
     });
+
     const moduleFlags: CustomerModuleFlags =
       parsed.data.modules ?? DEFAULT_CUSTOMER_MODULE_FLAGS;
     await syncCustomerModuleFlags(customer.id, moduleFlags);
+
     invalidateAfterCustomerMutation();
-    return NextResponse.json({ customer, pin: pin ?? null });
+    return NextResponse.json({ customer, pin });
+  } catch (err) {
+    console.error("[admin/customers] POST failed", err);
+    const detail =
+      err instanceof Error ? err.message : "Error inesperado al guardar.";
+    return NextResponse.json({ error: detail }, { status: 500 });
   }
-
-  if (!passwordHash || !pin) {
-    pin = pinFromCustomerCode(code);
-    passwordHash = await bcrypt.hash(pin, 10);
-  }
-
-  if (priceListId === undefined) {
-    const base = await getBasePriceList();
-    priceListId = base?.id ?? null;
-  }
-
-  const customer = await db.customer.create({
-    data: {
-      code,
-      name: parsed.data.name,
-      nameNote,
-      passwordHash,
-      mustChangePassword: true,
-      priceListId: priceListId ?? null,
-      address,
-      phone,
-      email,
-      notes,
-      paymentTerms,
-      deliveryHours,
-      active: parsed.data.active ?? true,
-    },
-  });
-
-  const moduleFlags: CustomerModuleFlags =
-    parsed.data.modules ?? DEFAULT_CUSTOMER_MODULE_FLAGS;
-  await syncCustomerModuleFlags(customer.id, moduleFlags);
-
-  invalidateAfterCustomerMutation();
-  return NextResponse.json({ customer, pin });
 }

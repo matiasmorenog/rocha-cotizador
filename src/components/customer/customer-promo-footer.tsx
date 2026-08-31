@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { developerPortfolioWhatsAppHref } from "@/lib/developer-portfolio-contact";
 import {
   dismissCustomerPromoFooter,
@@ -13,31 +13,33 @@ import {
 import { FOCUS_BRAND_BORDER, FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
+function promoFooterDismissedSnapshot(): boolean {
+  return isCustomerPromoFooterDismissed();
+}
+
+/** SSR + hydration: show footer; session dismiss applies after hydrate. */
+function promoFooterDismissedServerSnapshot(): boolean {
+  return false;
+}
+
 export function CustomerPromoFooter() {
-  const [dismissed, setDismissed] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    // Mounted gate: defer sessionStorage read until after hydration (null → known).
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional client-only gate
-    setDismissed(isCustomerPromoFooterDismissed());
-
-    return subscribeCustomerPromoFooter(() => {
-      setDismissed(isCustomerPromoFooterDismissed());
-    });
-  }, []);
+  const dismissed = useSyncExternalStore(
+    subscribeCustomerPromoFooter,
+    promoFooterDismissedSnapshot,
+    promoFooterDismissedServerSnapshot,
+  );
 
   function handleDismiss() {
     dismissCustomerPromoFooter();
     notifyCustomerPromoFooterChange();
-    setDismissed(true);
   }
 
-  if (dismissed !== false) {
+  if (dismissed) {
     return null;
   }
 
   return (
-    <footer className="mt-10 print:hidden" aria-label="Desarrollo de software">
+    <footer className="print:hidden" aria-label="Desarrollo de software">
       <div className="relative mx-auto max-w-xl rounded-xl border border-[var(--brand-primary)]/25 bg-[var(--brand-primary-soft)]/90 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
         <button
           type="button"

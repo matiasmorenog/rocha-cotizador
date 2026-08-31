@@ -3,7 +3,7 @@
  * then seed deterministic fictitious customers for local/preview work.
  *
  * Preserves: products, price lists, admin users, BusinessSettings, SubscriptionPayment.
- * Deletes: customers, quotes/remitos, merma/consumables, admin inbox, module access.
+ * Deletes: customers, quotes/remitos, desperdicios/consumables, admin inbox, module access.
  * Resets: QuoteSequence → 0 (next remito R-000001).
  *
  * Safety (fail closed — never production / Neon branch main):
@@ -50,22 +50,22 @@ type FakeCustomerSpec = {
   active?: boolean;
 };
 
-/** Full set — covers MERMAS_SEED_CODES + CONSUMABLES_SEED_CODES for stock dev. */
+/** Full set — covers DESPERDICIOS_SEED_CODES + CONSUMABLES_SEED_CODES for stock dev. */
 const FULL_FAKE_CUSTOMERS: FakeCustomerSpec[] = [
   { code: "001", name: "Panadería Demo Norte", priceListExcelKey: "5", modules: [] },
   { code: "002", name: "Mayorista Ficticia Sur", priceListExcelKey: "6", modules: [] },
   { code: "003", name: "Distribuidor Test Oeste", priceListExcelKey: "7", modules: [] },
-  { code: "007", name: "Elaborados Demo SA", priceListExcelKey: "5", modules: ["MERMAS"] },
+  { code: "007", name: "Desperdicios Demo SA", priceListExcelKey: "5", modules: ["DESPERDICIOS"] },
   { code: "047", name: "Consumibles Lab 047", priceListExcelKey: "6", modules: ["CONSUMABLES"] },
   { code: "051", name: "Sucursal Ficticia A", priceListExcelKey: "5", modules: ["CONSUMABLES"] },
   { code: "052", name: "Sucursal Ficticia B", priceListExcelKey: "8", modules: ["CONSUMABLES"] },
-  { code: "077", name: "Elaborados Beta", priceListExcelKey: "7", modules: ["MERMAS"] },
-  { code: "125", name: "Mermas Lab 125", priceListExcelKey: "6", modules: ["MERMAS"] },
-  { code: "131", name: "Test Elaborados 131", priceListExcelKey: "5", modules: ["MERMAS"] },
+  { code: "077", name: "Desperdicios Beta", priceListExcelKey: "7", modules: ["DESPERDICIOS"] },
+  { code: "125", name: "Desperdicios Lab 125", priceListExcelKey: "6", modules: ["DESPERDICIOS"] },
+  { code: "131", name: "Test Desperdicios 131", priceListExcelKey: "5", modules: ["DESPERDICIOS"] },
   { code: "150", name: "Inventario Demo 150", priceListExcelKey: "9", modules: ["CONSUMABLES"] },
-  { code: "168", name: "Branch Mermas 168", priceListExcelKey: "5", modules: ["MERMAS"] },
+  { code: "168", name: "Branch Desperdicios 168", priceListExcelKey: "5", modules: ["DESPERDICIOS"] },
   { code: "172", name: "Stock Consumibles 172", priceListExcelKey: "6", modules: ["CONSUMABLES"] },
-  { code: "200", name: "Elaborados Centro", priceListExcelKey: "5", modules: ["MERMAS"] },
+  { code: "200", name: "Desperdicios Centro", priceListExcelKey: "5", modules: ["DESPERDICIOS"] },
 ];
 
 const MINIMAL_FAKE_CUSTOMERS: FakeCustomerSpec[] = FULL_FAKE_CUSTOMERS.slice(0, 3);
@@ -95,7 +95,7 @@ async function countBeforeWipe() {
     customers,
     quotes,
     quoteItems,
-    mermaEntries,
+    desperdicioEntries,
     consumableCounts,
     inbox,
     moduleAccess,
@@ -103,7 +103,7 @@ async function countBeforeWipe() {
     db.customer.count(),
     db.quote.count(),
     db.quoteItem.count(),
-    db.mermaEntry.count(),
+    db.desperdicioEntry.count(),
     db.consumableCount.count(),
     db.adminInboxItem.count(),
     db.customerModuleAccess.count(),
@@ -112,7 +112,7 @@ async function countBeforeWipe() {
     customers,
     quotes,
     quoteItems,
-    mermaEntries,
+    desperdicioEntries,
     consumableCounts,
     inbox,
     moduleAccess,
@@ -124,8 +124,8 @@ async function wipeCustomerDomain() {
     const inbox = await tx.adminInboxItem.deleteMany({});
     const quoteItems = await tx.quoteItem.deleteMany({});
     const quotes = await tx.quote.deleteMany({});
-    const mermaLines = await tx.mermaLine.deleteMany({});
-    const mermaEntries = await tx.mermaEntry.deleteMany({});
+    const desperdicioLines = await tx.desperdicioLine.deleteMany({});
+    const desperdicioEntries = await tx.desperdicioEntry.deleteMany({});
     const consumableLines = await tx.consumableCountLine.deleteMany({});
     const consumableCounts = await tx.consumableCount.deleteMany({});
     const moduleAccess = await tx.customerModuleAccess.deleteMany({});
@@ -139,8 +139,8 @@ async function wipeCustomerDomain() {
       inbox: inbox.count,
       quoteItems: quoteItems.count,
       quotes: quotes.count,
-      mermaLines: mermaLines.count,
-      mermaEntries: mermaEntries.count,
+      desperdicioLines: desperdicioLines.count,
+      desperdicioEntries: desperdicioEntries.count,
       consumableLines: consumableLines.count,
       consumableCounts: consumableCounts.count,
       moduleAccess: moduleAccess.count,
@@ -264,12 +264,12 @@ async function main() {
 
   const modules = await seedCustomerModuleAccess();
   console.log(
-    `Module flags (seed codes present): Mermas=${modules.mermas}, Consumibles=${modules.consumables}`,
+    `Module flags (seed codes present): Desperdicios=${modules.desperdicios}, Consumibles=${modules.consumables}`,
   );
 
   const stock = await seedStockSampleData();
   console.log(
-    `Stock sample: merma=${stock.mermaCustomer ?? "n/a"} (${stock.mermaLines} lines), consumibles=${stock.consumableCustomer ?? "n/a"} (${stock.consumableLines} lines)`,
+    `Stock sample: desperdicios=${stock.desperdiciosCustomer ?? "n/a"} (${stock.desperdicioLines} lines), consumibles=${stock.consumableCustomer ?? "n/a"} (${stock.consumableLines} lines)`,
   );
 
   const after = await countBeforeWipe();

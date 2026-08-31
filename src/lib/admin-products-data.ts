@@ -10,7 +10,8 @@ export type AdminProductTableRow = {
   name: string;
   rubro: string | null;
   basePrice: number;
-  active: boolean;
+  available: boolean;
+  stockKind: "DESPERDICIO" | "CONSUMABLE" | "LOCAL_ASSET" | null;
   allowsUnitOrder: boolean;
   /** priceListId → unitPrice */
   listPrices: Record<string, number>;
@@ -38,7 +39,8 @@ async function fetchAdminProductosPageDataUncached(): Promise<AdminProductosPage
         name: true,
         rubro: true,
         basePrice: true,
-        active: true,
+        available: true,
+        stockKind: true,
         allowsUnitOrder: true,
       },
     }),
@@ -66,7 +68,8 @@ async function fetchAdminProductosPageDataUncached(): Promise<AdminProductosPage
     name: p.name,
     rubro: p.rubro,
     basePrice: Number(p.basePrice),
-    active: p.active,
+    available: p.available,
+    stockKind: p.stockKind,
     allowsUnitOrder: p.allowsUnitOrder,
     listPrices: listPricesByProduct.get(p.id) ?? {},
   }));

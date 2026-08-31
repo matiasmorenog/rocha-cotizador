@@ -15,8 +15,10 @@ concurrency:
 jobs:
   lint-and-typecheck:
     name: lint-and-typecheck
-    # Draft PRs: skip (save Actions minutes). Push to development/main still runs.
-    if: github.event_name != 'pull_request' || github.event.pull_request.draft == false
+    # Draft PRs: skip. Push to main: deploy.yml owns lint (avoid duplicate).
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+      && !(github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

@@ -8,13 +8,86 @@
 
 export const ARGENTINA_TZ = "America/Argentina/Buenos_Aires";
 
+/** Live end-of-range sentinel for datetime filters (display: "Ahora"). */
+export const DATETIME_FILTER_NOW = "now";
+
 /** Order / export batch closing hour (Argentina wall time). */
 export const ORDER_CUTOFF_HOUR_AR = 16;
+
+/** Default inclusive day count for admin/customer date filters (through today AR). */
+export const FILTER_DEFAULT_RANGE_DAYS = 7;
+
+/** Inclusive day count for "Último mes" filter preset (through today AR). */
+export const FILTER_LAST_MONTH_RANGE_DAYS = 30;
 
 /** Argentina offset used when parsing naive local datetimes. */
 const ARGENTINA_OFFSET = "-03:00";
 
+const DATE_ONLY_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DATETIME_LOCAL_RE = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/;
+
+export function isDateOnlyYmd(value: string): boolean {
+  return DATE_ONLY_RE.test(value.trim());
+}
+
+export function argentinaTodayYmd(now = new Date()): string {
+  return now
+    .toLocaleDateString("en-CA", { timeZone: ARGENTINA_TZ })
+    .slice(0, 10);
+}
+
+function addDaysYmd(ymd: string, days: number): string {
+  const match = DATE_ONLY_RE.exec(ymd);
+  if (!match) throw new Error(`Invalid YMD: ${ymd}`);
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  const d = Number(match[3]);
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  return dt.toISOString().slice(0, 10);
+}
+
+/** Start of calendar day in Argentina (00:00 wall). */
+export function parseArgentinaDateOnlyStart(ymd: string): Date | null {
+  const trimmed = ymd.trim();
+  const match = DATE_ONLY_RE.exec(trimmed);
+  if (!match) return null;
+  const iso = `${match[1]}-${match[2]}-${match[3]}T00:00:00${ARGENTINA_OFFSET}`;
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** Exclusive upper bound for half-open `[from, to)` queries on a calendar day. */
+export function parseArgentinaDateOnlyEndExclusive(ymd: string): Date | null {
+  const start = parseArgentinaDateOnlyStart(ymd);
+  if (!start) return null;
+  return new Date(start.getTime() + 24 * 60 * 60 * 1000);
+}
+
+export function filterDateRange(
+  inclusiveDays: number,
+  now = new Date(),
+): {
+  from: string;
+  to: string;
+} {
+  const to = argentinaTodayYmd(now);
+  const from = addDaysYmd(to, -(inclusiveDays - 1));
+  return { from, to };
+}
+
+export function defaultFilterDateRange(now = new Date()): {
+  from: string;
+  to: string;
+} {
+  return filterDateRange(FILTER_DEFAULT_RANGE_DAYS, now);
+}
+
+export function lastMonthFilterDateRange(now = new Date()): {
+  from: string;
+  to: string;
+} {
+  return filterDateRange(FILTER_LAST_MONTH_RANGE_DAYS, now);
+}
 
 /**
  * Parse `YYYY-MM-DDTHH:mm` (or with seconds) as America/Argentina/Buenos_Aires
@@ -60,9 +133,13 @@ export function formatArgentinaDateTime(date: Date): string {
   return date.toLocaleString("es-AR", { timeZone: ARGENTINA_TZ });
 }
 
+export function isDatetimeFilterNow(value: string | undefined | null): boolean {
+  return value?.trim().toLowerCase() === DATETIME_FILTER_NOW;
+}
+
 /**
- * Default quotes list/export window: yesterday 16:00 → now (Argentina).
- * Half-open interval: [from, to). Includes post-cutoff quotes when now > 16:00.
+ * Default quotes list/export window: last {@link FILTER_DEFAULT_RANGE_DAYS} calendar
+ * days through today (Argentina), date-only. Half-open interval: [from, to).
  */
 export function defaultQuotesExportRange(now = new Date()): {
   from: Date;
@@ -70,17 +147,10 @@ export function defaultQuotesExportRange(now = new Date()): {
   fromLocal: string;
   toLocal: string;
 } {
-  const localNow = toArgentinaDatetimeLocal(now);
-  const [datePart] = localNow.split("T");
-  const todayCutoffLocal = `${datePart}T${String(ORDER_CUTOFF_HOUR_AR).padStart(2, "0")}:00`;
-  const todayCutoff = parseArgentinaDateTime(todayCutoffLocal)!;
-
-  // Yesterday same 16:00 (Argentina has no DST — 24h subtract is safe)
-  const from = new Date(todayCutoff.getTime() - 24 * 60 * 60 * 1000);
-  const fromLocal = toArgentinaDatetimeLocal(from);
-  const toLocal = localNow;
-
-  return { from, to: now, fromLocal, toLocal };
+  const { from: fromYmd, to: toYmd } = defaultFilterDateRange(now);
+  const from = parseArgentinaDateOnlyStart(fromYmd)!;
+  const to = parseArgentinaDateOnlyEndExclusive(toYmd)!;
+  return { from, to, fromLocal: fromYmd, toLocal: toYmd };
 }
 
 /**
@@ -91,7 +161,11 @@ export function splitQuotesByDayCutoff<T extends { createdAt: string | Date }>(
   quotes: T[],
   toLocal: string,
 ): { main: T[]; afterCutoff: T[]; cutoffLocal: string | null } {
-  const [datePart, timePart = "00:00"] = toLocal.split("T");
+  const trimmed = toLocal.trim();
+  const dateOnly = isDateOnlyYmd(trimmed);
+  const [datePart, timePart = dateOnly ? "23:59" : "00:00"] = dateOnly
+    ? [trimmed, "23:59"]
+    : trimmed.split("T");
   if (!datePart) {
     return { main: quotes, afterCutoff: [], cutoffLocal: null };
   }
@@ -104,7 +178,11 @@ export function splitQuotesByDayCutoff<T extends { createdAt: string | Date }>(
   if (!Number.isFinite(hour) || hour < ORDER_CUTOFF_HOUR_AR) {
     return { main: quotes, afterCutoff: [], cutoffLocal: null };
   }
-  if (hour === ORDER_CUTOFF_HOUR_AR && (!Number.isFinite(minute) || minute === 0)) {
+  if (
+    !dateOnly &&
+    hour === ORDER_CUTOFF_HOUR_AR &&
+    (!Number.isFinite(minute) || minute === 0)
+  ) {
     return { main: quotes, afterCutoff: [], cutoffLocal: null };
   }
 
@@ -125,6 +203,26 @@ export function splitQuotesByDayCutoff<T extends { createdAt: string | Date }>(
   return { main, afterCutoff, cutoffLocal };
 }
 
+function resolveFilterBound(
+  param: string | undefined | null,
+  edge: "start" | "end",
+): Date | null {
+  const trimmed = param?.trim();
+  if (!trimmed) return null;
+  if (isDateOnlyYmd(trimmed)) {
+    return edge === "start"
+      ? parseArgentinaDateOnlyStart(trimmed)
+      : parseArgentinaDateOnlyEndExclusive(trimmed);
+  }
+  return parseArgentinaDateTime(trimmed);
+}
+
+function filterBoundToLocal(param: string | undefined | null, date: Date): string {
+  const trimmed = param?.trim();
+  if (trimmed && isDateOnlyYmd(trimmed)) return trimmed;
+  return toArgentinaDatetimeLocal(date);
+}
+
 /** Resolve from/to params; fall back to default range. Invalid → null for that side uses default. */
 export function resolveQuotesExportRange(
   fromParam: string | undefined | null,
@@ -132,8 +230,8 @@ export function resolveQuotesExportRange(
   now = new Date(),
 ): { from: Date; to: Date; fromLocal: string; toLocal: string } {
   const defaults = defaultQuotesExportRange(now);
-  const from = fromParam ? parseArgentinaDateTime(fromParam) : null;
-  const to = toParam ? parseArgentinaDateTime(toParam) : null;
+  const from = resolveFilterBound(fromParam, "start");
+  const to = resolveFilterBound(toParam, "end");
 
   const resolvedFrom = from ?? defaults.from;
   const resolvedTo = to ?? defaults.to;
@@ -141,7 +239,9 @@ export function resolveQuotesExportRange(
   return {
     from: resolvedFrom,
     to: resolvedTo,
-    fromLocal: toArgentinaDatetimeLocal(resolvedFrom),
-    toLocal: toArgentinaDatetimeLocal(resolvedTo),
+    fromLocal: from
+      ? filterBoundToLocal(fromParam, resolvedFrom)
+      : defaults.fromLocal,
+    toLocal: to ? filterBoundToLocal(toParam, resolvedTo) : defaults.toLocal,
   };
 }

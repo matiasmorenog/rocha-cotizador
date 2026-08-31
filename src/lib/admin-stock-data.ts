@@ -10,7 +10,7 @@ import {
   type ProductReportRow,
 } from "@/lib/stock-line-serialize";
 
-export type StockTab = "elaborados" | "consumibles";
+export type StockTab = "desperdicios" | "consumibles" | "activos";
 
 export const STOCK_HISTORY_LIMIT = 20;
 
@@ -21,7 +21,10 @@ export type StockModuleCustomer = {
 };
 
 export function parseStockTab(tab?: string): StockTab {
-  return tab === "consumibles" ? "consumibles" : "elaborados";
+  if (tab === "consumibles") return "consumibles";
+  if (tab === "activos") return "activos";
+  if (tab === "desperdicios" || tab === "elaborados") return "desperdicios";
+  return "desperdicios";
 }
 
 export function resolveStockCustomerId(
@@ -34,7 +37,7 @@ export function resolveStockCustomerId(
 }
 
 async function fetchModuleCustomersUncached(
-  module: "MERMAS" | "CONSUMABLES",
+  module: "DESPERDICIOS" | "CONSUMABLES" | "ACTIVOS",
 ): Promise<StockModuleCustomer[]> {
   const [customers, accessRows] = await Promise.all([
     db.customer.findMany({
@@ -58,7 +61,9 @@ const getCachedModuleCustomers = unstable_cache(
   { tags: [CACHE_TAGS.customers], revalidate: 86400 },
 );
 
-export async function moduleCustomers(module: "MERMAS" | "CONSUMABLES") {
+export async function moduleCustomers(
+  module: "DESPERDICIOS" | "CONSUMABLES" | "ACTIVOS",
+) {
   return getCachedModuleCustomers(module);
 }
 
@@ -141,20 +146,20 @@ const stockEntryListSelect = {
   lines: { select: stockLineFlatSelect },
 } as const;
 
-export async function loadElaboradosEntries(
+export async function loadDesperdiciosEntries(
   from: string,
   to: string,
   customerId?: string,
   limit = STOCK_HISTORY_LIMIT,
 ) {
   const [rows, customers, catalog] = await Promise.all([
-    db.mermaEntry.findMany({
+    db.desperdicioEntry.findMany({
       where: stockEntryWhere(from, to, customerId),
       orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
       take: limit,
       select: stockEntryListSelect,
     }),
-    moduleCustomers("MERMAS"),
+    moduleCustomers("DESPERDICIOS"),
     getActiveProductsBase(),
   ]);
 
@@ -175,6 +180,26 @@ export async function loadConsumiblesEntries(
       select: stockEntryListSelect,
     }),
     moduleCustomers("CONSUMABLES"),
+    getActiveProductsBase(),
+  ]);
+
+  return hydrateStockEntryListRows(rows, catalog, customers);
+}
+
+export async function loadActivosEntries(
+  from: string,
+  to: string,
+  customerId?: string,
+  limit = STOCK_HISTORY_LIMIT,
+) {
+  const [rows, customers, catalog] = await Promise.all([
+    db.localAssetCount.findMany({
+      where: stockEntryWhere(from, to, customerId),
+      orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
+      take: limit,
+      select: stockEntryListSelect,
+    }),
+    moduleCustomers("ACTIVOS"),
     getActiveProductsBase(),
   ]);
 

@@ -9,11 +9,12 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ClipboardPlus, FileDown } from "lucide-react";
+import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-route-transition";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
-import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -28,12 +29,14 @@ import {
 } from "@/hooks/use-selected-row";
 import {
   ARGENTINA_TZ,
+  FILTER_DEFAULT_RANGE_DAYS,
   ORDER_CUTOFF_HOUR_AR,
   splitQuotesByDayCutoff,
 } from "@/lib/argentina-time";
 import { formatDeliveryDateLabel } from "@/lib/delivery-date";
 import { quoteStatusLabel } from "@/lib/quote-status";
 import { cn, formatPrice } from "@/lib/utils";
+import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { filterFoldedSearch } from "@/lib/search-fold";
 
 export type QuoteListRow = {
@@ -272,27 +275,24 @@ export function QuotesAdminPanel({
               Filtrar cotizaciones
             </p>
             <p className="text-xs text-neutral-500">
-              Por defecto: ayer {ORDER_CUTOFF_HOUR_AR}:00 → ahora (hora
-              Argentina). Las ingresadas después del cierre van arriba, en una
-              fila expansible (orden más reciente primero).
+              Por defecto: últimos {FILTER_DEFAULT_RANGE_DAYS} días (hora
+              Argentina). Las ingresadas después del cierre ({ORDER_CUTOFF_HOUR_AR}
+              :00) van arriba, en una fila expansible (orden más reciente
+              primero).
             </p>
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
-              Desde
-              <DatetimeLocalPicker
-                value={from}
-                onChange={setFrom}
-                aria-label="Desde"
-              />
-            </label>
-            <label className="flex w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
-              Hasta
-              <DatetimeLocalPicker
-                value={to}
-                onChange={setTo}
-                aria-label="Hasta"
+            <label className="flex min-w-[14rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
+              Período
+              <DateRangePicker
+                from={from}
+                to={to}
+                onChange={(nextFrom, nextTo) => {
+                  setFrom(nextFrom);
+                  setTo(nextTo);
+                }}
+                aria-label="Período"
               />
             </label>
 
@@ -315,15 +315,17 @@ export function QuotesAdminPanel({
               type="button"
               onClick={onDownload}
               disabled={downloading}
-              className="gap-2"
             >
               {downloading ? (
                 <>
-                  <Spinner className="text-white" />
+                  <Spinner className="mr-1.5 text-white" />
                   Generando…
                 </>
               ) : (
-                "Descargar PDF"
+                <>
+                  <FileDown className="mr-1.5 h-4 w-4" aria-hidden />
+                  Descargar PDF
+                </>
               )}
             </Button>
           </div>
@@ -334,13 +336,26 @@ export function QuotesAdminPanel({
         </form>
       </div>
 
-      <Input
-        ref={searchInputRef}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar número o cliente…"
-        aria-label="Buscar cotizaciones"
-      />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Input
+          ref={searchInputRef}
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Buscar número o cliente…"
+          aria-label="Buscar cotizaciones"
+          className="min-w-0 flex-1"
+        />
+        <CotizacionesTransitionLink
+          href="/admin/cotizaciones/nueva"
+          className={cn(
+            "inline-flex h-10 w-full shrink-0 items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white shadow-sm hover:opacity-90 sm:w-auto",
+            FOCUS_BRAND_PRIMARY,
+          )}
+        >
+          <ClipboardPlus className="mr-1.5 h-4 w-4" aria-hidden />
+          Nueva cotización
+        </CotizacionesTransitionLink>
+      </div>
 
       <div ref={tableHeightLockRef}>
         <DataTableScroll>

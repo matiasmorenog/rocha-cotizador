@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { parseDateOnlyYmd } from "@/lib/delivery-date";
 import { getActiveProductsBase } from "@/lib/products-cache";
 import { productWhereForModule } from "@/lib/stock-rubros";
+import type { StockModuleKey } from "@/lib/stock-product-kind-shared";
 import {
   serializeStockLinesWithProducts,
   stockLineFlatSelect,
@@ -61,15 +62,20 @@ export async function loadStockEntryForDate(
   if (!entryDate) return null;
 
   const [entry, catalog] = await Promise.all([
-    module === "MERMAS"
-      ? db.mermaEntry.findUnique({
+    module === "DESPERDICIOS"
+      ? db.desperdicioEntry.findUnique({
           where: { customerId_entryDate: { customerId, entryDate } },
           select: stockEntryDateSelect,
         })
-      : db.consumableCount.findUnique({
-          where: { customerId_entryDate: { customerId, entryDate } },
-          select: stockEntryDateSelect,
-        }),
+      : module === "CONSUMABLES"
+        ? db.consumableCount.findUnique({
+            where: { customerId_entryDate: { customerId, entryDate } },
+            select: stockEntryDateSelect,
+          })
+        : db.localAssetCount.findUnique({
+            where: { customerId_entryDate: { customerId, entryDate } },
+            select: stockEntryDateSelect,
+          }),
     getActiveProductsBase(),
   ]);
   if (!entry) return null;
@@ -101,7 +107,12 @@ export async function upsertStockEntry(
   }
 
   const productIds = [...new Set(body.lines.map((l) => l.productId))];
-  const moduleKey = module === "MERMAS" ? "MERMAS" : "CONSUMABLES";
+  const moduleKey: StockModuleKey =
+    module === "DESPERDICIOS"
+      ? "DESPERDICIOS"
+      : module === "CONSUMABLES"
+        ? "CONSUMABLES"
+        : "ACTIVOS";
   const moduleFilter = productWhereForModule(moduleKey);
   const validProducts = await db.product.findMany({
     where: { id: { in: productIds }, ...moduleFilter },
@@ -118,7 +129,12 @@ export async function upsertStockEntry(
           })
         : [];
     const codes = invalidRows.map((p) => p.code).join(", ");
-    const moduleLabel = module === "MERMAS" ? "mermas" : "consumibles";
+    const moduleLabel =
+      module === "DESPERDICIOS"
+        ? "desperdicios"
+        : module === "CONSUMABLES"
+          ? "consumibles"
+          : "activos del local";
     return {
       error:
         codes.length > 0
@@ -148,15 +164,15 @@ export async function upsertStockEntry(
     });
   }
 
-  if (module === "MERMAS") {
+  if (module === "DESPERDICIOS") {
     const entry = await db.$transaction(async (tx) => {
-      const existing = await tx.mermaEntry.findUnique({
+      const existing = await tx.desperdicioEntry.findUnique({
         where: { customerId_entryDate: { customerId, entryDate } },
         select: { id: true },
       });
       if (existing) {
-        await tx.mermaLine.deleteMany({ where: { entryId: existing.id } });
-        return tx.mermaEntry.update({
+        await tx.desperdicioLine.deleteMany({ where: { entryId: existing.id } });
+        return tx.desperdicioEntry.update({
           where: { id: existing.id },
           data: {
             notes: body.notes?.trim() || null,
@@ -166,7 +182,39 @@ export async function upsertStockEntry(
           select: { id: true },
         });
       }
-      return tx.mermaEntry.create({
+      return tx.desperdicioEntry.create({
+        data: {
+          customerId,
+          entryDate,
+          notes: body.notes?.trim() || null,
+          submittedBy,
+          lines: { create: lineCreates },
+        },
+        select: { id: true },
+      });
+    });
+    return { id: entry.id, ok: true as const };
+  }
+
+  if (module === "CONSUMABLES") {
+    const entry = await db.$transaction(async (tx) => {
+      const existing = await tx.consumableCount.findUnique({
+        where: { customerId_entryDate: { customerId, entryDate } },
+        select: { id: true },
+      });
+      if (existing) {
+        await tx.consumableCountLine.deleteMany({ where: { countId: existing.id } });
+        return tx.consumableCount.update({
+          where: { id: existing.id },
+          data: {
+            notes: body.notes?.trim() || null,
+            submittedBy,
+            lines: { create: lineCreates },
+          },
+          select: { id: true },
+        });
+      }
+      return tx.consumableCount.create({
         data: {
           customerId,
           entryDate,
@@ -181,13 +229,13 @@ export async function upsertStockEntry(
   }
 
   const entry = await db.$transaction(async (tx) => {
-    const existing = await tx.consumableCount.findUnique({
+    const existing = await tx.localAssetCount.findUnique({
       where: { customerId_entryDate: { customerId, entryDate } },
       select: { id: true },
     });
     if (existing) {
-      await tx.consumableCountLine.deleteMany({ where: { countId: existing.id } });
-      return tx.consumableCount.update({
+      await tx.localAssetCountLine.deleteMany({ where: { countId: existing.id } });
+      return tx.localAssetCount.update({
         where: { id: existing.id },
         data: {
           notes: body.notes?.trim() || null,
@@ -197,7 +245,7 @@ export async function upsertStockEntry(
         select: { id: true },
       });
     }
-    return tx.consumableCount.create({
+    return tx.localAssetCount.create({
       data: {
         customerId,
         entryDate,
