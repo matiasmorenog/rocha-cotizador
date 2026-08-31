@@ -22,9 +22,9 @@ export function CustomerHomeHub({
   return (
     <BrandBackdrop className="flex w-full min-h-[min(calc(100vh-10rem),40rem)] flex-col items-center justify-center rounded-xl px-4 py-10 sm:py-12">
       <div className="mx-auto w-full max-w-xl space-y-6 text-center">
-        <div className="flex flex-col items-center gap-3">
-          <BrandLogo size="lg" priority />
-          <div className="max-w-md space-y-0.5 rounded-2xl bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-[2px]">
+        <div className="flex w-full flex-col items-center gap-3 rounded-2xl bg-white/95 px-5 py-4 text-center shadow-sm backdrop-blur-[2px]">
+          <BrandLogo size="md" priority />
+          <div className="space-y-0.5">
             <h1 className="text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
               Hola, {displayName}
             </h1>
