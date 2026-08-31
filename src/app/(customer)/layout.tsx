@@ -1,20 +1,9 @@
-import { CustomerPromoFooter } from "@/components/customer/customer-promo-footer";
-import { getOptionalSession } from "@/lib/session";
-import { isAdminPanelRole } from "@/lib/staff-permissions";
+import { CustomerShell } from "@/components/customer/customer-shell";
 
-export default async function CustomerLayout({
+export default function CustomerLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const session = await getOptionalSession();
-  const showPromo =
-    session?.user?.role === "CUSTOMER" && !isAdminPanelRole(session.user.role);
-
-  return (
-    <>
-      {children}
-      {showPromo ? <CustomerPromoFooter /> : null}
-    </>
-  );
+  return <CustomerShell>{children}</CustomerShell>;
 }

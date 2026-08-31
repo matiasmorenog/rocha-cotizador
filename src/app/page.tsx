@@ -3,19 +3,41 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
+import { CustomerHomeHub } from "@/components/customer/customer-home-hub";
+import { CustomerShell } from "@/components/customer/customer-shell";
 import { SkeletonHomePage } from "@/components/ui/skeleton";
+import { resolveCustomerModulesForSession } from "@/lib/customer-modules";
+import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { getOptionalSession } from "@/lib/session";
 import { isAdminPanelRole, staffHomeHref } from "@/lib/staff-permissions";
-import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 async function HomeContent() {
   const session = await getOptionalSession();
-  if (session?.user?.role === "CUSTOMER") redirect("/cotizar");
   if (isAdminPanelRole(session?.user?.role)) {
     redirect(staffHomeHref(session?.user?.permissions, session?.user?.role));
+  }
+
+  if (
+    session?.user?.role === "CUSTOMER" &&
+    session.user.customerId
+  ) {
+    const modules = await resolveCustomerModulesForSession(
+      session.user.customerId,
+      session.user.modules,
+    );
+
+    return (
+      <CustomerShell>
+        <CustomerHomeHub
+          userName={session.user.name}
+          customerCode={session.user.customerCode}
+          modules={modules}
+        />
+      </CustomerShell>
+    );
   }
 
   return (

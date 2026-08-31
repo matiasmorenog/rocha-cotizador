@@ -4,7 +4,7 @@ import { signOut } from "@/lib/auth";
 import { PinChangeHint } from "@/components/account/pin-change-hint";
 import { AdminMenuButton } from "@/components/admin/admin-menu-button";
 import { AdminThemeToggle } from "@/components/admin/admin-theme-toggle";
-import { CustomerNav } from "@/components/customer/customer-nav";
+import { CustomerMenuButton } from "@/components/customer/customer-menu-button";
 import { HeaderProgressLine } from "@/components/header-progress-line";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { getOptionalSession } from "@/lib/session";
@@ -20,7 +20,6 @@ export async function AppHeader() {
     : "/admin";
   /** From JWT — updated via session.update() after password change. No Neon hit. */
   const mustChangePassword = Boolean(session?.user?.mustChangePassword);
-  const stockModules = session?.user?.modules ?? [];
 
   return (
     <>
@@ -28,20 +27,15 @@ export async function AppHeader() {
         <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 py-3">
           <div className="flex min-w-0 shrink-0 items-center gap-2">
             {isStaff ? <AdminMenuButton /> : null}
+            {isCustomer ? <CustomerMenuButton /> : null}
             <Link
-              href={isCustomer ? "/cotizar" : isStaff ? staffHome : "/"}
+              href={isCustomer ? "/" : isStaff ? staffHome : "/"}
               className="truncate text-base font-semibold tracking-tight text-[var(--brand-primary)] sm:text-lg"
             >
               Rocha Cotizador
             </Link>
           </div>
-          {isCustomer ? (
-            <div className="flex min-w-0 flex-1 justify-center px-1 sm:px-2">
-              <CustomerNav modules={stockModules} />
-            </div>
-          ) : (
-            <div className="min-w-0 flex-1" aria-hidden />
-          )}
+          <div className="min-w-0 flex-1" aria-hidden />
           {isCustomer || isStaff ? (
             <div className="flex shrink-0 items-center gap-3 text-sm">
               {isCustomer ? (

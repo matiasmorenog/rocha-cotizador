@@ -18,7 +18,7 @@ import {
 
 export function CustomerLoginForm() {
   const searchParams = useSearchParams();
-  const callbackUrl = safeCallbackUrl(searchParams.get("callbackUrl"), "/cotizar");
+  const callbackUrl = safeCallbackUrl(searchParams.get("callbackUrl"), "/");
   const rememberedCode = useSyncExternalStore(
     subscribeToLastLoginStorage,
     readLastCustomerCode,

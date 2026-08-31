@@ -1,0 +1,72 @@
+import Link from "next/link";
+import { BrandBackdrop } from "@/components/brand-backdrop";
+import { BrandLogo } from "@/components/brand-logo";
+import { buildCustomerHomeActions } from "@/lib/customer-nav-items";
+import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
+import type { CustomerModuleSession } from "@/types/auth";
+import { cn } from "@/lib/utils";
+
+export function CustomerHomeHub({
+  userName,
+  customerCode,
+  modules,
+}: {
+  userName?: string | null;
+  customerCode?: string | null;
+  modules: CustomerModuleSession[];
+}) {
+  const actions = buildCustomerHomeActions(modules);
+  const displayName = userName?.trim() || "Cliente";
+  const code = customerCode?.trim();
+
+  return (
+    <BrandBackdrop className="flex w-full min-h-[min(calc(100vh-10rem),40rem)] flex-col items-center justify-center rounded-xl px-4 py-10 sm:py-12">
+      <div className="mx-auto w-full max-w-2xl space-y-8 text-center">
+        <div className="flex flex-col items-center gap-4">
+          <BrandLogo size="xl" priority />
+          <div className="space-y-1">
+            <h1 className="text-2xl font-semibold text-neutral-900">
+              Hola, {displayName}
+            </h1>
+            {code ? (
+              <p className="text-sm text-neutral-600">Código {code}</p>
+            ) : null}
+            <p className="text-sm text-neutral-600">
+              Elegí qué querés hacer hoy.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-3">
+          {actions.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex w-full max-w-xs flex-col items-start gap-3 rounded-xl border border-[var(--brand-primary)]/20 bg-white/90 p-4 text-left shadow-sm backdrop-blur-[2px] transition-colors hover:border-[var(--brand-primary)]/35 hover:bg-white sm:w-[calc(50%-0.375rem)] sm:max-w-[17rem]",
+                  FOCUS_BRAND_OUTLINE,
+                )}
+              >
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]">
+                  <Icon className="h-5 w-5" aria-hidden />
+                </span>
+                <span className="space-y-1">
+                  <span className="block text-base font-semibold text-neutral-900">
+                    {item.label}
+                  </span>
+                  {item.description ? (
+                    <span className="block text-sm text-neutral-600">
+                      {item.description}
+                    </span>
+                  ) : null}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+    </BrandBackdrop>
+  );
+}
