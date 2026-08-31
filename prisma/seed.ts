@@ -456,11 +456,11 @@ async function main() {
     await seedUnitOrderFlags();
     const modules = await seedCustomerModuleAccess();
     console.log(
-      `Customer modules: Mermas=${modules.mermas}, Consumibles=${modules.consumables}`,
+      `Customer modules: Desperdicios=${modules.desperdicios}, Consumibles=${modules.consumables}`,
     );
     const stock = await seedStockSampleData();
     console.log(
-      `Stock sample: merma lines=${stock.mermaLines}, consumibles lines=${stock.consumableLines}, merma=${stock.mermaCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
+      `Stock sample: desperdicio lines=${stock.desperdicioLines}, consumibles lines=${stock.consumableLines}, desperdicios=${stock.desperdiciosCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
     );
     const staffMigrated = await migrateStaffRolesToAdmin();
     console.log(`Staff roles migrated to ADMIN: ${staffMigrated}`);
@@ -469,11 +469,11 @@ async function main() {
   await seedFromExcel(xlsxPath);
   const modules = await seedCustomerModuleAccess();
   console.log(
-    `Customer modules: Mermas=${modules.mermas}, Consumibles=${modules.consumables}`,
+    `Customer modules: Desperdicios=${modules.desperdicios}, Consumibles=${modules.consumables}`,
   );
   const stock = await seedStockSampleData();
   console.log(
-    `Stock sample: merma lines=${stock.mermaLines}, consumibles lines=${stock.consumableLines}, merma=${stock.mermaCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
+    `Stock sample: desperdicio lines=${stock.desperdicioLines}, consumibles lines=${stock.consumableLines}, desperdicios=${stock.desperdiciosCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
   );
   const staffMigrated = await migrateStaffRolesToAdmin();
   console.log(`Staff roles migrated to ADMIN: ${staffMigrated}`);

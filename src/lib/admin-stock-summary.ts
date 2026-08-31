@@ -118,7 +118,7 @@ function mapDailyRows(
   }));
 }
 
-async function loadElaboradosSummary(
+async function loadDesperdiciosSummary(
   fromDate: Date,
   toDate: Date,
   customerIds: string[],
@@ -140,7 +140,7 @@ async function loadElaboradosSummary(
   const [entryCountRow, productRows, dailyRows] = await Promise.all([
     db.$queryRaw<{ count: bigint }[]>`
       SELECT COUNT(*)::bigint AS count
-      FROM "MermaEntry" e
+      FROM "DesperdicioEntry" e
       WHERE ${entryWhere}
     `,
     db.$queryRaw<ProductAggRow[]>`
@@ -153,8 +153,8 @@ async function loadElaboradosSummary(
         MAX(p."basePrice")::float AS "basePrice",
         SUM(l.qty * p."basePrice")::float AS "totalCost",
         MAX(e."entryDate") AS "lastDate"
-      FROM "MermaLine" l
-      INNER JOIN "MermaEntry" e ON e.id = l."entryId"
+      FROM "DesperdicioLine" l
+      INNER JOIN "DesperdicioEntry" e ON e.id = l."entryId"
       INNER JOIN "Product" p ON p.id = l."productId"
       WHERE ${entryWhere}
       GROUP BY l."productId", l.unit
@@ -162,8 +162,8 @@ async function loadElaboradosSummary(
     `,
     db.$queryRaw<{ entryDate: Date; totalCost: number }[]>`
       SELECT e."entryDate", SUM(l.qty * p."basePrice")::float AS "totalCost"
-      FROM "MermaEntry" e
-      INNER JOIN "MermaLine" l ON l."entryId" = e.id
+      FROM "DesperdicioEntry" e
+      INNER JOIN "DesperdicioLine" l ON l."entryId" = e.id
       INNER JOIN "Product" p ON p.id = l."productId"
       WHERE ${entryWhere}
       GROUP BY e."entryDate"
@@ -324,7 +324,7 @@ export async function getStockSummary(input: {
       ? "CONSUMABLES"
       : input.tab === "activos"
         ? "ACTIVOS"
-        : "MERMAS";
+        : "DESPERDICIOS";
   const customers = await moduleCustomers(stockModule);
   const resolvedCustomerId = resolveStockCustomerId(
     customers,
@@ -364,7 +364,7 @@ export async function getStockSummary(input: {
             input.to,
             dayCount,
           )
-        : await loadElaboradosSummary(
+        : await loadDesperdiciosSummary(
             fromDate,
             toDate,
             customerIds,

@@ -6,14 +6,14 @@ import { db } from "@/lib/db";
 import { foldSearchText } from "@/lib/search-fold";
 
 function parseModule(value: string | null): CustomerModule | null {
-  if (value === "MERMAS" || value === "CONSUMABLES" || value === "ACTIVOS") {
+  if (value === "DESPERDICIOS" || value === "CONSUMABLES" || value === "ACTIVOS") {
     return value;
   }
   return null;
 }
 
 /**
- * GET /api/customer/stock/products?module=MERMAS|CONSUMABLES|ACTIVOS&q=&take=
+ * GET /api/customer/stock/products?module=DESPERDICIOS|CONSUMABLES|ACTIVOS&q=&take=
  */
 export async function GET(req: NextRequest) {
   const customerModule = parseModule(req.nextUrl.searchParams.get("module"));

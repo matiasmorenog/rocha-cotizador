@@ -3,7 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
+import {
+  ClipboardList,
+  LayoutDashboard,
+  Package,
+  Settings,
+  Tags,
+  UserCog,
+  Users,
+  Warehouse,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import {
   useExitPresence,
   QUOTE_PICKER_FLOAT_MS,
@@ -17,27 +28,37 @@ import { useAdminNavStore } from "@/stores/admin-nav-store";
 const links: Array<{
   href: string;
   label: string;
+  icon: LucideIcon;
   exact?: boolean;
   permission: StaffPermission;
 }> = [
-  { href: "/admin", label: "Dashboard", exact: true, permission: "dashboard" },
-  { href: "/admin/clientes", label: "Clientes", permission: "customers" },
-  { href: "/admin/productos", label: "Productos", permission: "products" },
+  {
+    href: "/admin",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    exact: true,
+    permission: "dashboard",
+  },
+  { href: "/admin/clientes", label: "Clientes", icon: Users, permission: "customers" },
+  { href: "/admin/productos", label: "Productos", icon: Package, permission: "products" },
   {
     href: "/admin/listas-precios",
     label: "Listas de precios",
+    icon: Tags,
     permission: "priceLists",
   },
   {
     href: "/admin/cotizaciones",
     label: "Cotizaciones",
+    icon: ClipboardList,
     permission: "quotes",
   },
-  { href: "/admin/stock", label: "Stock", permission: "stockReports" },
-  { href: "/admin/usuarios", label: "Usuarios", permission: "users" },
+  { href: "/admin/stock", label: "Stock", icon: Warehouse, permission: "stockReports" },
+  { href: "/admin/usuarios", label: "Usuarios", icon: UserCog, permission: "users" },
   {
     href: "/admin/configuracion",
     label: "Configuración",
+    icon: Settings,
     permission: "account",
   },
 ];
@@ -69,20 +90,22 @@ function NavLinks({
           l.href,
           "exact" in l ? l.exact : false,
         );
+        const Icon = l.icon;
         return (
           <Link
             key={l.href}
             href={l.href}
             onClick={onNavigate}
             className={cn(
-              "admin-nav-link rounded-md px-2 py-1.5 transition-colors",
+              "admin-nav-link inline-flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
               FOCUS_BRAND_OUTLINE,
               active
                 ? "admin-nav-link-active bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
                 : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900",
             )}
           >
-            {l.label}
+            <Icon className="h-4 w-4 shrink-0" aria-hidden />
+            <span>{l.label}</span>
           </Link>
         );
       })}

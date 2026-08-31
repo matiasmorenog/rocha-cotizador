@@ -11,10 +11,10 @@ export const CUSTOMER_STOCK_TABS: Array<{
   apiSegment: string;
 }> = [
   {
-    tab: "elaborados",
-    module: "MERMAS",
-    stockModule: "MERMAS",
-    apiSegment: "mermas",
+    tab: "desperdicios",
+    module: "DESPERDICIOS",
+    stockModule: "DESPERDICIOS",
+    apiSegment: "desperdicios",
   },
   {
     tab: "consumibles",
@@ -43,7 +43,9 @@ export function parseCustomerStockTab(
 ): (typeof CUSTOMER_STOCK_TABS)[number] | null {
   const available = customerStockTabsForModules(modules);
   if (available.length === 0) return null;
-  const match = available.find((row) => row.tab === tabParam);
+  const normalized =
+    tabParam === "elaborados" ? "desperdicios" : tabParam;
+  const match = available.find((row) => row.tab === normalized);
   return match ?? available[0]!;
 }
 
@@ -61,6 +63,8 @@ export function customerStockApiSegment(module: CustomerModule): string {
 export function customerStockModuleFromApiSegment(
   segment: string,
 ): CustomerModule | null {
-  const row = CUSTOMER_STOCK_TABS.find((r) => r.apiSegment === segment);
+  const legacy =
+    segment === "mermas" || segment === "elaborados" ? "desperdicios" : segment;
+  const row = CUSTOMER_STOCK_TABS.find((r) => r.apiSegment === legacy);
   return row?.module ?? null;
 }

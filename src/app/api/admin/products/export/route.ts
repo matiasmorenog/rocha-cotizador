@@ -9,6 +9,7 @@ import {
   xlsxResponse,
 } from "@/lib/admin-excel";
 import { sortPriceListsForDisplay } from "@/lib/pricing";
+import { formatStockKindForExport } from "@/lib/stock-product-kind-labels";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -72,7 +73,7 @@ export async function GET() {
       }),
       formatBool(p.allowsUnitOrder),
       formatBool(p.available),
-      p.stockKind ?? "",
+      formatStockKindForExport(p.stockKind),
     ]);
   }
 

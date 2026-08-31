@@ -1,21 +1,20 @@
 /**
  * Product stock classification — client/server safe (no DB).
- * Replaces rubro-based split when Product.stockKind is set.
  */
 
-import { isConsumableRubro } from "@/lib/stock-rubros-shared";
-
 /** Customer module / admin stock tab keys. */
-export type StockModuleKey = "MERMAS" | "CONSUMABLES" | "ACTIVOS";
+export type StockModuleKey = "DESPERDICIOS" | "CONSUMABLES" | "ACTIVOS";
 
-export type ProductStockKindValue = "MERMA" | "CONSUMABLE" | "LOCAL_ASSET";
+export type ProductStockKindValue = "DESPERDICIO" | "CONSUMABLE" | "LOCAL_ASSET";
+
+export const DEFAULT_PRODUCT_STOCK_KIND: ProductStockKindValue = "DESPERDICIO";
 
 export function stockKindForModule(
   module: StockModuleKey,
 ): ProductStockKindValue {
   switch (module) {
-    case "MERMAS":
-      return "MERMA";
+    case "DESPERDICIOS":
+      return "DESPERDICIO";
     case "CONSUMABLES":
       return "CONSUMABLE";
     case "ACTIVOS":
@@ -27,25 +26,18 @@ export function stockKindForModule(
 export function isProductQuotable(
   stockKind: ProductStockKindValue | null | undefined,
 ): boolean {
-  return stockKind == null || stockKind === "MERMA";
+  return stockKind == null || stockKind === "DESPERDICIO";
 }
 
 /**
  * Whether a product belongs in a stock module recount.
- * Uses stockKind when set; otherwise legacy rubro split (not for ACTIVOS).
  */
 export function productMatchesStockModule(
   rubro: string | null | undefined,
   module: StockModuleKey,
   stockKind?: ProductStockKindValue | null,
 ): boolean {
-  if (stockKind) {
-    return stockKind === stockKindForModule(module);
-  }
-  if (module === "ACTIVOS") {
-    return false;
-  }
-  return module === "CONSUMABLES"
-    ? isConsumableRubro(rubro)
-    : !isConsumableRubro(rubro);
+  void rubro;
+  const kind = stockKind ?? DEFAULT_PRODUCT_STOCK_KIND;
+  return kind === stockKindForModule(module);
 }

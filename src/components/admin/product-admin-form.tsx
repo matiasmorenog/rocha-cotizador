@@ -2,6 +2,10 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { FormSection } from "@/components/admin/form-section";
+import { FormToggleCard } from "@/components/admin/form-toggle-card";
+import { ProductStockKindPicker } from "@/components/admin/product-stock-kind-picker";
+import { ProductTipoField } from "@/components/admin/product-tipo-field";
 import { Button } from "@/components/ui/button";
 import {
   AR_PRICE_FORMAT,
@@ -9,9 +13,12 @@ import {
 } from "@/components/ui/ar-number-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { ProductTipoField } from "@/components/admin/product-tipo-field";
 import { notifyCatalogStale } from "@/lib/client-catalog-cache";
+import { CATALOG_PRODUCT_ENABLED_LABEL } from "@/lib/entity-status-labels";
+import { dispatchAdminInAppToast } from "@/lib/push-sw-client";
+import { DEFAULT_PRODUCT_STOCK_KIND } from "@/lib/stock-product-kind-labels";
+import type { ProductStockKindValue } from "@/lib/stock-product-kind-shared";
+import { inferStockKindFromRubro } from "@/lib/stock-rubros-shared";
 import { parseArNumber } from "@/lib/utils";
 
 export type PriceListOption = {
@@ -34,16 +41,21 @@ export function ProductAdminForm({
   const [rubro, setRubro] = useState("");
   const [basePrice, setBasePrice] = useState("");
   const [available, setAvailable] = useState(true);
+  const [stockKind, setStockKind] =
+    useState<ProductStockKindValue>(DEFAULT_PRODUCT_STOCK_KIND);
   const [allowsUnitOrder, setAllowsUnitOrder] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function onRubroChange(nextRubro: string) {
+    setRubro(nextRubro);
+    setStockKind(inferStockKindFromRubro(nextRubro));
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setMessage(null);
 
     const price = parseArNumber(basePrice);
     if (!Number.isFinite(price) || price < 0) {
@@ -52,62 +64,99 @@ export function ProductAdminForm({
       return;
     }
 
-    const res = await fetch("/api/admin/products", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        code,
-        name,
-        rubro,
-        basePrice: price,
-        available,
-        allowsUnitOrder,
-      }),
-    });
-    setLoading(false);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      setError(data.error ?? "Error al guardar");
-      return;
+    try {
+      const res = await fetch("/api/admin/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          code,
+          name,
+          rubro,
+          basePrice: price,
+          available,
+          stockKind,
+          allowsUnitOrder,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const detail =
+          typeof data.error === "string" && data.error.trim()
+            ? data.error
+            : `No se pudo guardar el producto (HTTP ${res.status}).`;
+        setError(detail);
+        dispatchAdminInAppToast({
+          title: "Error al guardar producto",
+          body: detail,
+          tone: "error",
+        });
+        return;
+      }
+
+      const savedLabel = `${name.trim()} (${code.trim()})`;
+      dispatchAdminInAppToast({
+        title: "Producto creado",
+        body: savedLabel,
+        tone: "success",
+      });
+      notifyCatalogStale();
+      router.refresh();
+      onCancel();
+    } catch {
+      const detail = "No se pudo conectar con el servidor. Revisá tu conexión.";
+      setError(detail);
+      dispatchAdminInAppToast({
+        title: "Error al guardar producto",
+        body: detail,
+        tone: "error",
+      });
+    } finally {
+      setLoading(false);
     }
-    notifyCatalogStale();
-    setMessage("Producto creado");
-    setCode("");
-    setName("");
-    setRubro("");
-    setBasePrice("");
-    setAvailable(true);
-    setAllowsUnitOrder(false);
-    router.refresh();
   }
 
   return (
     <form
       onSubmit={onSubmit}
-      className="space-y-3 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
+      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
     >
       <p className="text-sm font-medium text-neutral-800">Nuevo producto</p>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="space-y-1">
-          <Label>Código</Label>
-          <Input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            required
-          />
+
+      <FormSection
+        title="Identificación"
+        description="Código, nombre y rubro del producto en el catálogo."
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-1">
+            <Label htmlFor="product-code">Código</Label>
+            <Input
+              id="product-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="product-name">Nombre</Label>
+            <Input
+              id="product-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </div>
+          <ProductTipoField rubros={rubros} value={rubro} onChange={onRubroChange} />
         </div>
-        <div className="space-y-1">
-          <Label>Nombre</Label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-        </div>
-        <ProductTipoField rubros={rubros} value={rubro} onChange={setRubro} />
-        <div className="space-y-1">
-          <Label>Precio base</Label>
+      </FormSection>
+
+      <FormSection
+        title="Precio base"
+        description="Precio de la lista base; las demás listas pueden tener valores distintos."
+      >
+        <div className="max-w-xs space-y-1">
+          <Label htmlFor="product-base-price">Precio base</Label>
           <ArNumberInput
+            id="product-base-price"
             value={basePrice}
             onValueChange={setBasePrice}
             maxFractionDigits={2}
@@ -116,32 +165,37 @@ export function ProductAdminForm({
             required
           />
         </div>
-      </div>
+      </FormSection>
 
-      <label
-        htmlFor="product-available-create"
-        className="flex cursor-pointer items-center gap-2.5 text-sm"
+      <FormSection
+        title="Tipo de stock"
+        description="Define en qué módulo de stock aparece al recuentar (desperdicios, consumibles o activos)."
       >
-        <Switch
+        <ProductStockKindPicker value={stockKind} onChange={setStockKind} />
+      </FormSection>
+
+      <FormSection
+        title="Opciones"
+        description="Disponibilidad en cotizaciones y reglas de pedido."
+        className="space-y-3"
+      >
+        <FormToggleCard
           id="product-available-create"
+          label={CATALOG_PRODUCT_ENABLED_LABEL}
+          description="Si está deshabilitado, no aparece en cotizaciones ni listas de clientes."
           checked={available}
-          onChange={(e) => setAvailable(e.target.checked)}
+          onChange={setAvailable}
         />
-        Disponible en catálogo
-      </label>
-      <label
-        htmlFor="product-unit-order-create"
-        className="flex cursor-pointer items-center gap-2.5 text-sm"
-      >
-        <Switch
+        <FormToggleCard
           id="product-unit-order-create"
+          label="Pedido por unidades o kg"
+          description="Permite cotizar por unidad o al peso cuando el producto se vende en ambos formatos."
           checked={allowsUnitOrder}
-          onChange={(e) => setAllowsUnitOrder(e.target.checked)}
+          onChange={setAllowsUnitOrder}
         />
-        Permite pedido por unidades o kg (precio al pesar en unidades)
-      </label>
+      </FormSection>
+
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {message ? <p className="text-sm text-green-700">{message}</p> : null}
       <div className="flex flex-wrap justify-end gap-2">
         <Button
           type="button"

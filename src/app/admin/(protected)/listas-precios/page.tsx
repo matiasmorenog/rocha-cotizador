@@ -1,3 +1,4 @@
+import { ENTITY_ENABLED_FEMININE_LABELS } from "@/lib/entity-status-labels";
 import { requireStaffPermission } from "@/lib/session";
 import { Badge } from "@/components/ui/badge";
 import { DataTableScroll } from "@/components/ui/data-table";
@@ -47,7 +48,9 @@ export default async function AdminListasPreciosPage() {
                 <td className="px-3 py-2">{l.customerCount}</td>
                 <td className="px-3 py-2">
                   <Badge variant={l.active ? "success" : "danger"}>
-                    {l.active ? "Activa" : "Inactiva"}
+                    {l.active
+                      ? ENTITY_ENABLED_FEMININE_LABELS.enabled
+                      : ENTITY_ENABLED_FEMININE_LABELS.disabled}
                   </Badge>
                 </td>
                 <td className="px-3 py-2 text-right">

@@ -9,7 +9,7 @@ import { CustomerStockTabs } from "@/components/customer/customer-stock-tabs";
 import {
   loadActivosEntries,
   loadConsumiblesEntries,
-  loadElaboradosEntries,
+  loadDesperdiciosEntries,
   STOCK_HISTORY_LIMIT,
 } from "@/lib/admin-stock-data";
 import { resolveStockDateRange } from "@/lib/admin-stock-summary-shared";
@@ -34,7 +34,7 @@ async function loadCustomerStockEntries(
   if (tab.module === "ACTIVOS") {
     return loadActivosEntries(from, to, customerId, STOCK_HISTORY_LIMIT);
   }
-  return loadElaboradosEntries(from, to, customerId, STOCK_HISTORY_LIMIT);
+  return loadDesperdiciosEntries(from, to, customerId, STOCK_HISTORY_LIMIT);
 }
 
 export default async function CustomerStockPage({
@@ -68,7 +68,7 @@ export default async function CustomerStockPage({
       ? {
           formTitle: "Recuento de consumibles",
           formDescription:
-            "Gaseosas, insumos y stock invertido. No son bajas del día.",
+            "Gaseosas, insumos y stock invertido. No son desperdicios.",
         }
       : active.tab === "activos"
         ? {
@@ -77,7 +77,7 @@ export default async function CustomerStockPage({
               "Carritos, bandejas y otros activos. Podés elegir cualquier fecha.",
           }
         : {
-            formTitle: "Carga de bajas del día",
+            formTitle: "Carga de desperdicios",
             formDescription:
               "Recuento fin de día de panes y masas. Solo cantidades a tirar.",
           };
@@ -87,7 +87,7 @@ export default async function CustomerStockPage({
       ? "Recuentos guardados (módulo Consumibles)."
       : active.tab === "activos"
         ? "Recuentos de activos guardados."
-        : "Cargas de bajas del día guardadas.";
+        : "Cargas de desperdicios guardadas.";
 
   return (
     <div className="space-y-6">
@@ -132,8 +132,8 @@ export default async function CustomerStockPage({
           active.tab === "consumibles"
             ? "Recuento"
             : active.tab === "activos"
-              ? "Activo"
-              : "Baja del día"
+              ? "Activo del local"
+              : "Desperdicio"
         }
         hideCustomerColumn
       />

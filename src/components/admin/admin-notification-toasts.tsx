@@ -10,7 +10,8 @@ export type AdminToastItem = {
   id: string;
   title: string;
   body: string;
-  url: string;
+  /** When absent, toast is informational only (no navigation). */
+  url?: string;
   tone: AdminToastTone;
   source: "inbox" | "push" | "test";
 };
@@ -33,7 +34,7 @@ type DisplayItem = { toast: AdminToastItem; exiting: boolean };
 
 /**
  * Compact toast stack (bottom-right). Brand: teal.
- * Click body opens url; X dismisses.
+ * Click body opens url when present; X dismisses.
  *
  * Keeps toasts mounted for `TOAST_EXIT_MS` after they leave `toasts` so the
  * exit animation can play instead of popping out of the DOM instantly.
@@ -100,23 +101,36 @@ export function AdminNotificationToasts({ toasts, onDismiss }: Props) {
           )}
         >
           <div className="flex items-start gap-2 p-3">
-            <a
-              href={toast.url}
-              className={cn("min-w-0 flex-1 rounded-sm", FOCUS_BRAND_OUTLINE)}
-              onClick={() => onDismiss(toast.id)}
-            >
-              <p className="text-sm font-semibold leading-snug text-[var(--brand-primary)]">
-                {toast.title}
-              </p>
-              {toast.body ? (
-                <p className="mt-0.5 text-xs leading-snug text-[var(--foreground)]/80">
-                  {toast.body}
+            {toast.url ? (
+              <a
+                href={toast.url}
+                className={cn("min-w-0 flex-1 rounded-sm", FOCUS_BRAND_OUTLINE)}
+                onClick={() => onDismiss(toast.id)}
+              >
+                <p className="text-sm font-semibold leading-snug text-[var(--brand-primary)]">
+                  {toast.title}
                 </p>
-              ) : null}
-              <p className="mt-1.5 text-[10px] font-medium uppercase tracking-wide text-[var(--foreground)]/50">
-                Abrir · notificación en la app
-              </p>
-            </a>
+                {toast.body ? (
+                  <p className="mt-0.5 text-xs leading-snug text-[var(--foreground)]/80">
+                    {toast.body}
+                  </p>
+                ) : null}
+                <p className="mt-1.5 text-[10px] font-medium uppercase tracking-wide text-[var(--foreground)]/50">
+                  Abrir · notificación en la app
+                </p>
+              </a>
+            ) : (
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold leading-snug text-[var(--brand-primary)]">
+                  {toast.title}
+                </p>
+                {toast.body ? (
+                  <p className="mt-0.5 text-xs leading-snug text-[var(--foreground)]/80">
+                    {toast.body}
+                  </p>
+                ) : null}
+              </div>
+            )}
             <button
               type="button"
               aria-label="Cerrar notificación"

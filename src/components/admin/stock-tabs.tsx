@@ -5,7 +5,7 @@ import type { StockTab } from "@/lib/admin-stock-data";
 import { cn } from "@/lib/utils";
 
 const TABS: Array<{ id: StockTab; label: string }> = [
-  { id: "elaborados", label: CUSTOMER_MODULE_LABELS.MERMAS },
+  { id: "desperdicios", label: CUSTOMER_MODULE_LABELS.DESPERDICIOS },
   { id: "consumibles", label: CUSTOMER_MODULE_LABELS.CONSUMABLES },
   { id: "activos", label: CUSTOMER_MODULE_LABELS.ACTIVOS },
 ];

@@ -55,8 +55,8 @@ function saveSeenIds(ids: Set<string>) {
   }
 }
 
-function fingerprint(title: string, body: string, url: string): string {
-  return `${title}\0${body}\0${url}`;
+function fingerprint(title: string, body: string, url?: string): string {
+  return `${title}\0${body}\0${url ?? ""}`;
 }
 
 /**
@@ -239,7 +239,7 @@ export function AdminPushSwRegister() {
         id: inboxId ? `inbox-${inboxId}` : undefined,
         title: detail.title,
         body: detail.body ?? "",
-        url: detail.url ?? "/admin/configuracion",
+        url: detail.url,
         tone: detail.tone ?? "success",
         source: "test",
       });

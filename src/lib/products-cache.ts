@@ -48,7 +48,7 @@ async function fetchActiveProductsBaseUncached(): Promise<ProductBase[]> {
   const rows = await db.product.findMany({
     where: {
       available: true,
-      OR: [{ stockKind: null }, { stockKind: "MERMA" }],
+      OR: [{ stockKind: null }, { stockKind: "DESPERDICIO" }],
     },
     orderBy: [{ code: "asc" }],
     select: {

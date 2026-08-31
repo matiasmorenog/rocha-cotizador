@@ -5,7 +5,7 @@ import { customerStockModuleFromApiSegment } from "@/lib/customer-stock-shared";
 import {
   loadActivosEntries,
   loadConsumiblesEntries,
-  loadElaboradosEntries,
+  loadDesperdiciosEntries,
 } from "@/lib/admin-stock-data";
 import { invalidateAfterStockEntryMutation } from "@/lib/cache-tags";
 import {
@@ -28,7 +28,7 @@ async function loadEntries(
   if (customerModule === "ACTIVOS") {
     return loadActivosEntries(from, to, customerId, 200);
   }
-  return loadElaboradosEntries(from, to, customerId, 200);
+  return loadDesperdiciosEntries(from, to, customerId, 200);
 }
 
 export async function GET(req: NextRequest, context: RouteContext) {

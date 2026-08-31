@@ -8,15 +8,13 @@ import {
   stockKindForModule,
   type StockModuleKey,
 } from "@/lib/stock-product-kind-shared";
-import {
-  CONSUMABLE_RUBROS,
-  uniqRubrosFromProducts,
-} from "@/lib/stock-rubros-shared";
+import { uniqRubrosFromProducts } from "@/lib/stock-rubros-shared";
 
 export {
   CONSUMABLE_RUBROS,
   isConsumableRubro,
   normalizeRubro,
+  inferStockKindFromRubro,
   productMatchesStockModule,
   stockKindForModule,
   uniqRubrosFromProducts,
@@ -30,54 +28,18 @@ export async function listDistinctProductRubros(): Promise<string[]> {
   return uniqRubrosFromProducts(products);
 }
 
-const consumableRubroOr = CONSUMABLE_RUBROS.map((rubro) => ({
-  rubro: { equals: rubro, mode: "insensitive" as const },
-}));
-
-const notConsumableRubroAnd = {
-  OR: [
-    { rubro: null },
-    {
-      NOT: {
-        OR: consumableRubroOr,
-      },
-    },
-  ],
-};
-
 export function productWhereForModule(
   module: StockModuleKey,
 ): Prisma.ProductWhereInput {
   const kind = stockKindForModule(module);
-
-  if (module === "ACTIVOS") {
+  if (kind === "DESPERDICIO") {
     return {
       available: true,
-      stockKind: kind,
+      OR: [{ stockKind: "DESPERDICIO" }, { stockKind: null }],
     };
   }
-
-  if (module === "CONSUMABLES") {
-    return {
-      available: true,
-      OR: [
-        { stockKind: kind },
-        {
-          stockKind: null,
-          OR: consumableRubroOr,
-        },
-      ],
-    };
-  }
-
   return {
     available: true,
-    OR: [
-      { stockKind: kind },
-      {
-        stockKind: null,
-        AND: [notConsumableRubroAnd],
-      },
-    ],
+    stockKind: kind,
   };
 }

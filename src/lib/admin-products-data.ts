@@ -11,7 +11,7 @@ export type AdminProductTableRow = {
   rubro: string | null;
   basePrice: number;
   available: boolean;
-  stockKind: "MERMA" | "CONSUMABLE" | "LOCAL_ASSET" | null;
+  stockKind: "DESPERDICIO" | "CONSUMABLE" | "LOCAL_ASSET" | null;
   allowsUnitOrder: boolean;
   /** priceListId → unitPrice */
   listPrices: Record<string, number>;

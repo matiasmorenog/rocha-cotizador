@@ -483,7 +483,7 @@ export function CustomerPicker({
       !searching &&
       trimmedQuery.length > 0 &&
       results.length === 0 ? (
-        <p className="mt-2 text-sm text-neutral-500">Sin clientes activos</p>
+        <p className="mt-2 text-sm text-neutral-500">Sin clientes habilitados</p>
       ) : null}
     </div>
   );

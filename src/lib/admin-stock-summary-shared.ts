@@ -81,8 +81,7 @@ export function formatStockDayLabel(ymd: string): string {
 }
 
 export function parseStockSummaryTab(tab?: string | null): StockTab | null {
-  if (tab === "elaborados" || tab === "consumibles" || tab === "activos") {
-    return tab;
-  }
+  if (tab === "desperdicios" || tab === "elaborados") return "desperdicios";
+  if (tab === "consumibles" || tab === "activos") return tab;
   return null;
 }

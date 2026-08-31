@@ -6,14 +6,14 @@ import { db } from "@/lib/db";
 import { foldSearchText } from "@/lib/search-fold";
 
 function parseModule(value: string | null): StockModuleKey | null {
-  if (value === "MERMAS" || value === "CONSUMABLES" || value === "ACTIVOS") {
+  if (value === "DESPERDICIOS" || value === "CONSUMABLES" || value === "ACTIVOS") {
     return value;
   }
   return null;
 }
 
 /**
- * GET /api/admin/stock/products?module=MERMAS|CONSUMABLES|ACTIVOS&q=&take=
+ * GET /api/admin/stock/products?module=DESPERDICIOS|CONSUMABLES|ACTIVOS&q=&take=
  *
  * Product search for admin stock recount forms (includes non-quotable kinds).
  */

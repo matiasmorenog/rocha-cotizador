@@ -16,6 +16,7 @@ import {
   formatStaffPermissionLabels,
   staffSwitchesFromProfile,
 } from "@/lib/staff-permissions";
+import { ENTITY_ENABLED_LABELS } from "@/lib/entity-status-labels";
 import { cn } from "@/lib/utils";
 import type { StaffRole } from "@/types/auth";
 
@@ -52,7 +53,8 @@ export function StaffUsersPanel({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-neutral-600">
-          Usuarios internos con email y permisos (Administración, Cotización, Stock).
+          Alta de administradores del equipo. El acceso de stock de sucursales es
+          por cliente (módulos), no por usuario staff.
         </p>
         {!showForm ? (
           <Button
@@ -124,7 +126,9 @@ export function StaffUsersPanel({
                   {formatStaffPermissionLabels(u)}
                 </td>
                 <td className="px-3 py-2">
-                  {u.active ? "Activo" : "Inactivo"}
+                  {u.active
+                    ? ENTITY_ENABLED_LABELS.enabled
+                    : ENTITY_ENABLED_LABELS.disabled}
                 </td>
                 <td className="px-3 py-2 text-right">
                   <AdminTableActions className="justify-end">
@@ -187,9 +191,11 @@ function StaffUserForm({
   onSaved: (user: StaffUser) => void;
 }) {
   const isEdit = Boolean(user);
+  const isLegacyStaff =
+    isEdit && user!.role !== "ADMIN" && !staffSwitchesFromProfile(user!).isAdmin;
   const initialSwitches = user
     ? staffSwitchesFromProfile(user)
-    : { isAdmin: false, canQuotes: true, canStock: false };
+    : { isAdmin: true, canQuotes: true, canStock: true };
 
   const [email, setEmail] = useState(user?.email ?? "");
   const [name, setName] = useState(user?.name ?? "");
@@ -211,7 +217,7 @@ function StaffUserForm({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!isAdmin && !canQuotes && !canStock) {
+    if (isLegacyStaff && !isAdmin && !canQuotes && !canStock) {
       setError("Elegí al menos un permiso (Cotización o Stock)");
       return;
     }
@@ -224,9 +230,9 @@ function StaffUserForm({
         id: user?.id,
         email,
         name: name || null,
-        isAdmin,
-        canQuotes: isAdmin ? true : canQuotes,
-        canStock: isAdmin ? true : canStock,
+        isAdmin: isEdit ? isAdmin : true,
+        canQuotes: isEdit ? (isAdmin ? true : canQuotes) : true,
+        canStock: isEdit ? (isAdmin ? true : canStock) : true,
         active,
         ...(password ? { password } : {}),
       }),
@@ -246,8 +252,13 @@ function StaffUserForm({
       className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
     >
       <p className="text-sm font-medium text-neutral-800">
-        {isEdit ? "Editar usuario" : "Nuevo usuario"}
+        {isEdit ? "Editar usuario" : "Nuevo administrador"}
       </p>
+      {!isEdit ? (
+        <p className="text-xs text-neutral-600">
+          Los usuarios nuevos tienen acceso completo al panel de administración.
+        </p>
+      ) : null}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label>Email</Label>
@@ -276,37 +287,45 @@ function StaffUserForm({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-neutral-800">Permisos</p>
-        <PermissionSwitch
-          label="Administración"
-          description="Acceso completo al panel (usuarios, configuración, etc.)"
-          checked={isAdmin}
-          onChange={onAdminChange}
-        />
-        <PermissionSwitch
-          label="Cotización"
-          description="Productos, listas de precios y cotizaciones"
-          checked={canQuotes}
-          onChange={setCanQuotes}
-          disabled={isAdmin}
-        />
-        <PermissionSwitch
-          label="Stock"
-          description="Elaborados y consumibles"
-          checked={canStock}
-          onChange={setCanStock}
-          disabled={isAdmin}
-        />
-      </div>
+      {isLegacyStaff ? (
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-neutral-800">Permisos</p>
+          <p className="text-xs text-neutral-500">
+            Usuario con rol heredado (Cotización/Stock). Podés promoverlo a
+            administración o ajustar permisos.
+          </p>
+          <PermissionSwitch
+            label="Administración"
+            description="Acceso completo al panel (usuarios, configuración, etc.)"
+            checked={isAdmin}
+            onChange={onAdminChange}
+          />
+          <PermissionSwitch
+            label="Cotización"
+            description="Productos, listas de precios y cotizaciones"
+            checked={canQuotes}
+            onChange={setCanQuotes}
+            disabled={isAdmin}
+          />
+          <PermissionSwitch
+            label="Stock"
+            description="Desperdicios, consumibles y activos del local"
+            checked={canStock}
+            onChange={setCanStock}
+            disabled={isAdmin}
+          />
+        </div>
+      ) : null}
 
       <div className="flex items-center justify-between gap-3 rounded-md border border-neutral-200 px-3 py-2">
         <div>
-          <p className="text-sm font-medium text-neutral-800">Activo</p>
+          <p className="text-sm font-medium text-neutral-800">
+            {ENTITY_ENABLED_LABELS.enabled}
+          </p>
           <p className="text-xs text-neutral-500">
             {user?.id === currentUserId
-              ? "No podés desactivar tu propia cuenta"
-              : "Usuarios inactivos no pueden ingresar"}
+              ? "No podés deshabilitar tu propia cuenta"
+              : "Los usuarios deshabilitados no pueden ingresar"}
           </p>
         </div>
         <Switch

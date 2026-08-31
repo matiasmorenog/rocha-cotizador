@@ -4,9 +4,9 @@ import { requireStaffApi } from "@/lib/api-auth";
 import { db } from "@/lib/db";
 import { invalidateAfterProductMutation } from "@/lib/cache-tags";
 import { syncBaseListItemForProduct } from "@/lib/price-list-resolve";
-import { normalizeRubro } from "@/lib/stock-rubros";
+import { normalizeRubro, inferStockKindFromRubro } from "@/lib/stock-rubros";
 
-const stockKindSchema = z.enum(["MERMA", "CONSUMABLE", "LOCAL_ASSET"]).nullable();
+const stockKindSchema = z.enum(["DESPERDICIO", "CONSUMABLE", "LOCAL_ASSET"]).nullable();
 
 const schema = z.object({
   id: z.string().optional(),
@@ -47,7 +47,9 @@ export async function POST(req: NextRequest) {
     available: parsed.data.available ?? true,
     ...(parsed.data.stockKind !== undefined
       ? { stockKind: parsed.data.stockKind }
-      : {}),
+      : parsed.data.id
+        ? {}
+        : { stockKind: inferStockKindFromRubro(rubro) }),
     ...(parsed.data.allowsUnitOrder !== undefined
       ? { allowsUnitOrder: parsed.data.allowsUnitOrder }
       : parsed.data.id

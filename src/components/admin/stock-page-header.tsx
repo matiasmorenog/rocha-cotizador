@@ -19,7 +19,7 @@ export function StockPageHeader({
   formDescription: string;
   apiPath: string;
   customers: StockRecountCustomer[];
-  stockModule: "MERMAS" | "CONSUMABLES" | "ACTIVOS";
+  stockModule: "DESPERDICIOS" | "CONSUMABLES" | "ACTIVOS";
 }) {
   const [open, setOpen] = useState(false);
 
