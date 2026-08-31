@@ -1,7 +1,5 @@
 /** Client-safe types/helpers for admin quote activity chart. */
 
-import { addCalendarDaysYmd } from "@/lib/delivery-date";
-
 export type QuoteActivityPeriod = "week" | "month" | "year";
 
 export type QuoteActivityPoint = {
@@ -78,11 +76,11 @@ export function aggregateQuoteActivityIntoWeeks(
 }
 
 /**
- * Half-open `[desde 00:00, hasta+1 00:00)` Argentina wall time for cotizaciones filters.
+ * Inclusive calendar-day range for cotizaciones filters (`from`/`to` as YMD).
  *
- * Build the query string with raw `YYYY-MM-DDTHH:mm` (do not use URLSearchParams).
- * Percent-encoding `:` as `%3A` has caused soft-nav to land with the URL bar
- * updated while the cotizaciones page fell back to the default range.
+ * Build the query string with raw `YYYY-MM-DD` (do not use URLSearchParams).
+ * Percent-encoding has caused soft-nav to land with the URL bar updated while
+ * the cotizaciones page fell back to the default range.
  */
 export function buildAdminQuotesHrefFromActivityPoint(
   point: QuoteActivityPoint,
@@ -90,7 +88,5 @@ export function buildAdminQuotesHrefFromActivityPoint(
   if (!point.desde || point.quotes <= 0) return null;
 
   const endDay = point.hasta ?? point.desde;
-  const from = `${point.desde}T00:00`;
-  const to = `${addCalendarDaysYmd(endDay, 1)}T00:00`;
-  return `/admin/cotizaciones?from=${from}&to=${to}`;
+  return `/admin/cotizaciones?from=${point.desde}&to=${endDay}`;
 }

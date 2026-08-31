@@ -13,7 +13,7 @@ import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
-import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -28,6 +28,7 @@ import {
 } from "@/hooks/use-selected-row";
 import {
   ARGENTINA_TZ,
+  FILTER_DEFAULT_RANGE_DAYS,
   ORDER_CUTOFF_HOUR_AR,
   splitQuotesByDayCutoff,
 } from "@/lib/argentina-time";
@@ -272,27 +273,24 @@ export function QuotesAdminPanel({
               Filtrar cotizaciones
             </p>
             <p className="text-xs text-neutral-500">
-              Por defecto: ayer {ORDER_CUTOFF_HOUR_AR}:00 → ahora (hora
-              Argentina). Las ingresadas después del cierre van arriba, en una
-              fila expansible (orden más reciente primero).
+              Por defecto: últimos {FILTER_DEFAULT_RANGE_DAYS} días (hora
+              Argentina). Las ingresadas después del cierre ({ORDER_CUTOFF_HOUR_AR}
+              :00) van arriba, en una fila expansible (orden más reciente
+              primero).
             </p>
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
-              Desde
-              <DatetimeLocalPicker
-                value={from}
-                onChange={setFrom}
-                aria-label="Desde"
-              />
-            </label>
-            <label className="flex w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
-              Hasta
-              <DatetimeLocalPicker
-                value={to}
-                onChange={setTo}
-                aria-label="Hasta"
+            <label className="flex min-w-[14rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
+              Período
+              <DateRangePicker
+                from={from}
+                to={to}
+                onChange={(nextFrom, nextTo) => {
+                  setFrom(nextFrom);
+                  setTo(nextTo);
+                }}
+                aria-label="Período"
               />
             </label>
 

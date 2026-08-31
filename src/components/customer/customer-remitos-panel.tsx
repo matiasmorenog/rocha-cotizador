@@ -11,14 +11,13 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
-import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { ARGENTINA_TZ, parseArgentinaDateTime } from "@/lib/argentina-time";
+import { ARGENTINA_TZ, defaultFilterDateRange } from "@/lib/argentina-time";
 import type { CustomerRemitoRow } from "@/lib/customer-remitos-data";
 import {
   clampCustomerRemitosHasta,
-  CUSTOMER_REMITOS_DEFAULT_LIMIT,
   CUSTOMER_REMITOS_MAX_RANGE_DAYS,
   customerRemitosDateRangeError,
 } from "@/lib/customer-remitos-limits";
@@ -26,7 +25,7 @@ import { formatDeliveryDateLabel } from "@/lib/delivery-date";
 import { quoteStatusLabel } from "@/lib/quote-status";
 import { formatPrice } from "@/lib/utils";
 
-type FetchMode = "default" | "range" | "search";
+type FetchMode = "range" | "search";
 
 function buildParams(opts: {
   from?: string;
@@ -69,18 +68,22 @@ function RemitoRow({ row }: { row: CustomerRemitoRow }) {
 
 export function CustomerRemitosPanel({
   initialRemitos,
+  defaultFrom,
+  defaultTo,
 }: {
   initialRemitos: CustomerRemitoRow[];
+  defaultFrom: string;
+  defaultTo: string;
 }) {
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [appliedFrom, setAppliedFrom] = useState("");
-  const [appliedTo, setAppliedTo] = useState("");
+  const [from, setFrom] = useState(defaultFrom);
+  const [to, setTo] = useState(defaultTo);
+  const [appliedFrom, setAppliedFrom] = useState(defaultFrom);
+  const [appliedTo, setAppliedTo] = useState(defaultTo);
   const [remitos, setRemitos] = useState(initialRemitos);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<FetchMode>("default");
+  const [mode, setMode] = useState<FetchMode>("range");
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const fetchRemitos = useCallback(
@@ -111,19 +114,14 @@ export function CustomerRemitosPanel({
     [],
   );
 
-  function onFromChange(next: string) {
-    setFrom(next);
-    if (next.trim() && to.trim()) {
-      setTo(clampCustomerRemitosHasta(next, to));
-    }
-  }
-
-  function onToChange(next: string) {
-    if (from.trim() && next.trim()) {
-      setTo(clampCustomerRemitosHasta(from, next));
+  function onRangeChange(nextFrom: string, nextTo: string) {
+    if (nextFrom.trim() && nextTo.trim()) {
+      setFrom(nextFrom);
+      setTo(clampCustomerRemitosHasta(nextFrom, nextTo));
       return;
     }
-    setTo(next);
+    setFrom(nextFrom);
+    setTo(nextTo);
   }
 
   async function onFilter(e: FormEvent) {
@@ -131,16 +129,10 @@ export function CustomerRemitosPanel({
     const fromValue = from.trim();
     const toValue = to.trim();
     if (!fromValue || !toValue) {
-      setError("Indicá fecha Desde y Hasta para filtrar por rango");
+      setError("Indicá un período para filtrar por rango");
       return;
     }
-    const fromDate = parseArgentinaDateTime(fromValue);
-    const toDate = parseArgentinaDateTime(toValue);
-    if (!fromDate || !toDate) {
-      setError("Fechas inválidas");
-      return;
-    }
-    const rangeError = customerRemitosDateRangeError(fromDate, toDate);
+    const rangeError = customerRemitosDateRangeError(fromValue, toValue);
     if (rangeError) {
       setError(rangeError);
       return;
@@ -155,29 +147,24 @@ export function CustomerRemitosPanel({
   }
 
   function onReset() {
-    setFrom("");
-    setTo("");
-    setAppliedFrom("");
-    setAppliedTo("");
+    const { from: resetFrom, to: resetTo } = defaultFilterDateRange();
+    setFrom(resetFrom);
+    setTo(resetTo);
+    setAppliedFrom(resetFrom);
+    setAppliedTo(resetTo);
     setQuery("");
     setError(null);
-    setRemitos(initialRemitos);
-    setMode("default");
+    void fetchRemitos(buildParams({ from: resetFrom, to: resetTo }), "range");
   }
 
   function onQueryChange(value: string) {
     const hadSearch = query.trim().length > 0;
     setQuery(value);
     if (!value.trim() && hadSearch) {
-      if (appliedFrom && appliedTo) {
-        void fetchRemitos(
-          buildParams({ from: appliedFrom, to: appliedTo }),
-          "range",
-        );
-      } else {
-        setRemitos(initialRemitos);
-        setMode("default");
-      }
+      void fetchRemitos(
+        buildParams({ from: appliedFrom, to: appliedTo }),
+        "range",
+      );
     }
   }
 
@@ -207,21 +194,14 @@ export function CustomerRemitosPanel({
   const emptyLabel =
     mode === "search"
       ? "Sin remitos para esa búsqueda"
-      : mode === "range"
-        ? "Sin remitos en este rango"
-        : "Todavía no hay remitos.";
+      : "Sin remitos en este rango";
 
-  const showDefaultHint = mode === "default" && remitos.length > 0;
+  const showRangeChanged =
+    mode !== "search" &&
+    (from !== appliedFrom || to !== appliedTo);
 
   return (
     <div className="space-y-4">
-      {showDefaultHint ? (
-        <p className="text-sm text-neutral-600">
-          Mostrando los últimos {CUSTOMER_REMITOS_DEFAULT_LIMIT} remitos. Usá
-          fechas o búsqueda para ver más.
-        </p>
-      ) : null}
-
       <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
         <form onSubmit={onFilter} className="space-y-4">
           <div className="space-y-1">
@@ -235,20 +215,13 @@ export function CustomerRemitosPanel({
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
-              Desde
-              <DatetimeLocalPicker
-                value={from}
-                onChange={onFromChange}
-                aria-label="Desde"
-              />
-            </label>
-            <label className="flex w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
-              Hasta
-              <DatetimeLocalPicker
-                value={to}
-                onChange={onToChange}
-                aria-label="Hasta"
+            <label className="flex min-w-[14rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
+              Período
+              <DateRangePicker
+                from={from}
+                to={to}
+                onChange={onRangeChange}
+                aria-label="Período"
               />
             </label>
             <Button
@@ -266,14 +239,14 @@ export function CustomerRemitosPanel({
                 "Filtrar"
               )}
             </Button>
-            {mode !== "default" ? (
+            {showRangeChanged || mode === "search" ? (
               <Button
                 type="button"
                 variant="secondary"
                 disabled={loading}
                 onClick={onReset}
               >
-                Ver últimos 5
+                Restablecer
               </Button>
             ) : null}
           </div>
