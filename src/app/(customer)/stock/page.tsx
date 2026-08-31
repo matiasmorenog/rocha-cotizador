@@ -6,6 +6,7 @@ import {
 import { CustomerStockDateFilters } from "@/components/customer/customer-stock-date-filters";
 import { CustomerStockPageHeader } from "@/components/customer/customer-stock-page-header";
 import { CustomerStockTabs } from "@/components/customer/customer-stock-tabs";
+import { StockTabPanel } from "@/components/admin/stock-tab-panel";
 import {
   loadActivosEntries,
   loadConsumiblesEntries,
@@ -112,35 +113,37 @@ export default async function CustomerStockPage({
         to={to}
       />
 
-      <CustomerStockDateFilters tab={active.tab} from={from} to={to} />
+      <StockTabPanel tabKey={active.tab}>
+        <CustomerStockDateFilters tab={active.tab} from={from} to={to} />
 
-      <div>
-        <h2 className="text-lg font-semibold text-neutral-900">Historial</h2>
-        <p className="text-sm text-neutral-600">
-          {historialHint} Hasta {STOCK_HISTORY_LIMIT} por consulta — filtrá por
-          fechas.
-        </p>
-      </div>
+        <div>
+          <h2 className="text-lg font-semibold text-neutral-900">Historial</h2>
+          <p className="text-sm text-neutral-600">
+            {historialHint} Hasta {STOCK_HISTORY_LIMIT} por consulta — filtrá por
+            fechas.
+          </p>
+        </div>
 
-      <AdminStockReports
-        entries={entries}
-        customers={[
-          {
-            id: customerId,
-            code: session.user.customerCode ?? "",
-            name: session.user.name ?? "",
-          },
-        ]}
-        customerId={customerId}
-        kindLabel={
-          active.tab === "consumibles"
-            ? "Recuento"
-            : active.tab === "activos"
-              ? "Activo del local"
-              : "Desperdicio"
-        }
-        hideCustomerColumn
-      />
+        <AdminStockReports
+          entries={entries}
+          customers={[
+            {
+              id: customerId,
+              code: session.user.customerCode ?? "",
+              name: session.user.name ?? "",
+            },
+          ]}
+          customerId={customerId}
+          kindLabel={
+            active.tab === "consumibles"
+              ? "Recuento"
+              : active.tab === "activos"
+                ? "Activo del local"
+                : "Desperdicio"
+          }
+          hideCustomerColumn
+        />
+      </StockTabPanel>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { AdminStockReports } from "@/components/admin/admin-stock-reports";
 import { AdminStockSummarySection } from "@/components/admin/admin-stock-summary-section";
 import { StockPageHeader } from "@/components/admin/stock-page-header";
 import { StockPanelFilters } from "@/components/admin/stock-panel-filters";
+import { StockTabPanel } from "@/components/admin/stock-tab-panel";
 import { StockTabs } from "@/components/admin/stock-tabs";
 import {
   loadActivosEntries,
@@ -165,23 +166,25 @@ export default async function AdminStockPage({
 
       <StockTabs active={tab} from={from} to={to} customerId={customerId} />
 
-      <StockPanel
-        tab={tab}
-        from={from}
-        to={to}
-        customerId={customerId}
-        customers={customers}
-      >
-        <Suspense fallback={<StockHistorialFallback />}>
-          <StockHistorial
-            tab={tab}
-            from={from}
-            to={to}
-            customerId={customerId}
-            customers={customers}
-          />
-        </Suspense>
-      </StockPanel>
+      <StockTabPanel tabKey={tab}>
+        <StockPanel
+          tab={tab}
+          from={from}
+          to={to}
+          customerId={customerId}
+          customers={customers}
+        >
+          <Suspense fallback={<StockHistorialFallback />}>
+            <StockHistorial
+              tab={tab}
+              from={from}
+              to={to}
+              customerId={customerId}
+              customers={customers}
+            />
+          </Suspense>
+        </StockPanel>
+      </StockTabPanel>
     </div>
   );
 }

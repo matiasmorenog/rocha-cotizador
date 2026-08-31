@@ -1,8 +1,6 @@
-import Link from "next/link";
+import { SolapasTabLink, SolapasTabList } from "@/components/ui/solapas-tabs";
 import { CUSTOMER_MODULE_LABELS } from "@/lib/customer-modules";
-import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import type { StockTab } from "@/lib/admin-stock-data";
-import { cn } from "@/lib/utils";
 
 const TABS: Array<{ id: StockTab; label: string }> = [
   { id: "desperdicios", label: CUSTOMER_MODULE_LABELS.DESPERDICIOS },
@@ -30,31 +28,16 @@ export function StockTabs({
   customerId: string;
 }) {
   return (
-    <div
-      role="tablist"
-      aria-label="Stock"
-      className="inline-flex gap-1 rounded-lg border border-neutral-200 bg-white p-1"
-    >
-      {TABS.map((tab) => {
-        const selected = active === tab.id;
-        return (
-          <Link
-            key={tab.id}
-            href={tabHref(tab.id, from, to, customerId)}
-            role="tab"
-            aria-selected={selected}
-            className={cn(
-              "rounded-md px-4 py-2 text-sm font-medium transition-colors",
-              FOCUS_BRAND_OUTLINE,
-              selected
-                ? "bg-[var(--brand-primary-soft)] text-[var(--brand-primary)]"
-                : "text-neutral-600 hover:bg-neutral-50 hover:text-neutral-900",
-            )}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </div>
+    <SolapasTabList activeKey={active} aria-label="Stock">
+      {TABS.map((tab) => (
+        <SolapasTabLink
+          key={tab.id}
+          href={tabHref(tab.id, from, to, customerId)}
+          selected={active === tab.id}
+        >
+          {tab.label}
+        </SolapasTabLink>
+      ))}
+    </SolapasTabList>
   );
 }

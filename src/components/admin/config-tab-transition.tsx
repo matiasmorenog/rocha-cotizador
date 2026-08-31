@@ -10,8 +10,8 @@ import {
   type ComponentProps,
   type ReactNode,
 } from "react";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { SolapasTabLink } from "@/components/ui/solapas-tabs";
 import { parseConfigTab } from "@/lib/admin-config-tabs";
 import { cn } from "@/lib/utils";
 
@@ -122,26 +122,26 @@ export function ConfigTabPanel({ children }: { children: ReactNode }) {
 /** Soft-nav tab link with exit animation when inside ConfigTabTransition. */
 export function ConfigTabLink({
   href,
-  className,
+  selected,
   children,
   ...rest
-}: Omit<ComponentProps<typeof Link>, "href" | "onClick"> & {
+}: Omit<ComponentProps<typeof SolapasTabLink>, "href" | "onClick"> & {
   href: string;
 }) {
   const ctx = useContext(ConfigTabContext);
 
   if (!ctx) {
     return (
-      <Link href={href} className={className} {...rest}>
+      <SolapasTabLink href={href} selected={selected} {...rest}>
         {children}
-      </Link>
+      </SolapasTabLink>
     );
   }
 
   return (
-    <Link
+    <SolapasTabLink
       href={href}
-      className={className}
+      selected={selected}
       onClick={(e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) {
           return;
@@ -152,6 +152,6 @@ export function ConfigTabLink({
       {...rest}
     >
       {children}
-    </Link>
+    </SolapasTabLink>
   );
 }
