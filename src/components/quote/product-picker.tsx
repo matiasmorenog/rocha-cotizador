@@ -43,6 +43,8 @@ type ProductPickerProps = {
   customerId?: string;
   /** Admin stock recount — searches module-scoped products (incl. non-quotable kinds). */
   adminStockModule?: StockModuleKey;
+  /** Customer stock recount — same product search via customer API. */
+  customerStockModule?: StockModuleKey;
   value: CatalogSearchProduct | null;
   onChange: (product: CatalogSearchProduct | null) => void;
   /** Optional filter (e.g. stock module rubro split). */
@@ -100,6 +102,7 @@ const ProductOption = memo(
 function ProductPickerInner({
   customerId,
   adminStockModule,
+  customerStockModule,
   value,
   onChange,
   filterProduct,
@@ -109,7 +112,7 @@ function ProductPickerInner({
   const { searchAsync } = catalog;
   const searchAsyncRef = useRef(searchAsync);
   const isClient = useIsClient();
-  const useAdminStockSearch = Boolean(adminStockModule);
+  const useStockModuleSearch = Boolean(adminStockModule || customerStockModule);
 
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -131,10 +134,10 @@ function ProductPickerInner({
   // Gate on isClient: useProductCatalog may read sessionStorage on the client
   // first paint while SSR had an empty catalog — that mismatch hydrates badly.
   const catalogUsable =
-    useAdminStockSearch ||
+    useStockModuleSearch ||
     (isClient && (catalog.ready || catalog.products.length > 0));
   const catalogLoading =
-    !useAdminStockSearch && catalog.loading && !catalogUsable;
+    !useStockModuleSearch && catalog.loading && !catalogUsable;
   const trimmedQuery = query.trim();
   const deferredTrimmed = deferredQuery.trim();
   const filterPending =
@@ -149,7 +152,7 @@ function ProductPickerInner({
 
   const warmResults = useMemo(() => {
     if (
-      useAdminStockSearch ||
+      useStockModuleSearch ||
       value ||
       deferredTrimmed.length < 1 ||
       catalog.products.length === 0
@@ -165,7 +168,7 @@ function ProductPickerInner({
     );
     return filterProduct ? rows.filter(filterProduct) : rows;
   }, [
-    useAdminStockSearch,
+    useStockModuleSearch,
     value,
     deferredTrimmed,
     catalog.products.length,
@@ -175,14 +178,14 @@ function ProductPickerInner({
   ]);
 
   const results = useMemo(() => {
-    const base = useAdminStockSearch
+    const base = useStockModuleSearch
       ? (coldResults ?? [])
       : catalog.products.length > 0
         ? warmResults
         : (coldResults ?? []);
     return filterProduct ? base.filter(filterProduct) : base;
   }, [
-    useAdminStockSearch,
+    useStockModuleSearch,
     catalog.products.length,
     warmResults,
     coldResults,
@@ -206,7 +209,7 @@ function ProductPickerInner({
     trimmedQuery.length > 0 &&
     (results.length > 0 ||
       searchBusy ||
-      useAdminStockSearch ||
+      useStockModuleSearch ||
       (!catalogLoading && catalog.products.length > 0) ||
       coldResults !== null);
 
@@ -218,7 +221,7 @@ function ProductPickerInner({
     results.length === 0 &&
     !catalogLoading &&
     !searchBusy;
-  const showError = Boolean(!useAdminStockSearch && catalog.error && !catalogUsable);
+  const showError = Boolean(!useStockModuleSearch && catalog.error && !catalogUsable);
   const floatingOpen = showList || showSearching || showEmpty || showError;
   const {
     present: floatPresent,
@@ -322,7 +325,7 @@ function ProductPickerInner({
 
     setHighlightIndex(0);
 
-    if (!useAdminStockSearch && catalog.products.length > 0) {
+    if (!useStockModuleSearch && catalog.products.length > 0) {
       setColdResults(null);
       setColdInFlight(false);
       return;
@@ -330,10 +333,12 @@ function ProductPickerInner({
 
     const requestId = ++searchRequestId.current;
     setColdInFlight(true);
-    const searchPromise = useAdminStockSearch
-      ? fetch(
-          `/api/admin/stock/products?module=${adminStockModule}&q=${encodeURIComponent(q)}&take=50`,
-        )
+    const stockModule = adminStockModule ?? customerStockModule;
+    const stockProductsUrl = customerStockModule
+      ? `/api/customer/stock/products?module=${stockModule}&q=${encodeURIComponent(q)}&take=50`
+      : `/api/admin/stock/products?module=${stockModule}&q=${encodeURIComponent(q)}&take=50`;
+    const searchPromise = useStockModuleSearch
+      ? fetch(stockProductsUrl)
           .then(async (res) => {
             if (!res.ok) return [] as CatalogSearchProduct[];
             const data = (await res.json()) as {
