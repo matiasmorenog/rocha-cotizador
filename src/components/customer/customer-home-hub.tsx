@@ -20,31 +20,48 @@ export function CustomerHomeHub({
   const code = customerCode?.trim();
   const threeCol = actions.length === 3;
   const containerMax = threeCol ? "max-w-3xl" : "max-w-xl";
+  const oneColWidth = threeCol
+    ? "sm:max-w-[calc((100%-1.5rem)/3)]"
+    : "sm:max-w-[calc((100%-0.75rem)/2)]";
 
   return (
     <BrandBackdrop className="flex w-full min-h-[min(calc(100vh-10rem),40rem)] flex-col items-center justify-center rounded-xl px-4 py-10 sm:py-12">
-      <div className={cn("mx-auto w-full space-y-6 text-center", containerMax)}>
-        <div className="flex w-full flex-col items-center gap-3 rounded-2xl bg-white/95 px-5 py-4 text-center shadow-sm backdrop-blur-[2px]">
-          <BrandLogo size="md" priority />
-          <div className="space-y-0.5">
-            <h1 className="text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
-              Hola, {displayName}
-            </h1>
-            {code ? (
-              <p className="text-sm font-medium text-neutral-800">Código {code}</p>
-            ) : null}
-            <p className="text-sm text-neutral-700">
-              Elegí qué querés hacer hoy.
-            </p>
-          </div>
-        </div>
-
+      <div className={cn("mx-auto w-full", containerMax)}>
         <div
           className={cn(
-            "mx-auto grid w-full grid-cols-1 gap-3",
+            "grid w-full grid-cols-1 gap-3",
             threeCol ? "sm:grid-cols-3" : "sm:grid-cols-2",
           )}
         >
+          <div
+            className={cn(
+              "flex w-full justify-center",
+              threeCol ? "sm:col-span-3" : "sm:col-span-2",
+            )}
+          >
+            <div
+              className={cn(
+                "flex w-full flex-col items-center gap-3 rounded-2xl bg-white/95 px-5 py-4 text-center shadow-sm backdrop-blur-[2px]",
+                oneColWidth,
+              )}
+            >
+              <BrandLogo size="md" priority />
+              <div className="space-y-0.5">
+                <h1 className="text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
+                  Hola, {displayName}
+                </h1>
+                {code ? (
+                  <p className="text-sm font-medium text-neutral-800">
+                    Código {code}
+                  </p>
+                ) : null}
+                <p className="text-sm text-neutral-700">
+                  Elegí qué querés hacer hoy.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {actions.map((item) => {
             const Icon = item.icon;
             return (
