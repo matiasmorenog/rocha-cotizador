@@ -706,6 +706,20 @@ select:not([multiple]):disabled {
 }
 
 /*
+  Segmented tabs — sliding pill indicator + panel enter on tab change.
+  Visual style matches the pre-solapas pill bar; motion is additive.
+*/
+.solapas-tab-indicator-animate {
+  transition:
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.solapas-tab-content-enter {
+  animation: quote-panel-enter 0.2s ease-out backwards;
+}
+
+/*
   Product/customer picker listbox (portaled): same fade/slide ~200ms as
   quote-panel-enter/exit. Enter: backwards only. Exit: forwards — keep-mount
   then unmount (see useExitPresence).
@@ -1185,14 +1199,16 @@ html[data-admin-theme="dark"][data-admin-sober-dark] .admin-notification-toast {
   box-shadow: none;
 }
 
-/* Sidebar nav — active bg must differ from sidebar surface (#202c33) in dark. */
-html[data-admin-theme="dark"] .admin-nav-link-active {
+/* Sidebar nav — active pill uses sliding indicator; dark needs distinct surface. */
+html[data-admin-theme="dark"] .admin-nav-indicator {
   background-color: color-mix(in srgb, var(--brand-primary) 18%, #202c33);
+}
+
+html[data-admin-theme="dark"] .admin-nav-link-active {
   color: var(--brand-primary);
 }
 
 html[data-admin-theme="dark"] .admin-nav-link-active:hover {
-  background-color: color-mix(in srgb, var(--brand-primary) 24%, #202c33);
   color: var(--brand-primary);
 }
 
@@ -1477,6 +1493,8 @@ html[data-admin-theme="dark"] .admin-edit-hover:hover {
   .quote-customer-reveal.quote-customer-reveal-exit > *,
   .quote-route-enter,
   .quote-route-exit,
+  .solapas-tab-indicator-animate,
+  .solapas-tab-content-enter,
   .quote-picker-float-enter,
   .quote-picker-float-exit,
   .quote-unit-warn-enter,

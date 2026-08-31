@@ -1,6 +1,5 @@
 import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
-import { isDatetimeFilterNow } from "@/lib/argentina-time";
 import { CACHE_TAGS } from "@/lib/cache-tag-names";
 import { formatDateOnlyYmd } from "@/lib/delivery-date";
 
@@ -73,9 +72,7 @@ const getCachedAdminCotizaciones = unstable_cache(
 
 /** Stable cache key for default rolling `to` (minute bucket). */
 export function quotesRangeCacheToIso(to: Date, explicitToParam?: string | null): string {
-  if (explicitToParam?.trim() && !isDatetimeFilterNow(explicitToParam)) {
-    return to.toISOString();
-  }
+  if (explicitToParam?.trim()) return to.toISOString();
   const bucketMs = Math.floor(to.getTime() / 60_000) * 60_000;
   return new Date(bucketMs).toISOString();
 }
@@ -85,9 +82,7 @@ export function getAdminCotizacionesQuotes(
   to: Date,
   explicitToParam?: string | null,
 ): Promise<AdminCotizacionRow[]> {
-  const hasExplicitTo =
-    Boolean(explicitToParam?.trim()) && !isDatetimeFilterNow(explicitToParam);
-  const queryTo = hasExplicitTo
+  const queryTo = explicitToParam?.trim()
     ? to
     : new Date(quotesRangeCacheToIso(to, explicitToParam));
   return getCachedAdminCotizaciones(

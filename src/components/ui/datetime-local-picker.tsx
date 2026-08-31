@@ -11,6 +11,7 @@ import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   ARGENTINA_TZ,
   DATETIME_FILTER_NOW,
+  argentinaTodayYmd,
   isDatetimeFilterNow,
   parseArgentinaDateTime,
   toArgentinaDatetimeLocal,
@@ -21,6 +22,7 @@ import {
   FOCUS_BRAND_OUTLINE,
   FOCUS_BRAND_PRIMARY,
 } from "@/lib/focus-styles";
+import { presetChipClassName } from "@/components/ui/picker-preset-chips";
 import { cn } from "@/lib/utils";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 
@@ -95,8 +97,14 @@ type Props = {
   "aria-label"?: string;
   /** When true: renders date-only picker. Value format: YYYY-MM-DD. No hour column shown. */
   dateOnly?: boolean;
-  /** When true: value may be {@link DATETIME_FILTER_NOW}; show "Ahora" and "Hoy" resets to now. */
+  /** When true: value may be {@link DATETIME_FILTER_NOW}; "Hoy" sets live now and shows "Ahora". */
   nowPreset?: boolean;
+  /** Preset chips such as "Hoy" (default true). */
+  showPresets?: boolean;
+  /** Show "Restablecer" in footer (default false). */
+  allowReset?: boolean;
+  /** Value applied on restablecer; defaults to empty. */
+  resetValue?: string;
 };
 
 function formatDisplayDateOnly(value: string): string {
@@ -111,6 +119,30 @@ function formatDisplayDateOnly(value: string): string {
   });
 }
 
+function valueYmd(value: string, dateOnly: boolean): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (dateOnly) return trimmed.slice(0, 10);
+  const parts = partsFromValue(trimmed);
+  if (!parts) return null;
+  return `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}`;
+}
+
+function isTodayValue(value: string, dateOnly: boolean): boolean {
+  const ymd = valueYmd(value, dateOnly);
+  return Boolean(ymd && ymd === argentinaTodayYmd());
+}
+
+function footerSelectionLabel(
+  value: string,
+  dateOnly: boolean,
+  showPresets: boolean,
+): string {
+  if (!value.trim()) return dateOnly ? "Sin fecha" : "Sin fecha y hora";
+  if (showPresets && isTodayValue(value, dateOnly)) return "Hoy";
+  return dateOnly ? formatDisplayDateOnly(value) : formatDisplay(value);
+}
+
 export function DatetimeLocalPicker({
   value,
   onChange,
@@ -120,6 +152,9 @@ export function DatetimeLocalPicker({
   "aria-label": ariaLabel,
   dateOnly = false,
   nowPreset = false,
+  showPresets = true,
+  allowReset = false,
+  resetValue = "",
 }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -267,13 +302,22 @@ export function DatetimeLocalPicker({
     commit(now);
     setViewYear(now.year);
     setViewMonth(now.month);
-    setOpen(false);
   }
 
-  function onClear() {
-    onChange("");
-    setOpen(false);
+  function onReset() {
+    const next = resetValue;
+    const parts = partsFromValueMode(next) ?? fallbackNow();
+    setDraft(parts);
+    setViewYear(parts.year);
+    setViewMonth(parts.month);
+    onChange(next);
   }
+
+  const isTodayActive =
+    showPresets &&
+    (nowPreset
+      ? isDatetimeFilterNow(value)
+      : isTodayValue(value, dateOnly));
 
   const display = !value.trim()
     ? dateOnly
@@ -281,9 +325,11 @@ export function DatetimeLocalPicker({
       : "Elegir fecha y hora"
     : nowPreset && isDatetimeFilterNow(value)
       ? "Ahora"
-      : dateOnly
-        ? formatDisplayDateOnly(value)
-        : formatDisplay(value);
+      : isTodayActive
+        ? "Hoy"
+        : dateOnly
+          ? formatDisplayDateOnly(value)
+          : formatDisplay(value);
 
   return (
     <div ref={rootRef} className={cn("relative", className)}>
@@ -325,6 +371,19 @@ export function DatetimeLocalPicker({
               : "quote-picker-float-enter",
           )}
         >
+          {showPresets ? (
+            <div className="flex flex-wrap gap-2 border-b border-neutral-200 px-3 py-2">
+              <button
+                type="button"
+                onClick={onToday}
+                aria-pressed={isTodayActive}
+                className={presetChipClassName(isTodayActive, "rect")}
+              >
+                Hoy
+              </button>
+            </div>
+          ) : null}
+
           <div className="flex items-stretch">
             <div className="min-w-0 flex-1 p-3">
               <div className="mb-2 flex items-center justify-between gap-1">
@@ -434,27 +493,40 @@ export function DatetimeLocalPicker({
             )}
           </div>
 
-          <div className="flex items-center justify-between border-t border-neutral-200 bg-[var(--brand-primary-soft)]/40 px-3 py-2">
-            <button
-              type="button"
-              onClick={onClear}
+          <div
+            className={cn(
+              "border-t border-neutral-200 bg-[var(--brand-primary-soft)]/40 px-3 py-2",
+              allowReset
+                ? "flex items-center justify-between gap-2"
+                : "text-center",
+            )}
+          >
+            {allowReset ? (
+              <button
+                type="button"
+                onClick={onReset}
+                className={cn(
+                  "rounded-sm text-sm font-medium text-[var(--brand-primary)] hover:underline",
+                  FOCUS_BRAND_OUTLINE,
+                )}
+              >
+                Restablecer
+              </button>
+            ) : null}
+            <span
               className={cn(
-                "rounded-sm text-sm font-medium text-[var(--brand-primary)] hover:underline",
-                FOCUS_BRAND_OUTLINE,
+                "text-xs",
+                allowReset && "flex-1 text-center",
+                value.trim()
+                  ? "font-medium text-[var(--brand-primary)]"
+                  : "text-neutral-600",
               )}
             >
-              Borrar
-            </button>
-            <button
-              type="button"
-              onClick={onToday}
-              className={cn(
-                "rounded-sm text-sm font-medium text-[var(--brand-primary)] hover:underline",
-                FOCUS_BRAND_OUTLINE,
-              )}
-            >
-              Hoy
-            </button>
+              {footerSelectionLabel(value, dateOnly, showPresets)}
+            </span>
+            {allowReset ? (
+              <span className="w-[5.5rem]" aria-hidden />
+            ) : null}
           </div>
         </div>
       ) : null}

@@ -46,6 +46,36 @@ const ADMIN_SKELETON_CARD = cn(SKELETON_CARD, "shadow-sm");
 
 const ADMIN_SKELETON_TABLE = cn(ADMIN_SKELETON_CARD, "data-table-scroll");
 
+/** Segmented tab bar placeholder — matches SolapasTabList pill style. */
+function SkeletonSolapasTabList({
+  tabs = 3,
+  size = "md",
+}: {
+  tabs?: number;
+  size?: "sm" | "md";
+}) {
+  return (
+    <div
+      className={cn(
+        "inline-flex gap-1 rounded-lg border border-neutral-200 p-1",
+        size === "sm" ? "bg-neutral-50" : "bg-white",
+      )}
+      aria-hidden
+    >
+      {Array.from({ length: tabs }, (_, i) => (
+        <Skeleton
+          key={i}
+          className={cn(
+            "rounded-md",
+            size === "sm" ? "h-8 w-14 sm:w-16" : "h-9 w-20 sm:w-24",
+            i === 0 && "bg-[var(--brand-primary-soft)]/50",
+          )}
+        />
+      ))}
+    </div>
+  );
+}
+
 function SkeletonLogo({
   size = "xl",
 }: {
@@ -679,11 +709,7 @@ export function SkeletonAdminConfigPage() {
     >
       <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-72" />
 
-      <div className="inline-flex gap-1 rounded-lg border border-neutral-200 bg-white p-1">
-        <Skeleton className="h-9 w-32 rounded-md" />
-        <Skeleton className="h-9 w-24 rounded-md" />
-        <Skeleton className="h-9 w-20 rounded-md" />
-      </div>
+      <SkeletonSolapasTabList tabs={3} />
 
       <SkeletonAdminConfigCuentaSection />
     </SkeletonRegion>
@@ -712,7 +738,7 @@ export function SkeletonAdminDashboardPage() {
             <Skeleton className="h-5 w-52" />
             <Skeleton className="h-4 w-72 max-w-full" />
           </div>
-          <Skeleton className="h-9 w-36 rounded-lg" />
+          <SkeletonSolapasTabList tabs={3} size="sm" />
         </div>
         <div className="mb-6 flex flex-wrap gap-6">
           <div className="space-y-2">
@@ -854,10 +880,7 @@ export function SkeletonAdminStockPage() {
         <SkeletonPageHeader titleWidth="w-20" descriptionWidth="w-72" />
         <Skeleton className="h-10 w-40 shrink-0 rounded-md" />
       </div>
-      <div className="inline-flex gap-1 rounded-lg border border-neutral-200 bg-white p-1">
-        <Skeleton className="h-9 w-28 rounded-md" />
-        <Skeleton className="h-9 w-28 rounded-md" />
-      </div>
+      <SkeletonSolapasTabList tabs={3} />
       <div className="flex flex-wrap items-end gap-3">
         <Skeleton className="h-10 w-56 rounded-md" />
         <Skeleton className="h-10 w-44 rounded-md" />

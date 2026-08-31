@@ -13,7 +13,7 @@ import { ChevronDown, FileDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
-import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -28,11 +28,9 @@ import {
 } from "@/hooks/use-selected-row";
 import {
   ARGENTINA_TZ,
-  DATETIME_FILTER_NOW,
-  isDatetimeFilterNow,
+  FILTER_DEFAULT_RANGE_DAYS,
   ORDER_CUTOFF_HOUR_AR,
   splitQuotesByDayCutoff,
-  toArgentinaDatetimeLocal,
 } from "@/lib/argentina-time";
 import { formatDeliveryDateLabel } from "@/lib/delivery-date";
 import { quoteStatusLabel } from "@/lib/quote-status";
@@ -147,18 +145,13 @@ export function QuotesAdminPanel({
   initialQuotes,
   defaultFromLocal,
   defaultToLocal,
-  defaultToIsNow = false,
 }: {
   initialQuotes: QuoteListRow[];
   defaultFromLocal: string;
   defaultToLocal: string;
-  /** When true, "Hasta" starts as live now (label "Ahora"). */
-  defaultToIsNow?: boolean;
 }) {
   const [from, setFrom] = useState(defaultFromLocal);
-  const [to, setTo] = useState(() =>
-    defaultToIsNow ? DATETIME_FILTER_NOW : defaultToLocal,
-  );
+  const [to, setTo] = useState(defaultToLocal);
   const [quotes, setQuotes] = useState(initialQuotes);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -204,13 +197,9 @@ export function QuotesAdminPanel({
     [quotes, query],
   );
 
-  const resolvedToLocal = isDatetimeFilterNow(to)
-    ? toArgentinaDatetimeLocal(new Date())
-    : to;
-
   const { main, afterCutoff } = useMemo(
-    () => splitQuotesByDayCutoff(filtered, resolvedToLocal),
-    [filtered, resolvedToLocal],
+    () => splitQuotesByDayCutoff(filtered, to),
+    [filtered, to],
   );
 
   // Freeze late rows while exit plays (filter can clear afterCutoff same tick).
@@ -237,12 +226,7 @@ export function QuotesAdminPanel({
   function buildParams() {
     const params = new URLSearchParams();
     if (from) params.set("from", from);
-    if (to) {
-      params.set(
-        "to",
-        isDatetimeFilterNow(to) ? DATETIME_FILTER_NOW : to,
-      );
-    }
+    if (to) params.set("to", to);
     return params;
   }
 
@@ -289,28 +273,24 @@ export function QuotesAdminPanel({
               Filtrar cotizaciones
             </p>
             <p className="text-xs text-neutral-500">
-              Por defecto: ayer {ORDER_CUTOFF_HOUR_AR}:00 → ahora (hora
-              Argentina). Las ingresadas después del cierre van arriba, en una
-              fila expansible (orden más reciente primero).
+              Por defecto: últimos {FILTER_DEFAULT_RANGE_DAYS} días (hora
+              Argentina). Las ingresadas después del cierre ({ORDER_CUTOFF_HOUR_AR}
+              :00) van arriba, en una fila expansible (orden más reciente
+              primero).
             </p>
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
-              Desde
-              <DatetimeLocalPicker
-                value={from}
-                onChange={setFrom}
-                aria-label="Desde"
-              />
-            </label>
-            <label className="flex w-[12.75rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
-              Hasta
-              <DatetimeLocalPicker
-                value={to}
-                onChange={setTo}
-                nowPreset
-                aria-label="Hasta"
+            <label className="flex min-w-[14rem] shrink-0 flex-col gap-1 text-xs text-neutral-600">
+              Período
+              <DateRangePicker
+                from={from}
+                to={to}
+                onChange={(nextFrom, nextTo) => {
+                  setFrom(nextFrom);
+                  setTo(nextTo);
+                }}
+                aria-label="Período"
               />
             </label>
 
