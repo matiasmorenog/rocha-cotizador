@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ClipboardPlus } from "lucide-react";
 import { AdminQuoteActivitySection } from "@/components/admin/admin-quote-activity-section";
 import { RecentQuotesList } from "@/components/admin/recent-quotes-list";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
@@ -77,6 +78,7 @@ export default async function AdminDashboardPage({
               FOCUS_BRAND_PRIMARY,
             )}
           >
+            <ClipboardPlus className="mr-1.5 h-4 w-4" aria-hidden />
             Nueva cotización
           </Link>
         ) : null}

@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, FileDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
@@ -323,7 +323,10 @@ export function QuotesAdminPanel({
                   Generando…
                 </>
               ) : (
-                "Descargar PDF"
+                <>
+                  <FileDown className="mr-1.5 h-4 w-4" aria-hidden />
+                  Descargar PDF
+                </>
               )}
             </Button>
           </div>

@@ -1,3 +1,4 @@
+import { ClipboardPlus } from "lucide-react";
 import { requireStaffPermission } from "@/lib/session";
 import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-route-transition";
 import { QuotesAdminPanel } from "@/components/admin/quotes-admin-panel";
@@ -34,6 +35,7 @@ export default async function AdminCotizacionesPage({
             FOCUS_BRAND_PRIMARY,
           )}
         >
+          <ClipboardPlus className="mr-1.5 h-4 w-4" aria-hidden />
           Nueva cotización
         </CotizacionesTransitionLink>
       </div>
