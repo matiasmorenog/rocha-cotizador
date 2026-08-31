@@ -10,6 +10,8 @@ import {
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   ARGENTINA_TZ,
+  DATETIME_FILTER_NOW,
+  isDatetimeFilterNow,
   parseArgentinaDateTime,
   toArgentinaDatetimeLocal,
 } from "@/lib/argentina-time";
@@ -93,6 +95,8 @@ type Props = {
   "aria-label"?: string;
   /** When true: renders date-only picker. Value format: YYYY-MM-DD. No hour column shown. */
   dateOnly?: boolean;
+  /** When true: value may be {@link DATETIME_FILTER_NOW}; show "Ahora" and "Hoy" resets to now. */
+  nowPreset?: boolean;
 };
 
 function formatDisplayDateOnly(value: string): string {
@@ -115,6 +119,7 @@ export function DatetimeLocalPicker({
   disabled = false,
   "aria-label": ariaLabel,
   dateOnly = false,
+  nowPreset = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -123,6 +128,7 @@ export function DatetimeLocalPicker({
   const { present, exiting, animKey } = useExitPresence(open);
 
   function partsFromValueMode(v: string): Parts | null {
+    if (nowPreset && isDatetimeFilterNow(v)) return null;
     if (dateOnly) {
       const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.trim());
       if (!m) return null;
@@ -247,6 +253,15 @@ export function DatetimeLocalPicker({
   }
 
   function onToday() {
+    if (nowPreset) {
+      const now = fallbackNow();
+      setDraft(now);
+      setViewYear(now.year);
+      setViewMonth(now.month);
+      onChange(DATETIME_FILTER_NOW);
+      setOpen(false);
+      return;
+    }
     const now = partsFromValue(toArgentinaDatetimeLocal(new Date()));
     if (!now) return;
     commit(now);
@@ -260,13 +275,15 @@ export function DatetimeLocalPicker({
     setOpen(false);
   }
 
-  const display = value.trim()
+  const display = !value.trim()
     ? dateOnly
-      ? formatDisplayDateOnly(value)
-      : formatDisplay(value)
-    : dateOnly
       ? "Elegir fecha"
-      : "Elegir fecha y hora";
+      : "Elegir fecha y hora"
+    : nowPreset && isDatetimeFilterNow(value)
+      ? "Ahora"
+      : dateOnly
+        ? formatDisplayDateOnly(value)
+        : formatDisplay(value);
 
   return (
     <div ref={rootRef} className={cn("relative", className)}>

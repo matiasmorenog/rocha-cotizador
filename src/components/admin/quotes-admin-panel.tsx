@@ -204,9 +204,13 @@ export function QuotesAdminPanel({
     [quotes, query],
   );
 
+  const resolvedToLocal = isDatetimeFilterNow(to)
+    ? toArgentinaDatetimeLocal(new Date())
+    : to;
+
   const { main, afterCutoff } = useMemo(
-    () => splitQuotesByDayCutoff(filtered, to),
-    [filtered, to],
+    () => splitQuotesByDayCutoff(filtered, resolvedToLocal),
+    [filtered, resolvedToLocal],
   );
 
   // Freeze late rows while exit plays (filter can clear afterCutoff same tick).
@@ -233,7 +237,12 @@ export function QuotesAdminPanel({
   function buildParams() {
     const params = new URLSearchParams();
     if (from) params.set("from", from);
-    if (to) params.set("to", to);
+    if (to) {
+      params.set(
+        "to",
+        isDatetimeFilterNow(to) ? DATETIME_FILTER_NOW : to,
+      );
+    }
     return params;
   }
 
@@ -300,6 +309,7 @@ export function QuotesAdminPanel({
               <DatetimeLocalPicker
                 value={to}
                 onChange={setTo}
+                nowPreset
                 aria-label="Hasta"
               />
             </label>

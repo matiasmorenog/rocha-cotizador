@@ -2,7 +2,7 @@ import { ClipboardPlus } from "lucide-react";
 import { requireStaffPermission } from "@/lib/session";
 import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-route-transition";
 import { QuotesAdminPanel } from "@/components/admin/quotes-admin-panel";
-import { resolveQuotesExportRange } from "@/lib/argentina-time";
+import { resolveQuotesExportRange, isDatetimeFilterNow } from "@/lib/argentina-time";
 import { getAdminCotizacionesQuotes } from "@/lib/admin-cotizaciones-data";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
@@ -41,10 +41,11 @@ export default async function AdminCotizacionesPage({
       </div>
 
       <QuotesAdminPanel
-        key={`${fromLocal}_${toLocal}`}
+        key={`${fromLocal}_${toLocal}_${toParam?.trim() ? "explicit" : "now"}`}
         initialQuotes={rows}
         defaultFromLocal={fromLocal}
         defaultToLocal={toLocal}
+        defaultToIsNow={!toParam?.trim() || isDatetimeFilterNow(toParam)}
       />
     </div>
   );
