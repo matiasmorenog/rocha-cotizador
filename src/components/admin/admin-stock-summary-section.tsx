@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { StockTab } from "@/lib/admin-stock-data";
 import type { StockSummaryPayload } from "@/lib/admin-stock-summary-shared";
+import { ADMIN_STOCK_SUMMARY_REFRESH_EVENT } from "@/lib/admin-stock-summary-refresh";
 import { AdminStockSummaryChart } from "@/components/admin/admin-stock-summary-chart";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { cn, formatPrice, formatQty } from "@/lib/utils";
@@ -26,7 +27,8 @@ export function AdminStockSummarySection({
   to: string;
   customerId: string;
 }) {
-  const fetchKey = `${tab}:${from}:${to}:${customerId}`;
+  const [refreshNonce, setRefreshNonce] = useState(0);
+  const fetchKey = `${tab}:${from}:${to}:${customerId}:${refreshNonce}`;
   const [snapshot, setSnapshot] = useState<{
     key: string;
     data: StockSummaryPayload | null;
@@ -36,6 +38,13 @@ export function AdminStockSummarySection({
   const loading = snapshot.key !== fetchKey;
   const data = snapshot.key === fetchKey ? snapshot.data : null;
   const error = snapshot.key === fetchKey ? snapshot.error : null;
+
+  useEffect(() => {
+    const bump = () => setRefreshNonce((n) => n + 1);
+    window.addEventListener(ADMIN_STOCK_SUMMARY_REFRESH_EVENT, bump);
+    return () =>
+      window.removeEventListener(ADMIN_STOCK_SUMMARY_REFRESH_EVENT, bump);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
