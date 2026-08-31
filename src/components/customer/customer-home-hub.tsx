@@ -18,10 +18,12 @@ export function CustomerHomeHub({
   const actions = buildCustomerHomeActions(modules);
   const displayName = userName?.trim() || "Cliente";
   const code = customerCode?.trim();
+  const threeCol = actions.length === 3;
+  const containerMax = threeCol ? "max-w-3xl" : "max-w-xl";
 
   return (
     <BrandBackdrop className="flex w-full min-h-[min(calc(100vh-10rem),40rem)] flex-col items-center justify-center rounded-xl px-4 py-10 sm:py-12">
-      <div className="mx-auto w-full max-w-xl space-y-6 text-center">
+      <div className={cn("mx-auto w-full space-y-6 text-center", containerMax)}>
         <div className="flex w-full flex-col items-center gap-3 rounded-2xl bg-white/95 px-5 py-4 text-center shadow-sm backdrop-blur-[2px]">
           <BrandLogo size="md" priority />
           <div className="space-y-0.5">
@@ -37,7 +39,12 @@ export function CustomerHomeHub({
           </div>
         </div>
 
-        <div className="mx-auto grid w-full max-w-xl grid-cols-1 gap-3 sm:grid-cols-2">
+        <div
+          className={cn(
+            "mx-auto grid w-full grid-cols-1 gap-3",
+            threeCol ? "sm:grid-cols-3" : "sm:grid-cols-2",
+          )}
+        >
           {actions.map((item) => {
             const Icon = item.icon;
             return (
