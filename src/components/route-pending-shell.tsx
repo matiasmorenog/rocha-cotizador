@@ -12,6 +12,8 @@ import {
   SkeletonAdminStockPage,
   SkeletonChooserPage,
   SkeletonCustomerCuentaConfigPage,
+  SkeletonCustomerRemitosPage,
+  SkeletonCustomerStockPage,
   SkeletonHomePage,
   SkeletonListPage,
   SkeletonLoginPage,
@@ -28,17 +30,10 @@ function customerSkeletonFor(path: string) {
     return <SkeletonRemitoDetailPage />;
   }
   if (path.startsWith("/remitos")) {
-    return (
-      <SkeletonListPage
-        label="Cargando remitos"
-        titleWidth="w-36"
-        cols={4}
-        descriptionWidth={null}
-      />
-    );
+    return <SkeletonCustomerRemitosPage />;
   }
   if (path.startsWith("/stock")) {
-    return <SkeletonAdminStockPage />;
+    return <SkeletonCustomerStockPage />;
   }
   if (path.startsWith("/cuenta")) return <SkeletonCustomerCuentaConfigPage />;
   if (path.startsWith("/entrar")) return <SkeletonChooserPage />;

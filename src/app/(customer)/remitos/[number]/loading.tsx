@@ -1,5 +1,5 @@
 import { SkeletonRemitoDetailPage } from "@/components/ui/skeleton";
 
 export default function RemitoDetailLoading() {
-  return <SkeletonRemitoDetailPage />;
+  return <SkeletonRemitoDetailPage withShell={false} />;
 }
