@@ -1,12 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Suspense } from "react";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { CustomerHomeHub } from "@/components/customer/customer-home-hub";
-import { CustomerShell } from "@/components/customer/customer-shell";
-import { SkeletonHomePage } from "@/components/ui/skeleton";
-import { resolveCustomerModulesForSession } from "@/lib/customer-modules";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { getOptionalSession } from "@/lib/session";
 import { isAdminPanelRole, staffHomeHref } from "@/lib/staff-permissions";
@@ -14,28 +10,18 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-async function HomeContent() {
+export default async function HomePage() {
   const session = await getOptionalSession();
   if (isAdminPanelRole(session?.user?.role)) {
     redirect(staffHomeHref(session?.user?.permissions, session?.user?.role));
   }
 
-  if (
-    session?.user?.role === "CUSTOMER" &&
-    session.user.customerId
-  ) {
-    const modules = await resolveCustomerModulesForSession(
-      session.user.customerId,
-      session.user.modules,
-    );
-
+  if (session?.user?.role === "CUSTOMER" && session.user.customerId) {
     return (
-      <CustomerShell showSidebar={false}>
-        <CustomerHomeHub
-          userName={session.user.name}
-          modules={modules}
-        />
-      </CustomerShell>
+      <CustomerHomeHub
+        userName={session.user.name}
+        modules={session.user.modules ?? []}
+      />
     );
   }
 
@@ -68,13 +54,5 @@ async function HomeContent() {
         </div>
       </div>
     </BrandBackdrop>
-  );
-}
-
-export default function HomePage() {
-  return (
-    <Suspense fallback={<SkeletonHomePage />}>
-      <HomeContent />
-    </Suspense>
   );
 }

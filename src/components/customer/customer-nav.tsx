@@ -8,6 +8,7 @@ import {
   useExitPresence,
   QUOTE_PICKER_FLOAT_MS,
 } from "@/hooks/use-exit-presence";
+import { useShellNavEnterOnce } from "@/hooks/use-shell-nav-enter-once";
 import { buildCustomerNavItems } from "@/lib/customer-nav-items";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { useCustomerNavStore } from "@/stores/customer-nav-store";
@@ -34,7 +35,7 @@ function CustomerSidebarUserInfo({
   );
 }
 
-function NavLinks({
+function CustomerNavLinkItems({
   pathname,
   modules,
   onNavigate,
@@ -45,35 +46,29 @@ function NavLinks({
 }) {
   const items = buildCustomerNavItems(modules);
 
-  return (
-    <nav
-      aria-label="Secciones del cliente"
-      className="flex flex-col gap-1 text-sm"
-    >
-      {items.map((item) => {
-        const active = item.match(pathname);
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "inline-flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
-              FOCUS_BRAND_OUTLINE,
-              active
-                ? "bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
-                : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900",
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0" aria-hidden />
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
-  );
+  return items.map((item, index) => {
+    const active = item.match(pathname);
+    const Icon = item.icon;
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={onNavigate}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "inline-flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
+          index > 0 && "mt-1",
+          FOCUS_BRAND_OUTLINE,
+          active
+            ? "bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
+            : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900",
+        )}
+      >
+        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+        <span>{item.label}</span>
+      </Link>
+    );
+  });
 }
 
 function CustomerSidebarPanel({
@@ -84,6 +79,7 @@ function CustomerSidebarPanel({
   onClose,
   userName,
   customerCode,
+  staggerEnter = false,
 }: {
   pathname: string;
   modules: CustomerModuleSession[];
@@ -92,6 +88,7 @@ function CustomerSidebarPanel({
   onClose?: () => void;
   userName?: string | null;
   customerCode?: string | null;
+  staggerEnter?: boolean;
 }) {
   return (
     <div className="flex h-auto flex-col">
@@ -110,15 +107,23 @@ function CustomerSidebarPanel({
           </button>
         </div>
       ) : null}
-      <CustomerSidebarUserInfo
-        userName={userName}
-        customerCode={customerCode}
-      />
-      <NavLinks
-        pathname={pathname}
-        modules={modules}
-        onNavigate={onNavigate}
-      />
+      <nav
+        aria-label="Secciones del cliente"
+        className={cn(
+          "flex flex-col text-sm",
+          staggerEnter && "shell-nav-reveal",
+        )}
+      >
+        <CustomerSidebarUserInfo
+          userName={userName}
+          customerCode={customerCode}
+        />
+        <CustomerNavLinkItems
+          pathname={pathname}
+          modules={modules}
+          onNavigate={onNavigate}
+        />
+      </nav>
     </div>
   );
 }
@@ -204,6 +209,7 @@ function CustomerMobileDrawer({
           onClose={close}
           userName={userName}
           customerCode={customerCode}
+          staggerEnter
         />
       </aside>
     </div>
@@ -227,6 +233,7 @@ export function CustomerNav({
 }) {
   const pathnameFromRouter = usePathname();
   const pathname = activePathname ?? pathnameFromRouter;
+  const { animate: navAnimate } = useShellNavEnterOnce(showDesktopSidebar);
 
   return (
     <>
@@ -237,6 +244,7 @@ export function CustomerNav({
             modules={modules}
             userName={userName}
             customerCode={customerCode}
+            staggerEnter={navAnimate}
           />
         </aside>
       ) : null}

@@ -1,7 +1,7 @@
 /**
  * Labels for quote/remito line measure.
  *
- * - `allowsUnitOrder` true: customer may choose kg or units (units → price TBD).
+ * - `allowsUnitOrder` true (solo elaborados): customer may choose kg or units.
  * - `allowsUnitOrder` false: fixed-price quantity (unidades), not kg.
  */
 export function quoteLineMeasureLabel(

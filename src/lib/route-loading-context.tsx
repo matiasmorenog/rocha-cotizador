@@ -22,6 +22,8 @@ type RouteLoadingContextValue = {
   pendingPath: string | null;
   startLoading: (path?: string | null) => void;
   finishLoading: () => void;
+  /** Drop pendingPath once the router pathname has caught up (or force after timeout). */
+  reconcilePendingPath: (pathname: string, opts?: { force?: boolean }) => void;
   /** Sync read of startLoading — overlay settle must not wait for React state. */
   isNavActive: () => boolean;
 };
@@ -85,7 +87,6 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
   const finishLoading = useCallback(() => {
     clearTrickle();
     setPending(false);
-    setPendingPath(null);
     if (!activeRef.current) {
       setVisible(false);
       setProgress(0);
@@ -100,6 +101,18 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
       hideRef.current = null;
     }, HIDE_AFTER_DONE_MS);
   }, [clearHide, clearTrickle]);
+
+  const reconcilePendingPath = useCallback(
+    (pathname: string, opts?: { force?: boolean }) => {
+      setPendingPath((prev) => {
+        if (!prev) return null;
+        if (opts?.force) return null;
+        if (pathname === prev || pathname.startsWith(`${prev}/`)) return null;
+        return prev;
+      });
+    },
+    [],
+  );
 
   const isNavActive = useCallback(() => activeRef.current, []);
 
@@ -118,6 +131,7 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
       pendingPath,
       startLoading,
       finishLoading,
+      reconcilePendingPath,
       isNavActive,
     }),
     [
@@ -127,6 +141,7 @@ export function RouteLoadingProvider({ children }: { children: ReactNode }) {
       pendingPath,
       startLoading,
       finishLoading,
+      reconcilePendingPath,
       isNavActive,
     ],
   );

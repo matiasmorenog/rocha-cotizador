@@ -320,28 +320,97 @@ export function SkeletonLoginPage({ title = "Cargando acceso" }: { title?: strin
   );
 }
 
+function SkeletonQuoteBuilderContent() {
+  return (
+    <div className="space-y-6">
+      <div className={cn(SKELETON_CARD, "p-4 shadow-sm")}>
+        <div className="grid gap-3 md:grid-cols-[1fr_120px_auto]">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-20" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <div className="flex items-end">
+            <Skeleton className="h-10 w-24 rounded-md" />
+          </div>
+        </div>
+      </div>
+
+      <div className={cn(SKELETON_CARD, "shadow-sm")}>
+        <div className="data-table-scroll">
+          <table className="quote-draft-table w-full min-w-[40rem] text-sm">
+            <thead className="text-left text-neutral-600">
+              <tr className="border-b border-neutral-200">
+                {Array.from({ length: 7 }, (_, i) => (
+                  <th key={i} className="px-3 py-2.5 font-medium">
+                    <Skeleton className="h-4 w-full max-w-[4.5rem]" />
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {Array.from({ length: 3 }, (_, row) => (
+                <tr key={row} className="border-t border-neutral-100">
+                  <td className="px-3 py-2">
+                    <Skeleton className="h-4 w-12" />
+                  </td>
+                  <td className="px-3 py-2">
+                    <Skeleton className="h-4 w-36" />
+                  </td>
+                  <td className="px-3 py-2">
+                    <Skeleton className="h-8 w-24 rounded-md" />
+                  </td>
+                  <td className="px-3 py-2">
+                    <Skeleton className="h-8 w-[7.5rem] rounded-md" />
+                  </td>
+                  <td className="px-3 py-2">
+                    <Skeleton className="h-4 w-16" />
+                  </td>
+                  <td className="px-3 py-2">
+                    <Skeleton className="h-4 w-16" />
+                  </td>
+                  <td className="px-3 py-2">
+                    <Skeleton className="h-8 w-8 rounded-md" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="flex items-center justify-between border-t border-neutral-200 px-4 py-3">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-7 w-28" />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <Skeleton className="h-4 w-32" />
+        <Skeleton className="h-10 w-full max-w-xs rounded-md" />
+        <Skeleton className="h-3 w-full max-w-md" />
+      </div>
+
+      <div className="space-y-1">
+        <Skeleton className="h-4 w-28" />
+        <Skeleton className="h-[4.75rem] w-full rounded-md" />
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Skeleton className="h-10 w-20 rounded-md" />
+        <Skeleton className="h-10 w-44 rounded-md" />
+      </div>
+    </div>
+  );
+}
+
 export function SkeletonQuotePage({ withShell = true }: CustomerSkeletonShellProps = {}) {
   return (
     <CustomerSkeletonFrame withShell={withShell}>
       <SkeletonRegion label="Cargando cotizador" className="space-y-4">
         <SkeletonPageHeader titleWidth="w-52" descriptionWidth="w-48" />
-        <div className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-[1fr_120px_auto]">
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-20" />
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-            <div className="space-y-2">
-              <Skeleton className="h-4 w-16" />
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-            <div className="flex items-end">
-              <Skeleton className="h-10 w-24 rounded-md" />
-            </div>
-          </div>
-        </div>
-        {/* Código · Producto · Cant. · Medida · Precio · Importe · actions */}
-        <SkeletonTableRows rows={4} cols={7} />
+        <SkeletonQuoteBuilderContent />
       </SkeletonRegion>
     </CustomerSkeletonFrame>
   );
@@ -631,16 +700,14 @@ export function SkeletonCustomerStockPage({
       <SkeletonRegion label="Cargando stock" className="space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2">
-            <Skeleton className="h-8 w-20" />
+            <div className="flex flex-wrap items-center gap-2">
+              <Skeleton className="h-8 w-20" />
+              <Skeleton className="h-8 w-28 rounded-md" />
+            </div>
             <Skeleton className="h-4 w-64 max-w-full" />
             <Skeleton className="h-4 w-48" />
           </div>
           <Skeleton className="h-10 w-40 shrink-0 rounded-md" />
-        </div>
-        <div className="inline-flex gap-1 rounded-lg border border-neutral-200 bg-white p-1">
-          <Skeleton className="h-9 w-28 rounded-md" />
-          <Skeleton className="h-9 w-24 rounded-md" />
-          <Skeleton className="h-9 w-32 rounded-md" />
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <div className="w-[12.75rem] shrink-0 space-y-1">
@@ -810,10 +877,7 @@ export function SkeletonAdminListPage({
 export function SkeletonAdminQuotesPage() {
   return (
     <SkeletonRegion label="Cargando cotizaciones" className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <Skeleton className="h-8 w-40" />
-        <Skeleton className="h-10 w-40 rounded-md" />
-      </div>
+      <Skeleton className="h-8 w-40" />
       <div className={cn(ADMIN_SKELETON_CARD, "p-4")}>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -821,11 +885,7 @@ export function SkeletonAdminQuotesPage() {
             <Skeleton className="h-3 w-56" />
           </div>
           <div className="flex flex-wrap items-end gap-3">
-            <div className="w-[12.75rem] shrink-0 space-y-1">
-              <Skeleton className="h-3 w-12" />
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-            <div className="w-[12.75rem] shrink-0 space-y-1">
+            <div className="min-w-[14rem] shrink-0 flex-1 space-y-1">
               <Skeleton className="h-3 w-12" />
               <Skeleton className="h-10 w-full rounded-md" />
             </div>
@@ -834,7 +894,10 @@ export function SkeletonAdminQuotesPage() {
           </div>
         </div>
       </div>
-      <Skeleton className="h-10 w-full rounded-md" />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Skeleton className="h-10 min-w-0 flex-1 rounded-md" />
+        <Skeleton className="h-10 w-40 shrink-0 rounded-md" />
+      </div>
       {/* Número · Cliente · Pedido · Entrega · Estado · Total */}
       <SkeletonTableRows rows={8} cols={6} admin tableMinWidth="min-w-[42rem]" />
     </SkeletonRegion>

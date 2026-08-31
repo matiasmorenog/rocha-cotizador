@@ -15,6 +15,7 @@ import {
   type ImportValidationResult,
 } from "@/lib/admin-excel";
 import { inferStockKindFromRubro } from "@/lib/stock-rubros-shared";
+import { normalizeAllowsUnitOrder } from "@/lib/stock-product-kind-shared";
 import {
   PRODUCT_CODE_HEADER_ALIASES,
   PRODUCT_NAME_HEADER_ALIASES,
@@ -284,9 +285,10 @@ export async function executeProductsImport(
       });
       continue;
     }
-    const allowsUnitOrder = parseBool(
-      getCellByHeader(row, ctx.headers, "permitePedidoUnidad"),
-      false,
+    const stockKind = stockKindRaw ?? inferStockKindFromRubro(rubro);
+    const allowsUnitOrder = normalizeAllowsUnitOrder(
+      stockKind,
+      parseBool(getCellByHeader(row, ctx.headers, "permitePedidoUnidad"), false),
     );
 
     try {
@@ -298,7 +300,7 @@ export async function executeProductsImport(
         basePrice: priceRaw,
         allowsUnitOrder,
         available,
-        stockKind: stockKindRaw ?? inferStockKindFromRubro(rubro),
+        stockKind,
       };
 
       const product = existing

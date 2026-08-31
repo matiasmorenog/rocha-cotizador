@@ -1,9 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
 import type { ReactNode } from "react";
-import { CustomerNav } from "@/components/customer/customer-nav";
 import {
   SkeletonAdminConfigPage,
   SkeletonAdminDashboardPage,
@@ -22,22 +20,12 @@ import {
   SkeletonQuotePage,
   SkeletonRemitoDetailPage,
 } from "@/components/ui/skeleton";
-import { normalizeCustomerModules } from "@/lib/customer-modules-normalize";
 import { useRouteLoading } from "@/lib/route-loading-context";
 import { cn } from "@/lib/utils";
 
-function isCustomerModulePath(path: string): boolean {
-  return (
-    path.startsWith("/cotizar") ||
-    path.startsWith("/remitos") ||
-    path.startsWith("/stock") ||
-    path.startsWith("/cuenta")
-  );
-}
-
 function customerSkeletonFor(path: string) {
-  /** Layout + JWT already know nav — never skeleton the sidebar on module routes. */
-  const withShell = !isCustomerModulePath(path);
+  /** Live sidebar sits outside pending — skeleton content column only. */
+  const withShell = false;
 
   if (path === "/" || path === "") return <SkeletonHomePage />;
   if (path.startsWith("/cotizar")) return <SkeletonQuotePage withShell={withShell} />;
@@ -112,49 +100,35 @@ type RoutePendingShellProps = {
    * table skeleton on `min-w-0` flex (remito → cotizaciones).
    */
   coverGutters?: boolean;
+  /** Home hub uses a full-width skeleton in CustomerLayoutFrame instead. */
+  suppressOverlay?: boolean;
 };
 
 /**
  * On soft-nav start (`pending`), cover children with a destination skeleton
  * immediately — do not wait for Next `loading.tsx` to swap the segment.
  *
- * Customer modules: real sidebar from session (same items as home cards);
- * only the content column skeletons while the route resolves.
+ * Customer module routes: live nav is outside this shell — content skeleton only.
  */
 export function RoutePendingShell({
   children,
   variant,
   coverGutters = true,
+  suppressOverlay = false,
 }: RoutePendingShellProps) {
   const { pending, pendingPath } = useRouteLoading();
   const pathname = usePathname();
-  const { data: session } = useSession();
   const path = pendingPath ?? pathname;
-  const showPendingOverlay = pending;
+  const showPendingOverlay = pending && !suppressOverlay;
   const skeleton =
     variant === "admin" ? adminSkeletonFor(path) : customerSkeletonFor(path);
-
-  const customerUser =
-    session?.user?.role === "CUSTOMER" && session.user.customerId
-      ? session.user
-      : null;
-  const showLiveCustomerNav =
-    variant === "customer" &&
-    showPendingOverlay &&
-    customerUser != null &&
-    isCustomerModulePath(path);
 
   const pendingOverlay = (
     <div
       data-route-pending=""
       className={cn(
-        "cursor-wait overflow-auto",
-        showLiveCustomerNav
-          ? "relative min-h-[12rem] min-w-0 flex-1"
-          : cn(
-              "absolute z-[5]",
-              coverGutters ? "-inset-x-4 -inset-y-6 px-4 py-6" : "inset-0",
-            ),
+        "relative z-[5] cursor-wait",
+        coverGutters && "-mx-4 -my-6 px-4 py-6",
       )}
       role="status"
       aria-busy="true"
@@ -166,45 +140,24 @@ export function RoutePendingShell({
   );
 
   return (
-    <div
-      className={cn(
-        "relative min-w-0 w-full",
-        showPendingOverlay &&
-          !showLiveCustomerNav &&
-          "min-h-[min(calc(100vh-10rem),40rem)]",
-      )}
-    >
+    <div className="relative min-w-0 w-full">
       <div
-        className={cn(showPendingOverlay && "hidden")}
-        aria-hidden={showPendingOverlay || undefined}
-        {...(showPendingOverlay ? { inert: true } : {})}
+        data-route-content=""
+        className={cn(pending && "hidden")}
+        aria-hidden={pending || undefined}
+        {...(pending ? { inert: true } : {})}
       >
         {children}
       </div>
       {showPendingOverlay ? (
         <>
-          {variant === "customer" && !showLiveCustomerNav ? (
+          {variant === "customer" && coverGutters ? (
             <div
               aria-hidden
               className="brand-page-atmosphere pointer-events-none fixed inset-0 z-[4] print:hidden"
             />
           ) : null}
-          {showLiveCustomerNav ? (
-            <div className="w-full admin-shell">
-              <CustomerNav
-                modules={normalizeCustomerModules(
-                  (customerUser.modules ?? []).map(String),
-                )}
-                userName={customerUser.name}
-                customerCode={customerUser.customerCode}
-                activePathname={path}
-                showDesktopSidebar
-              />
-              {pendingOverlay}
-            </div>
-          ) : (
-            pendingOverlay
-          )}
+          {pendingOverlay}
         </>
       ) : null}
     </div>

@@ -16,9 +16,9 @@ import {
 import { resolveStockDateRange } from "@/lib/admin-stock-summary-shared";
 import {
   customerStockTabsForModules,
+  customerStockTabLabel,
   parseCustomerStockTab,
 } from "@/lib/customer-stock-shared";
-import { resolveCustomerModulesForSession } from "@/lib/customer-modules";
 import { requireCustomerSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -49,10 +49,8 @@ export default async function CustomerStockPage({
     requireCustomerSession(),
   ]);
 
-  const modules = await resolveCustomerModulesForSession(
-    session.user.customerId!,
-    session.user.modules,
-  );
+  const customerId = session.user.customerId!;
+  const modules = session.user.modules ?? [];
   const availableTabs = customerStockTabsForModules(modules);
   if (availableTabs.length === 0) {
     notFound();
@@ -64,7 +62,6 @@ export default async function CustomerStockPage({
   }
 
   const { from, to } = resolveStockDateRange(params.from, params.to);
-  const customerId = session.user.customerId!;
   const customerLabel = `${session.user.name ?? "Cliente"} · código ${session.user.customerCode ?? "—"}`;
   const entries = await loadCustomerStockEntries(active, from, to, customerId);
 
@@ -103,6 +100,11 @@ export default async function CustomerStockPage({
         customerId={customerId}
         customerLabel={customerLabel}
         stockModule={active.stockModule}
+        sectionLabel={
+          availableTabs.length === 1
+            ? customerStockTabLabel(active.tab)
+            : undefined
+        }
         {...formCopy}
       />
 
@@ -114,35 +116,37 @@ export default async function CustomerStockPage({
       />
 
       <StockTabPanel tabKey={active.tab}>
-        <CustomerStockDateFilters tab={active.tab} from={from} to={to} />
+        <div className="space-y-6">
+          <CustomerStockDateFilters tab={active.tab} from={from} to={to} />
 
-        <div>
-          <h2 className="text-lg font-semibold text-neutral-900">Historial</h2>
-          <p className="text-sm text-neutral-600">
-            {historialHint} Hasta {STOCK_HISTORY_LIMIT} por consulta — filtrá por
-            fechas.
-          </p>
+          <div>
+            <h2 className="text-lg font-semibold text-neutral-900">Historial</h2>
+            <p className="text-sm text-neutral-600">
+              {historialHint} Hasta {STOCK_HISTORY_LIMIT} por consulta — filtrá por
+              fechas.
+            </p>
+          </div>
+
+          <AdminStockReports
+            entries={entries}
+            customers={[
+              {
+                id: customerId,
+                code: session.user.customerCode ?? "",
+                name: session.user.name ?? "",
+              },
+            ]}
+            customerId={customerId}
+            kindLabel={
+              active.tab === "consumibles"
+                ? "Recuento"
+                : active.tab === "activos"
+                  ? "Activo del local"
+                  : "Desperdicio"
+            }
+            hideCustomerColumn
+          />
         </div>
-
-        <AdminStockReports
-          entries={entries}
-          customers={[
-            {
-              id: customerId,
-              code: session.user.customerCode ?? "",
-              name: session.user.name ?? "",
-            },
-          ]}
-          customerId={customerId}
-          kindLabel={
-            active.tab === "consumibles"
-              ? "Recuento"
-              : active.tab === "activos"
-                ? "Activo del local"
-                : "Desperdicio"
-          }
-          hideCustomerColumn
-        />
       </StockTabPanel>
     </div>
   );

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Source_Sans_3 } from "next/font/google";
 import { AppHeader } from "@/components/app-header";
-import { MainRoutePending } from "@/components/main-route-pending";
+import { CustomerLayoutFrame } from "@/components/customer/customer-layout-frame";
+import type { CustomerLayoutFrameUser } from "@/components/customer/customer-layout-frame";
 import { Providers } from "@/components/providers";
 import { adminThemeBlockingScript } from "@/lib/admin-theme";
 import { getOptionalSession } from "@/lib/session";
@@ -25,6 +26,14 @@ export default async function RootLayout({
 }>) {
   const session = await getOptionalSession();
   const isStaff = isAdminPanelRole(session?.user?.role);
+  const customerFrameUser: CustomerLayoutFrameUser | null =
+    session?.user?.role === "CUSTOMER" && session.user.customerId
+      ? {
+          modules: (session.user.modules ?? []) as CustomerLayoutFrameUser["modules"],
+          userName: session.user.name,
+          customerCode: session.user.customerCode,
+        }
+      : null;
 
   return (
     <html
@@ -41,7 +50,9 @@ export default async function RootLayout({
         <Providers isStaff={isStaff}>
           <AppHeader />
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
-            <MainRoutePending>{children}</MainRoutePending>
+            <CustomerLayoutFrame customerUser={customerFrameUser}>
+              {children}
+            </CustomerLayoutFrame>
           </main>
         </Providers>
       </body>

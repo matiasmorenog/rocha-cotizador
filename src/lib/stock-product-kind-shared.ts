@@ -29,6 +29,20 @@ export function isProductQuotable(
   return stockKind == null || stockKind === "DESPERDICIO";
 }
 
+/** Only elaborados (DESPERDICIO) may enable kg vs unit choice in quotes. */
+export function productSupportsUnitOrKgOrder(
+  stockKind: ProductStockKindValue | null | undefined,
+): boolean {
+  return (stockKind ?? DEFAULT_PRODUCT_STOCK_KIND) === "DESPERDICIO";
+}
+
+export function normalizeAllowsUnitOrder(
+  stockKind: ProductStockKindValue | null | undefined,
+  allowsUnitOrder: boolean,
+): boolean {
+  return productSupportsUnitOrKgOrder(stockKind) && allowsUnitOrder;
+}
+
 /**
  * Whether a product belongs in a stock module recount.
  */

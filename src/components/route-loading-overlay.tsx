@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
+import { isCustomerHomePath } from "@/lib/customer-module-path";
 import { useRouteLoading } from "@/lib/route-loading-context";
 
 /** Keep bar trickling at least this long after route change so fill is visible. */
@@ -66,11 +67,24 @@ function hasPendingSkeleton(): boolean {
     "main .rocha-skeleton, main [role=\"status\"][aria-busy=\"true\"]",
   );
   for (const node of nodes) {
-    // Ignore our instant cover — otherwise settle never finishes.
+    // Our overlay + layout home skeleton while pending.
     if (node.closest("[data-route-pending]")) continue;
+    // Next loading.tsx under hidden route children — not user-visible.
+    if (node.closest(".hidden")) continue;
     return true;
   }
   return false;
+}
+
+/** Segment loading.tsx still mounted under hidden route content. */
+function hasHiddenRouteSkeleton(): boolean {
+  const hidden = document.querySelector("[data-route-content].hidden");
+  if (!hidden) return false;
+  return (
+    hidden.querySelector(
+      ".rocha-skeleton, [role=\"status\"][aria-busy=\"true\"]",
+    ) != null
+  );
 }
 
 /**
@@ -81,12 +95,25 @@ export function RouteLoadingOverlay() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
-  const { visible, startLoading, finishLoading, isNavActive } =
-    useRouteLoading();
+  const {
+    visible,
+    pending,
+    pendingPath,
+    startLoading,
+    finishLoading,
+    reconcilePendingPath,
+    isNavActive,
+  } = useRouteLoading();
   const settleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const navStartedRef = useRef(false);
   const isFirstRouteRef = useRef(true);
+  const pathnameRef = useRef(pathname);
+  const pendingPathRef = useRef(pendingPath);
+  useLayoutEffect(() => {
+    pathnameRef.current = pathname;
+    pendingPathRef.current = pendingPath;
+  }, [pathname, pendingPath]);
 
   const clearSettle = useCallback(() => {
     if (settleTimerRef.current) {
@@ -120,11 +147,27 @@ export function RouteLoadingOverlay() {
     const tryFinish = () => {
       const elapsed = Date.now() - startedAt;
       const skeletonGone = !hasPendingSkeleton();
+      const routeContentReady = !hasHiddenRouteSkeleton();
       const docReady = document.readyState === "complete";
       const minTimeOk = elapsed >= MIN_VISIBLE_AFTER_ROUTE_MS;
       const timedOut = elapsed >= SKELETON_MAX_WAIT_MS;
+      const currentPath = pathnameRef.current;
+      const currentPendingPath = pendingPathRef.current;
+      const homeDest =
+        isCustomerHomePath(currentPendingPath ?? "") ||
+        isCustomerHomePath(currentPath);
+      const homeReady =
+        !homeDest ||
+        document.querySelector("main [data-customer-home-hub]") != null;
 
-      if ((skeletonGone && docReady && minTimeOk) || timedOut) {
+      if (timedOut) {
+        clearSettle();
+        navStartedRef.current = false;
+        finishLoading();
+        return;
+      }
+
+      if (skeletonGone && routeContentReady && docReady && minTimeOk && homeReady) {
         clearSettle();
         navStartedRef.current = false;
         finishLoading();
@@ -146,6 +189,8 @@ export function RouteLoadingOverlay() {
 
     const startInitialIfNeeded = () => {
       if (cancelled || navStartedRef.current) return true;
+      // Home hub paints in-place — pending cover causes card double-mount flicker.
+      if (pathname === "/" || pathname === "") return false;
       const docStillLoading = document.readyState !== "complete";
       if (!docStillLoading && !hasPendingSkeleton()) return false;
       beginNavigation();
@@ -172,7 +217,23 @@ export function RouteLoadingOverlay() {
       if (rafId) cancelAnimationFrame(rafId);
       if (pollId) clearInterval(pollId);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- first paint only; pathname changes use click handler
   }, [beginNavigation, settleAfterRoute]);
+
+  /** Keep pendingPath until pathname catches up — avoids sidebar chrome flicker. */
+  useEffect(() => {
+    if (pending) return;
+    if (!pendingPath) return;
+    if (pathname === pendingPath || pathname.startsWith(`${pendingPath}/`)) {
+      reconcilePendingPath(pathname);
+      return;
+    }
+    const t = window.setTimeout(
+      () => reconcilePendingPath(pathname, { force: true }),
+      600,
+    );
+    return () => window.clearTimeout(t);
+  }, [pathname, pending, pendingPath, reconcilePendingPath]);
 
   useEffect(() => {
     if (isFirstRouteRef.current) {

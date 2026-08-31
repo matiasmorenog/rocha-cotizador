@@ -5,6 +5,7 @@ import {
   StockRecountForm,
   StockRecountTrigger,
 } from "@/components/admin/stock-recount-form";
+import { SolapasTabLabel } from "@/components/ui/solapas-tabs";
 import type { StockModuleKey } from "@/lib/stock-product-kind-shared";
 
 export function CustomerStockPageHeader({
@@ -16,6 +17,7 @@ export function CustomerStockPageHeader({
   customerId,
   customerLabel,
   stockModule,
+  sectionLabel,
 }: {
   title: string;
   description: string;
@@ -25,6 +27,8 @@ export function CustomerStockPageHeader({
   customerId: string;
   customerLabel: string;
   stockModule: StockModuleKey;
+  /** Single stock module — chip beside title instead of a one-item tab bar. */
+  sectionLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -32,7 +36,12 @@ export function CustomerStockPageHeader({
     <>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-neutral-900">{title}</h1>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold text-neutral-900">{title}</h1>
+            {sectionLabel ? (
+              <SolapasTabLabel>{sectionLabel}</SolapasTabLabel>
+            ) : null}
+          </div>
           <p className="text-sm text-neutral-600">{description}</p>
           <p className="mt-1 text-sm text-neutral-500">{customerLabel}</p>
         </div>
