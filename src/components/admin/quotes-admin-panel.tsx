@@ -28,8 +28,11 @@ import {
 } from "@/hooks/use-selected-row";
 import {
   ARGENTINA_TZ,
+  DATETIME_FILTER_NOW,
+  isDatetimeFilterNow,
   ORDER_CUTOFF_HOUR_AR,
   splitQuotesByDayCutoff,
+  toArgentinaDatetimeLocal,
 } from "@/lib/argentina-time";
 import { formatDeliveryDateLabel } from "@/lib/delivery-date";
 import { quoteStatusLabel } from "@/lib/quote-status";
@@ -144,13 +147,18 @@ export function QuotesAdminPanel({
   initialQuotes,
   defaultFromLocal,
   defaultToLocal,
+  defaultToIsNow = false,
 }: {
   initialQuotes: QuoteListRow[];
   defaultFromLocal: string;
   defaultToLocal: string;
+  /** When true, "Hasta" starts as live now (label "Ahora"). */
+  defaultToIsNow?: boolean;
 }) {
   const [from, setFrom] = useState(defaultFromLocal);
-  const [to, setTo] = useState(defaultToLocal);
+  const [to, setTo] = useState(() =>
+    defaultToIsNow ? DATETIME_FILTER_NOW : defaultToLocal,
+  );
   const [quotes, setQuotes] = useState(initialQuotes);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -315,11 +323,10 @@ export function QuotesAdminPanel({
               type="button"
               onClick={onDownload}
               disabled={downloading}
-              className="gap-2"
             >
               {downloading ? (
                 <>
-                  <Spinner className="text-white" />
+                  <Spinner className="mr-1.5 text-white" />
                   Generando…
                 </>
               ) : (
