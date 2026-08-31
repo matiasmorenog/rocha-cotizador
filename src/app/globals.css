@@ -423,6 +423,67 @@ select:not([multiple]):disabled {
   animation: payment-form-exit 0.25s ease-in forwards;
 }
 
+/* Customer home hub — greeting card + action tiles */
+@keyframes customer-home-hub-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.customer-home-hub-enter,
+.route-view-enter {
+  animation: customer-home-hub-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--hub-enter-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .customer-home-hub-enter,
+  .route-view-enter {
+    animation: none;
+  }
+}
+
+/* Sidebar — user row + nav links stagger on first mount */
+.shell-nav-reveal > * {
+  animation: customer-home-hub-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.shell-nav-reveal > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.shell-nav-reveal > *:nth-child(2) {
+  animation-delay: 55ms;
+}
+.shell-nav-reveal > *:nth-child(3) {
+  animation-delay: 110ms;
+}
+.shell-nav-reveal > *:nth-child(4) {
+  animation-delay: 165ms;
+}
+.shell-nav-reveal > *:nth-child(5) {
+  animation-delay: 220ms;
+}
+.shell-nav-reveal > *:nth-child(6) {
+  animation-delay: 275ms;
+}
+.shell-nav-reveal > *:nth-child(7) {
+  animation-delay: 330ms;
+}
+.shell-nav-reveal > *:nth-child(n + 8) {
+  animation-delay: 385ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shell-nav-reveal > * {
+    animation: none;
+  }
+}
+
 /* Admin in-app notification toasts */
 @keyframes admin-toast-enter {
   from {
@@ -1493,6 +1554,9 @@ html[data-admin-theme="dark"] .admin-edit-hover:hover {
   .quote-customer-reveal.quote-customer-reveal-exit > *,
   .quote-route-enter,
   .quote-route-exit,
+  .customer-home-hub-enter,
+  .route-view-enter,
+  .shell-nav-reveal > *,
   .solapas-tab-indicator-animate,
   .solapas-tab-content-enter,
   .quote-picker-float-enter,

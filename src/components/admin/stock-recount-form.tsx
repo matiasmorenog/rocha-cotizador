@@ -2,7 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
+import { ClipboardPlus, Trash2 } from "lucide-react";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 import { ProductPicker } from "@/components/quote/product-picker";
 import type { CatalogSearchProduct } from "@/components/quote/product-picker";
@@ -472,7 +472,7 @@ export function StockRecountTrigger({
 }) {
   return (
     <Button type="button" onClick={onClick}>
-      <Plus className="h-4 w-4" />
+      <ClipboardPlus className="mr-1.5 h-4 w-4" aria-hidden />
       Registrar stock
     </Button>
   );

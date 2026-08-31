@@ -1,5 +1,5 @@
-import { SkeletonAccountPage } from "@/components/ui/skeleton";
+import { SkeletonCustomerCuentaConfigPage } from "@/components/ui/skeleton";
 
-export default function CuentaConfigLoading() {
-  return <SkeletonAccountPage />;
+export default function CustomerCuentaConfigLoading() {
+  return <SkeletonCustomerCuentaConfigPage withShell={false} />;
 }

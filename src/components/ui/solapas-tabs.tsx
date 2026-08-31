@@ -286,6 +286,27 @@ export function SolapasTabButton({
   );
 }
 
+/** Static selected-tab chip — same size as `SolapasTabLink` md (no tab bar frame). */
+export function SolapasTabLabel({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <span
+      className={cn(
+        tabTriggerClass(true, "md"),
+        "inline-flex items-center bg-[var(--brand-primary-soft)]",
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
 /** Fade/slide panel body on tab key change (respects reduced motion). */
 export function SolapasTabContent({
   tabKey,

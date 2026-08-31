@@ -24,7 +24,7 @@ export default async function EntrarPage({
     redirect(callbackUrl === "/" ? home : callbackUrl);
   }
   if (session?.user?.role === "CUSTOMER") {
-    redirect(callbackUrl === "/" ? "/cotizar" : callbackUrl);
+    redirect(callbackUrl === "/" ? "/" : callbackUrl);
   }
 
   const encoded = encodeURIComponent(callbackUrl);

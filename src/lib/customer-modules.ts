@@ -1,36 +1,13 @@
 import type { CustomerModule } from "@prisma/client";
 import { db } from "@/lib/db";
 import { ENTITY_ENABLED_FEMININE_LABELS } from "@/lib/entity-status-labels";
+import { normalizeCustomerModules } from "@/lib/customer-modules-normalize";
 import type { CustomerModuleSession } from "@/types/auth";
 
 export type { CustomerModule };
+export { normalizeCustomerModules };
 
-const LEGACY_CUSTOMER_MODULE_MAP: Record<string, CustomerModuleSession> = {
-  MERMAS: "DESPERDICIOS",
-  ELABORADOS: "DESPERDICIOS",
-  DESPERDICIOS: "DESPERDICIOS",
-  CONSUMABLES: "CONSUMABLES",
-  ACTIVOS: "ACTIVOS",
-};
-
-/** Map JWT/legacy enum values to current stock modules (deduped). */
-export function normalizeCustomerModules(
-  modules: readonly string[],
-): CustomerModuleSession[] {
-  const out = new Set<CustomerModuleSession>();
-  for (const raw of modules) {
-    const mapped = LEGACY_CUSTOMER_MODULE_MAP[raw];
-    if (mapped) out.add(mapped);
-  }
-  return [...out];
-}
-
-function tokenModulesNeedRefresh(modules: readonly string[]): boolean {
-  if (modules.length === 0) return true;
-  return modules.some((m) => m === "MERMAS" || m === "ELABORADOS");
-}
-
-/** Prefer JWT modules; refetch from DB when empty or legacy MERMAS/ELABORADOS. */
+/** Always read enabled modules from DB; JWT may be stale after admin changes flags. */
 export async function resolveCustomerModulesForSession(
   customerId: string,
   tokenModules: unknown,
@@ -38,14 +15,13 @@ export async function resolveCustomerModulesForSession(
   const raw = Array.isArray(tokenModules)
     ? tokenModules.filter((m): m is string => typeof m === "string")
     : [];
-  const normalized = normalizeCustomerModules(raw);
-  if (!tokenModulesNeedRefresh(raw)) return normalized;
+  const fallback = normalizeCustomerModules(raw);
   try {
     return normalizeCustomerModules(
       await getEnabledModulesForCustomer(customerId),
     );
   } catch {
-    return normalized;
+    return fallback;
   }
 }
 

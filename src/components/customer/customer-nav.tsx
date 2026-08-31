@@ -2,93 +2,259 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ClipboardList, FileText, Package, Settings } from "lucide-react";
-import { customerStockTabsForModules } from "@/lib/customer-stock-shared";
+import { useEffect, useState } from "react";
+import { X } from "lucide-react";
+import {
+  useExitPresence,
+  QUOTE_PICKER_FLOAT_MS,
+} from "@/hooks/use-exit-presence";
+import { useShellNavEnterOnce } from "@/hooks/use-shell-nav-enter-once";
+import { buildCustomerNavItems } from "@/lib/customer-nav-items";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
+import { useCustomerNavStore } from "@/stores/customer-nav-store";
 import type { CustomerModuleSession } from "@/types/auth";
 import { cn } from "@/lib/utils";
 
-type NavItem = {
-  href: string;
-  label: string;
-  icon: typeof ClipboardList;
-  match: (pathname: string) => boolean;
-};
+function CustomerSidebarUserInfo({
+  userName,
+  customerCode,
+}: {
+  userName?: string | null;
+  customerCode?: string | null;
+}) {
+  const primary = userName?.trim() || "Cliente";
+  const code = customerCode?.trim();
 
-function stockNavItem(modules: CustomerModuleSession[]): NavItem | null {
-  const tabs = customerStockTabsForModules(modules);
-  if (tabs.length === 0) return null;
-  const href =
-    tabs.length === 1
-      ? `/stock?tab=${tabs[0]!.tab}`
-      : "/stock";
+  return (
+    <div className="mb-3 border-b border-neutral-200 pb-3">
+      <p className="truncate text-sm font-medium text-neutral-900">{primary}</p>
+      {code ? (
+        <p className="truncate text-xs text-neutral-500">Código {code}</p>
+      ) : null}
+    </div>
+  );
+}
 
-  return {
-    href,
-    label: "Stock",
-    icon: Package,
-    match: (pathname) => pathname.startsWith("/stock"),
+function CustomerNavLinkItems({
+  pathname,
+  modules,
+  onNavigate,
+}: {
+  pathname: string;
+  modules: CustomerModuleSession[];
+  onNavigate?: () => void;
+}) {
+  const items = buildCustomerNavItems(modules);
+
+  return items.map((item, index) => {
+    const active = item.match(pathname);
+    const Icon = item.icon;
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={onNavigate}
+        aria-current={active ? "page" : undefined}
+        className={cn(
+          "inline-flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors",
+          index > 0 && "mt-1",
+          FOCUS_BRAND_OUTLINE,
+          active
+            ? "bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]"
+            : "text-neutral-700 hover:bg-neutral-50 hover:text-neutral-900",
+        )}
+      >
+        <Icon className="h-4 w-4 shrink-0" aria-hidden />
+        <span>{item.label}</span>
+      </Link>
+    );
+  });
+}
+
+function CustomerSidebarPanel({
+  pathname,
+  modules,
+  onNavigate,
+  showCloseButton = false,
+  onClose,
+  userName,
+  customerCode,
+  staggerEnter = false,
+}: {
+  pathname: string;
+  modules: CustomerModuleSession[];
+  onNavigate?: () => void;
+  showCloseButton?: boolean;
+  onClose?: () => void;
+  userName?: string | null;
+  customerCode?: string | null;
+  staggerEnter?: boolean;
+}) {
+  return (
+    <div className="flex h-auto flex-col">
+      {showCloseButton ? (
+        <div className="mb-3 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar menú"
+            className={cn(
+              "rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900",
+              FOCUS_BRAND_OUTLINE,
+            )}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+      ) : null}
+      <nav
+        aria-label="Secciones del cliente"
+        className={cn(
+          "flex flex-col text-sm",
+          staggerEnter && "shell-nav-reveal",
+        )}
+      >
+        <CustomerSidebarUserInfo
+          userName={userName}
+          customerCode={customerCode}
+        />
+        <CustomerNavLinkItems
+          pathname={pathname}
+          modules={modules}
+          onNavigate={onNavigate}
+        />
+      </nav>
+    </div>
+  );
+}
+
+function CustomerMobileDrawer({
+  pathname,
+  modules,
+  userName,
+  customerCode,
+}: {
+  pathname: string;
+  modules: CustomerModuleSession[];
+  userName?: string | null;
+  customerCode?: string | null;
+}) {
+  const open = useCustomerNavStore((s) => s.open);
+  const setOpen = useCustomerNavStore((s) => s.setOpen);
+  const [skipExit, setSkipExit] = useState(false);
+  if (open && skipExit) {
+    setSkipExit(false);
+  }
+  const { present, exiting, animKey } = useExitPresence(
+    open && !skipExit,
+    QUOTE_PICKER_FLOAT_MS,
+  );
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname, setOpen]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, setOpen]);
+
+  const close = () => setOpen(false);
+  const closeForNavigate = () => {
+    setSkipExit(true);
+    setOpen(false);
   };
+
+  if (skipExit || !present) return null;
+
+  return (
+    <div className="admin-mobile-drawer-root fixed inset-0 z-50 print:hidden">
+      <button
+        type="button"
+        aria-label="Cerrar menú"
+        className={cn(
+          "absolute inset-0 bg-black/40",
+          exiting
+            ? "admin-drawer-backdrop-exit pointer-events-none"
+            : "admin-drawer-backdrop-enter",
+        )}
+        onClick={close}
+        tabIndex={exiting ? -1 : undefined}
+      />
+      <aside
+        key={animKey}
+        id="customer-mobile-nav"
+        role="dialog"
+        aria-modal={exiting ? undefined : true}
+        aria-hidden={exiting || undefined}
+        aria-label="Menú del cliente"
+        className={cn(
+          "relative h-full w-[min(100%,16rem)] overflow-y-auto border-r border-neutral-200 bg-white p-4 shadow-xl",
+          exiting
+            ? "admin-drawer-panel-exit pointer-events-none"
+            : "admin-drawer-panel-enter",
+        )}
+      >
+        <CustomerSidebarPanel
+          pathname={pathname}
+          modules={modules}
+          onNavigate={closeForNavigate}
+          showCloseButton
+          onClose={close}
+          userName={userName}
+          customerCode={customerCode}
+          staggerEnter
+        />
+      </aside>
+    </div>
+  );
 }
 
 export function CustomerNav({
   modules,
+  userName,
+  customerCode,
+  showDesktopSidebar = true,
+  activePathname,
 }: {
   modules: CustomerModuleSession[];
+  userName?: string | null;
+  customerCode?: string | null;
+  /** Home hub uses full-width centering; drawer still available on mobile. */
+  showDesktopSidebar?: boolean;
+  /** Soft-nav overlay: highlight destination before pathname updates. */
+  activePathname?: string;
 }) {
-  const pathname = usePathname();
-  const stock = stockNavItem(modules);
-
-  const items: NavItem[] = [
-    {
-      href: "/cotizar",
-      label: "Cotizar",
-      icon: ClipboardList,
-      match: (path) => path.startsWith("/cotizar"),
-    },
-    {
-      href: "/remitos",
-      label: "Remitos",
-      icon: FileText,
-      match: (path) => path.startsWith("/remitos"),
-    },
-    ...(stock ? [stock] : []),
-    {
-      href: "/cuenta/configuracion",
-      label: "Cuenta",
-      icon: Settings,
-      match: (path) => path.startsWith("/cuenta"),
-    },
-  ];
+  const pathnameFromRouter = usePathname();
+  const pathname = activePathname ?? pathnameFromRouter;
+  const { animate: navAnimate } = useShellNavEnterOnce(showDesktopSidebar);
 
   return (
-    <nav
-      aria-label="Secciones del cliente"
-      className={cn(
-        "flex min-w-0 max-w-full gap-1 overflow-x-auto rounded-xl border border-[var(--brand-primary)]/15 bg-white/80 p-1 shadow-sm [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-      )}
-    >
-      {items.map((item) => {
-        const active = item.match(pathname);
-        const Icon = item.icon;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "inline-flex min-w-0 shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              FOCUS_BRAND_OUTLINE,
-              active
-                ? "bg-[var(--brand-primary)] text-white shadow-sm"
-                : "text-neutral-700 hover:bg-[var(--brand-primary-soft)]/60 hover:text-[var(--brand-primary)]",
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0" aria-hidden />
-            <span className="truncate">{item.label}</span>
-          </Link>
-        );
-      })}
-    </nav>
+    <>
+      {showDesktopSidebar ? (
+        <aside className="admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 shadow-sm print:hidden">
+          <CustomerSidebarPanel
+            pathname={pathname}
+            modules={modules}
+            userName={userName}
+            customerCode={customerCode}
+            staggerEnter={navAnimate}
+          />
+        </aside>
+      ) : null}
+
+      <CustomerMobileDrawer
+        pathname={pathname}
+        modules={modules}
+        userName={userName}
+        customerCode={customerCode}
+      />
+    </>
   );
 }

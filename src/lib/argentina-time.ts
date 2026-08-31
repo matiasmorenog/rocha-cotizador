@@ -8,6 +8,9 @@
 
 export const ARGENTINA_TZ = "America/Argentina/Buenos_Aires";
 
+/** Live end-of-range sentinel for datetime filters (display: "Ahora"). */
+export const DATETIME_FILTER_NOW = "now";
+
 /** Order / export batch closing hour (Argentina wall time). */
 export const ORDER_CUTOFF_HOUR_AR = 16;
 
@@ -128,6 +131,10 @@ export function toArgentinaDatetimeLocal(date: Date): string {
 /** Format for export / UI display in Argentina. */
 export function formatArgentinaDateTime(date: Date): string {
   return date.toLocaleString("es-AR", { timeZone: ARGENTINA_TZ });
+}
+
+export function isDatetimeFilterNow(value: string | undefined | null): boolean {
+  return value?.trim().toLowerCase() === DATETIME_FILTER_NOW;
 }
 
 /**

@@ -10,7 +10,9 @@ import {
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   ARGENTINA_TZ,
+  DATETIME_FILTER_NOW,
   argentinaTodayYmd,
+  isDatetimeFilterNow,
   parseArgentinaDateTime,
   toArgentinaDatetimeLocal,
 } from "@/lib/argentina-time";
@@ -95,6 +97,8 @@ type Props = {
   "aria-label"?: string;
   /** When true: renders date-only picker. Value format: YYYY-MM-DD. No hour column shown. */
   dateOnly?: boolean;
+  /** When true: value may be {@link DATETIME_FILTER_NOW}; "Hoy" sets live now and shows "Ahora". */
+  nowPreset?: boolean;
   /** Preset chips such as "Hoy" (default true). */
   showPresets?: boolean;
   /** Show "Restablecer" in footer (default false). */
@@ -147,6 +151,7 @@ export function DatetimeLocalPicker({
   disabled = false,
   "aria-label": ariaLabel,
   dateOnly = false,
+  nowPreset = false,
   showPresets = true,
   allowReset = false,
   resetValue = "",
@@ -158,6 +163,7 @@ export function DatetimeLocalPicker({
   const { present, exiting, animKey } = useExitPresence(open);
 
   function partsFromValueMode(v: string): Parts | null {
+    if (nowPreset && isDatetimeFilterNow(v)) return null;
     if (dateOnly) {
       const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v.trim());
       if (!m) return null;
@@ -282,6 +288,15 @@ export function DatetimeLocalPicker({
   }
 
   function onToday() {
+    if (nowPreset) {
+      const now = fallbackNow();
+      setDraft(now);
+      setViewYear(now.year);
+      setViewMonth(now.month);
+      onChange(DATETIME_FILTER_NOW);
+      setOpen(false);
+      return;
+    }
     const now = partsFromValue(toArgentinaDatetimeLocal(new Date()));
     if (!now) return;
     commit(now);
@@ -298,17 +313,23 @@ export function DatetimeLocalPicker({
     onChange(next);
   }
 
-  const isTodayActive = showPresets && isTodayValue(value, dateOnly);
+  const isTodayActive =
+    showPresets &&
+    (nowPreset
+      ? isDatetimeFilterNow(value)
+      : isTodayValue(value, dateOnly));
 
   const display = !value.trim()
     ? dateOnly
       ? "Elegir fecha"
       : "Elegir fecha y hora"
-    : isTodayActive
-      ? "Hoy"
-      : dateOnly
-        ? formatDisplayDateOnly(value)
-        : formatDisplay(value);
+    : nowPreset && isDatetimeFilterNow(value)
+      ? "Ahora"
+      : isTodayActive
+        ? "Hoy"
+        : dateOnly
+          ? formatDisplayDateOnly(value)
+          : formatDisplay(value);
 
   return (
     <div ref={rootRef} className={cn("relative", className)}>

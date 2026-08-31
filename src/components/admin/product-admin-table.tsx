@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useRef, useState } from "react";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 import { useRouter } from "next/navigation";
-import { Check, Pencil, Plus, X } from "lucide-react";
+import { Check, PackagePlus, Pencil, X } from "lucide-react";
 import {
   AdminTableActions,
   AdminTableIconAction,
@@ -38,6 +38,10 @@ import {
   resolveProductStockKind,
 } from "@/lib/stock-product-kind-labels";
 import type { ProductStockKindValue } from "@/lib/stock-product-kind-shared";
+import {
+  normalizeAllowsUnitOrder,
+  productSupportsUnitOrKgOrder,
+} from "@/lib/stock-product-kind-shared";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { filterFoldedSearch } from "@/lib/search-fold";
 import {
@@ -117,7 +121,13 @@ function ProductEditRow({
   const [stockKind, setStockKind] = useState<ProductStockKindValue>(() =>
     resolveProductStockKind(product.stockKind),
   );
-  const [allowsUnitOrder, setAllowsUnitOrder] = useState(product.allowsUnitOrder);
+  const [allowsUnitOrder, setAllowsUnitOrder] = useState(
+    () =>
+      normalizeAllowsUnitOrder(
+        resolveProductStockKind(product.stockKind),
+        product.allowsUnitOrder,
+      ),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -164,7 +174,9 @@ function ProductEditRow({
           basePrice: base,
           available,
           stockKind,
-          allowsUnitOrder,
+          allowsUnitOrder: productSupportsUnitOrKgOrder(stockKind)
+            ? allowsUnitOrder
+            : false,
           listPrices: listPricePayload,
         }),
       });
@@ -270,9 +282,13 @@ function ProductEditRow({
         <select
           form={formId}
           value={stockKind}
-          onChange={(e) =>
-            setStockKind(e.target.value as ProductStockKindValue)
-          }
+          onChange={(e) => {
+            const nextKind = e.target.value as ProductStockKindValue;
+            setStockKind(nextKind);
+            if (!productSupportsUnitOrKgOrder(nextKind)) {
+              setAllowsUnitOrder(false);
+            }
+          }}
           disabled={loading}
           aria-label="Tipo de stock"
           className={cn(
@@ -307,18 +323,22 @@ function ProductEditRow({
         {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
       </td>
       <td className="px-3 py-2">
-        <label
-          className="inline-flex cursor-pointer items-center gap-2"
-          title={productOrderModeDescription(allowsUnitOrder)}
-        >
-          <Switch
-            form={formId}
-            checked={allowsUnitOrder}
-            onChange={(e) => setAllowsUnitOrder(e.target.checked)}
-            disabled={loading}
-            aria-label="Permite pedido por unidades"
-          />
-        </label>
+        {productSupportsUnitOrKgOrder(stockKind) ? (
+          <label
+            className="inline-flex cursor-pointer items-center gap-2"
+            title={productOrderModeDescription(allowsUnitOrder)}
+          >
+            <Switch
+              form={formId}
+              checked={allowsUnitOrder}
+              onChange={(e) => setAllowsUnitOrder(e.target.checked)}
+              disabled={loading}
+              aria-label="Permite pedido por unidades"
+            />
+          </label>
+        ) : (
+          <span className="text-xs text-neutral-400">—</span>
+        )}
       </td>
       <td className="px-3 py-2 text-right">
         <AdminTableActions className="justify-end">
@@ -387,9 +407,17 @@ function ProductViewRow({
         </Badge>
       </td>
       <td className="px-3 py-2">
-        <Badge variant={product.allowsUnitOrder ? "success" : "default"}>
-          {productOrderModeBadge(product.allowsUnitOrder)}
-        </Badge>
+        {(() => {
+          const effectiveAllows = normalizeAllowsUnitOrder(
+            resolveProductStockKind(product.stockKind),
+            product.allowsUnitOrder,
+          );
+          return (
+            <Badge variant={effectiveAllows ? "success" : "default"}>
+              {productOrderModeBadge(effectiveAllows)}
+            </Badge>
+          );
+        })()}
       </td>
       <td className="px-3 py-2 text-right">
         <AdminTableActions className="justify-end">
@@ -497,7 +525,7 @@ export function ProductAdminTable({
             className="w-full shrink-0 sm:w-auto"
             onClick={() => setCreating(true)}
           >
-            <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+            <PackagePlus className="mr-1.5 h-4 w-4" aria-hidden />
             Nuevo producto
           </Button>
         ) : null}

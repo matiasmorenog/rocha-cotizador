@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Pencil, UserCog } from "lucide-react";
 import {
   AdminTableActions,
   AdminTableIconAction,
@@ -64,6 +64,7 @@ export function StaffUsersPanel({
               setEditingId(null);
             }}
           >
+            <UserCog className="mr-1.5 h-4 w-4" aria-hidden />
             Nuevo usuario
           </Button>
         ) : null}

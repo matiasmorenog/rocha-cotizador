@@ -17,7 +17,10 @@ import { notifyCatalogStale } from "@/lib/client-catalog-cache";
 import { CATALOG_PRODUCT_ENABLED_LABEL } from "@/lib/entity-status-labels";
 import { dispatchAdminInAppToast } from "@/lib/push-sw-client";
 import { DEFAULT_PRODUCT_STOCK_KIND } from "@/lib/stock-product-kind-labels";
-import type { ProductStockKindValue } from "@/lib/stock-product-kind-shared";
+import {
+  productSupportsUnitOrKgOrder,
+  type ProductStockKindValue,
+} from "@/lib/stock-product-kind-shared";
 import { inferStockKindFromRubro } from "@/lib/stock-rubros-shared";
 import { parseArNumber } from "@/lib/utils";
 
@@ -49,7 +52,18 @@ export function ProductAdminForm({
 
   function onRubroChange(nextRubro: string) {
     setRubro(nextRubro);
-    setStockKind(inferStockKindFromRubro(nextRubro));
+    const nextKind = inferStockKindFromRubro(nextRubro);
+    setStockKind(nextKind);
+    if (!productSupportsUnitOrKgOrder(nextKind)) {
+      setAllowsUnitOrder(false);
+    }
+  }
+
+  function onStockKindChange(nextKind: ProductStockKindValue) {
+    setStockKind(nextKind);
+    if (!productSupportsUnitOrKgOrder(nextKind)) {
+      setAllowsUnitOrder(false);
+    }
   }
 
   async function onSubmit(e: FormEvent) {
@@ -75,7 +89,9 @@ export function ProductAdminForm({
           basePrice: price,
           available,
           stockKind,
-          allowsUnitOrder,
+          allowsUnitOrder: productSupportsUnitOrKgOrder(stockKind)
+            ? allowsUnitOrder
+            : false,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -171,7 +187,7 @@ export function ProductAdminForm({
         title="Tipo de stock"
         description="Define en qué módulo de stock aparece al recuentar (desperdicios, consumibles o activos)."
       >
-        <ProductStockKindPicker value={stockKind} onChange={setStockKind} />
+        <ProductStockKindPicker value={stockKind} onChange={onStockKindChange} />
       </FormSection>
 
       <FormSection
@@ -186,13 +202,15 @@ export function ProductAdminForm({
           checked={available}
           onChange={setAvailable}
         />
-        <FormToggleCard
-          id="product-unit-order-create"
-          label="Pedido por unidades o kg"
-          description="Permite cotizar por unidad o al peso cuando el producto se vende en ambos formatos."
-          checked={allowsUnitOrder}
-          onChange={setAllowsUnitOrder}
-        />
+        {productSupportsUnitOrKgOrder(stockKind) ? (
+          <FormToggleCard
+            id="product-unit-order-create"
+            label="Pedido por unidades o kg"
+            description="Solo productos elaborados. Permite cotizar por unidad o al peso."
+            checked={allowsUnitOrder}
+            onChange={setAllowsUnitOrder}
+          />
+        ) : null}
       </FormSection>
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}

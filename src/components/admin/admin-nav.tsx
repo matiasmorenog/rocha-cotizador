@@ -18,6 +18,7 @@ import {
   useExitPresence,
   QUOTE_PICKER_FLOAT_MS,
 } from "@/hooks/use-exit-presence";
+import { useShellNavEnterOnce } from "@/hooks/use-shell-nav-enter-once";
 import { StaffPreviewControl } from "@/components/admin/staff-preview-ui";
 import { SolapasNavLink, SolapasNavList } from "@/components/ui/solapas-tabs";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
@@ -283,10 +284,16 @@ export function AdminNav({
   isSuperuser?: boolean;
 }) {
   const pathname = usePathname();
+  const { animate: navAnimate } = useShellNavEnterOnce();
 
   return (
     <>
-      <aside className="admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 shadow-sm print:hidden">
+      <aside
+        className={cn(
+          "admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 shadow-sm print:hidden",
+          navAnimate && "route-view-enter",
+        )}
+      >
         <AdminSidebarPanel
           pathname={pathname}
           permissions={permissions}
