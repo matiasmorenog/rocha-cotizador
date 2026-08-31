@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth";
+import { CUSTOMER_MODULE_LABELS } from "@/lib/customer-modules";
 import { getOptionalSession } from "@/lib/session";
 import { PinChangeHint } from "@/components/account/pin-change-hint";
 import { AdminMenuButton } from "@/components/admin/admin-menu-button";
@@ -19,6 +20,12 @@ export async function AppHeader() {
     : "/admin";
   /** From JWT — updated via session.update() after password change. No Neon hit. */
   const mustChangePassword = Boolean(session?.user?.mustChangePassword);
+  const stockModules = session?.user?.modules ?? [];
+  const showStockNav =
+    isCustomer &&
+    (stockModules.includes("MERMAS") ||
+      stockModules.includes("CONSUMABLES") ||
+      stockModules.includes("ACTIVOS"));
 
   return (
     <>
@@ -43,6 +50,16 @@ export async function AppHeader() {
                   <Link href="/remitos" className="text-neutral-700 hover:text-neutral-900">
                     Remitos
                   </Link>
+                  {showStockNav ? (
+                    <Link
+                      href="/stock"
+                      className="text-neutral-700 hover:text-neutral-900"
+                    >
+                      {stockModules.length === 1
+                        ? CUSTOMER_MODULE_LABELS[stockModules[0]!]
+                        : "Stock"}
+                    </Link>
+                  ) : null}
                   <Link
                     href="/cuenta/configuracion"
                     className="text-neutral-700 hover:text-neutral-900"

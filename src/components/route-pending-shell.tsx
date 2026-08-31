@@ -37,6 +37,9 @@ function customerSkeletonFor(path: string) {
       />
     );
   }
+  if (path.startsWith("/stock")) {
+    return <SkeletonAdminStockPage />;
+  }
   if (path.startsWith("/cuenta")) return <SkeletonAccountPage />;
   if (path.startsWith("/entrar")) return <SkeletonChooserPage />;
   if (path.startsWith("/login")) return <SkeletonLoginPage />;
