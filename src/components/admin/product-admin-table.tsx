@@ -3,7 +3,7 @@
 import { FormEvent, useMemo, useRef, useState } from "react";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 import { useRouter } from "next/navigation";
-import { Check, Pencil, Plus, X } from "lucide-react";
+import { Check, PackagePlus, Pencil, X } from "lucide-react";
 import {
   AdminTableActions,
   AdminTableIconAction,
@@ -497,7 +497,7 @@ export function ProductAdminTable({
             className="w-full shrink-0 sm:w-auto"
             onClick={() => setCreating(true)}
           >
-            <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+            <PackagePlus className="mr-1.5 h-4 w-4" aria-hidden />
             Nuevo producto
           </Button>
         ) : null}

@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 import { cn } from "@/lib/utils";
-import { Pencil, Plus } from "lucide-react";
+import { Pencil, UserPlus } from "lucide-react";
 import {
   AdminTableActions,
   AdminTableIconAction,
@@ -122,7 +122,7 @@ export function CustomersAdminPanel({
               setCreating(true);
             }}
           >
-            <Plus className="mr-1.5 h-4 w-4" aria-hidden />
+            <UserPlus className="mr-1.5 h-4 w-4" aria-hidden />
             Nuevo cliente
           </Button>
         ) : null}
