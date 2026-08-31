@@ -36,9 +36,13 @@ import {
 
 export type { CatalogSearchProduct };
 
+import type { StockModuleKey } from "@/lib/stock-product-kind-shared";
+
 type ProductPickerProps = {
   /** Admin quote-for-customer — resolves list prices. */
   customerId?: string;
+  /** Admin stock recount — searches module-scoped products (incl. non-quotable kinds). */
+  adminStockModule?: StockModuleKey;
   value: CatalogSearchProduct | null;
   onChange: (product: CatalogSearchProduct | null) => void;
   /** Optional filter (e.g. stock module rubro split). */
@@ -95,6 +99,7 @@ const ProductOption = memo(
 
 function ProductPickerInner({
   customerId,
+  adminStockModule,
   value,
   onChange,
   filterProduct,
@@ -104,6 +109,7 @@ function ProductPickerInner({
   const { searchAsync } = catalog;
   const searchAsyncRef = useRef(searchAsync);
   const isClient = useIsClient();
+  const useAdminStockSearch = Boolean(adminStockModule);
 
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -125,8 +131,10 @@ function ProductPickerInner({
   // Gate on isClient: useProductCatalog may read sessionStorage on the client
   // first paint while SSR had an empty catalog — that mismatch hydrates badly.
   const catalogUsable =
-    isClient && (catalog.ready || catalog.products.length > 0);
-  const catalogLoading = catalog.loading && !catalogUsable;
+    useAdminStockSearch ||
+    (isClient && (catalog.ready || catalog.products.length > 0));
+  const catalogLoading =
+    !useAdminStockSearch && catalog.loading && !catalogUsable;
   const trimmedQuery = query.trim();
   const deferredTrimmed = deferredQuery.trim();
   const filterPending =
@@ -140,7 +148,12 @@ function ProductPickerInner({
   const showInputSpinner = (catalogLoading || searchBusy) && !value;
 
   const warmResults = useMemo(() => {
-    if (value || deferredTrimmed.length < 1 || catalog.products.length === 0) {
+    if (
+      useAdminStockSearch ||
+      value ||
+      deferredTrimmed.length < 1 ||
+      catalog.products.length === 0
+    ) {
       return [] as CatalogSearchProduct[];
     }
     // No take cap: filter full in-memory catalog; DOM windowed below.
@@ -152,6 +165,7 @@ function ProductPickerInner({
     );
     return filterProduct ? rows.filter(filterProduct) : rows;
   }, [
+    useAdminStockSearch,
     value,
     deferredTrimmed,
     catalog.products.length,
@@ -161,10 +175,19 @@ function ProductPickerInner({
   ]);
 
   const results = useMemo(() => {
-    const base =
-      catalog.products.length > 0 ? warmResults : (coldResults ?? []);
+    const base = useAdminStockSearch
+      ? (coldResults ?? [])
+      : catalog.products.length > 0
+        ? warmResults
+        : (coldResults ?? []);
     return filterProduct ? base.filter(filterProduct) : base;
-  }, [catalog.products.length, warmResults, coldResults, filterProduct]);
+  }, [
+    useAdminStockSearch,
+    catalog.products.length,
+    warmResults,
+    coldResults,
+    filterProduct,
+  ]);
 
   const {
     visible: visibleResults,
@@ -183,6 +206,7 @@ function ProductPickerInner({
     trimmedQuery.length > 0 &&
     (results.length > 0 ||
       searchBusy ||
+      useAdminStockSearch ||
       (!catalogLoading && catalog.products.length > 0) ||
       coldResults !== null);
 
@@ -194,7 +218,7 @@ function ProductPickerInner({
     results.length === 0 &&
     !catalogLoading &&
     !searchBusy;
-  const showError = Boolean(catalog.error && !catalogUsable);
+  const showError = Boolean(!useAdminStockSearch && catalog.error && !catalogUsable);
   const floatingOpen = showList || showSearching || showEmpty || showError;
   const {
     present: floatPresent,
@@ -298,7 +322,7 @@ function ProductPickerInner({
 
     setHighlightIndex(0);
 
-    if (catalog.products.length > 0) {
+    if (!useAdminStockSearch && catalog.products.length > 0) {
       setColdResults(null);
       setColdInFlight(false);
       return;
@@ -306,7 +330,20 @@ function ProductPickerInner({
 
     const requestId = ++searchRequestId.current;
     setColdInFlight(true);
-    void searchAsyncRef.current(q).then((rows) => {
+    const searchPromise = useAdminStockSearch
+      ? fetch(
+          `/api/admin/stock/products?module=${adminStockModule}&q=${encodeURIComponent(q)}&take=50`,
+        )
+          .then(async (res) => {
+            if (!res.ok) return [] as CatalogSearchProduct[];
+            const data = (await res.json()) as {
+              products?: CatalogSearchProduct[];
+            };
+            return data.products ?? [];
+          })
+          .catch(() => [] as CatalogSearchProduct[])
+      : searchAsyncRef.current(q);
+    void searchPromise.then((rows) => {
       if (requestId !== searchRequestId.current) return;
       const filtered = filterProduct ? rows.filter(filterProduct) : rows;
       setColdResults(filtered);

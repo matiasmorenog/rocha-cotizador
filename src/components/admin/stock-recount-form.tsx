@@ -21,6 +21,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
 import { dispatchAdminStockSummaryRefresh } from "@/lib/admin-stock-summary-refresh";
+import type { StockModuleKey } from "@/lib/stock-product-kind-shared";
 import { productMatchesStockModule } from "@/lib/stock-rubros-shared";
 
 export type StockRecountCustomer = {
@@ -64,7 +65,7 @@ export function StockRecountForm({
   description: string;
   apiPath: string;
   customers: StockRecountCustomer[];
-  stockModule: "MERMAS" | "CONSUMABLES";
+  stockModule: StockModuleKey;
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
 }) {
@@ -152,14 +153,20 @@ export function StockRecountForm({
 
   const filterProduct = useCallback(
     (product: CatalogSearchProduct) =>
-      productMatchesStockModule(product.rubro, stockModule),
+      productMatchesStockModule(
+        product.rubro,
+        stockModule,
+        product.stockKind,
+      ),
     [stockModule],
   );
 
   const moduleMismatchMessage =
     stockModule === "MERMAS"
       ? "Ese producto es insumo/consumible — cargalo en Consumibles"
-      : "Ese producto no es insumo/consumible — cargalo en Elaborados";
+      : stockModule === "CONSUMABLES"
+        ? "Ese producto no es consumible — cargalo en Bajas del día o Activos"
+        : "Ese producto no es un activo del local — revisá el tipo de stock del producto";
 
   function addProduct(product: CatalogSearchProduct) {
     if (!productMatchesStockModule(product.rubro, stockModule)) {
@@ -318,6 +325,7 @@ export function StockRecountForm({
         <Label>Agregar producto</Label>
         <ProductPicker
           value={picked}
+          adminStockModule={stockModule}
           filterProduct={filterProduct}
           onChange={(p) => {
             if (p) addProduct(p);
@@ -327,7 +335,9 @@ export function StockRecountForm({
         <p className="text-xs text-neutral-500">
           {stockModule === "MERMAS"
             ? "Solo panes, masas y rubros de merma (no insumos ni regalo)."
-            : "Solo rubros Insumos y Regalo."}
+            : stockModule === "CONSUMABLES"
+              ? "Solo insumos y regalo (gaseosas, etc.) — no son bajas del día."
+              : "Solo productos marcados como activo del local (carritos, bandejas, etc.)."}
         </p>
       </div>
 

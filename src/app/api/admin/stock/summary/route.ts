@@ -7,7 +7,7 @@ import {
 } from "@/lib/admin-stock-summary-shared";
 
 /**
- * GET /api/admin/stock/summary?tab=elaborados|consumibles&customerId=&from=&to=
+ * GET /api/admin/stock/summary?tab=elaborados|consumibles|activos&customerId=&from=&to=
  *
  * Server-side stock aggregates (quantities and base-price cost) for summary cards, product table, and chart.
  */

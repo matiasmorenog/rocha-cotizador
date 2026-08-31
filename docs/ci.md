@@ -2,7 +2,7 @@
 
 Workflows:
 - [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) — lint/typecheck (PRs ready + push)
-- [`.github/workflows/preview-on-ready.yml`](../.github/workflows/preview-on-ready.yml) — Vercel preview when PR leaves draft (`ready_for_review`)
+- [`.github/workflows/preview-on-ready.yml`](../.github/workflows/preview-on-ready.yml) — Vercel preview for ready feature PRs (Actions CLI)
 - [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) — push only (`main` ship + `development` cache purge)
 
 ## Draft PRs (sin checks)
@@ -12,40 +12,47 @@ Los PRs en **draft** no deben consumir CI ni previews:
 | Superficie | Comportamiento |
 |------------|----------------|
 | GitHub Actions | Job `lint-and-typecheck` con `if: … draft == false`. También escucha `ready_for_review`. |
-| Vercel Git (push) | `git.deploymentEnabled`: `development` + `**` (feature) on; `main` off. Draft push → ignore cancela build. |
-| Vercel preview on ready | Job `vercel-preview` en [`preview-on-ready.yml`](../.github/workflows/preview-on-ready.yml): en `ready_for_review` hace checkout del PR head + `vercel pull` / `vercel build` / `vercel deploy --prebuilt` (solo **`rocha-cotizador`**, `VERCEL_PROJECT_ID`). Cubre el caso “último push fue en draft”. |
-| Vercel ignore | [`scripts/vercel-ignore-draft-pr.sh`](../scripts/vercel-ignore-draft-pr.sh): draft cancela; ready procede en **`rocha-cotizador`**; **`rocha-cotizador-dev`** sin feature Preview (solo `development` / Production). Sigue activo en builds por push y en los disparados por Actions. |
+| Vercel Git (push) | `git.deploymentEnabled`: `development` + `**` (feature) on; `main` off. Feature-branch previews on **`rocha-cotizador`** canceladas (ignore) — preview solo vía Actions. Draft push → cancel igual. |
+| Vercel preview (Actions) | Job `vercel-preview` en [`preview-on-ready.yml`](../.github/workflows/preview-on-ready.yml): en PR **ready** (`opened` / `synchronize` / `reopened` / `ready_for_review`, no draft) hace checkout + `vercel pull` / `vercel build` / `vercel deploy --prebuilt` en **`rocha-cotizador`**. Único path de preview para feature PRs. |
+| Vercel ignore | [`scripts/vercel-ignore-draft-pr.sh`](../scripts/vercel-ignore-draft-pr.sh): feature en prod project → cancel (Actions preview). `development` → proceed. **`rocha-cotizador-dev`** sin feature Preview (solo `development` / Production). |
 | Push a `development` / `main` | CI en push. `development` Git-deploya Preview en **`rocha-cotizador`** (SSO) y Production en **`rocha-cotizador-dev`** (público). Prod `main` = Actions. |
 
-**Proyecto prod** (`rocha-cotizador` / `prj_q87cwzCd…`): ready feature PR → Preview URL (Neon **development** vía Preview env). Draft → cancel. Push `development` → Preview (SSO). `main` = Actions-only (no Git auto-deploy).
+**Proyecto prod** (`rocha-cotizador` / `prj_q87cwzCd…`): feature PR **ready** → preview solo por Actions (`vercel-preview`). Git cancela builds de feature. Push `development` → Preview (SSO). `main` = Actions-only.
 
-**Proyecto demo** (`rocha-cotizador-dev` / `prj_Oagw7Pq3…`): **no** Preview de feature/ready PRs (ignore cancela). Solo deploya cuando hay push/merge a **`development`** → Production pública (`https://rocha-cotizador-dev.vercel.app`, portfolio). Mismo `vercel.json` que prod; el gate por `VERCEL_PROJECT_ID` vive en el ignore script.
+**Proyecto demo** (`rocha-cotizador-dev` / `prj_Oagw7Pq3…`): **no** Preview de feature/ready PRs (ignore cancela). Solo deploya cuando hay push/merge a **`development`** → Production pública (`https://rocha-cotizador-dev.vercel.app`, portfolio).
 
-**Vercel:** Preview env en **`rocha-cotizador`** necesita `GITHUB_TOKEN` o `GH_TOKEN` (`repo` / `pull_requests: read`). Sin token → fail-closed.
+### Checks en un PR ready (feature → `development`)
+
+| Check | Necesario | Notas |
+|-------|-----------|--------|
+| `lint-and-typecheck` | Sí | tsc + eslint + admin-chrome |
+| `vercel-preview` | Sí | único preview deploy |
+| `Vercel – rocha-cotizador` | No (cancelado) | ignore cancela feature Git build a propósito |
+| `Vercel – rocha-cotizador-dev` | No (cancelado) | demo project, esperado |
+| `Vercel Preview Comments` | Cosmético | bot Vercel |
 
 ### Troubleshooting: preview “Canceled by Ignored Build Step”
 
 | Síntoma | Causa | Qué hacer |
 |---------|--------|-----------|
-| Check verde pero descripción **Canceled by Ignored Build Step** en **`rocha-cotizador-dev`** en un feature PR | Esperado: ignore cancela previews de feature en el proyecto demo | Ignorar; el preview útil es **`rocha-cotizador`**. |
-| **`rocha-cotizador`** cancelado; marcaste **Ready** sin push nuevo | El último build fue en **draft** (ignore canceló). Vercel Git solo buildea en **push**; `ready_for_review` no re-dispara Git hasta [`preview-on-ready.yml`](../.github/workflows/preview-on-ready.yml) esté en `development`. | Mergear el fix de preview-on-ready, o push vacío / **Redeploy** en Vercel; luego marcar ready de nuevo si hace falta. |
-| **Todos** los feature PR ready cancelan en **`rocha-cotizador`** (incluso con push después de ready) | Falta o inválido `GITHUB_TOKEN`/`GH_TOKEN` en **Preview** del proyecto prod | Vercel → rocha-cotizador → Settings → Environment Variables: agregar `GITHUB_TOKEN` (PAT con **Contents: read** + **Pull requests: read**) solo en **Preview**. Redeploy. |
+| **Canceled** en **`rocha-cotizador`** o **`rocha-cotizador-dev`** en feature PR | Esperado: Git preview cancelado; preview real = check **`vercel-preview`** (Actions) | Ignorar cancel de Vercel Git si `vercel-preview` está verde. |
+| `vercel-preview` falla o no corre | PR en **draft**, o secrets `VERCEL_*` faltan en Actions | Marcar ready; verificar secrets en GitHub Actions. |
+| Preview viejo tras marcar **Ready** sin push | Último commit fue en draft | `vercel-preview` corre en `ready_for_review` y en cada push **ready** — esperar job o re-run workflow. |
 
-Probar ignore local (exit **1** = build procede):
+Probar ignore local (exit **0** = cancel, **1** = proceed):
 
 ```bash
-export GITHUB_TOKEN="$(gh auth token)"
 VERCEL_ENV=preview VERCEL_PROJECT_ID=prj_q87cwzCd7xVN7eDPzm81fDmjLKNz \
-  VERCEL_GIT_COMMIT_REF=<branch> VERCEL_GIT_REPO_OWNER=matiasmorenog \
-  VERCEL_GIT_REPO_SLUG=rocha-cotizador VERCEL_GIT_PULL_REQUEST_ID=<n> \
+  VERCEL_GIT_COMMIT_REF=feat/my-branch \
   bash scripts/vercel-ignore-draft-pr.sh; echo exit=$?
+# feature branch → exit 0 (cancel)
 ```
 
-WIP → abrí **draft** (`gh pr create --draft`). Al marcar **Ready for review**: Actions (`lint-and-typecheck`) + job `vercel-preview` (API → build en **`rocha-cotizador`**). Pushes posteriores en ready siguen por Git integration.
+WIP → **draft** (`gh pr create --draft`). **Ready**: `lint-and-typecheck` + `vercel-preview` (Actions). Cada push **ready** re-dispara ambos.
 
 ## Job `lint-and-typecheck` (CI)
 
-Corre en PR **ready**/push a `development` y `main`:
+Corre en PR **ready** y push a `development`. En push a `main` solo corre en `deploy.yml` (evita duplicado con CI).
 
 1. `npm ci`
 2. `npx prisma generate` (con `DATABASE_URL` dummy; schema includes `rhel-openssl-3.0.x` for Vercel)
@@ -119,15 +126,11 @@ Verificado vía API (`GET .../branches/{development,main}/protection`): **ningun
 
 Varios PR (#106–#109) salieron del mismo `base` (`83c540a`, #103) y se mergearon seguidos. En la UI algunos quedaron **desactualizados** respecto a `development` mientras otro mergeaba el mismo archivo (`excel-sync-panel.tsx` en #107 vs #108). Sin branch protection, GitHub **no** exige “branch up to date” ni bloquea por política de repo; el squash se aplicó en cadena (`107` → `108` → `106` → `109`). **No** hay marcadores `<<<<<<<` en `development`; `tsc` y `lint` pasan. El riesgo es mergear con base vieja y perder hunks (GitHub a veces resuelve en silencio en squash), no un árbol roto con conflict markers.
 
-**Antes de mergear:** `Update branch` / mergear `development` en el feature branch y esperar CI verde. Evitá mergear varios PR que tocan los mismos archivos en paralelo.
-
-### Mitigación en CI (sin Pro)
-
-Job **`merge-conflict-gate`** en [`ci.yml`](../.github/workflows/ci.yml): en PRs **ready**, falla solo si `mergeable_state` es `dirty` (conflictos de merge). Estados como `unstable` (checks fallando/pendientes) o `behind` no implican conflictos y pasan el gate. No reemplaza branch protection (un admin puede mergear igual), pero deja el conflicto en rojo en checks.
+**Antes de mergear:** `Update branch` / mergear `development` en el feature branch, revisar banner de conflictos en GitHub, y esperar `lint-and-typecheck` + `vercel-preview` verdes.
 
 ### Opciones con Pro
 
-1. Settings → Branches / Rulesets en `development` y `main`: require status checks `lint-and-typecheck` + `merge-conflict-gate`, y **Require branches to be up to date before merging**.
+1. Settings → Branches / Rulesets en `development` y `main`: require status checks `lint-and-typecheck` + `vercel-preview`, y **Require branches to be up to date before merging**.
 2. Hasta entonces: **no mergear** con checks rojos ni con banner de conflictos (regla de equipo + agente).
 
 Prod sigue acotada por Actions: sin `lint-and-typecheck` verde en el workflow de deploy no hay ship a `main`; schema gate + health frenan drift.
@@ -140,4 +143,4 @@ Si querés freno también en el dashboard:
 
 Con el gate de Actions + `main: false`, esto es backup, no obligatorio.
 
-Nota: Preview de ready PR en `rocha-cotizador` buildea en paralelo al CI (comportamiento normal de Vercel).
+Nota: `vercel-preview` corre en paralelo a `lint-and-typecheck` en PRs ready.
