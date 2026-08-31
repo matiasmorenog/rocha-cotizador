@@ -1,15 +1,15 @@
 name: Preview on ready
 
-# Vercel Git only builds on push. Draft pushes are cancelled by ignoreCommand;
-# marking a PR ready does not push, so build + deploy preview here via Vercel CLI
-# (same prebuilt pattern as deploy.yml — the Deployments API gitSource path 400s).
+# Single preview path for feature PRs: Actions builds via Vercel CLI.
+# Git integration previews on rocha-cotizador are cancelled (ignore script) to
+# avoid duplicate builds with Vercel – rocha-cotizador checks.
 permissions:
   contents: read
 
 on:
   pull_request:
     branches: [development, main]
-    types: [ready_for_review]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 concurrency:
   group: preview-on-ready-${{ github.event.pull_request.number }}
