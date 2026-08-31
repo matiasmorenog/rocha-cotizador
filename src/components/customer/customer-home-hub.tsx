@@ -21,15 +21,15 @@ export function CustomerHomeHub({
 
   return (
     <BrandBackdrop className="flex w-full min-h-[min(calc(100vh-10rem),40rem)] flex-col items-center justify-center rounded-xl px-4 py-10 sm:py-12">
-      <div className="mx-auto w-full max-w-xl space-y-8 text-center">
-        <div className="flex w-full flex-col items-center gap-4 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary-soft)]/95 p-6 shadow-sm backdrop-blur-[2px]">
-          <BrandLogo size="xl" priority />
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold text-neutral-900">
+      <div className="mx-auto w-full max-w-xl space-y-6 text-center">
+        <div className="flex flex-col items-center gap-3">
+          <BrandLogo size="lg" priority />
+          <div className="max-w-md space-y-0.5 rounded-2xl bg-white/95 px-4 py-2.5 shadow-sm backdrop-blur-[2px]">
+            <h1 className="text-xl font-semibold tracking-tight text-neutral-900 sm:text-2xl">
               Hola, {displayName}
             </h1>
             {code ? (
-              <p className="text-sm text-neutral-700">Código {code}</p>
+              <p className="text-sm font-medium text-neutral-800">Código {code}</p>
             ) : null}
             <p className="text-sm text-neutral-700">
               Elegí qué querés hacer hoy.
