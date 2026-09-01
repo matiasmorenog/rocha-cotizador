@@ -49,8 +49,7 @@ import {
 const QUOTE_PANEL_ENTER_MS = 200;
 
 function deliveryDateToPickerValue(ymd: string): string {
-  const trimmed = ymd.trim();
-  return trimmed ? `${trimmed}T00:00` : "";
+  return ymd.trim().slice(0, 10);
 }
 
 type QuoteBuilderProps = {
@@ -477,6 +476,7 @@ export function QuoteBuilder({
         <Label htmlFor="quote-delivery-date">Fecha de entrega</Label>
         <DatetimeLocalPicker
           id="quote-delivery-date"
+          dateOnly
           showPresets={false}
           allowReset
           resetValue={deliveryDateToPickerValue(minDeliveryDate)}

@@ -29,6 +29,7 @@ import { seedStockSampleData } from "../src/lib/stock-seed";
 import { parsePlatformOwnerEmails } from "../src/lib/platform-owner";
 import { assertSafeDestructiveDb } from "./assert-safe-db";
 import { revalidateAppCache } from "../scripts/revalidate-app-cache";
+import { seedDemoPersonas } from "./seed-demo-personas";
 
 const db = new PrismaClient();
 
@@ -464,6 +465,7 @@ async function main() {
     );
     const staffMigrated = await migrateStaffRolesToAdmin();
     console.log(`Staff roles migrated to ADMIN: ${staffMigrated}`);
+    await seedDemoPersonas(db);
     return;
   }
   await seedFromExcel(xlsxPath);
@@ -477,6 +479,7 @@ async function main() {
   );
   const staffMigrated = await migrateStaffRolesToAdmin();
   console.log(`Staff roles migrated to ADMIN: ${staffMigrated}`);
+  await seedDemoPersonas(db);
 }
 
 main()

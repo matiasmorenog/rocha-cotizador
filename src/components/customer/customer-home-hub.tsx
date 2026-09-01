@@ -4,7 +4,6 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
-import { CustomerCatalogWarmup } from "@/components/customer/customer-catalog-warmup";
 import { CustomerPromoFooter } from "@/components/customer/customer-promo-footer";
 import { buildCustomerHomeActions } from "@/lib/customer-nav-items";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
@@ -34,10 +33,9 @@ export function CustomerHomeHub({
   return (
     <BrandBackdrop
       data-customer-home-hub=""
-      className="flex w-full min-h-[min(calc(100vh-10rem),40rem)] flex-col items-center justify-start rounded-xl px-4 pb-10 pt-2 sm:pb-12 sm:pt-4"
+      className="flex w-full min-h-[calc(100dvh-8rem)] flex-col items-center justify-start rounded-xl px-4 pb-6 pt-2 sm:pt-4"
     >
-      <CustomerCatalogWarmup />
-      <div className={cn("mx-auto w-full", containerMax)}>
+      <div className={cn("mx-auto flex w-full flex-1 flex-col", containerMax)}>
         <div
           className={cn(
             "grid w-full grid-cols-1 gap-3",
@@ -99,12 +97,12 @@ export function CustomerHomeHub({
             );
           })}
         </div>
-      </div>
-      <div
-        className={cn(gateClass, "mx-auto mt-8 w-full max-w-xl sm:mt-10")}
-        style={animate ? hubEnterDelay(90 + actions.length * 55) : undefined}
-      >
-        <CustomerPromoFooter />
+        <div
+          className={cn(gateClass, "mt-auto w-full pt-6 sm:pt-8")}
+          style={animate ? hubEnterDelay(90 + actions.length * 55) : undefined}
+        >
+          <CustomerPromoFooter />
+        </div>
       </div>
     </BrandBackdrop>
   );

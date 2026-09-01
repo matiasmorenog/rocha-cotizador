@@ -2,7 +2,8 @@
 
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
-import { isCustomerHomePath } from "@/lib/customer-module-path";
+import { useSession } from "next-auth/react";
+import { isAuthSessionSurfaceNav, isCustomerHomePath } from "@/lib/customer-module-path";
 import { useRouteLoading } from "@/lib/route-loading-context";
 
 /** Keep bar trickling at least this long after route change so fill is visible. */
@@ -95,6 +96,7 @@ export function RouteLoadingOverlay() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
+  const { data: session, status } = useSession();
   const {
     visible,
     pending,
@@ -132,6 +134,15 @@ export function RouteLoadingOverlay() {
       startLoading(path);
     },
     [startLoading],
+  );
+
+  const shouldSkipLightAuthNav = useCallback(
+    (destPath: string) => {
+      if (status === "loading") return false;
+      const isGuest = !session?.user;
+      return isAuthSessionSurfaceNav(pathname, destPath, isGuest);
+    },
+    [pathname, session?.user, status],
   );
 
   const settleAfterRoute = useCallback(() => {
@@ -255,6 +266,7 @@ export function RouteLoadingOverlay() {
         return;
       }
       if (isQueryOnlyNavigation(pathname, url)) return;
+      if (shouldSkipLightAuthNav(url.pathname)) return;
       beginNavigation(url.pathname);
     };
 
@@ -272,7 +284,7 @@ export function RouteLoadingOverlay() {
       window.removeEventListener("popstate", onPopState);
       clearSettle();
     };
-  }, [pathname, search, beginNavigation, clearSettle]);
+  }, [pathname, search, beginNavigation, clearSettle, shouldSkipLightAuthNav]);
 
   if (!visible) return null;
 

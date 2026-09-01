@@ -87,9 +87,12 @@ function useSlidingIndicator(
 function SlidingIndicator({
   indicator,
   animate,
+  skipEnterReveal = false,
 }: {
   indicator: IndicatorState;
   animate: boolean;
+  /** Absolute pill — skip shell-nav-reveal stagger on sidebar first paint. */
+  skipEnterReveal?: boolean;
 }) {
   const animateClass = animate && "solapas-tab-indicator-animate";
 
@@ -100,6 +103,7 @@ function SlidingIndicator({
         className={cn(
           "pointer-events-none absolute top-1 bottom-1 left-0 z-0 rounded-md bg-[var(--brand-primary-soft)]",
           animateClass,
+          skipEnterReveal && "shell-nav-reveal-skip",
         )}
         style={{
           width: indicator.width,
@@ -115,6 +119,7 @@ function SlidingIndicator({
       className={cn(
         "admin-nav-indicator pointer-events-none absolute right-0 left-0 z-0 rounded-md bg-[var(--brand-primary-soft)]",
         animateClass,
+        skipEnterReveal && "shell-nav-reveal-skip",
       )}
       style={{
         height: indicator.height,
@@ -172,6 +177,10 @@ type SolapasNavListProps = {
   /** Re-measure when route changes (e.g. pathname). */
   activeKey: string;
   "aria-label": string;
+  /** User row etc. — first stagger step before nav links. */
+  header?: ReactNode;
+  /** Stagger user + links on first sidebar mount (matches customer nav). */
+  staggerReveal?: boolean;
 };
 
 /** Vertical nav list with sliding active indicator (admin sidebar). */
@@ -180,6 +189,8 @@ export function SolapasNavList({
   className,
   activeKey,
   "aria-label": ariaLabel,
+  header,
+  staggerReveal = false,
 }: SolapasNavListProps) {
   const { listRef, indicator, animate } = useSlidingIndicator(
     activeKey,
@@ -191,10 +202,19 @@ export function SolapasNavList({
     <nav
       ref={listRef}
       aria-label={ariaLabel}
-      className={cn("relative flex flex-col gap-1 text-sm", className)}
+      className={cn(
+        "relative flex flex-col gap-1 text-sm",
+        staggerReveal && "shell-nav-reveal",
+        className,
+      )}
     >
+      {header}
       {indicator ? (
-        <SlidingIndicator indicator={indicator} animate={animate} />
+        <SlidingIndicator
+          indicator={indicator}
+          animate={animate}
+          skipEnterReveal={staggerReveal}
+        />
       ) : null}
       {children}
     </nav>

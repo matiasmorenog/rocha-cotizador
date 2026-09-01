@@ -478,6 +478,12 @@ select:not([multiple]):disabled {
   animation-delay: 385ms;
 }
 
+.shell-nav-reveal > .shell-nav-reveal-skip {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .shell-nav-reveal > * {
     animation: none;
@@ -1555,6 +1561,9 @@ html[data-admin-theme="dark"] .admin-edit-hover:hover {
   .quote-route-enter,
   .quote-route-exit,
   .customer-home-hub-enter,
+  .login-card-enter,
+  .login-card-exit,
+  .login-session-pane,
   .route-view-enter,
   .shell-nav-reveal > *,
   .solapas-tab-indicator-animate,
@@ -1837,6 +1846,72 @@ html[data-admin-theme="dark"] .admin-edit-hover:hover {
 /* Screen: thermal receipt stays hidden until thermal print */
 .remito-thermal-only {
   display: none;
+}
+
+/* Auth session cards — /entrar, /login, /admin/login, guest home */
+@keyframes login-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes login-card-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-0.35rem);
+  }
+}
+
+.login-card-enter {
+  animation: login-card-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.login-card-exit {
+  animation: login-card-exit 0.28s cubic-bezier(0.4, 0, 1, 1) both;
+  pointer-events: none;
+}
+
+.login-session-height {
+  transition: height 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes login-session-pane-enter {
+  from {
+    opacity: 0;
+    transform: translateY(0.35rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.login-session-pane {
+  animation: login-session-pane-enter 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .login-card-enter,
+  .login-card-exit {
+    animation: none;
+  }
+
+  .login-session-height {
+    transition: none;
+  }
+
+  .login-session-pane {
+    animation: none;
+  }
 }
 
 @keyframes login-shake {
