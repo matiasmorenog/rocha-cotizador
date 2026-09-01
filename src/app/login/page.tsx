@@ -7,6 +7,7 @@ import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { LoginCard } from "@/components/auth/login-card";
 import { CustomerLoginForm } from "@/components/auth/customer-login-form";
+import { CustomerLoginWithDemo } from "@/components/auth/demo-login-gate";
 import { Skeleton } from "@/components/ui/skeleton";
 import { safeCallbackUrl } from "@/lib/callback-url";
 
@@ -65,7 +66,9 @@ export default async function LoginPage({
           </div>
         </div>
         <Suspense fallback={<LoginFormFallback />}>
-          <CustomerLoginForm />
+          <CustomerLoginWithDemo>
+            <CustomerLoginForm />
+          </CustomerLoginWithDemo>
         </Suspense>
         <p className="text-center text-xs text-neutral-500">
           <Link href={chooserHref} className="underline">

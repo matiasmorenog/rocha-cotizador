@@ -15,6 +15,11 @@ import {
   staffPreviewPermissions,
   staffPreviewSessionFromPresetId,
 } from "@/lib/staff-preview";
+import {
+  assertDemoPersonaAllowed,
+  isDemoLoginEnabled,
+} from "@/lib/demo-login";
+import { getDemoPersonaById } from "@/lib/demo-personas";
 import { padCustomerCode } from "@/lib/utils";
 import {
   isPlatformOwnerEmail,
@@ -195,6 +200,107 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           console.error("[auth] admin authorize failed", err);
           return null;
         }
+      },
+    }),
+    Credentials({
+      id: "demo",
+      name: "Demo",
+      credentials: {
+        personaId: { label: "Persona", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!isDemoLoginEnabled()) return null;
+
+        const personaId = String(credentials?.personaId ?? "").trim();
+        if (!personaId) return null;
+
+        try {
+          assertDemoPersonaAllowed(personaId);
+        } catch {
+          return null;
+        }
+
+        const persona = getDemoPersonaById(personaId);
+        if (!persona) return null;
+
+        if (persona.kind === "customer") {
+          const code = padCustomerCode(persona.code);
+          const customer = await db.customer.findUnique({
+            where: { code },
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              active: true,
+              mustChangePassword: true,
+              moduleAccess: {
+                where: { enabled: true },
+                select: { module: true },
+              },
+            },
+          });
+          if (!customer?.active) return null;
+
+          const modules = normalizeCustomerModules(
+            customer.moduleAccess.map((r) => r.module),
+          );
+
+          return {
+            id: customer.id,
+            email: null,
+            name: customer.name,
+            role: "CUSTOMER" as const,
+            customerId: customer.id,
+            customerCode: customer.code,
+            mustChangePassword: customer.mustChangePassword,
+            modules,
+            permissions: [],
+          };
+        }
+
+        const email = persona.email.toLowerCase();
+        const user = await db.user.findUnique({
+          where: { email },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+            canQuotes: true,
+            canStock: true,
+            active: true,
+            inAppNotificationsEnabled: true,
+            isSuperuser: true,
+          },
+        });
+        if (!user?.active || !isAdminPanelRole(user.role)) return null;
+
+        const effectiveRole = await ensureSuperuserRole({
+          id: user.id,
+          email: user.email,
+          role: user.role,
+          isSuperuser: user.isSuperuser,
+        });
+        const permissions = isSuperuserRole(effectiveRole)
+          ? []
+          : staffPermissionsFromProfile({
+              role: effectiveRole,
+              canQuotes: user.canQuotes,
+              canStock: user.canStock,
+            });
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: effectiveRole,
+          customerId: null,
+          customerCode: null,
+          mustChangePassword: false,
+          inAppNotificationsEnabled: user.inAppNotificationsEnabled !== false,
+          modules: [],
+          permissions,
+        };
       },
     }),
     Credentials({

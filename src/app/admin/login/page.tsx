@@ -6,6 +6,7 @@ import { isAdminPanelRole, staffHomeHref } from "@/lib/staff-permissions";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { AdminLoginForm } from "@/components/auth/admin-login-form";
+import { AdminLoginWithDemo } from "@/components/auth/demo-login-gate";
 import { LoginCard } from "@/components/auth/login-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { safeCallbackUrl } from "@/lib/callback-url";
@@ -65,7 +66,9 @@ export default async function AdminLoginPage({
           </div>
         </div>
         <Suspense fallback={<LoginFormFallback />}>
-          <AdminLoginForm />
+          <AdminLoginWithDemo>
+            <AdminLoginForm />
+          </AdminLoginWithDemo>
         </Suspense>
         <p className="text-center text-xs text-neutral-500">
           <Link href={customerLoginHref} className="underline">

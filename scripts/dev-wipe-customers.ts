@@ -37,7 +37,9 @@ import {
 import { seedCustomerModuleAccess } from "../src/lib/customer-modules";
 import { seedStockSampleData } from "../src/lib/stock-seed";
 import { padCustomerCode, pinFromCustomerCode } from "../src/lib/utils";
+import { DEMO_PERSONAS } from "../src/lib/demo-personas";
 import { revalidateAppCache } from "./revalidate-app-cache";
+import { seedDemoPersonas } from "../prisma/seed-demo-personas";
 
 const db = new PrismaClient();
 
@@ -272,11 +274,18 @@ async function main() {
     `Stock sample: desperdicios=${stock.desperdiciosCustomer ?? "n/a"} (${stock.desperdicioLines} lines), consumibles=${stock.consumableCustomer ?? "n/a"} (${stock.consumableLines} lines)`,
   );
 
+  await seedDemoPersonas(db);
+
   const after = await countBeforeWipe();
   console.log("After:", after);
 
-  if (after.customers !== specs.length || after.quotes !== 0) {
-    throw new Error("Post-wipe verification failed");
+  const demoCustomerCount = DEMO_PERSONAS.filter((p) => p.kind === "customer").length;
+  const expectedCustomers = specs.length + demoCustomerCount;
+
+  if (after.customers !== expectedCustomers || after.quotes !== 0) {
+    throw new Error(
+      `Post-wipe verification failed (expected ${expectedCustomers} customers incl. demo, got ${after.customers})`,
+    );
   }
 
   await revalidateAppCache();
