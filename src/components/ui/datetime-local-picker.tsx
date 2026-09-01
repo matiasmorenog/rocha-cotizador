@@ -9,11 +9,9 @@ import {
 } from "react";
 import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import {
-  ARGENTINA_TZ,
   DATETIME_FILTER_NOW,
   argentinaTodayYmd,
   isDatetimeFilterNow,
-  parseArgentinaDateTime,
   toArgentinaDatetimeLocal,
 } from "@/lib/argentina-time";
 import {
@@ -67,25 +65,30 @@ function mondayIndex(year: number, month: number, day: number) {
 }
 
 function formatDisplay(value: string): string {
-  const d = parseArgentinaDateTime(value);
-  if (!d) return value;
-  return d.toLocaleString("es-AR", {
-    timeZone: ARGENTINA_TZ,
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const parts = partsFromValue(value);
+  if (!parts) return value;
+  const h12 = parts.hour % 12 || 12;
+  const ampm = parts.hour < 12 ? "a. m." : "p. m.";
+  return `${pad2(parts.day)}/${pad2(parts.month)}/${parts.year}, ${pad2(h12)}:00 ${ampm}`;
 }
 
+const MONTHS_ES = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre",
+] as const;
+
 function monthTitle(year: number, month: number) {
-  const d = new Date(Date.UTC(year, month - 1, 1));
-  return d.toLocaleDateString("es-AR", {
-    timeZone: "UTC",
-    month: "long",
-    year: "numeric",
-  });
+  return `${MONTHS_ES[month - 1]} ${year}`;
 }
 
 type Props = {
@@ -110,13 +113,7 @@ type Props = {
 function formatDisplayDateOnly(value: string): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
   if (!m) return value;
-  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-  return d.toLocaleDateString("es-AR", {
-    timeZone: "UTC",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
 function valueYmd(value: string, dateOnly: boolean): string | null {

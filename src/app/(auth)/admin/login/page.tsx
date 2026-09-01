@@ -3,11 +3,8 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { getOptionalSession } from "@/lib/session";
 import { isAdminPanelRole, staffHomeHref } from "@/lib/staff-permissions";
-import { BrandBackdrop } from "@/components/brand-backdrop";
-import { BrandLogo } from "@/components/brand-logo";
 import { AdminLoginForm } from "@/components/auth/admin-login-form";
 import { AdminLoginWithDemo } from "@/components/auth/demo-login-gate";
-import { LoginCard } from "@/components/auth/login-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { safeCallbackUrl } from "@/lib/callback-url";
 
@@ -51,31 +48,26 @@ export default async function AdminLoginPage({
       : "/entrar";
 
   return (
-    <BrandBackdrop className="mx-auto flex min-h-[60vh] max-w-md items-center py-4">
-      <LoginCard>
-        <div className="flex flex-col items-center gap-4 text-center">
-          <BrandLogo size="xl" priority />
-          <div className="space-y-1">
-            <h1 className="text-xl font-semibold text-neutral-900">Admin</h1>
-            <p className="text-sm text-neutral-600">Acceso administradores</p>
-            {callbackUrl.startsWith("/remitos/") ? (
-              <p className="text-xs text-neutral-500">
-                Después del login vas a ver el remito del enlace.
-              </p>
-            ) : null}
-          </div>
-        </div>
-        <Suspense fallback={<LoginFormFallback />}>
-          <AdminLoginWithDemo>
-            <AdminLoginForm />
-          </AdminLoginWithDemo>
-        </Suspense>
-        <p className="text-center text-xs text-neutral-500">
-          <Link href={customerLoginHref} className="underline">
-            Elegir otro tipo de acceso
-          </Link>
-        </p>
-      </LoginCard>
-    </BrandBackdrop>
+    <>
+      <div className="space-y-1 text-center">
+        <h1 className="text-xl font-semibold text-neutral-900">Admin</h1>
+        <p className="text-sm text-neutral-600">Acceso administradores</p>
+        {callbackUrl.startsWith("/remitos/") ? (
+          <p className="text-xs text-neutral-500">
+            Después del login vas a ver el remito del enlace.
+          </p>
+        ) : null}
+      </div>
+      <Suspense fallback={<LoginFormFallback />}>
+        <AdminLoginWithDemo>
+          <AdminLoginForm />
+        </AdminLoginWithDemo>
+      </Suspense>
+      <p className="text-center text-xs text-neutral-500">
+        <Link href={customerLoginHref} className="underline">
+          Elegir otro tipo de acceso
+        </Link>
+      </p>
+    </>
   );
 }
