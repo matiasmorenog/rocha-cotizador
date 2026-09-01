@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { ClipboardPlus } from "lucide-react";
-import { AdminQuoteActivitySection } from "@/components/admin/admin-quote-activity-section";
+import { AdminDashboardChartLoader } from "@/components/admin/admin-dashboard-chart-loader";
 import { RecentQuotesList } from "@/components/admin/recent-quotes-list";
+import { SkeletonAdminQuoteActivityCard } from "@/components/ui/skeleton";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
-import { getAdminQuoteActivity, parseQuoteActivityPeriod } from "@/lib/admin-quote-activity";
+import { parseQuoteActivityPeriod } from "@/lib/admin-quote-activity";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { isSuperuserRole } from "@/lib/platform-owner";
 import { requireStaffSession } from "@/lib/session";
@@ -25,21 +27,15 @@ export default async function AdminDashboardPage({
   const { chart: chartParam } = await searchParams;
   const chartPeriod = parseQuoteActivityPeriod(chartParam);
 
-  const [
-    {
-      quotesToday,
-      quotesTodayTotal,
-      quotesYesterday,
-      customersQuotedToday,
-      customersQuotedWeek,
-      pendingWeighLines,
-      recent,
-    },
-    activity,
-  ] = await Promise.all([
-    getAdminDashboardData(),
-    isAdmin ? getAdminQuoteActivity(chartPeriod) : Promise.resolve(null),
-  ]);
+  const {
+    quotesToday,
+    quotesTodayTotal,
+    quotesYesterday,
+    customersQuotedToday,
+    customersQuotedWeek,
+    pendingWeighLines,
+    recent,
+  } = await getAdminDashboardData();
 
   const stats: { label: string; value: number | string; hint: string }[] = [
     ...(canQuotes
@@ -104,15 +100,10 @@ export default async function AdminDashboardPage({
         </p>
       )}
 
-      {isAdmin && activity ? (
-        <AdminQuoteActivitySection
-          initial={{
-            period: activity.period,
-            points: activity.points,
-            totalQuotes: activity.totalQuotes,
-            totalRevenue: activity.totalRevenue,
-          }}
-        />
+      {isAdmin ? (
+        <Suspense fallback={<SkeletonAdminQuoteActivityCard />}>
+          <AdminDashboardChartLoader period={chartPeriod} />
+        </Suspense>
       ) : null}
 
       {(isAdmin || canQuotes) ? (<div className="rounded-lg border border-neutral-200 bg-white shadow-sm">

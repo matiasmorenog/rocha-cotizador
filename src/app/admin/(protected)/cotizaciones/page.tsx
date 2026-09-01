@@ -1,7 +1,7 @@
+import { Suspense } from "react";
+import { CotizacionesQuotesLoader } from "@/components/admin/cotizaciones-quotes-loader";
+import { SkeletonAdminQuotesPanel } from "@/components/ui/skeleton";
 import { requireStaffPermission } from "@/lib/session";
-import { QuotesAdminPanel } from "@/components/admin/quotes-admin-panel";
-import { resolveQuotesExportRange } from "@/lib/argentina-time";
-import { getAdminCotizacionesQuotes } from "@/lib/admin-cotizaciones-data";
 
 /** Always honor `from`/`to` query (dashboard chart deep-links). */
 export const dynamic = "force-dynamic";
@@ -13,23 +13,13 @@ export default async function AdminCotizacionesPage({
 }) {
   await requireStaffPermission("quotes");
   const { from: fromParam, to: toParam } = await searchParams;
-  const { from, to, fromLocal, toLocal } = resolveQuotesExportRange(
-    fromParam,
-    toParam,
-  );
-
-  const rows = await getAdminCotizacionesQuotes(from, to, toParam);
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-neutral-900">Cotizaciones</h1>
-
-      <QuotesAdminPanel
-        key={`${fromLocal}_${toLocal}`}
-        initialQuotes={rows}
-        defaultFromLocal={fromLocal}
-        defaultToLocal={toLocal}
-      />
+      <Suspense fallback={<SkeletonAdminQuotesPanel />}>
+        <CotizacionesQuotesLoader fromParam={fromParam} toParam={toParam} />
+      </Suspense>
     </div>
   );
 }

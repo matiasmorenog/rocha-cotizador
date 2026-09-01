@@ -15,6 +15,7 @@ import {
   writeCachedCatalog,
   writeCachedUnitPrices,
 } from "@/lib/client-catalog-cache";
+import { scheduleIdleWork } from "@/lib/schedule-idle";
 import {
   buildProductSearchIndex,
   EMPTY_PRODUCT_SEARCH_INDEX,
@@ -57,6 +58,8 @@ type CatalogSnapshot = {
 
 /** Background ping while tab stays visible — version only, then full catalog if stale. */
 const CATALOG_VERSION_POLL_MS = 60 * 60 * 1000;
+/** Defer network revalidate on mount — sessionStorage catalog still hydrates immediately. */
+const CATALOG_NETWORK_BOOT_DEFER_MS = 1_500;
 
 function customerKey(customerId?: string): string {
   return customerId?.trim() || "self";
@@ -538,7 +541,13 @@ export function useProductCatalog(
       }
     }
 
-    kickRevalidate();
+    const cancelIdleBoot = scheduleIdleWork(
+      () => kickRevalidate(),
+      {
+        timeoutMs: CATALOG_NETWORK_BOOT_DEFER_MS + 2_000,
+        fallbackMs: CATALOG_NETWORK_BOOT_DEFER_MS,
+      },
+    );
 
     if (typeof document !== "undefined") {
       document.addEventListener("visibilitychange", onVisibilityChange);
@@ -554,6 +563,7 @@ export function useProductCatalog(
 
     return () => {
       cancelled = true;
+      cancelIdleBoot();
       stopInterval();
       unsubscribeStale();
       if (typeof document !== "undefined") {

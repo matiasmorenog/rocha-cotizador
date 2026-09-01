@@ -320,7 +320,7 @@ export function SkeletonLoginPage({ title = "Cargando acceso" }: { title?: strin
   );
 }
 
-function SkeletonQuoteBuilderContent() {
+export function SkeletonQuoteBuilderContent() {
   return (
     <div className="space-y-6">
       <div className={cn(SKELETON_CARD, "p-4 shadow-sm")}>
@@ -473,6 +473,33 @@ export function SkeletonRemitoDetailPage({
   );
 }
 
+/** Customer `/remitos` — date filter card, search, table (title above Suspense). */
+export function SkeletonCustomerRemitosPanel() {
+  return (
+    <>
+      <div className={cn(SKELETON_CARD, "space-y-4 p-4 shadow-sm")}>
+        <div className="space-y-1">
+          <Skeleton className="h-4 w-44" />
+          <Skeleton className="h-3 w-72 max-w-full" />
+        </div>
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="w-[12.75rem] shrink-0 space-y-1">
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <div className="w-[12.75rem] shrink-0 space-y-1">
+            <Skeleton className="h-3 w-12" />
+            <Skeleton className="h-10 w-full rounded-md" />
+          </div>
+          <Skeleton className="h-10 w-24 rounded-md" />
+        </div>
+      </div>
+      <Skeleton className="h-10 w-full rounded-md" />
+      <SkeletonTableRows rows={8} cols={5} tableMinWidth="min-w-[32rem]" />
+    </>
+  );
+}
+
 /** Customer `/remitos` — title, date filter card, search, table. */
 export function SkeletonCustomerRemitosPage({
   withShell = true,
@@ -481,31 +508,13 @@ export function SkeletonCustomerRemitosPage({
     <CustomerSkeletonFrame withShell={withShell}>
       <SkeletonRegion label="Cargando remitos" className="space-y-4">
         <Skeleton className="h-8 w-36" />
-        <div className={cn(SKELETON_CARD, "space-y-4 p-4 shadow-sm")}>
-          <div className="space-y-1">
-            <Skeleton className="h-4 w-44" />
-            <Skeleton className="h-3 w-72 max-w-full" />
-          </div>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="w-[12.75rem] shrink-0 space-y-1">
-              <Skeleton className="h-3 w-12" />
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-            <div className="w-[12.75rem] shrink-0 space-y-1">
-              <Skeleton className="h-3 w-12" />
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-            <Skeleton className="h-10 w-24 rounded-md" />
-          </div>
-        </div>
-        <Skeleton className="h-10 w-full rounded-md" />
-        <SkeletonTableRows rows={8} cols={5} tableMinWidth="min-w-[32rem]" />
+        <SkeletonCustomerRemitosPanel />
       </SkeletonRegion>
     </CustomerSkeletonFrame>
   );
 }
 
-function SkeletonCustomerCuentaPanel() {
+export function SkeletonCustomerCuentaPanel() {
   return (
     <section className={cn(SKELETON_CARD, "w-full max-w-lg p-5 shadow-sm")}>
       <Skeleton className="mb-1 h-3 w-24" />
@@ -691,6 +700,42 @@ export function SkeletonCustomerCuentaConfigPage({
   return <SkeletonAccountPage withShell={withShell} />;
 }
 
+/** Customer stock historial block (header/tabs already painted). */
+export function SkeletonCustomerStockHistoryPanel() {
+  return (
+    <>
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="w-[12.75rem] shrink-0 space-y-1">
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+        <div className="w-[12.75rem] shrink-0 space-y-1">
+          <Skeleton className="h-3 w-12" />
+          <Skeleton className="h-10 w-full rounded-md" />
+        </div>
+        <Skeleton className="h-10 w-24 rounded-md" />
+      </div>
+      <div className="space-y-1">
+        <Skeleton className="h-6 w-28" />
+        <Skeleton className="h-4 w-80 max-w-full" />
+      </div>
+      <div className="space-y-2">
+        {Array.from({ length: 5 }, (_, i) => (
+          <div key={i} className={cn(SKELETON_CARD, "px-3 py-3 shadow-sm")}>
+            <div className="flex items-center justify-between gap-3">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-24" />
+              </div>
+              <Skeleton className="h-4 w-16" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
 /** Customer `/stock` — header, tabs, date filters, historial rows. */
 export function SkeletonCustomerStockPage({
   withShell = true,
@@ -709,34 +754,7 @@ export function SkeletonCustomerStockPage({
           </div>
           <Skeleton className="h-10 w-40 shrink-0 rounded-md" />
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="w-[12.75rem] shrink-0 space-y-1">
-            <Skeleton className="h-3 w-12" />
-            <Skeleton className="h-10 w-full rounded-md" />
-          </div>
-          <div className="w-[12.75rem] shrink-0 space-y-1">
-            <Skeleton className="h-3 w-12" />
-            <Skeleton className="h-10 w-full rounded-md" />
-          </div>
-          <Skeleton className="h-10 w-24 rounded-md" />
-        </div>
-        <div className="space-y-1">
-          <Skeleton className="h-6 w-28" />
-          <Skeleton className="h-4 w-80 max-w-full" />
-        </div>
-        <div className="space-y-2">
-          {Array.from({ length: 5 }, (_, i) => (
-            <div key={i} className={cn(SKELETON_CARD, "px-3 py-3 shadow-sm")}>
-              <div className="flex items-center justify-between gap-3">
-                <div className="space-y-2">
-                  <Skeleton className="h-4 w-40" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-                <Skeleton className="h-4 w-16" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <SkeletonCustomerStockHistoryPanel />
       </SkeletonRegion>
     </CustomerSkeletonFrame>
   );
@@ -878,6 +896,15 @@ export function SkeletonAdminQuotesPage() {
   return (
     <SkeletonRegion label="Cargando cotizaciones" className="space-y-6">
       <Skeleton className="h-8 w-40" />
+      <SkeletonAdminQuotesPanel />
+    </SkeletonRegion>
+  );
+}
+
+/** Cotizaciones filters + table (title already painted above Suspense). */
+export function SkeletonAdminQuotesPanel() {
+  return (
+    <>
       <div className={cn(ADMIN_SKELETON_CARD, "p-4")}>
         <div className="space-y-4">
           <div className="space-y-2">
@@ -898,9 +925,49 @@ export function SkeletonAdminQuotesPage() {
         <Skeleton className="h-10 min-w-0 flex-1 rounded-md" />
         <Skeleton className="h-10 w-40 shrink-0 rounded-md" />
       </div>
-      {/* Número · Cliente · Pedido · Entrega · Estado · Total */}
       <SkeletonTableRows rows={8} cols={6} admin tableMinWidth="min-w-[42rem]" />
+    </>
+  );
+}
+
+/** Generic admin shell while protected layout auth resolves. */
+export function SkeletonAdminShellPage() {
+  return (
+    <SkeletonRegion label="Cargando admin" className="space-y-6">
+      <Skeleton className="h-8 w-40" />
+      <Skeleton className="min-h-[14rem] w-full rounded-lg" />
     </SkeletonRegion>
+  );
+}
+
+/** Dashboard quote-activity card only (KPIs + list already visible). */
+export function SkeletonAdminQuoteActivityCard() {
+  return (
+    <div className={cn(ADMIN_SKELETON_CARD, "p-4 sm:p-5")}>
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2">
+          <Skeleton className="h-5 w-52" />
+          <Skeleton className="h-4 w-72 max-w-full" />
+        </div>
+        <SkeletonSolapasTabList tabs={3} size="sm" />
+      </div>
+      <div className="mb-6 flex flex-wrap gap-6">
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-28" />
+          <Skeleton className="h-7 w-14" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-7 w-28" />
+        </div>
+      </div>
+      <Skeleton className="h-44 w-full rounded-md sm:h-48" />
+      <div className="mt-3 flex justify-between gap-1">
+        {Array.from({ length: 7 }, (_, i) => (
+          <Skeleton key={i} className="h-3 w-6" />
+        ))}
+      </div>
+    </div>
   );
 }
 

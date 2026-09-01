@@ -12,6 +12,7 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import { BrandLogo } from "@/components/brand-logo";
+import { useIsClient } from "@/hooks/use-is-client";
 import { isPublicAuthPath } from "@/lib/customer-module-path";
 import { useRouteLoading } from "@/lib/route-loading-context";
 import { cn } from "@/lib/utils";
@@ -64,12 +65,14 @@ export function LoginCardShell({
   );
 }
 
-let loginSessionShellEntered = false;
-
 function LoginSessionContent({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const outerRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
+  /** First paint on this document load — skip pane enter (refresh flicker). */
+  const [initialPath] = useState(pathname);
+  const animatePane = pathname !== initialPath;
+  const heightTransitionRef = useRef(false);
 
   useLayoutEffect(() => {
     const outer = outerRef.current;
@@ -78,6 +81,12 @@ function LoginSessionContent({ children }: { children: ReactNode }) {
 
     const syncHeight = () => {
       outer.style.height = `${inner.offsetHeight}px`;
+      if (!heightTransitionRef.current) {
+        heightTransitionRef.current = true;
+        requestAnimationFrame(() => {
+          outer.classList.add("login-session-height");
+        });
+      }
     };
 
     syncHeight();
@@ -87,11 +96,11 @@ function LoginSessionContent({ children }: { children: ReactNode }) {
   }, [pathname, children]);
 
   return (
-    <div ref={outerRef} className="login-session-height overflow-hidden">
+    <div ref={outerRef} className="overflow-hidden">
       <div
         ref={innerRef}
         key={pathname}
-        className="login-session-pane space-y-6"
+        className={cn("space-y-6", animatePane && "login-session-pane")}
       >
         {children}
       </div>
@@ -107,19 +116,21 @@ export function LoginSessionShell({ children }: { children: ReactNode }) {
   const { pending, pendingPath } = useRouteLoading();
   const pathname = usePathname();
   const dest = pendingPath ?? pathname;
-  const [cardEnter] = useState(() => {
-    if (loginSessionShellEntered) return false;
-    loginSessionShellEntered = true;
-    return true;
-  });
+  const isClient = useIsClient();
+  /** Enter once per layout mount — applied after hydration to avoid SSR mismatch. */
+  const [cardEnter] = useState(true);
 
   const leavingAuth =
+    isClient &&
     pending &&
     isPublicAuthPath(pathname) &&
     !isPublicAuthPath(dest);
 
   return (
-    <LoginCardShell enter={cardEnter && !leavingAuth} exit={leavingAuth}>
+    <LoginCardShell
+      enter={isClient && cardEnter && !leavingAuth}
+      exit={leavingAuth}
+    >
       <div className="flex flex-col items-center gap-4 text-center">
         <BrandLogo size="xl" priority />
       </div>

@@ -1,9 +1,9 @@
-import { SkeletonAdminDashboardPage } from "@/components/ui/skeleton";
+import { SkeletonAdminShellPage } from "@/components/ui/skeleton";
 
 /**
  * Shows while `admin/(protected)/layout` awaits auth.
- * Nested `(protected)/loading.tsx` cannot paint until that layout resolves.
+ * Generic shell — not dashboard-shaped (cotizaciones is the common landing).
  */
 export default function AdminSegmentLoading() {
-  return <SkeletonAdminDashboardPage />;
+  return <SkeletonAdminShellPage />;
 }

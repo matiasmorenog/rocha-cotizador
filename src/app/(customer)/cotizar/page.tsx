@@ -1,5 +1,5 @@
 import { requireCustomerSession } from "@/lib/session";
-import { QuoteBuilder } from "@/components/quote/quote-builder";
+import { CotizarQuoteBuilder } from "@/components/quote/cotizar-quote-builder-lazy";
 
 export default async function CotizarPage() {
   const session = await requireCustomerSession();
@@ -12,7 +12,7 @@ export default async function CotizarPage() {
           {session.user.name} · código {session.user.customerCode}
         </p>
       </div>
-      <QuoteBuilder />
+      <CotizarQuoteBuilder />
     </div>
   );
 }
