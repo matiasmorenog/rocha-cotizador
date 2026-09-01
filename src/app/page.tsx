@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
+import { LoginCard } from "@/components/auth/login-card";
 import { CustomerHomeHub } from "@/components/customer/customer-home-hub";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { getOptionalSession } from "@/lib/session";
@@ -27,7 +28,7 @@ export default async function HomePage() {
 
   return (
     <BrandBackdrop className="mx-auto flex min-h-[70vh] max-w-md items-center justify-center py-4">
-      <div className="w-full space-y-6 rounded-xl border border-[var(--brand-primary)]/20 bg-[var(--brand-primary-soft)]/95 p-6 shadow-sm backdrop-blur-[2px]">
+      <LoginCard>
         <div className="flex flex-col items-center gap-4 text-center">
           <BrandLogo size="2xl" priority />
           <p className="max-w-sm text-sm text-neutral-600">
@@ -52,7 +53,7 @@ export default async function HomePage() {
             Ingresar como administrador
           </Link>
         </div>
-      </div>
+      </LoginCard>
     </BrandBackdrop>
   );
 }

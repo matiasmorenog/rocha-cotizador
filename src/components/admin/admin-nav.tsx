@@ -73,15 +73,24 @@ function NavLinks({
   pathname,
   onNavigate,
   permissions,
+  header,
+  staggerReveal = false,
 }: {
   pathname: string;
   onNavigate?: () => void;
   permissions: StaffPermission[];
+  header?: React.ReactNode;
+  staggerReveal?: boolean;
 }) {
   const filtered = links.filter((l) => permissions.includes(l.permission));
 
   return (
-    <SolapasNavList activeKey={pathname} aria-label="Navegación de administración">
+    <SolapasNavList
+      activeKey={pathname}
+      aria-label="Navegación de administración"
+      header={header}
+      staggerReveal={staggerReveal}
+    >
       {filtered.map((l) => {
         const active = isActive(
           pathname,
@@ -141,6 +150,7 @@ function AdminSidebarPanel({
   userName,
   userEmail,
   isSuperuser,
+  staggerEnter = false,
 }: {
   pathname: string;
   onNavigate?: () => void;
@@ -150,6 +160,7 @@ function AdminSidebarPanel({
   userName?: string | null;
   userEmail?: string | null;
   isSuperuser?: boolean;
+  staggerEnter?: boolean;
 }) {
   return (
     <div className="flex h-auto flex-col">
@@ -168,15 +179,18 @@ function AdminSidebarPanel({
           </button>
         </div>
       ) : null}
-      <AdminSidebarUserInfo
-        name={userName}
-        email={userEmail}
-        isSuperuser={isSuperuser}
-      />
       <NavLinks
         pathname={pathname}
         onNavigate={onNavigate}
         permissions={permissions}
+        staggerReveal={staggerEnter}
+        header={
+          <AdminSidebarUserInfo
+            name={userName}
+            email={userEmail}
+            isSuperuser={isSuperuser}
+          />
+        }
       />
     </div>
   );
@@ -266,6 +280,7 @@ function AdminMobileDrawer({
           userName={userName}
           userEmail={userEmail}
           isSuperuser={isSuperuser}
+          staggerEnter
         />
       </aside>
     </div>
@@ -288,18 +303,14 @@ export function AdminNav({
 
   return (
     <>
-      <aside
-        className={cn(
-          "admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 shadow-sm print:hidden",
-          navAnimate && "route-view-enter",
-        )}
-      >
+      <aside className="admin-desktop-sidebar rounded-lg border border-neutral-200 bg-white p-4 shadow-sm print:hidden">
         <AdminSidebarPanel
           pathname={pathname}
           permissions={permissions}
           userName={userName}
           userEmail={userEmail}
           isSuperuser={isSuperuser}
+          staggerEnter={navAnimate}
         />
       </aside>
 
