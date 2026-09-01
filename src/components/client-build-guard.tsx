@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { APP_BUILD_ID } from "@/lib/app-build-id";
 import { forceReloadApp, stripReloadParam } from "@/lib/force-reload-app";
+import { scheduleIdleWork } from "@/lib/schedule-idle";
 
 function reloadedForKey(buildId: string): string {
   return `rocha:reloaded-for:${buildId}`;
@@ -44,12 +45,16 @@ export function ClientBuildGuard() {
       if (document.visibilityState === "visible") void check();
     }
 
-    void check();
+    const cancelIdle = scheduleIdleWork(() => {
+      void check();
+    });
+
     window.addEventListener("pageshow", onPageShow);
     document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       cancelled = true;
+      cancelIdle();
       window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVisibility);
     };

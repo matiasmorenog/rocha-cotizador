@@ -1,5 +1,5 @@
-import { SkeletonAdminDashboardPage } from "@/components/ui/skeleton";
+import { SkeletonAdminShellPage } from "@/components/ui/skeleton";
 
 export default function AdminLoading() {
-  return <SkeletonAdminDashboardPage />;
+  return <SkeletonAdminShellPage />;
 }

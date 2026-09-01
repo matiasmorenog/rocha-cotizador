@@ -1,7 +1,8 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AdminQuoteActivityChart } from "@/components/admin/admin-quote-activity-chart";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   SolapasTabButton,
   SolapasTabContent,
@@ -13,6 +14,18 @@ import {
   type QuoteActivityPoint,
 } from "@/lib/admin-quote-activity-shared";
 import { cn } from "@/lib/utils";
+
+const AdminQuoteActivityChart = dynamic(
+  () =>
+    import("@/components/admin/admin-quote-activity-chart").then(
+      (m) => m.AdminQuoteActivityChart,
+    ),
+  {
+    loading: () => (
+      <Skeleton className="h-44 w-full rounded-md sm:h-48" aria-hidden />
+    ),
+  },
+);
 
 const PERIODS: QuoteActivityPeriod[] = ["week", "month", "year"];
 

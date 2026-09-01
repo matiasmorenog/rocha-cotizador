@@ -1,43 +1,20 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import {
-  AdminStockReports,
-  type StockReportEntry,
-} from "@/components/admin/admin-stock-reports";
 import { CustomerStockDateFilters } from "@/components/customer/customer-stock-date-filters";
+import { CustomerStockHistoryLoader } from "@/components/customer/customer-stock-history-loader";
 import { CustomerStockPageHeader } from "@/components/customer/customer-stock-page-header";
 import { CustomerStockTabs } from "@/components/customer/customer-stock-tabs";
 import { StockTabPanel } from "@/components/admin/stock-tab-panel";
-import {
-  loadActivosEntries,
-  loadConsumiblesEntries,
-  loadDesperdiciosEntries,
-  STOCK_HISTORY_LIMIT,
-} from "@/lib/admin-stock-data";
+import { SkeletonCustomerStockHistoryPanel } from "@/components/ui/skeleton";
 import { resolveStockDateRange } from "@/lib/admin-stock-summary-shared";
 import {
-  customerStockTabsForModules,
   customerStockTabLabel,
+  customerStockTabsForModules,
   parseCustomerStockTab,
 } from "@/lib/customer-stock-shared";
 import { requireCustomerSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
-
-async function loadCustomerStockEntries(
-  tab: ReturnType<typeof parseCustomerStockTab>,
-  from: string,
-  to: string,
-  customerId: string,
-): Promise<StockReportEntry[]> {
-  if (!tab) return [];
-  if (tab.module === "CONSUMABLES") {
-    return loadConsumiblesEntries(from, to, customerId, STOCK_HISTORY_LIMIT);
-  }
-  if (tab.module === "ACTIVOS") {
-    return loadActivosEntries(from, to, customerId, STOCK_HISTORY_LIMIT);
-  }
-  return loadDesperdiciosEntries(from, to, customerId, STOCK_HISTORY_LIMIT);
-}
 
 export default async function CustomerStockPage({
   searchParams,
@@ -63,7 +40,6 @@ export default async function CustomerStockPage({
 
   const { from, to } = resolveStockDateRange(params.from, params.to);
   const customerLabel = `${session.user.name ?? "Cliente"} · código ${session.user.customerCode ?? "—"}`;
-  const entries = await loadCustomerStockEntries(active, from, to, customerId);
 
   const formCopy =
     active.tab === "consumibles"
@@ -90,6 +66,13 @@ export default async function CustomerStockPage({
       : active.tab === "activos"
         ? "Recuentos de activos guardados."
         : "Cargas de desperdicios guardadas.";
+
+  const kindLabel =
+    active.tab === "consumibles"
+      ? "Recuento"
+      : active.tab === "activos"
+        ? "Activo del local"
+        : "Desperdicio";
 
   return (
     <div className="space-y-6">
@@ -119,33 +102,18 @@ export default async function CustomerStockPage({
         <div className="space-y-6">
           <CustomerStockDateFilters tab={active.tab} from={from} to={to} />
 
-          <div>
-            <h2 className="text-lg font-semibold text-neutral-900">Historial</h2>
-            <p className="text-sm text-neutral-600">
-              {historialHint} Hasta {STOCK_HISTORY_LIMIT} por consulta — filtrá por
-              fechas.
-            </p>
-          </div>
-
-          <AdminStockReports
-            entries={entries}
-            customers={[
-              {
-                id: customerId,
-                code: session.user.customerCode ?? "",
-                name: session.user.name ?? "",
-              },
-            ]}
-            customerId={customerId}
-            kindLabel={
-              active.tab === "consumibles"
-                ? "Recuento"
-                : active.tab === "activos"
-                  ? "Activo del local"
-                  : "Desperdicio"
-            }
-            hideCustomerColumn
-          />
+          <Suspense fallback={<SkeletonCustomerStockHistoryPanel />}>
+            <CustomerStockHistoryLoader
+              tab={active.tab}
+              from={from}
+              to={to}
+              customerId={customerId}
+              customerCode={session.user.customerCode ?? ""}
+              customerName={session.user.name ?? ""}
+              historialHint={historialHint}
+              kindLabel={kindLabel}
+            />
+          </Suspense>
         </div>
       </StockTabPanel>
     </div>

@@ -18,6 +18,7 @@ import {
   stopAdminNotificationSound,
   unlockAdminNotificationSound,
 } from "@/lib/admin-notification-sound";
+import { scheduleIdleWork } from "@/lib/schedule-idle";
 
 type InboxItem = {
   id: string;
@@ -28,6 +29,8 @@ type InboxItem = {
 };
 
 const POLL_MS = 8_000;
+/** Defer inbox poll + SW register so first admin paint is not competing with RSC. */
+const PUSH_BOOT_DEFER_MS = 2_500;
 const TOAST_TTL_MS = 6_000;
 const MAX_TOASTS = 4;
 /** Only for Web Push double-delivery (BroadcastChannel + postMessage). */
@@ -166,7 +169,6 @@ export function AdminPushSwRegister() {
     seenRef.current = loadSeenIds();
     sinceRef.current = new Date().toISOString();
 
-    // Best-effort: unlock Web Audio after first gesture in admin.
     const unlock = () => {
       unlockAdminNotificationSound();
       window.removeEventListener("pointerdown", unlock);
@@ -175,19 +177,11 @@ export function AdminPushSwRegister() {
     window.addEventListener("pointerdown", unlock, { once: true });
     window.addEventListener("keydown", unlock, { once: true });
 
-    // Best-effort SW (optional Web Push enhancement).
-    if ("serviceWorker" in navigator) {
-      void ensureFreshServiceWorker().catch((err) => {
-        console.warn("[push] service worker register failed", err);
-      });
-    }
-
     function onPushMessage(raw: unknown) {
       if (!raw || typeof raw !== "object") return;
       const msg = raw as Record<string, unknown>;
       if (msg.type !== "ROCHA_PUSH") return;
       const tag = typeof msg.tag === "string" ? msg.tag : "";
-      // System Probar — OS toast only; avoid double UI with in-app toast.
       if (tag.startsWith("rocha-test")) return;
       const title =
         typeof msg.title === "string" ? msg.title : "Nueva cotización";
@@ -196,12 +190,8 @@ export function AdminPushSwRegister() {
         typeof msg.url === "string" ? msg.url : "/admin/cotizaciones";
       const inboxId = typeof msg.id === "string" ? msg.id : null;
       if (inboxId) {
-        // Same AdminInboxItem id as the 8s poll — reusing it as the toast id
-        // makes both delivery paths (push + poll) resolve to one chime, no
-        // matter which arrives first.
         markInboxSeen(inboxId);
       }
-      // Same SW push arrives via BroadcastChannel AND clients.postMessage.
       pushToast({
         id: inboxId ? `inbox-${inboxId}` : undefined,
         title,
@@ -247,11 +237,10 @@ export function AdminPushSwRegister() {
     window.addEventListener(ADMIN_INAPP_TOAST_EVENT, onCustomToast);
 
     let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    let pollTimer: ReturnType<typeof setTimeout> | null = null;
 
     async function pollOnce() {
       if (cancelled || document.visibilityState === "hidden") return;
-      // Session/JWT only — no pref API / DB on the 8s interval.
       if (!enabledRef.current) return;
       try {
         const res = await fetch(
@@ -291,14 +280,30 @@ export function AdminPushSwRegister() {
       }
     }
 
-    function schedule() {
+    function schedulePoll() {
       if (cancelled) return;
-      timer = setTimeout(() => {
-        void pollOnce().finally(() => schedule());
+      pollTimer = setTimeout(() => {
+        void pollOnce().finally(() => schedulePoll());
       }, POLL_MS);
     }
 
-    void pollOnce().finally(() => schedule());
+    function startInboxPolling() {
+      if (cancelled) return;
+      void pollOnce().finally(() => schedulePoll());
+    }
+
+    const cancelIdleBoot = scheduleIdleWork(
+      () => {
+        if (cancelled) return;
+        if ("serviceWorker" in navigator) {
+          void ensureFreshServiceWorker().catch((err) => {
+            console.warn("[push] service worker register failed", err);
+          });
+        }
+        startInboxPolling();
+      },
+      { timeoutMs: PUSH_BOOT_DEFER_MS + 2_000, fallbackMs: PUSH_BOOT_DEFER_MS },
+    );
 
     const onVisible = () => {
       if (document.visibilityState === "visible") void pollOnce();
@@ -307,7 +312,8 @@ export function AdminPushSwRegister() {
 
     return () => {
       cancelled = true;
-      if (timer) clearTimeout(timer);
+      cancelIdleBoot();
+      if (pollTimer) clearTimeout(pollTimer);
       for (const t of toastTimers.values()) clearTimeout(t);
       toastTimers.clear();
       document.removeEventListener("visibilitychange", onVisible);

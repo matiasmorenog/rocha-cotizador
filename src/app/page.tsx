@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
 import { LoginCard } from "@/components/auth/login-card";
-import { CustomerHomeHub } from "@/components/customer/customer-home-hub";
+import { CustomerHomeHubLazy } from "@/components/customer/customer-home-hub-lazy";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { getOptionalSession } from "@/lib/session";
 import { isAdminPanelRole, staffHomeHref } from "@/lib/staff-permissions";
@@ -19,7 +19,7 @@ export default async function HomePage() {
 
   if (session?.user?.role === "CUSTOMER" && session.user.customerId) {
     return (
-      <CustomerHomeHub
+      <CustomerHomeHubLazy
         userName={session.user.name}
         modules={session.user.modules ?? []}
       />
