@@ -56,6 +56,11 @@ function customerSkeletonFor(path: string) {
 }
 
 function adminSkeletonFor(path: string) {
+  if (path.startsWith("/entrar")) return <SkeletonChooserPage />;
+  if (path.startsWith("/login")) return <SkeletonLoginPage />;
+  if (path.startsWith("/admin/login")) {
+    return <SkeletonLoginPage title="Cargando acceso admin" />;
+  }
   if (path.startsWith("/admin/clientes")) {
     return <SkeletonAdminListPage label="Cargando clientes" titleWidth="w-28" />;
   }

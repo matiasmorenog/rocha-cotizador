@@ -2,6 +2,15 @@ export function isCustomerHomePath(path: string): boolean {
   return path === "/" || path === "";
 }
 
+/** Login / chooser routes — never show admin dashboard skeleton while pending. */
+export function isPublicAuthPath(path: string): boolean {
+  return (
+    path === "/entrar" ||
+    path.startsWith("/login") ||
+    path.startsWith("/admin/login")
+  );
+}
+
 export function isCustomerModulePath(path: string): boolean {
   return (
     path.startsWith("/cotizar") ||

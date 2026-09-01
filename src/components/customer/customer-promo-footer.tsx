@@ -39,8 +39,8 @@ export function CustomerPromoFooter() {
   }
 
   return (
-    <footer className="print:hidden" aria-label="Desarrollo de software">
-      <div className="relative mx-auto max-w-xl rounded-xl border border-[var(--brand-primary)]/25 bg-[var(--brand-primary-soft)]/90 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
+    <footer className="w-full print:hidden" aria-label="Desarrollo de software">
+      <div className="relative w-full rounded-xl border border-[var(--brand-primary)]/25 bg-[var(--brand-primary-soft)]/90 px-4 py-4 shadow-sm sm:px-5 sm:py-5">
         <button
           type="button"
           onClick={handleDismiss}

@@ -8,6 +8,7 @@ import { RoutePendingShell } from "@/components/route-pending-shell";
 import { normalizeCustomerModules } from "@/lib/customer-modules-normalize";
 import {
   isCustomerHomePath,
+  isPublicAuthPath,
   shouldShowCustomerModuleShell,
 } from "@/lib/customer-module-path";
 import { useRouteLoading } from "@/lib/route-loading-context";
@@ -78,7 +79,12 @@ export function CustomerLayoutFrame({
   const customer = resolveCustomerUser(bootstrap, session, status);
 
   if (!customer) {
-    const variant = isAdminPanelRole(session?.user?.role) ? "admin" : "customer";
+    const variant =
+      isPublicAuthPath(dest) || isPublicAuthPath(pathname)
+        ? "customer"
+        : isAdminPanelRole(session?.user?.role)
+          ? "admin"
+          : "customer";
     return <RoutePendingShell variant={variant}>{children}</RoutePendingShell>;
   }
 
