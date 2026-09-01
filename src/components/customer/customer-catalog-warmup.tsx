@@ -2,7 +2,7 @@
 
 import { useProductCatalog } from "@/hooks/use-product-catalog";
 
-/** Prefetch quote catalog on customer home so /cotizar search is warm. */
+/** Prefetch quote catalog for logged-in customers (layout frame — all routes). */
 export function CustomerCatalogWarmup() {
   useProductCatalog();
   return null;
