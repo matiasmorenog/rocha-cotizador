@@ -17,10 +17,7 @@ const LoginShakeContext = createContext<{ shake: () => void } | null>(null);
 
 export function useLoginShake() {
   const ctx = useContext(LoginShakeContext);
-  if (!ctx) {
-    throw new Error("useLoginShake must be used within LoginCard");
-  }
-  return ctx;
+  return ctx ?? { shake: () => {} };
 }
 
 export function LoginCard({ children }: { children: ReactNode }) {

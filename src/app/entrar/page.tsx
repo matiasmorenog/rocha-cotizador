@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
+import { EntrarDemoBlock } from "@/components/auth/demo-login-gate";
 import { getOptionalSession } from "@/lib/session";
 import { isAdminPanelRole, staffHomeHref } from "@/lib/staff-permissions";
 import { safeCallbackUrl } from "@/lib/callback-url";
@@ -69,6 +70,8 @@ export default async function EntrarPage({
             Ingresar como administrador
           </Link>
         </div>
+
+        <EntrarDemoBlock />
       </div>
     </BrandBackdrop>
   );
