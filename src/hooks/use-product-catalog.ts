@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   indexCatalogProducts,
   type CatalogProduct,
@@ -109,24 +109,36 @@ export function mapCatalogSearch(
   return mapSearchRows(searchIndex, unitPrices, q, take);
 }
 
-function initialState(opts: UseProductCatalogOptions): CatalogState {
-  const cached = typeof window !== "undefined" ? readCachedCatalog() : null;
-  const key = customerKey(opts.customerId);
-  const cachedPrices =
-    typeof window !== "undefined" ? readCachedUnitPrices(key) : null;
-  const products = cached?.products ?? [];
-  const searchIndex =
-    products.length > 0
-      ? buildProductSearchIndex(products)
-      : emptySearchIndex();
+const SSR_EMPTY_CATALOG_STATE: CatalogState = {
+  products: [],
+  searchIndex: emptySearchIndex(),
+  version: null,
+  unitPrices: {},
+  ready: false,
+  loading: true,
+  error: null,
+};
 
+/** Read sessionStorage synchronously on the client (same-tab refresh keeps catalog). */
+function buildCatalogStateFromStorage(
+  opts: UseProductCatalogOptions,
+): CatalogState {
+  if (typeof window === "undefined") return SSR_EMPTY_CATALOG_STATE;
+
+  const cached = readCachedCatalog();
+  const key = customerKey(opts.customerId);
+  const cachedPrices = readCachedUnitPrices(key);
+  const rawProducts = cached?.products ?? [];
+  if (rawProducts.length === 0) return SSR_EMPTY_CATALOG_STATE;
+
+  const { products, searchIndex } = hydrateCatalog(rawProducts);
   return {
     products,
     searchIndex,
-    version: cached?.version ?? null,
+    version: cached!.version,
     unitPrices: cachedPrices?.unitPrices ?? {},
-    ready: products.length > 0,
-    loading: true,
+    ready: true,
+    loading: false,
     error: null,
   };
 }
@@ -163,7 +175,8 @@ export function useProductCatalog(
   search: (q: string, take?: number) => CatalogSearchProduct[];
   searchAsync: (q: string, take?: number) => Promise<CatalogSearchProduct[]>;
 } {
-  const [state, setState] = useState<CatalogState>(() => initialState(opts));
+  const catalogCustomerId = opts.customerId;
+  const [state, setState] = useState<CatalogState>(SSR_EMPTY_CATALOG_STATE);
   const snapshotRef = useRef<CatalogSnapshot>({
     products: state.products,
     searchIndex: state.searchIndex,
@@ -180,11 +193,30 @@ export function useProductCatalog(
     ready: state.ready,
   };
   const loadPromiseRef = useRef<Promise<void> | null>(null);
+  const storageBootstrappedRef = useRef(false);
 
   /** Sync snapshot before React re-renders so awaiters see fresh catalog. */
   function commitSnapshot(next: CatalogSnapshot) {
     snapshotRef.current = next;
   }
+
+  /** Before first paint on client — use sessionStorage after Cmd+R (SSR state is empty). */
+  useLayoutEffect(() => {
+    if (storageBootstrappedRef.current) return;
+    storageBootstrappedRef.current = true;
+    const fromStorage = buildCatalogStateFromStorage({
+      customerId: catalogCustomerId,
+    });
+    if (!fromStorage.ready) return;
+    commitSnapshot({
+      products: fromStorage.products,
+      searchIndex: fromStorage.searchIndex,
+      unitPrices: fromStorage.unitPrices,
+      version: fromStorage.version,
+      ready: true,
+    });
+    setState(fromStorage);
+  }, [catalogCustomerId]);
 
   useEffect(() => {
     let cancelled = false;

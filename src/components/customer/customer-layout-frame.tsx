@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import type { ReactNode } from "react";
 import { CustomerNav } from "@/components/customer/customer-nav";
+import { CustomerCatalogWarmup } from "@/components/customer/customer-catalog-warmup";
 import { RoutePendingShell } from "@/components/route-pending-shell";
 import { normalizeCustomerModules } from "@/lib/customer-modules-normalize";
 import {
@@ -100,6 +101,7 @@ export function CustomerLayoutFrame({
 
   return (
     <div className={cn("w-full", moduleShell && "admin-shell")}>
+      <CustomerCatalogWarmup />
       <CustomerNav
         modules={customer.modules}
         userName={customer.userName}

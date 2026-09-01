@@ -47,7 +47,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col font-sans">
-        <Providers isStaff={isStaff}>
+        <Providers isStaff={isStaff} session={session}>
           <AppHeader />
           <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
             <CustomerLayoutFrame customerUser={customerFrameUser}>

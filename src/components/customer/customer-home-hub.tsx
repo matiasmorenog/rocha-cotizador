@@ -4,7 +4,6 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { BrandBackdrop } from "@/components/brand-backdrop";
 import { BrandLogo } from "@/components/brand-logo";
-import { CustomerCatalogWarmup } from "@/components/customer/customer-catalog-warmup";
 import { CustomerPromoFooter } from "@/components/customer/customer-promo-footer";
 import { buildCustomerHomeActions } from "@/lib/customer-nav-items";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
@@ -36,7 +35,6 @@ export function CustomerHomeHub({
       data-customer-home-hub=""
       className="flex w-full min-h-[calc(100dvh-8rem)] flex-col items-center justify-start rounded-xl px-4 pb-6 pt-2 sm:pt-4"
     >
-      <CustomerCatalogWarmup />
       <div className={cn("mx-auto flex w-full flex-1 flex-col", containerMax)}>
         <div
           className={cn(
