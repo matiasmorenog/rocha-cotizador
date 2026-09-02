@@ -28,6 +28,7 @@ import {
   useProductCatalog,
   type CatalogSearchProduct,
 } from "@/hooks/use-product-catalog";
+import { filterFoldedSearch } from "@/lib/search-fold";
 import {
   PICKER_REVEAL_INITIAL,
   PICKER_REVEAL_STEP,
@@ -113,6 +114,17 @@ function ProductPickerInner({
   const searchAsyncRef = useRef(searchAsync);
   const isClient = useIsClient();
   const useStockModuleSearch = Boolean(adminStockModule || customerStockModule);
+  const stockModule = adminStockModule ?? customerStockModule;
+
+  const [stockProducts, setStockProducts] = useState<CatalogSearchProduct[]>(
+    [],
+  );
+  const [stockCatalogLoading, setStockCatalogLoading] = useState(
+    useStockModuleSearch,
+  );
+  const [stockCatalogError, setStockCatalogError] = useState<string | null>(
+    null,
+  );
 
   const [query, setQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
@@ -134,20 +146,34 @@ function ProductPickerInner({
   // Gate on isClient: useProductCatalog may read sessionStorage on the client
   // first paint while SSR had an empty catalog — that mismatch hydrates badly.
   const catalogUsable =
-    useStockModuleSearch ||
-    (isClient && (catalog.ready || catalog.products.length > 0));
+    useStockModuleSearch && stockProducts.length > 0
+      ? true
+      : useStockModuleSearch
+        ? !stockCatalogLoading
+        : isClient && (catalog.ready || catalog.products.length > 0);
   const catalogLoading =
-    !useStockModuleSearch && catalog.loading && !catalogUsable;
+    useStockModuleSearch
+      ? stockCatalogLoading && stockProducts.length === 0
+      : catalog.loading && !catalogUsable;
   const trimmedQuery = query.trim();
   const deferredTrimmed = deferredQuery.trim();
   const filterPending =
     !value &&
     trimmedQuery.length > 0 &&
+    !useStockModuleSearch &&
     catalog.products.length > 0 &&
+    deferredQuery !== query;
+  const stockFilterPending =
+    useStockModuleSearch &&
+    !value &&
+    trimmedQuery.length > 0 &&
+    stockProducts.length > 0 &&
     deferredQuery !== query;
   // Ignore cold-flight once warm catalog hydrates — warmResults filter query.
   const coldSearchBusy = coldInFlight && catalog.products.length === 0;
-  const searchBusy = filterPending || coldSearchBusy;
+  const searchBusy = useStockModuleSearch
+    ? stockFilterPending
+    : filterPending || coldSearchBusy;
   const showInputSpinner = (catalogLoading || searchBusy) && !value;
 
   const warmResults = useMemo(() => {
@@ -177,15 +203,39 @@ function ProductPickerInner({
     filterProduct,
   ]);
 
+  const warmStockResults = useMemo(() => {
+    if (
+      !useStockModuleSearch ||
+      value ||
+      deferredTrimmed.length < 1 ||
+      stockProducts.length === 0
+    ) {
+      return [] as CatalogSearchProduct[];
+    }
+    const rows = filterFoldedSearch(stockProducts, deferredTrimmed, {
+      primary: [(p) => p.code],
+      secondary: [(p) => p.name, (p) => p.rubro],
+      take: 50,
+    });
+    return filterProduct ? rows.filter(filterProduct) : rows;
+  }, [
+    useStockModuleSearch,
+    value,
+    deferredTrimmed,
+    stockProducts,
+    filterProduct,
+  ]);
+
   const results = useMemo(() => {
-    const base = useStockModuleSearch
-      ? (coldResults ?? [])
-      : catalog.products.length > 0
-        ? warmResults
-        : (coldResults ?? []);
+    if (useStockModuleSearch) {
+      return warmStockResults;
+    }
+    const base =
+      catalog.products.length > 0 ? warmResults : (coldResults ?? []);
     return filterProduct ? base.filter(filterProduct) : base;
   }, [
     useStockModuleSearch,
+    warmStockResults,
     catalog.products.length,
     warmResults,
     coldResults,
@@ -220,8 +270,13 @@ function ProductPickerInner({
     deferredTrimmed.length > 0 &&
     results.length === 0 &&
     !catalogLoading &&
-    !searchBusy;
-  const showError = Boolean(!useStockModuleSearch && catalog.error && !catalogUsable);
+    !searchBusy &&
+    !(useStockModuleSearch && stockCatalogLoading);
+  const showError = Boolean(
+    useStockModuleSearch
+      ? stockCatalogError && stockProducts.length === 0
+      : catalog.error && !catalogUsable,
+  );
   const floatingOpen = showList || showSearching || showEmpty || showError;
   const {
     present: floatPresent,
@@ -247,7 +302,7 @@ function ProductPickerInner({
       hasMoreResults,
       activeHighlight,
       results,
-      error: catalog.error as string | null,
+      error: useStockModuleSearch ? stockCatalogError : (catalog.error as string | null),
     }),
     [
       showList,
@@ -260,6 +315,8 @@ function ProductPickerInner({
       activeHighlight,
       results,
       catalog.error,
+      stockCatalogError,
+      useStockModuleSearch,
     ],
   );
   const [frozenFloatView, setFrozenFloatView] = useState(liveFloatView);
@@ -271,6 +328,47 @@ function ProductPickerInner({
   useEffect(() => {
     searchAsyncRef.current = searchAsync;
   }, [searchAsync]);
+
+  useEffect(() => {
+    if (!useStockModuleSearch || !stockModule) return;
+
+    let cancelled = false;
+
+    void Promise.resolve().then(() => {
+      if (cancelled) return;
+      setStockCatalogLoading(true);
+      setStockCatalogError(null);
+
+      const stockProductsUrl = customerStockModule
+        ? `/api/customer/stock/products?module=${stockModule}&take=500`
+        : `/api/admin/stock/products?module=${stockModule}&take=500`;
+
+      void fetch(stockProductsUrl)
+        .then(async (res) => {
+          if (!res.ok) {
+            throw new Error("stock products fetch failed");
+          }
+          const data = (await res.json()) as {
+            products?: CatalogSearchProduct[];
+          };
+          return data.products ?? [];
+        })
+        .then((rows) => {
+          if (cancelled) return;
+          setStockProducts(rows);
+          setStockCatalogLoading(false);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setStockCatalogError("No se pudo cargar el listado de productos");
+          setStockCatalogLoading(false);
+        });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [useStockModuleSearch, stockModule, customerStockModule, adminStockModule]);
 
   // Grow DOM window for keyboard nav, then scroll highlight into view.
   useEffect(() => {
@@ -325,7 +423,12 @@ function ProductPickerInner({
 
     setHighlightIndex(0);
 
-    if (!useStockModuleSearch && catalog.products.length > 0) {
+    if (useStockModuleSearch) {
+      if (stockProducts.length > 0) {
+        setColdInFlight(false);
+        return;
+      }
+    } else if (catalog.products.length > 0) {
       setColdResults(null);
       setColdInFlight(false);
       return;
@@ -333,7 +436,6 @@ function ProductPickerInner({
 
     const requestId = ++searchRequestId.current;
     setColdInFlight(true);
-    const stockModule = adminStockModule ?? customerStockModule;
     const stockProductsUrl = customerStockModule
       ? `/api/customer/stock/products?module=${stockModule}&q=${encodeURIComponent(q)}&take=50`
       : `/api/admin/stock/products?module=${stockModule}&q=${encodeURIComponent(q)}&take=50`;
