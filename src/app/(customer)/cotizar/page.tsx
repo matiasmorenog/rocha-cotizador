@@ -1,8 +1,12 @@
 import { requireCustomerSession } from "@/lib/session";
+import { getOrderCutoffHourAr } from "@/lib/business-settings";
 import { CotizarQuoteBuilder } from "@/components/quote/cotizar-quote-builder-lazy";
 
 export default async function CotizarPage() {
-  const session = await requireCustomerSession();
+  const [session, orderCutoffHourAr] = await Promise.all([
+    requireCustomerSession(),
+    getOrderCutoffHourAr(),
+  ]);
 
   return (
     <div className="space-y-4">
@@ -12,7 +16,7 @@ export default async function CotizarPage() {
           {session.user.name} · código {session.user.customerCode}
         </p>
       </div>
-      <CotizarQuoteBuilder />
+      <CotizarQuoteBuilder orderCutoffHourAr={orderCutoffHourAr} />
     </div>
   );
 }

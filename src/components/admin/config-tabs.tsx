@@ -6,6 +6,7 @@ import { SolapasTabList } from "@/components/ui/solapas-tabs";
 import { parseConfigTab, type ConfigTab } from "@/lib/admin-config-tabs";
 
 const TABS: Array<{ id: ConfigTab; label: string }> = [
+  { id: "cotizaciones", label: "Cotizaciones" },
   { id: "notificaciones", label: "Notificaciones" },
   { id: "servicio", label: "Servicio" },
   { id: "cuenta", label: "Cuenta" },

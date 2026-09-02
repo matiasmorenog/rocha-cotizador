@@ -12,7 +12,11 @@ import { useQuoteDraftStore } from "@/stores/quote-draft-store";
 /** Keep in sync with `.quote-panel-exit` duration in globals.css */
 const QUOTE_CUSTOMER_EXIT_MS = 200;
 
-export function AdminNewQuoteForm() {
+export function AdminNewQuoteForm({
+  orderCutoffHourAr,
+}: {
+  orderCutoffHourAr: number;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [customer, setCustomer] = useState<PickedCustomer | null>(null);
@@ -101,6 +105,7 @@ export function AdminNewQuoteForm() {
           customerId={customer.id}
           exiting={exiting}
           onConfirmCreateNew={() => beginCustomerExit({ focusSearch: true })}
+          orderCutoffHourAr={orderCutoffHourAr}
         />
       ) : (
         <p className="text-sm text-neutral-500">

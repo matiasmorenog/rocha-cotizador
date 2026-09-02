@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { parseConfigTab } from "@/lib/admin-config-tabs";
 import {
+  SkeletonAdminConfigCotizacionesPanel,
   SkeletonAdminConfigCuentaPanel,
   SkeletonAdminConfigNotificacionesPanel,
   SkeletonAdminConfigServicioPanel,
@@ -14,6 +15,8 @@ export function ConfigPanelSkeleton() {
   const tab = parseConfigTab(searchParams.get("tab") ?? undefined);
 
   switch (tab) {
+    case "cotizaciones":
+      return <SkeletonAdminConfigCotizacionesPanel />;
     case "notificaciones":
       return <SkeletonAdminConfigNotificacionesPanel />;
     case "servicio":

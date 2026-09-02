@@ -1,10 +1,11 @@
-import { Suspense } from "react";
 import { AdminNewQuoteForm } from "@/components/admin/admin-new-quote-form";
 import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-route-transition";
+import { getOrderCutoffHourAr } from "@/lib/business-settings";
 import { requireStaffPermission } from "@/lib/session";
 
 export default async function AdminNuevaCotizacionPage() {
   await requireStaffPermission("quotes");
+  const orderCutoffHourAr = await getOrderCutoffHourAr();
 
   return (
     <div className="space-y-6">
@@ -24,9 +25,7 @@ export default async function AdminNuevaCotizacionPage() {
           Volver al listado
         </CotizacionesTransitionLink>
       </div>
-      <Suspense fallback={<p className="text-sm text-neutral-500">Cargando…</p>}>
-        <AdminNewQuoteForm />
-      </Suspense>
+      <AdminNewQuoteForm orderCutoffHourAr={orderCutoffHourAr} />
     </div>
   );
 }
