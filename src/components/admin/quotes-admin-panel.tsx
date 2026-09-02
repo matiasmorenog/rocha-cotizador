@@ -30,10 +30,10 @@ import {
 import {
   ARGENTINA_TZ,
   FILTER_DEFAULT_RANGE_DAYS,
-  ORDER_CUTOFF_HOUR_AR,
   splitQuotesByDayCutoff,
 } from "@/lib/argentina-time";
 import { formatDeliveryDateLabel } from "@/lib/delivery-date";
+import { formatOrderCutoffHourLabel } from "@/lib/order-cutoff";
 import { quoteStatusLabel } from "@/lib/quote-status";
 import { cn, formatPrice } from "@/lib/utils";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
@@ -50,8 +50,8 @@ export type QuoteListRow = {
   customer: { code: string; name: string };
 };
 
-function afterCutoffSummary(count: number): string {
-  const hora = `${ORDER_CUTOFF_HOUR_AR}:00`;
+function afterCutoffSummary(count: number, cutoffHour: number): string {
+  const hora = formatOrderCutoffHourLabel(cutoffHour);
   if (count === 1) {
     return `1 cotización ingresada después del cierre (${hora})`;
   }
@@ -147,10 +147,12 @@ export function QuotesAdminPanel({
   initialQuotes,
   defaultFromLocal,
   defaultToLocal,
+  orderCutoffHourAr,
 }: {
   initialQuotes: QuoteListRow[];
   defaultFromLocal: string;
   defaultToLocal: string;
+  orderCutoffHourAr: number;
 }) {
   const [from, setFrom] = useState(defaultFromLocal);
   const [to, setTo] = useState(defaultToLocal);
@@ -200,8 +202,8 @@ export function QuotesAdminPanel({
   );
 
   const { main, afterCutoff } = useMemo(
-    () => splitQuotesByDayCutoff(filtered, to),
-    [filtered, to],
+    () => splitQuotesByDayCutoff(filtered, to, orderCutoffHourAr),
+    [filtered, to, orderCutoffHourAr],
   );
 
   // Freeze late rows while exit plays (filter can clear afterCutoff same tick).
@@ -276,9 +278,9 @@ export function QuotesAdminPanel({
             </p>
             <p className="text-xs text-neutral-500">
               Por defecto: últimos {FILTER_DEFAULT_RANGE_DAYS} días (hora
-              Argentina). Las ingresadas después del cierre ({ORDER_CUTOFF_HOUR_AR}
-              :00) van arriba, en una fila expansible (orden más reciente
-              primero).
+              Argentina). Las ingresadas después del cierre (
+              {formatOrderCutoffHourLabel(orderCutoffHourAr)}) van arriba, en una
+              fila expansible (orden más reciente primero).
             </p>
           </div>
 
@@ -381,7 +383,7 @@ export function QuotesAdminPanel({
                       className="flex w-full items-center justify-between gap-3 px-3 py-2.5 text-left text-sm font-medium text-amber-950"
                     >
                       <span>
-                        {afterCutoffSummary(afterCutoff.length)}
+                        {afterCutoffSummary(afterCutoff.length, orderCutoffHourAr)}
                         <span className="mt-0.5 block text-xs font-normal text-amber-800/80">
                           Próximo ciclo de preparación —{" "}
                           {lateOpen ? "ocultar" : "mostrar"}

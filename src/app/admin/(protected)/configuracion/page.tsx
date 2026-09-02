@@ -4,6 +4,8 @@ import { staffHasPermission } from "@/lib/staff-permissions";
 import { getRochaSubscriptionStatus } from "@/lib/subscription-payments";
 import { parseConfigTab } from "@/lib/admin-config-tabs";
 import { PushNotificationsSettings } from "@/components/admin/push-notifications-settings";
+import { OrderCutoffSettingsSection } from "@/components/admin/order-cutoff-settings-section";
+import { OrderCutoffSettingsSectionSkeleton } from "@/components/admin/order-cutoff-settings-section-skeleton";
 import { SubscriptionStatusSection } from "@/components/admin/subscription-status-section";
 import { WhatsAppSettingsSection } from "@/components/admin/whatsapp-settings-section";
 import { WhatsAppSettingsSectionSkeleton } from "@/components/admin/whatsapp-settings-section-skeleton";
@@ -26,6 +28,25 @@ export default async function AdminConfigPage({
     Boolean(session.user.isSuperuser) && !session.user.staffPreview;
   const subscriptionStatus =
     tab === "servicio" ? await getRochaSubscriptionStatus() : null;
+
+  if (tab === "cotizaciones") {
+    return (
+      <section className="max-w-2xl rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">
+          Cotizaciones
+        </h2>
+        {canEditAppSettings ? (
+          <Suspense fallback={<OrderCutoffSettingsSectionSkeleton />}>
+            <OrderCutoffSettingsSection />
+          </Suspense>
+        ) : (
+          <p className="text-sm text-neutral-600">
+            No tenés permiso para editar la configuración de cotizaciones.
+          </p>
+        )}
+      </section>
+    );
+  }
 
   if (tab === "notificaciones") {
     return (

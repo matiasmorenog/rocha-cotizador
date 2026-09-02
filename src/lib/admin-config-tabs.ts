@@ -1,6 +1,11 @@
-export type ConfigTab = "notificaciones" | "servicio" | "cuenta";
+export type ConfigTab = "cotizaciones" | "notificaciones" | "servicio" | "cuenta";
 
-export const CONFIG_TABS: ConfigTab[] = ["notificaciones", "servicio", "cuenta"];
+export const CONFIG_TABS: ConfigTab[] = [
+  "cotizaciones",
+  "notificaciones",
+  "servicio",
+  "cuenta",
+];
 
 export const DEFAULT_CONFIG_TAB: ConfigTab = "cuenta";
 

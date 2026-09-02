@@ -183,7 +183,13 @@ export function StockRecountForm({
         : "Ese producto no es un activo del local — revisá el tipo de stock del producto";
 
   function addProduct(product: CatalogSearchProduct) {
-    if (!productMatchesStockModule(product.rubro, stockModule)) {
+    if (
+      !productMatchesStockModule(
+        product.rubro,
+        stockModule,
+        product.stockKind,
+      )
+    ) {
       setError(moduleMismatchMessage);
       return;
     }
