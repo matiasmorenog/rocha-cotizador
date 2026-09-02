@@ -233,6 +233,8 @@ model BusinessSettings {
   id                  Int      @id @default(1)
   /// Digits for wa.me (e.g. 5491166904442). Display forms are normalized on save.
   whatsappNotifyPhone String   @default("5491166904442")
+  /// Order batch closing hour (Argentina wall time, 0–23). Before cutoff → next-day delivery min.
+  orderCutoffHourAr   Int      @default(16)
   updatedAt           DateTime @updatedAt
 }
 

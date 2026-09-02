@@ -10,8 +10,8 @@ import { DataTableScroll } from "@/components/ui/data-table";
 import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import {
   earliestDeliveryDateYmd,
-  ORDER_CUTOFF_HOUR_AR,
 } from "@/lib/delivery-date";
+import { formatOrderCutoffHourLabel } from "@/lib/order-cutoff";
 import {
   quoteLineMeasureLabel,
   quoteLineQtyAriaLabel,
@@ -62,13 +62,16 @@ type QuoteBuilderProps = {
    * panel exit as “Cambiar cliente”, then clears customer + focuses search.
    */
   onConfirmCreateNew?: () => void;
+  /** Argentina wall hour (0–23) for delivery min date and copy. */
+  orderCutoffHourAr: number;
 };
 
 export function QuoteBuilder({
   customerId,
   exiting = false,
   onConfirmCreateNew,
-}: QuoteBuilderProps = {}) {
+  orderCutoffHourAr,
+}: QuoteBuilderProps) {
   const router = useRouter();
   const lines = useQuoteDraftStore((s) => s.lines);
   const addOrUpdate = useQuoteDraftStore((s) => s.addOrUpdate);
@@ -103,8 +106,12 @@ export function QuoteBuilder({
   const [qty, setLocalQty] = useState("1");
   const [orderByUnit, setLocalOrderByUnit] = useState(false);
   const [notes, setNotes] = useState("");
-  const [minDeliveryDate] = useState(() => earliestDeliveryDateYmd());
-  const [deliveryDate, setDeliveryDate] = useState(() => earliestDeliveryDateYmd());
+  const [minDeliveryDate] = useState(() =>
+    earliestDeliveryDateYmd(undefined, orderCutoffHourAr),
+  );
+  const [deliveryDate, setDeliveryDate] = useState(() =>
+    earliestDeliveryDateYmd(undefined, orderCutoffHourAr),
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -225,7 +232,7 @@ export function QuoteBuilder({
 
     clear();
     setNotes("");
-    setDeliveryDate(earliestDeliveryDateYmd());
+    setDeliveryDate(earliestDeliveryDateYmd(undefined, orderCutoffHourAr));
 
     if (action === "new") {
       // Customer self-serve: fresh cotizar. Admin without callback: focus query.
@@ -488,7 +495,7 @@ export function QuoteBuilder({
           aria-label="Fecha de entrega"
         />
         <p className="text-xs text-neutral-500">
-          Pedidos antes de las {ORDER_CUTOFF_HOUR_AR}:00 (AR) se preparan para el
+          Pedidos antes de las {formatOrderCutoffHourLabel(orderCutoffHourAr)} (AR) se preparan para el
           día siguiente; después del corte, el mínimo es pasado mañana. Podés
           elegir una fecha más adelante.
         </p>
@@ -518,7 +525,7 @@ export function QuoteBuilder({
           onClick={() => {
             clear();
             setNotes("");
-            setDeliveryDate(earliestDeliveryDateYmd());
+            setDeliveryDate(earliestDeliveryDateYmd(undefined, orderCutoffHourAr));
           }}
           disabled={!lines.length && !notes.trim()}
         >

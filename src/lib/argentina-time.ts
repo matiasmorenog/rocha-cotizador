@@ -160,6 +160,7 @@ export function defaultQuotesExportRange(now = new Date()): {
 export function splitQuotesByDayCutoff<T extends { createdAt: string | Date }>(
   quotes: T[],
   toLocal: string,
+  cutoffHour = ORDER_CUTOFF_HOUR_AR,
 ): { main: T[]; afterCutoff: T[]; cutoffLocal: string | null } {
   const trimmed = toLocal.trim();
   const dateOnly = isDateOnlyYmd(trimmed);
@@ -173,14 +174,14 @@ export function splitQuotesByDayCutoff<T extends { createdAt: string | Date }>(
   const [hhRaw, mmRaw] = timePart.split(":");
   const hour = Number(hhRaw);
   const minute = Number(mmRaw ?? "0");
-  const cutoffLocal = `${datePart}T${String(ORDER_CUTOFF_HOUR_AR).padStart(2, "0")}:00`;
+  const cutoffLocal = `${datePart}T${String(cutoffHour).padStart(2, "0")}:00`;
 
-  if (!Number.isFinite(hour) || hour < ORDER_CUTOFF_HOUR_AR) {
+  if (!Number.isFinite(hour) || hour < cutoffHour) {
     return { main: quotes, afterCutoff: [], cutoffLocal: null };
   }
   if (
     !dateOnly &&
-    hour === ORDER_CUTOFF_HOUR_AR &&
+    hour === cutoffHour &&
     (!Number.isFinite(minute) || minute === 0)
   ) {
     return { main: quotes, afterCutoff: [], cutoffLocal: null };

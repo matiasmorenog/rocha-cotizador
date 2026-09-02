@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Decimal } from "@prisma/client/runtime/library";
 import { auth } from "@/lib/auth";
-import { getWhatsAppNotifyDigits } from "@/lib/business-settings";
+import { getOrderCutoffHourAr, getWhatsAppNotifyDigits } from "@/lib/business-settings";
 import { db } from "@/lib/db";
 import { invalidateAfterQuoteCreate } from "@/lib/cache-tags";
 import { lineTotal, unitPriceForProduct } from "@/lib/pricing";
@@ -167,16 +167,23 @@ export async function POST(req: NextRequest) {
 
   const total = lines.reduce((acc, l) => acc.plus(l.lineTotal), new Decimal(0));
   const number = await nextQuoteNumber();
+  const orderCutoffHourAr = await getOrderCutoffHourAr();
 
   let deliveryDate: Date;
   if (parsed.data.deliveryDate) {
-    const validated = validateDeliveryDateYmd(parsed.data.deliveryDate);
+    const validated = validateDeliveryDateYmd(
+      parsed.data.deliveryDate,
+      new Date(),
+      orderCutoffHourAr,
+    );
     if (!validated.ok) {
       return NextResponse.json({ error: validated.error }, { status: 400 });
     }
     deliveryDate = validated.date;
   } else {
-    deliveryDate = parseDateOnlyYmd(earliestDeliveryDateYmd())!;
+    deliveryDate = parseDateOnlyYmd(
+      earliestDeliveryDateYmd(new Date(), orderCutoffHourAr),
+    )!;
   }
 
   const quote = await db.quote.create({

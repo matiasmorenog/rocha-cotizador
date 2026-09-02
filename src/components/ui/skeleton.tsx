@@ -649,6 +649,20 @@ function SkeletonAdminConfigCuentaSection() {
   );
 }
 
+function SkeletonAdminConfigCotizacionesSection() {
+  return (
+    <section className={ADMIN_CONFIG_SECTION}>
+      <Skeleton className="mb-3 h-3 w-28" />
+      <SkeletonConfigNestedCard
+        titleWidth="w-36"
+        descLines={2}
+        fields={1}
+        submitButton
+      />
+    </section>
+  );
+}
+
 function SkeletonAdminConfigNotificacionesSection() {
   return (
     <section className={ADMIN_CONFIG_SECTION}>
@@ -761,6 +775,15 @@ export function SkeletonCustomerStockPage({
 }
 
 /** Notificaciones tab panel. */
+/** Cotizaciones tab — order cutoff hour. */
+export function SkeletonAdminConfigCotizacionesPanel() {
+  return (
+    <SkeletonRegion label="Cargando cotizaciones">
+      <SkeletonAdminConfigCotizacionesSection />
+    </SkeletonRegion>
+  );
+}
+
 export function SkeletonAdminConfigNotificacionesPanel() {
   return (
     <SkeletonRegion label="Cargando notificaciones">
@@ -794,7 +817,7 @@ export function SkeletonAdminConfigPage() {
     >
       <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-72" />
 
-      <SkeletonSolapasTabList tabs={3} />
+      <SkeletonSolapasTabList tabs={4} />
 
       <SkeletonAdminConfigCuentaSection />
     </SkeletonRegion>

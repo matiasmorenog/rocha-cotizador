@@ -420,10 +420,11 @@ async function seedBusinessSettings() {
     create: {
       id: 1,
       whatsappNotifyPhone: "5491166904442",
+      orderCutoffHourAr: 16,
     },
     update: {},
   });
-  console.log("Business settings ready (WhatsApp notify default)");
+  console.log("Business settings ready (WhatsApp + order cutoff defaults)");
 }
 
 /** Excel LPM yellow products — allow unit OR kg orders (price TBD after weigh). */

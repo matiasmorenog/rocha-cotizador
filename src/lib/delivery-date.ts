@@ -52,11 +52,14 @@ export function addCalendarDaysYmd(ymd: string, days: number): string {
 
 /**
  * Earliest allowed delivery date as `YYYY-MM-DD` (Argentina calendar).
- * Before 16:00 → +1 day; at/after 16:00 → +2 days.
+ * Before cutoff → +1 day; at/after cutoff → +2 days.
  */
-export function earliestDeliveryDateYmd(now = new Date()): string {
+export function earliestDeliveryDateYmd(
+  now = new Date(),
+  cutoffHour = ORDER_CUTOFF_HOUR_AR,
+): string {
   const { ymd, hour } = argentinaCalendarParts(now);
-  const offset = hour < ORDER_CUTOFF_HOUR_AR ? 1 : 2;
+  const offset = hour < cutoffHour ? 1 : 2;
   return addCalendarDaysYmd(ymd, offset);
 }
 
@@ -137,13 +140,14 @@ export function resolveDeliveryDate(quote: {
 export function validateDeliveryDateYmd(
   value: string,
   now = new Date(),
+  cutoffHour = ORDER_CUTOFF_HOUR_AR,
 ): { ok: true; date: Date; ymd: string } | { ok: false; error: string } {
   const date = parseDateOnlyYmd(value);
   if (!date) {
     return { ok: false, error: "Fecha de entrega inválida" };
   }
   const ymd = formatDateOnlyYmd(date);
-  const min = earliestDeliveryDateYmd(now);
+  const min = earliestDeliveryDateYmd(now, cutoffHour);
   if (ymd < min) {
     return {
       ok: false,
