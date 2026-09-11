@@ -9,6 +9,7 @@ import {
   setOrderCutoffHourAr,
   setWhatsAppNotifyPhone,
 } from "@/lib/business-settings";
+import { isOrderCutoffEnforced } from "@/lib/order-cutoff";
 
 export async function GET() {
   if (!(await requireStaffApi("settings"))) {
@@ -19,7 +20,11 @@ export async function GET() {
     getWhatsAppNotifyDigits(),
     getOrderCutoffHourAr(),
   ]);
-  return NextResponse.json({ whatsappNotifyPhone, orderCutoffHourAr });
+  return NextResponse.json({
+    whatsappNotifyPhone,
+    orderCutoffHourAr,
+    orderCutoffEnforced: isOrderCutoffEnforced(),
+  });
 }
 
 const putSchema = z
@@ -59,6 +64,15 @@ export async function PUT(req: NextRequest) {
       );
     }
     if (parsed.data.orderCutoffHourAr !== undefined) {
+      if (!isOrderCutoffEnforced()) {
+        return NextResponse.json(
+          {
+            error:
+              "La hora de corte de pedidos está pausada; no se puede cambiar ahora.",
+          },
+          { status: 403 },
+        );
+      }
       orderCutoffHourAr = await setOrderCutoffHourAr(
         parsed.data.orderCutoffHourAr,
       );
@@ -69,6 +83,7 @@ export async function PUT(req: NextRequest) {
         whatsappNotifyPhone ?? (await getWhatsAppNotifyDigits()),
       orderCutoffHourAr:
         orderCutoffHourAr ?? (await getOrderCutoffHourAr()),
+      orderCutoffEnforced: isOrderCutoffEnforced(),
     };
     return NextResponse.json(body);
   } catch (err) {
