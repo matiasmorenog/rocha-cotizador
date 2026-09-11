@@ -1,15 +1,16 @@
 /**
  * Order delivery / fulfillment date helpers (America/Argentina/Buenos_Aires).
  *
- * Cutoff 16:00 AR wall time:
- * - before 16:00 → earliest delivery = tomorrow
- * - at/after 16:00 → earliest delivery = day after tomorrow
- *   (same batch boundary as admin list window: yesterday 16:00 → now)
+ * When order-cutoff enforcement is enabled (`isOrderCutoffEnforced()`):
+ * - before cutoff → earliest delivery = tomorrow
+ * - at/after cutoff → earliest delivery = day after tomorrow
  *
- * Customers may pick any date >= earliest (e.g. Monday → Friday).
+ * When paused (current): earliest = today (AR calendar). Never past days.
+ * Customers may pick any date >= earliest.
  */
 
 import { ARGENTINA_TZ, ORDER_CUTOFF_HOUR_AR } from "@/lib/argentina-time";
+import { isOrderCutoffEnforced } from "@/lib/order-cutoff";
 
 export { ORDER_CUTOFF_HOUR_AR };
 
@@ -52,13 +53,16 @@ export function addCalendarDaysYmd(ymd: string, days: number): string {
 
 /**
  * Earliest allowed delivery date as `YYYY-MM-DD` (Argentina calendar).
- * Before cutoff → +1 day; at/after cutoff → +2 days.
+ * Cutoff enforced → +1 / +2 days; paused → today (offset 0).
  */
 export function earliestDeliveryDateYmd(
   now = new Date(),
   cutoffHour = ORDER_CUTOFF_HOUR_AR,
 ): string {
   const { ymd, hour } = argentinaCalendarParts(now);
+  if (!isOrderCutoffEnforced()) {
+    return ymd;
+  }
   const offset = hour < cutoffHour ? 1 : 2;
   return addCalendarDaysYmd(ymd, offset);
 }

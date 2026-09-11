@@ -108,6 +108,11 @@ type Props = {
   allowReset?: boolean;
   /** Value applied on restablecer; defaults to empty. */
   resetValue?: string;
+  /**
+   * Inclusive minimum selectable day (`YYYY-MM-DD`). Days before are disabled.
+   * For datetime mode, only the calendar date is constrained (hour unrestricted).
+   */
+  min?: string;
 };
 
 function formatDisplayDateOnly(value: string): string {
@@ -140,6 +145,16 @@ function footerSelectionLabel(
   return dateOnly ? formatDisplayDateOnly(value) : formatDisplay(value);
 }
 
+function cellYmd(year: number, month: number, day: number): string {
+  return `${year}-${pad2(month)}-${pad2(day)}`;
+}
+
+function normalizeMinYmd(min: string | undefined): string | null {
+  if (!min?.trim()) return null;
+  const ymd = min.trim().slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(ymd) ? ymd : null;
+}
+
 export function DatetimeLocalPicker({
   value,
   onChange,
@@ -152,6 +167,7 @@ export function DatetimeLocalPicker({
   showPresets = true,
   allowReset = false,
   resetValue = "",
+  min,
 }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -265,7 +281,15 @@ export function DatetimeLocalPicker({
     return out;
   }, [viewYear, viewMonth]);
 
+  const minYmd = normalizeMinYmd(min);
+
+  function isDayDisabled(year: number, month: number, day: number): boolean {
+    if (!minYmd) return false;
+    return cellYmd(year, month, day) < minYmd;
+  }
+
   function commit(next: Parts) {
+    if (isDayDisabled(next.year, next.month, next.day)) return;
     setDraft(next);
     onChange(toValueMode(next));
   }
@@ -287,6 +311,7 @@ export function DatetimeLocalPicker({
   function onToday() {
     if (nowPreset) {
       const now = fallbackNow();
+      if (isDayDisabled(now.year, now.month, now.day)) return;
       setDraft(now);
       setViewYear(now.year);
       setViewMonth(now.month);
@@ -296,6 +321,7 @@ export function DatetimeLocalPicker({
     }
     const now = partsFromValue(toArgentinaDatetimeLocal(new Date()));
     if (!now) return;
+    if (isDayDisabled(now.year, now.month, now.day)) return;
     commit(now);
     setViewYear(now.year);
     setViewMonth(now.month);
@@ -373,8 +399,15 @@ export function DatetimeLocalPicker({
               <button
                 type="button"
                 onClick={onToday}
+                disabled={(() => {
+                  const now = fallbackNow();
+                  return isDayDisabled(now.year, now.month, now.day);
+                })()}
                 aria-pressed={isTodayActive}
-                className={presetChipClassName(isTodayActive, "rect")}
+                className={cn(
+                  presetChipClassName(isTodayActive, "rect"),
+                  "disabled:cursor-not-allowed disabled:opacity-40",
+                )}
               >
                 Hoy
               </button>
@@ -424,11 +457,19 @@ export function DatetimeLocalPicker({
                     draft.year === cell.year &&
                     draft.month === cell.month &&
                     draft.day === cell.day;
+                  const dayDisabled = isDayDisabled(
+                    cell.year,
+                    cell.month,
+                    cell.day,
+                  );
                   return (
                     <button
                       key={`${cell.year}-${cell.month}-${cell.day}`}
                       type="button"
+                      disabled={dayDisabled}
+                      aria-disabled={dayDisabled || undefined}
                       onClick={() => {
+                        if (dayDisabled) return;
                         commit({
                           ...draft,
                           year: cell.year,
@@ -442,13 +483,19 @@ export function DatetimeLocalPicker({
                       }}
                       className={cn(
                         "inline-flex size-8 items-center justify-center rounded-md text-sm tabular-nums transition-colors",
-                        isSelected ? FOCUS_BRAND_PRIMARY : FOCUS_BRAND_OUTLINE,
-                        cell.inMonth
-                          ? "text-neutral-900"
-                          : "text-neutral-400",
-                        isSelected
-                          ? "bg-[var(--brand-primary)] font-medium text-white hover:bg-[var(--brand-primary)]"
-                          : "hover:bg-[var(--brand-primary-soft)]",
+                        dayDisabled
+                          ? "cursor-not-allowed text-neutral-300"
+                          : isSelected
+                            ? FOCUS_BRAND_PRIMARY
+                            : FOCUS_BRAND_OUTLINE,
+                        !dayDisabled &&
+                          (cell.inMonth
+                            ? "text-neutral-900"
+                            : "text-neutral-400"),
+                        !dayDisabled &&
+                          (isSelected
+                            ? "bg-[var(--brand-primary)] font-medium text-white hover:bg-[var(--brand-primary)]"
+                            : "hover:bg-[var(--brand-primary-soft)]"),
                       )}
                     >
                       {cell.day}

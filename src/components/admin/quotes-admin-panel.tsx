@@ -33,7 +33,7 @@ import {
   splitQuotesByDayCutoff,
 } from "@/lib/argentina-time";
 import { formatDeliveryDateLabel } from "@/lib/delivery-date";
-import { formatOrderCutoffHourLabel } from "@/lib/order-cutoff";
+import { formatOrderCutoffHourLabel, isOrderCutoffEnforced } from "@/lib/order-cutoff";
 import { quoteStatusLabel } from "@/lib/quote-status";
 import { cn, formatPrice } from "@/lib/utils";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
@@ -201,10 +201,12 @@ export function QuotesAdminPanel({
     [quotes, query],
   );
 
-  const { main, afterCutoff } = useMemo(
-    () => splitQuotesByDayCutoff(filtered, to, orderCutoffHourAr),
-    [filtered, to, orderCutoffHourAr],
-  );
+  const { main, afterCutoff } = useMemo(() => {
+    if (!isOrderCutoffEnforced()) {
+      return { main: filtered, afterCutoff: [] as typeof filtered };
+    }
+    return splitQuotesByDayCutoff(filtered, to, orderCutoffHourAr);
+  }, [filtered, to, orderCutoffHourAr]);
 
   // Freeze late rows while exit plays (filter can clear afterCutoff same tick).
   const [frozenLate, setFrozenLate] = useState(afterCutoff);
@@ -277,10 +279,19 @@ export function QuotesAdminPanel({
               Filtrar cotizaciones
             </p>
             <p className="text-xs text-neutral-500">
-              Por defecto: últimos {FILTER_DEFAULT_RANGE_DAYS} días (hora
-              Argentina). Las ingresadas después del cierre (
-              {formatOrderCutoffHourLabel(orderCutoffHourAr)}) van arriba, en una
-              fila expansible (orden más reciente primero).
+              {isOrderCutoffEnforced() ? (
+                <>
+                  Por defecto: últimos {FILTER_DEFAULT_RANGE_DAYS} días (hora
+                  Argentina). Las ingresadas después del cierre (
+                  {formatOrderCutoffHourLabel(orderCutoffHourAr)}) van arriba, en
+                  una fila expansible (orden más reciente primero).
+                </>
+              ) : (
+                <>
+                  Por defecto: últimos {FILTER_DEFAULT_RANGE_DAYS} días (hora
+                  Argentina). Orden más reciente primero.
+                </>
+              )}
             </p>
           </div>
 
