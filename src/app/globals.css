@@ -1337,6 +1337,11 @@ html[data-admin-theme="dark"]
   background-color: #fef2f2;
 }
 
+.admin-import-feedback--progress {
+  border-color: #bfdbfe;
+  background-color: #eff6ff;
+}
+
 html[data-admin-theme="dark"] .admin-import-feedback--success {
   border-color: color-mix(in srgb, #22c55e 45%, #2a3942);
   background-color: color-mix(in srgb, #22c55e 12%, #202c33);
@@ -1377,6 +1382,20 @@ html[data-admin-theme="dark"] .admin-import-feedback--error .text-red-700 {
 html[data-admin-theme="dark"] .admin-import-feedback--error .text-red-800,
 html[data-admin-theme="dark"] .admin-import-feedback--error .text-red-900 {
   color: #fecaca;
+}
+
+html[data-admin-theme="dark"] .admin-import-feedback--progress {
+  border-color: color-mix(in srgb, #60a5fa 45%, #2a3942);
+  background-color: color-mix(in srgb, #3b82f6 12%, #202c33);
+}
+
+html[data-admin-theme="dark"] .admin-import-feedback--progress .text-blue-700 {
+  color: #93c5fd;
+}
+
+html[data-admin-theme="dark"] .admin-import-feedback--progress .text-blue-800,
+html[data-admin-theme="dark"] .admin-import-feedback--progress .text-blue-900 {
+  color: #bfdbfe;
 }
 
 /* Remito document in admin dark: no list hover/selection fill on body rows. */

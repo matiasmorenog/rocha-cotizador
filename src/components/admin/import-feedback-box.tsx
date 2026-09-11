@@ -1,7 +1,8 @@
 "use client";
 
 import { type ReactNode, useState } from "react";
-import { AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, AlertTriangle, CheckCircle2, Loader2 } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 import { cn } from "@/lib/utils";
 import {
@@ -13,7 +14,7 @@ import {
 /** Same exit window as admin payment/customer form collapse. */
 const IMPORT_FEEDBACK_EXIT_MS = 250;
 
-type Tone = "success" | "warning" | "error";
+type Tone = "success" | "warning" | "error" | "progress";
 
 const toneStyles: Record<
   Tone,
@@ -36,6 +37,12 @@ const toneStyles: Record<
     icon: "text-red-700",
     title: "text-red-900",
     body: "text-red-800",
+  },
+  progress: {
+    box: "admin-import-feedback admin-import-feedback--progress",
+    icon: "text-blue-700",
+    title: "text-blue-900",
+    body: "text-blue-800",
   },
 };
 
@@ -91,6 +98,9 @@ function ToneIcon({ tone }: { tone: Tone }) {
   const className = cn("mt-0.5 size-4 shrink-0", toneStyles[tone].icon);
   if (tone === "success") return <CheckCircle2 className={className} aria-hidden />;
   if (tone === "warning") return <AlertTriangle className={className} aria-hidden />;
+  if (tone === "progress") {
+    return <Loader2 className={cn(className, "animate-spin")} aria-hidden />;
+  }
   return <AlertCircle className={className} aria-hidden />;
 }
 
@@ -107,6 +117,8 @@ function FeedbackShell({
   return (
     <div
       role={tone === "error" ? "alert" : "status"}
+      aria-live={tone === "progress" ? "polite" : undefined}
+      aria-busy={tone === "progress" ? true : undefined}
       className={cn("rounded-md border px-3 py-2.5 text-sm", styles.box)}
     >
       <div className="flex gap-2">
@@ -132,6 +144,53 @@ function FeedbackBulletList({ items }: { items: string[] }) {
         <li key={item}>{item}</li>
       ))}
     </ul>
+  );
+}
+
+export function formatImportElapsed(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}m ${String(s).padStart(2, "0")}s`;
+}
+
+/** In-progress banner while validate/import fetch is open. */
+export function ImportProgressFeedbackBox({
+  phase,
+  elapsedSeconds,
+  rowHint,
+}: {
+  phase: "validating" | "importing";
+  elapsedSeconds: number;
+  /** e.g. validated row count before confirm */
+  rowHint?: number;
+}) {
+  const title =
+    phase === "validating"
+      ? "Validación en progreso…"
+      : "Sincronización en progreso…";
+  const elapsed = formatImportElapsed(elapsedSeconds);
+
+  return (
+    <FeedbackShell tone="progress" title={title}>
+      <p className="flex flex-wrap items-center gap-2">
+        <Spinner className="size-3.5" />
+        <span>
+          Tiempo transcurrido: <strong>{elapsed}</strong>
+          {rowHint != null && phase === "importing"
+            ? ` · ${rowHint} fila${rowHint === 1 ? "" : "s"}`
+            : null}
+        </span>
+      </p>
+      {phase === "importing" ? (
+        <p>
+          Puede tardar según el tamaño del archivo. No cierres esta pestaña: al
+          terminar vas a ver el resultado (ok o error).
+        </p>
+      ) : (
+        <p>Revisando el Excel…</p>
+      )}
+    </FeedbackShell>
   );
 }
 

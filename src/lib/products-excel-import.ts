@@ -1,7 +1,9 @@
 import ExcelJS from "exceljs";
+import { randomUUID } from "node:crypto";
+import { Prisma, type ProductStockKind } from "@prisma/client";
 import { db } from "@/lib/db";
 import { invalidateAfterProductMutation } from "@/lib/cache-tags";
-import { syncBaseListItemForProduct } from "@/lib/price-list-resolve";
+import { getBasePriceList } from "@/lib/price-list-resolve";
 import {
   cellNumber,
   cellText,
@@ -22,7 +24,6 @@ import {
   PRODUCT_RUBRO_HEADER_ALIASES,
   resolveProductHeaderColumn,
 } from "@/lib/rocha-lista-precios-products";
-import type { ProductStockKind } from "@prisma/client";
 
 function parseStockKindFromCell(
   raw: ExcelJS.CellValue,
@@ -238,6 +239,109 @@ export function validateProductsImport(
   return result;
 }
 
+type PreparedProductRow = {
+  row: number;
+  code: string;
+  name: string;
+  rubro: string | null;
+  basePrice: number;
+  allowsUnitOrder: boolean;
+  available: boolean;
+  stockKind: ProductStockKind;
+  /** null unitPrice → delete that list item */
+  listPrices: Array<{ priceListId: string; unitPrice: number | null }>;
+};
+
+function prepareProductRows(ctx: ProductsImportContext): {
+  rows: PreparedProductRow[];
+  skipped: number;
+  errors: ImportSummary["errors"];
+} {
+  const byCode = new Map<string, PreparedProductRow>();
+  const errors: ImportSummary["errors"] = [];
+  let skipped = 0;
+
+  for (let r = 2; r <= ctx.sheet.rowCount; r++) {
+    const row = ctx.sheet.getRow(r);
+    const codeRaw = cellText(getCellByHeader(row, ctx.headers, "código"));
+    const name = cellText(getCellByHeader(row, ctx.headers, "nombre"));
+
+    if (!codeRaw && !name) {
+      skipped += 1;
+      continue;
+    }
+
+    const validation = validateProductsRow(row, r, ctx);
+    if (validation.skip) {
+      skipped += 1;
+      continue;
+    }
+    if (validation.error) {
+      errors.push({ row: r, message: validation.error });
+      continue;
+    }
+
+    const code = codeRaw.trim();
+    const rubro = emptyToNull(
+      cellText(getCellByHeader(row, ctx.headers, "rubro")),
+    );
+    const priceRaw = cellNumber(
+      getCellByHeader(row, ctx.headers, "precioBase"),
+    )!;
+    const available = parseBool(
+      getCellByHeader(row, ctx.headers, "habilitado"),
+      true,
+    );
+    const stockKindRaw = parseStockKindFromCell(
+      getCellByHeader(row, ctx.headers, "tipoStock"),
+    );
+    if (stockKindRaw === "invalid") {
+      errors.push({
+        row: r,
+        message:
+          "tipoStock inválido (ELABORADO, CONSUMIBLE, ACTIVO_LOCAL o vacío)",
+      });
+      continue;
+    }
+    const stockKind = stockKindRaw ?? inferStockKindFromRubro(rubro);
+    const allowsUnitOrder = normalizeAllowsUnitOrder(
+      stockKind,
+      parseBool(
+        getCellByHeader(row, ctx.headers, "permitePedidoUnidad"),
+        false,
+      ),
+    );
+
+    const listPrices = ctx.listColumns.map((col) => {
+      const raw = getCellByHeader(row, ctx.headers, col.header);
+      const text = cellText(raw).trim();
+      return {
+        priceListId: col.priceListId,
+        unitPrice: text ? cellNumber(raw) : null,
+      };
+    });
+
+    // Last duplicate code wins (same as sequential upsert).
+    byCode.set(code, {
+      row: r,
+      code,
+      name,
+      rubro,
+      basePrice: priceRaw,
+      allowsUnitOrder,
+      available,
+      stockKind,
+      listPrices,
+    });
+  }
+
+  return { rows: [...byCode.values()], skipped, errors };
+}
+
+/**
+ * Bulk upsert products + price list items (few DB round-trips).
+ * Replaces per-row find/update/upsert that made ~500-row imports take minutes.
+ */
 export async function executeProductsImport(
   ctx: ProductsImportContext,
 ): Promise<ImportSummary> {
@@ -248,102 +352,129 @@ export async function executeProductsImport(
     errors: [],
   };
 
-  for (let r = 2; r <= ctx.sheet.rowCount; r++) {
-    const row = ctx.sheet.getRow(r);
-    const codeRaw = cellText(getCellByHeader(row, ctx.headers, "código"));
-    const name = cellText(getCellByHeader(row, ctx.headers, "nombre"));
+  const prepared = prepareProductRows(ctx);
+  summary.skipped = prepared.skipped;
+  summary.errors.push(...prepared.errors);
 
-    if (!codeRaw && !name) {
-      summary.skipped += 1;
-      continue;
-    }
+  if (prepared.rows.length === 0) {
+    return summary;
+  }
 
-    const validation = validateProductsRow(row, r, ctx);
-    if (validation.skip) {
-      summary.skipped += 1;
-      continue;
-    }
-    if (validation.error) {
-      summary.errors.push({ row: r, message: validation.error });
-      continue;
-    }
+  try {
+    const codes = prepared.rows.map((r) => r.code);
+    const [existing, baseList] = await Promise.all([
+      db.product.findMany({
+        where: { code: { in: codes } },
+        select: { id: true, code: true },
+      }),
+      getBasePriceList(),
+    ]);
+    const existingByCode = new Map(existing.map((p) => [p.code, p.id]));
 
-    const code = codeRaw.trim();
-    const rubro = emptyToNull(cellText(getCellByHeader(row, ctx.headers, "rubro")));
-    const priceRaw = cellNumber(getCellByHeader(row, ctx.headers, "precioBase"))!;
-    const available = parseBool(
-      getCellByHeader(row, ctx.headers, "habilitado"),
-      true,
-    );
-    const stockKindRaw = parseStockKindFromCell(
-      getCellByHeader(row, ctx.headers, "tipoStock"),
-    );
-    if (stockKindRaw === "invalid") {
-      summary.errors.push({
-        row: r,
-        message: "tipoStock inválido (ELABORADO, CONSUMIBLE, ACTIVO_LOCAL o vacío)",
-      });
-      continue;
-    }
-    const stockKind = stockKindRaw ?? inferStockKindFromRubro(rubro);
-    const allowsUnitOrder = normalizeAllowsUnitOrder(
-      stockKind,
-      parseBool(getCellByHeader(row, ctx.headers, "permitePedidoUnidad"), false),
-    );
+    const productValues = prepared.rows.map((p) => {
+      const id = existingByCode.get(p.code) ?? randomUUID();
+      return Prisma.sql`(
+        ${id},
+        ${p.code},
+        ${p.name},
+        ${p.rubro},
+        ${p.basePrice},
+        ${p.allowsUnitOrder},
+        ${p.available},
+        CAST(${p.stockKind} AS "ProductStockKind"),
+        NOW(),
+        NOW()
+      )`;
+    });
 
-    try {
-      const existing = await db.product.findUnique({ where: { code } });
-      const data = {
-        code,
-        name,
-        rubro,
-        basePrice: priceRaw,
-        allowsUnitOrder,
-        available,
-        stockKind,
-      };
+    const upserted = await db.$queryRaw<Array<{ id: string; code: string }>>`
+      INSERT INTO "Product" (
+        id, code, name, rubro, "basePrice", "allowsUnitOrder", available, "stockKind", "createdAt", "updatedAt"
+      )
+      VALUES ${Prisma.join(productValues)}
+      ON CONFLICT (code) DO UPDATE SET
+        name = EXCLUDED.name,
+        rubro = EXCLUDED.rubro,
+        "basePrice" = EXCLUDED."basePrice",
+        "allowsUnitOrder" = EXCLUDED."allowsUnitOrder",
+        available = EXCLUDED.available,
+        "stockKind" = EXCLUDED."stockKind",
+        "updatedAt" = NOW()
+      RETURNING id, code
+    `;
 
-      const product = existing
-        ? await db.product.update({ where: { code }, data })
-        : await db.product.create({ data });
-
-      await syncBaseListItemForProduct(product.id, product.basePrice);
-
-      if (existing) summary.updated += 1;
+    const idByCode = new Map(upserted.map((p) => [p.code, p.id]));
+    for (const row of prepared.rows) {
+      if (existingByCode.has(row.code)) summary.updated += 1;
       else summary.created += 1;
+    }
 
-      for (const col of ctx.listColumns) {
-        const raw = getCellByHeader(row, ctx.headers, col.header);
-        const text = cellText(raw).trim();
-        if (!text) {
-          await db.priceListItem.deleteMany({
-            where: {
-              priceListId: col.priceListId,
-              productId: product.id,
-            },
-          });
+    const upsertItems: Prisma.Sql[] = [];
+    const deletePairs: Prisma.Sql[] = [];
+
+    for (const row of prepared.rows) {
+      const productId = idByCode.get(row.code);
+      if (!productId) {
+        summary.errors.push({
+          row: row.row,
+          message: "No se pudo resolver el producto tras el upsert",
+        });
+        continue;
+      }
+
+      if (baseList) {
+        upsertItems.push(
+          Prisma.sql`(
+            ${randomUUID()},
+            ${baseList.id},
+            ${productId},
+            ${row.basePrice},
+            NOW()
+          )`,
+        );
+      }
+
+      for (const lp of row.listPrices) {
+        if (lp.unitPrice === null) {
+          deletePairs.push(Prisma.sql`(${lp.priceListId}, ${productId})`);
           continue;
         }
-        const unitPrice = cellNumber(raw)!;
-        await db.priceListItem.upsert({
-          where: {
-            priceListId_productId: {
-              priceListId: col.priceListId,
-              productId: product.id,
-            },
-          },
-          create: {
-            priceListId: col.priceListId,
-            productId: product.id,
-            unitPrice,
-          },
-          update: { unitPrice },
-        });
+        upsertItems.push(
+          Prisma.sql`(
+            ${randomUUID()},
+            ${lp.priceListId},
+            ${productId},
+            ${lp.unitPrice},
+            NOW()
+          )`,
+        );
       }
-    } catch (e) {
-      const message = e instanceof Error ? e.message : "Error al guardar";
-      summary.errors.push({ row: r, message });
     }
+
+    if (deletePairs.length > 0) {
+      await db.$executeRaw`
+        DELETE FROM "PriceListItem" AS pli
+        USING (VALUES ${Prisma.join(deletePairs)}) AS v("priceListId", "productId")
+        WHERE pli."priceListId" = v."priceListId"
+          AND pli."productId" = v."productId"
+      `;
+    }
+
+    if (upsertItems.length > 0) {
+      await db.$executeRaw`
+        INSERT INTO "PriceListItem" (
+          id, "priceListId", "productId", "unitPrice", "updatedAt"
+        )
+        VALUES ${Prisma.join(upsertItems)}
+        ON CONFLICT ("priceListId", "productId") DO UPDATE SET
+          "unitPrice" = EXCLUDED."unitPrice",
+          "updatedAt" = NOW()
+      `;
+    }
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Error al guardar";
+    summary.errors.push({ row: 0, message });
+    return summary;
   }
 
   if (summary.created > 0 || summary.updated > 0) {
