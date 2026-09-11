@@ -129,7 +129,25 @@ export function importHttpFatalMessage(
   }
 }
 
-export function importNetworkFatalMessage(): ImportFatalFeedback {
+export function importNetworkFatalMessage(
+  phase: "validate" | "import" | "generic" = "generic",
+): ImportFatalFeedback {
+  if (phase === "import") {
+    return {
+      kind: "fatal",
+      title: "No se pudo completar la sincronización",
+      detail:
+        "Se cortó la conexión antes de recibir el resultado. Si el archivo era grande, la importación puede haber seguido en el servidor: revisá productos o revalidá el Excel. No cierres la pestaña mientras diga «en progreso».",
+    };
+  }
+  if (phase === "validate") {
+    return {
+      kind: "fatal",
+      title: "Error de conexión al validar",
+      detail:
+        "No se pudo contactar al servidor. Verificá tu internet e intentá de nuevo.",
+    };
+  }
   return {
     kind: "fatal",
     title: "Error de conexión",

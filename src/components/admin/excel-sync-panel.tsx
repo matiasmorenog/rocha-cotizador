@@ -4,6 +4,7 @@ import {
   type DragEvent,
   type FormEvent,
   type KeyboardEvent,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -33,6 +34,7 @@ import {
   ImportDuplicateWarningsBox,
   ImportFatalFeedbackBox,
   ImportFeedbackReveal,
+  ImportProgressFeedbackBox,
   ImportRowErrorsBox,
   ImportSuccessFeedbackBox,
 } from "@/components/admin/import-feedback-box";
@@ -129,10 +131,37 @@ export function ExcelSyncPanel({
   const [importFeedback, setImportFeedback] = useState<ImportFeedback | null>(
     null,
   );
+  const [busyElapsedSec, setBusyElapsedSec] = useState(0);
+  const busyStartedAtRef = useRef<number | null>(null);
+
+  const validating = validation.status === "validating";
+  const progressPhase: "validating" | "importing" | null = importing
+    ? "importing"
+    : validating
+      ? "validating"
+      : null;
+
+  useEffect(() => {
+    if (!progressPhase) return;
+    busyStartedAtRef.current = Date.now();
+    const id = window.setInterval(() => {
+      const started = busyStartedAtRef.current;
+      if (started == null) return;
+      setBusyElapsedSec(Math.max(0, Math.floor((Date.now() - started) / 1000)));
+    }, 1000);
+    return () => {
+      window.clearInterval(id);
+      busyStartedAtRef.current = null;
+    };
+  }, [progressPhase]);
 
   function resetValidation() {
     setValidation({ status: "idle" });
     setImportFeedback(null);
+  }
+
+  function clearValidationOnly() {
+    setValidation({ status: "idle" });
   }
 
   function onFileChange(next: File | null) {
@@ -209,6 +238,7 @@ export function ExcelSyncPanel({
 
     setValidation({ status: "validating" });
     setImportFeedback(null);
+    setBusyElapsedSec(0);
 
     const body = new FormData();
     body.set("file", file);
@@ -227,7 +257,7 @@ export function ExcelSyncPanel({
     } catch {
       setValidation({
         status: "failed",
-        feedback: importNetworkFatalMessage(),
+        feedback: importNetworkFatalMessage("validate"),
       });
     }
   }
@@ -266,6 +296,7 @@ export function ExcelSyncPanel({
 
     setImporting(true);
     setImportFeedback(null);
+    setBusyElapsedSec(0);
 
     const body = new FormData();
     body.set("file", file);
@@ -283,19 +314,18 @@ export function ExcelSyncPanel({
         if (!hadErrors || hadMutations) {
           setFile(null);
           if (inputRef.current) inputRef.current.value = "";
-          resetValidation();
+          clearValidationOnly();
         }
         if (hadMutations && broadcastCatalogStale) notifyCatalogStale();
         if (hadMutations) router.refresh();
       }
     } catch {
-      setImportFeedback(importNetworkFatalMessage());
+      setImportFeedback(importNetworkFatalMessage("import"));
     } finally {
       setImporting(false);
     }
   }
 
-  const validating = validation.status === "validating";
   const busy = validating || importing || downloading;
   const validated =
     validation.status === "validated" ? validation.result : null;
@@ -485,6 +515,31 @@ export function ExcelSyncPanel({
                   </Button>
                 </div>
               </form>
+
+              <ImportFeedbackReveal
+                value={
+                  progressPhase
+                    ? {
+                        phase: progressPhase,
+                        elapsedSeconds: busyElapsedSec,
+                        rowHint:
+                          progressPhase === "importing" && validated
+                            ? validated.rowCount
+                            : undefined,
+                      }
+                    : null
+                }
+              >
+                {(progress) => (
+                  <div className="border-t border-neutral-100 pt-3">
+                    <ImportProgressFeedbackBox
+                      phase={progress.phase}
+                      elapsedSeconds={progress.elapsedSeconds}
+                      rowHint={progress.rowHint}
+                    />
+                  </div>
+                )}
+              </ImportFeedbackReveal>
 
               <ImportFeedbackReveal value={validationFatalFeedback}>
                 {(fatal) => (
