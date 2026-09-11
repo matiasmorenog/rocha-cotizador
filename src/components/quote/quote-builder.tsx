@@ -11,7 +11,6 @@ import { UNIT_ORDER_PRICE_WARNING } from "@/lib/unit-order-products";
 import {
   earliestDeliveryDateYmd,
 } from "@/lib/delivery-date";
-import { formatOrderCutoffHourLabel } from "@/lib/order-cutoff";
 import {
   quoteLineMeasureLabel,
   quoteLineQtyAriaLabel,
@@ -486,19 +485,16 @@ export function QuoteBuilder({
           dateOnly
           showPresets={false}
           allowReset
+          min={minDeliveryDate}
           resetValue={deliveryDateToPickerValue(minDeliveryDate)}
           value={deliveryDateToPickerValue(deliveryDate)}
           onChange={(next) => {
-            setDeliveryDate(next.trim() ? next.trim().slice(0, 10) : minDeliveryDate);
+            const ymd = next.trim() ? next.trim().slice(0, 10) : minDeliveryDate;
+            setDeliveryDate(ymd < minDeliveryDate ? minDeliveryDate : ymd);
           }}
           className="max-w-xs"
           aria-label="Fecha de entrega"
         />
-        <p className="text-xs text-neutral-500">
-          Pedidos antes de las {formatOrderCutoffHourLabel(orderCutoffHourAr)} (AR) se preparan para el
-          día siguiente; después del corte, el mínimo es pasado mañana. Podés
-          elegir una fecha más adelante.
-        </p>
       </div>
 
       <div className="space-y-1">

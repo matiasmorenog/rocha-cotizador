@@ -30,6 +30,8 @@ export default async function AdminConfigPage({
     tab === "servicio" ? await getRochaSubscriptionStatus() : null;
 
   if (tab === "cotizaciones") {
+    // Reachable only while ORDER_CUTOFF_ENFORCEMENT_ENABLED is true
+    // (`parseConfigTab` hides/redirects when paused).
     return (
       <section className="max-w-2xl rounded-lg border border-neutral-200 bg-white p-5 shadow-sm">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500">

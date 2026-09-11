@@ -807,7 +807,7 @@ export function SkeletonAdminConfigPanel() {
 }
 
 /**
- * Admin `/admin/configuracion` — tab bar + active panel (default: cuenta).
+ * Admin `/admin/configuracion` — tab bar + active panel (default: first visible tab).
  */
 export function SkeletonAdminConfigPage() {
   return (
