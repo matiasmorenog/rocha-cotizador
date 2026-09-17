@@ -1,3 +1,4 @@
+import { ARGENTINA_TZ } from "@/lib/argentina-time";
 import { db } from "@/lib/db";
 
 export async function nextQuoteNumber(): Promise<string> {
@@ -25,4 +26,24 @@ export function remitoPath(quoteNumber: string): string {
 /** Normalize URL segment for case-insensitive number match (`r-000018` → `R-000018`). */
 export function normalizeRemitoNumberParam(param: string): string {
   return decodeURIComponent(param).trim().toUpperCase();
+}
+
+/**
+ * Suggested Save-as-PDF filename via `document.title`.
+ * Slashes stripped so Chrome/macOS keep the date in the name.
+ */
+export function remitoPrintDocumentTitle(input: {
+  number: string;
+  customerCode: string;
+  createdAt: Date;
+}): string {
+  const date = input.createdAt
+    .toLocaleDateString("en-GB", {
+      timeZone: ARGENTINA_TZ,
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    })
+    .replace(/\//g, "-");
+  return `Remito ${input.number} ${input.customerCode} ${date}`;
 }
