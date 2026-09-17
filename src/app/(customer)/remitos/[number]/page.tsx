@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { getOptionalSession } from "@/lib/session";
 import { staffHasPermission, staffHomeHref } from "@/lib/staff-permissions";
@@ -14,6 +15,7 @@ import { quoteLineMeasureLabel } from "@/lib/order-measure";
 import {
   normalizeRemitoNumberParam,
   remitoPath,
+  remitoPrintDocumentTitle,
 } from "@/lib/quotes";
 import { formatPrice, formatQty } from "@/lib/utils";
 import {
@@ -43,6 +45,38 @@ import type { Decimal } from "@prisma/client/runtime/library";
 export const dynamic = "force-dynamic";
 /** Remito detail: quote + products + price list; Neon cold needs headroom. */
 export const maxDuration = 30;
+
+const remitoMetaSelect = {
+  number: true,
+  createdAt: true,
+  customer: { select: { code: true } },
+} as const;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ number: string }>;
+}): Promise<Metadata> {
+  const { number: rawParam } = await params;
+  const canonicalNumber = normalizeRemitoNumberParam(rawParam);
+  const quote =
+    (await db.quote.findUnique({
+      where: { number: canonicalNumber },
+      select: remitoMetaSelect,
+    })) ??
+    (await db.quote.findUnique({
+      where: { id: rawParam },
+      select: remitoMetaSelect,
+    }));
+  if (!quote) return { title: "Remito" };
+  return {
+    title: remitoPrintDocumentTitle({
+      number: quote.number,
+      customerCode: quote.customer.code,
+      createdAt: quote.createdAt,
+    }),
+  };
+}
 
 const quoteDetailInclude = {
   customer: {
@@ -243,7 +277,13 @@ export default async function RemitoDetailPage({
                 : staffHomeHref(session.user.permissions)
             }
           />
-          <RemitoPrintButtons />
+          <RemitoPrintButtons
+            documentTitle={remitoPrintDocumentTitle({
+              number: quote.number,
+              customerCode: quote.customer.code,
+              createdAt: quote.createdAt,
+            })}
+          />
           {isAdmin ? <RemitoEditModeToggle /> : null}
         </div>
       </div>
@@ -282,9 +322,9 @@ export default async function RemitoDetailPage({
       />
 
       <article className="remito-screen-only print-remito rounded-lg border border-neutral-200 bg-white p-7 shadow-sm">
-        <header className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-4">
+        <header className="remito-a4-header mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-neutral-200 pb-4">
           <div>
-            <BrandLogo size="md" priority className="print:h-24 print:w-24" />
+            <BrandLogo size="md" priority />
             <h2 className="mt-3 text-xl font-semibold">Remito {quote.number}</h2>
             <p className="text-sm text-neutral-600">
               Fecha: {quote.createdAt.toLocaleDateString("es-AR")}
@@ -305,6 +345,20 @@ export default async function RemitoDetailPage({
             ) : null}
           </div>
         </header>
+
+        <div className="remito-a4-delivery-mark" aria-hidden>
+          <span>ENTREGADO</span>
+          <span className="remito-a4-delivery-options">
+            <span className="remito-a4-delivery-option">
+              <span className="remito-a4-delivery-box" />
+              SI
+            </span>
+            <span className="remito-a4-delivery-option">
+              <span className="remito-a4-delivery-box" />
+              NO
+            </span>
+          </span>
+        </div>
 
         {isAdmin ? (
           <RemitoAdminTable
@@ -377,7 +431,7 @@ export default async function RemitoDetailPage({
           </DataTableScroll>
         )}
 
-        <div className="mt-5 flex items-baseline justify-end gap-2 border-t border-neutral-200 pt-4">
+        <div className="remito-print-total mt-5 flex items-baseline justify-end gap-2 border-t border-neutral-200 pt-4">
           <span className="text-sm font-medium text-neutral-500">Total</span>
           <span className="text-xl font-semibold tabular-nums text-neutral-900">
             {formatPrice(quote.total)}
@@ -385,7 +439,7 @@ export default async function RemitoDetailPage({
         </div>
 
         {quote.notes ? (
-          <div className="mt-5 border-t border-neutral-100 pt-4">
+          <div className="remito-print-notes mt-5 border-t border-neutral-100 pt-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
               Observaciones
             </p>
