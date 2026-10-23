@@ -2,10 +2,10 @@ import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 export const PRESET_CHIP_ACTIVE =
-  "border-[var(--brand-primary)]/30 bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)]";
+  "border-[var(--brand-primary)]/35 bg-[var(--brand-primary-soft)] font-medium text-[var(--brand-primary)] shadow-sm";
 
 export const PRESET_CHIP_IDLE =
-  "border-transparent bg-transparent text-[var(--brand-primary)] hover:bg-transparent";
+  "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-300 hover:bg-neutral-50 hover:text-neutral-900";
 
 /** Range presets use pills; single-date presets use rounded rectangles. */
 export function presetChipClassName(
