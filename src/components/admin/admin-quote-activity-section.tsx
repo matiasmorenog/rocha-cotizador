@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/solapas-tabs";
 import {
   QUOTE_ACTIVITY_PERIOD_LABELS,
+  resolveQuoteActivityLabels,
   type QuoteActivityPeriod,
   type QuoteActivityPoint,
 } from "@/lib/admin-quote-activity-shared";
@@ -106,7 +107,7 @@ export function AdminQuoteActivitySection({
     [activity.period],
   );
 
-  const labels = QUOTE_ACTIVITY_PERIOD_LABELS[activity.period];
+  const labels = resolveQuoteActivityLabels(activity.period, activity.points);
 
   return (
     <section className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
