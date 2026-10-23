@@ -21,6 +21,8 @@ export {
   parseQuoteActivityPeriod,
   aggregateQuoteActivityIntoWeeks,
   buildAdminQuotesHrefFromActivityPoint,
+  formatQuoteActivityDayRange,
+  resolveQuoteActivityLabels,
 } from "@/lib/admin-quote-activity-shared";
 
 export type QuoteActivitySeries = {
@@ -84,6 +86,47 @@ function lastDayOfMonth(yearMonth: string): string {
   return `${yearMonth}-${String(days).padStart(2, "0")}`;
 }
 
+/** Monday `YYYY-MM-DD` of the Argentina week (Mon–Sun) containing `day`. */
+function argentinaWeekMondayKey(day: string): string {
+  const noon = parseArgentinaDateTime(`${day}T12:00`);
+  if (!noon) throw new Error(`Invalid Argentina day key: ${day}`);
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: ARGENTINA_TZ,
+    weekday: "short",
+  }).format(noon);
+  const dow: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  const daysFromMonday = ((dow[weekday] ?? 1) + 6) % 7;
+  return shiftArgentinaDay(day, -daysFromMonday);
+}
+
+function buildDayBuckets(
+  startKey: string,
+  dayCount: number,
+  labelFor: (day: string) => string,
+): QuoteActivityPoint[] {
+  const buckets: QuoteActivityPoint[] = [];
+  for (let i = 0; i < dayCount; i++) {
+    const key = shiftArgentinaDay(startKey, i);
+    buckets.push({
+      key,
+      label: labelFor(key),
+      quotes: 0,
+      revenue: 0,
+      desde: key,
+      hasta: key,
+    });
+  }
+  return buckets;
+}
+
 function buildBuckets(
   period: QuoteActivityPeriod,
   todayKey: string,
@@ -115,23 +158,24 @@ function buildBuckets(
     };
   }
 
-  const dayCount = period === "week" ? 7 : 30;
-  const startKey = shiftArgentinaDay(todayKey, -(dayCount - 1));
-  const buckets: QuoteActivityPoint[] = [];
-
-  for (let i = 0; i < dayCount; i++) {
-    const key = shiftArgentinaDay(startKey, i);
-    buckets.push({
-      key,
-      label: period === "week" ? weekdayShortLabel(key) : dayOfMonthLabel(key),
-      quotes: 0,
-      revenue: 0,
-      desde: key,
-      hasta: key,
-    });
+  if (period === "month") {
+    const yearMonth = todayKey.slice(0, 7);
+    const startKey = `${yearMonth}-01`;
+    const dayCount = Number(lastDayOfMonth(yearMonth).slice(8, 10));
+    return {
+      buckets: buildDayBuckets(startKey, dayCount, dayOfMonthLabel),
+      rangeStart: argentinaDayStart(startKey),
+      grain: "day",
+    };
   }
 
-  return { buckets, rangeStart: argentinaDayStart(startKey), grain: "day" };
+  // week: calendar Mon–Sun containing today (Argentina); future days stay 0
+  const startKey = argentinaWeekMondayKey(todayKey);
+  return {
+    buckets: buildDayBuckets(startKey, 7, weekdayShortLabel),
+    rangeStart: argentinaDayStart(startKey),
+    grain: "day",
+  };
 }
 
 /**
@@ -198,7 +242,7 @@ function fillBuckets(
 /**
  * Quote activity series for the dashboard chart.
  * Cache key args: Argentina day + period (`week` | `month` | `year`).
- * Key prefix `admin-quote-activity`; tag `admin-dashboard` (bust on quote create / wipe).
+ * Key prefix `admin-quote-activity-v3` (calendar week + month); tag `admin-dashboard`.
  */
 const getCachedQuoteActivity = unstable_cache(
   async (day: string, period: QuoteActivityPeriod): Promise<QuoteActivitySeries> => {
@@ -206,7 +250,7 @@ const getCachedQuoteActivity = unstable_cache(
     const rows = await fetchQuoteActivityRows(rangeStart, grain);
     return fillBuckets(buckets, rows, period);
   },
-  ["admin-quote-activity"],
+  ["admin-quote-activity-v3"],
   { tags: [CACHE_TAGS.adminDashboard], revalidate: 86400 },
 );
 
