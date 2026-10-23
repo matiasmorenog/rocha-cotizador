@@ -45,6 +45,7 @@ Abrí [http://localhost:3000](http://localhost:3000).
 | `npm run db:push` | Sync schema |
 | `npm run db:seed` | Seed admin + Excel (requires `SEED_TARGET=development` or `ALLOW_DESTRUCTIVE_DB=1`; refuses Neon main) |
 | `npm run dev:wipe-customers` | Wipe customer PII on Neon **development** only; seeds fictitious clients (`SEED_TARGET=development`; refuses production/main) |
+| `npm run dev:seed-quotes` | Wipe all quotes/remitos on Neon **development** and seed random ones for testing Cotizaciones (`QUOTE_COUNT`, `DAYS_BACK` optional) |
 | `npm run db:studio` | Prisma Studio |
 
 ## Precios

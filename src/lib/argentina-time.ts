@@ -14,10 +14,15 @@ export const DATETIME_FILTER_NOW = "now";
 /** Order / export batch closing hour (Argentina wall time). */
 export const ORDER_CUTOFF_HOUR_AR = 16;
 
-/** Default inclusive day count for admin/customer date filters (through today AR). */
+/**
+ * @deprecated Prefer calendar presets (`thisWeekFilterDateRange`). Kept for
+ * callers that still want a rolling inclusive day window.
+ */
 export const FILTER_DEFAULT_RANGE_DAYS = 7;
 
-/** Inclusive day count for "Último mes" filter preset (through today AR). */
+/**
+ * @deprecated Prefer `thisMonthFilterDateRange` / `previousMonthFilterDateRange`.
+ */
 export const FILTER_LAST_MONTH_RANGE_DAYS = 30;
 
 /** Argentina offset used when parsing naive local datetimes. */
@@ -44,6 +49,26 @@ function addDaysYmd(ymd: string, days: number): string {
   const d = Number(match[3]);
   const dt = new Date(Date.UTC(y, m - 1, d + days));
   return dt.toISOString().slice(0, 10);
+}
+
+/** 0 = Monday … 6 = Sunday (matches DateRangePicker grid). */
+function mondayIndexFromYmd(ymd: string): number {
+  const match = DATE_ONLY_RE.exec(ymd);
+  if (!match) throw new Error(`Invalid YMD: ${ymd}`);
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  const d = Number(match[3]);
+  const sun0 = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+  return (sun0 + 6) % 7;
+}
+
+function mondayOfWeekContaining(ymd: string): string {
+  return addDaysYmd(ymd, -mondayIndexFromYmd(ymd));
+}
+
+function lastDayOfMonthYmd(year: number, month1to12: number): string {
+  const last = new Date(Date.UTC(year, month1to12, 0)).getUTCDate();
+  return `${year}-${String(month1to12).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
 }
 
 /** Start of calendar day in Argentina (00:00 wall). */
@@ -75,18 +100,68 @@ export function filterDateRange(
   return { from, to };
 }
 
+/** Monday of current week → today (Argentina). */
+export function thisWeekFilterDateRange(now = new Date()): {
+  from: string;
+  to: string;
+} {
+  const to = argentinaTodayYmd(now);
+  return { from: mondayOfWeekContaining(to), to };
+}
+
+/** Previous calendar week Monday → Sunday (Argentina). */
+export function previousWeekFilterDateRange(now = new Date()): {
+  from: string;
+  to: string;
+} {
+  const today = argentinaTodayYmd(now);
+  const thisMonday = mondayOfWeekContaining(today);
+  const from = addDaysYmd(thisMonday, -7);
+  const to = addDaysYmd(thisMonday, -1);
+  return { from, to };
+}
+
+/** 1st of current month → today (Argentina). */
+export function thisMonthFilterDateRange(now = new Date()): {
+  from: string;
+  to: string;
+} {
+  const to = argentinaTodayYmd(now);
+  const from = `${to.slice(0, 8)}01`;
+  return { from, to };
+}
+
+/** Previous calendar month 1st → last day (Argentina). */
+export function previousMonthFilterDateRange(now = new Date()): {
+  from: string;
+  to: string;
+} {
+  const today = argentinaTodayYmd(now);
+  const y = Number(today.slice(0, 4));
+  const m = Number(today.slice(5, 7));
+  const prevYear = m === 1 ? y - 1 : y;
+  const prevMonth = m === 1 ? 12 : m - 1;
+  const from = `${prevYear}-${String(prevMonth).padStart(2, "0")}-01`;
+  const to = lastDayOfMonthYmd(prevYear, prevMonth);
+  return { from, to };
+}
+
+/** Default admin/customer date filter = esta semana (lun → hoy). */
 export function defaultFilterDateRange(now = new Date()): {
   from: string;
   to: string;
 } {
-  return filterDateRange(FILTER_DEFAULT_RANGE_DAYS, now);
+  return thisWeekFilterDateRange(now);
 }
 
+/**
+ * @deprecated Use `thisMonthFilterDateRange`. Previously meant rolling 30 days.
+ */
 export function lastMonthFilterDateRange(now = new Date()): {
   from: string;
   to: string;
 } {
-  return filterDateRange(FILTER_LAST_MONTH_RANGE_DAYS, now);
+  return thisMonthFilterDateRange(now);
 }
 
 /**
@@ -138,8 +213,8 @@ export function isDatetimeFilterNow(value: string | undefined | null): boolean {
 }
 
 /**
- * Default quotes list/export window: last {@link FILTER_DEFAULT_RANGE_DAYS} calendar
- * days through today (Argentina), date-only. Half-open interval: [from, to).
+ * Default quotes list/export window: esta semana (lun → hoy, Argentina),
+ * date-only. Half-open interval: [from, to).
  */
 export function defaultQuotesExportRange(now = new Date()): {
   from: Date;
@@ -147,7 +222,7 @@ export function defaultQuotesExportRange(now = new Date()): {
   fromLocal: string;
   toLocal: string;
 } {
-  const { from: fromYmd, to: toYmd } = defaultFilterDateRange(now);
+  const { from: fromYmd, to: toYmd } = thisWeekFilterDateRange(now);
   const from = parseArgentinaDateOnlyStart(fromYmd)!;
   const to = parseArgentinaDateOnlyEndExclusive(toYmd)!;
   return { from, to, fromLocal: fromYmd, toLocal: toYmd };

@@ -13,21 +13,30 @@ export type QuoteActivityPoint = {
   hasta?: string;
 };
 
+export type QuoteActivityPeriodLabels = {
+  short: string;
+  summary: string;
+  description: string;
+  empty: string;
+};
+
 export const QUOTE_ACTIVITY_PERIOD_LABELS: Record<
   QuoteActivityPeriod,
-  { short: string; summary: string; description: string; empty: string }
+  QuoteActivityPeriodLabels
 > = {
   week: {
     short: "Semana",
-    summary: "7 días",
-    description: "Totales de cotizaciones por día (últimos 7 días, hora Argentina)",
-    empty: "Sin cotizaciones en los últimos 7 días.",
+    summary: "semana",
+    description:
+      "Totales de cotizaciones por día (semana calendario lun–dom, hora Argentina)",
+    empty: "Sin cotizaciones en la semana calendario actual.",
   },
   month: {
     short: "Mes",
-    summary: "30 días",
-    description: "Totales de cotizaciones por día (últimos 30 días, hora Argentina)",
-    empty: "Sin cotizaciones en los últimos 30 días.",
+    summary: "mes",
+    description:
+      "Totales de cotizaciones por día (mes calendario actual, hora Argentina)",
+    empty: "Sin cotizaciones en el mes calendario actual.",
   },
   year: {
     short: "Año",
@@ -37,13 +46,80 @@ export const QUOTE_ACTIVITY_PERIOD_LABELS: Record<
   },
 };
 
+const YMD_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+/**
+ * Inclusive Argentina calendar-day range for UI, e.g. `1–31 oct 2026`.
+ * Same month/year → compact day–day + month; else full short dates.
+ */
+export function formatQuoteActivityDayRange(
+  desdeYmd: string,
+  hastaYmd: string,
+): string {
+  const a = YMD_RE.exec(desdeYmd);
+  const b = YMD_RE.exec(hastaYmd);
+  if (!a || !b) return `${desdeYmd} – ${hastaYmd}`;
+
+  const d0 = new Date(Date.UTC(Number(a[1]), Number(a[2]) - 1, Number(a[3]), 12));
+  const d1 = new Date(Date.UTC(Number(b[1]), Number(b[2]) - 1, Number(b[3]), 12));
+  if (Number.isNaN(d0.getTime()) || Number.isNaN(d1.getTime())) {
+    return `${desdeYmd} – ${hastaYmd}`;
+  }
+
+  const day0 = Number(a[3]);
+  const day1 = Number(b[3]);
+  const sameMonth = a[1] === b[1] && a[2] === b[2];
+
+  if (sameMonth) {
+    const monthYear = d0
+      .toLocaleDateString("es-AR", { month: "short", year: "numeric", timeZone: "UTC" })
+      .replace(".", "");
+    if (day0 === day1) return `${day0} ${monthYear}`;
+    return `${day0}–${day1} ${monthYear}`;
+  }
+
+  const fmt = (d: Date) =>
+    d
+      .toLocaleDateString("es-AR", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "UTC",
+      })
+      .replace(/\./g, "");
+  return `${fmt(d0)} – ${fmt(d1)}`;
+}
+
+/** Labels for the activity card; week/month use the bucket range when present. */
+export function resolveQuoteActivityLabels(
+  period: QuoteActivityPeriod,
+  points: QuoteActivityPoint[],
+): QuoteActivityPeriodLabels {
+  const base = QUOTE_ACTIVITY_PERIOD_LABELS[period];
+  if (period !== "week" && period !== "month") return base;
+
+  const first = points[0];
+  const last = points[points.length - 1];
+  const desde = first?.desde;
+  const hasta = last?.hasta ?? last?.desde;
+  if (!desde || !hasta) return base;
+
+  const range = formatQuoteActivityDayRange(desde, hasta);
+  return {
+    ...base,
+    summary: range,
+    description: `Totales de cotizaciones por día (${range}, hora Argentina)`,
+    empty: `Sin cotizaciones en ${range}.`,
+  };
+}
+
 export function parseQuoteActivityPeriod(value?: string): QuoteActivityPeriod {
   if (value === "month") return "month";
   if (value === "year") return "year";
   return "week";
 }
 
-/** Collapse ~30 day points into ~4 weeks for mobile month view. */
+/** Collapse calendar-month day points into ~4 weeks for mobile month view. */
 export function aggregateQuoteActivityIntoWeeks(
   points: QuoteActivityPoint[],
 ): QuoteActivityPoint[] {
