@@ -11,7 +11,10 @@ import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   defaultFilterDateRange,
   formatYmdRangeDisplay,
-  lastMonthFilterDateRange,
+  previousMonthFilterDateRange,
+  previousWeekFilterDateRange,
+  thisMonthFilterDateRange,
+  thisWeekFilterDateRange,
 } from "@/lib/datetime-picker-bridge";
 import {
   BRAND_BORDER_ACTIVE,
@@ -92,9 +95,32 @@ type Props = {
   className?: string;
   disabled?: boolean;
   "aria-label"?: string;
-  /** Show "Última semana" preset chip (default true). */
+  /** Show calendar preset chips (default true). */
   showPresets?: boolean;
 };
+
+const RANGE_PRESETS = [
+  {
+    id: "thisWeek",
+    label: "Esta semana",
+    range: thisWeekFilterDateRange,
+  },
+  {
+    id: "previousWeek",
+    label: "Semana anterior",
+    range: previousWeekFilterDateRange,
+  },
+  {
+    id: "thisMonth",
+    label: "Este mes",
+    range: thisMonthFilterDateRange,
+  },
+  {
+    id: "previousMonth",
+    label: "Mes anterior",
+    range: previousMonthFilterDateRange,
+  },
+] as const;
 
 export function DateRangePicker({
   from,
@@ -263,8 +289,8 @@ export function DateRangePicker({
     setHoverYmd(null);
   }
 
-  function onLastWeek() {
-    const { from: presetFrom, to: presetTo } = defaultFilterDateRange();
+  function applyPreset(getRange: () => { from: string; to: string }) {
+    const { from: presetFrom, to: presetTo } = getRange();
     commitRange(presetFrom, presetTo);
     const parts = partsFromYmd(presetTo);
     if (parts) {
@@ -273,25 +299,11 @@ export function DateRangePicker({
     }
   }
 
-  function onLastMonth() {
-    const { from: presetFrom, to: presetTo } = lastMonthFilterDateRange();
-    commitRange(presetFrom, presetTo);
-    const parts = partsFromYmd(presetTo);
-    if (parts) {
-      setViewYear(parts.year);
-      setViewMonth(parts.month);
-    }
-  }
-
-  const weekPreset = defaultFilterDateRange();
-  const monthPreset = lastMonthFilterDateRange();
-  const isWeekPresetActive = matchesPresetRange(from, to, weekPreset);
-  const isMonthPresetActive = matchesPresetRange(from, to, monthPreset);
-  const display = isWeekPresetActive
-    ? "Última semana"
-    : isMonthPresetActive
-      ? "Último mes"
-      : formatYmdRangeDisplay(from, to);
+  const activePresetLabel =
+    RANGE_PRESETS.find((preset) =>
+      matchesPresetRange(from, to, preset.range()),
+    )?.label ?? null;
+  const display = activePresetLabel ?? formatYmdRangeDisplay(from, to);
   const rangeFrom = pendingStart ?? draftFrom;
   const rangeTo = pendingStart ? (hoverYmd ?? "") : draftTo;
   const previewActive = Boolean(pendingStart && hoverYmd);
@@ -339,23 +351,25 @@ export function DateRangePicker({
           )}
         >
           {showPresets ? (
-            <div className="flex flex-wrap gap-2 border-b border-neutral-200 px-3 py-2">
-              <button
-                type="button"
-                onClick={onLastWeek}
-                aria-pressed={isWeekPresetActive}
-                className={presetChipClassName(isWeekPresetActive, "pill")}
-              >
-                Última semana
-              </button>
-              <button
-                type="button"
-                onClick={onLastMonth}
-                aria-pressed={isMonthPresetActive}
-                className={presetChipClassName(isMonthPresetActive, "pill")}
-              >
-                Último mes
-              </button>
+            <div
+              className="flex flex-wrap gap-1.5 border-b border-neutral-200 bg-neutral-50 px-3 py-2.5"
+              role="group"
+              aria-label="Rangos rápidos"
+            >
+              {RANGE_PRESETS.map((preset) => {
+                const active = matchesPresetRange(from, to, preset.range());
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyPreset(preset.range)}
+                    aria-pressed={active}
+                    className={presetChipClassName(active, "pill")}
+                  >
+                    {preset.label}
+                  </button>
+                );
+              })}
             </div>
           ) : null}
 

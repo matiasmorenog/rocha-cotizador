@@ -395,7 +395,11 @@ export function DatetimeLocalPicker({
           )}
         >
           {showPresets ? (
-            <div className="flex flex-wrap gap-2 border-b border-neutral-200 px-3 py-2">
+            <div
+              className="flex flex-wrap gap-1.5 border-b border-neutral-200 bg-neutral-50 px-3 py-2.5"
+              role="group"
+              aria-label="Atajos de fecha"
+            >
               <button
                 type="button"
                 onClick={onToday}

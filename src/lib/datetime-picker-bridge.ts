@@ -4,6 +4,10 @@ import {
   argentinaTodayYmd,
   defaultFilterDateRange,
   lastMonthFilterDateRange,
+  previousMonthFilterDateRange,
+  previousWeekFilterDateRange,
+  thisMonthFilterDateRange,
+  thisWeekFilterDateRange,
 } from "@/lib/argentina-time";
 
 const YMD_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -47,4 +51,8 @@ export {
   argentinaTodayYmd,
   defaultFilterDateRange,
   lastMonthFilterDateRange,
+  previousMonthFilterDateRange,
+  previousWeekFilterDateRange,
+  thisMonthFilterDateRange,
+  thisWeekFilterDateRange,
 };
