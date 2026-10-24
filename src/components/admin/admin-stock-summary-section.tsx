@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { StockTab } from "@/lib/admin-stock-data";
 import type { StockSummaryPayload } from "@/lib/admin-stock-summary-shared";
 import { ADMIN_STOCK_SUMMARY_REFRESH_EVENT } from "@/lib/admin-stock-summary-refresh";
 import { AdminStockSummaryChart } from "@/components/admin/admin-stock-summary-chart";
 import { DataTableScroll } from "@/components/ui/data-table";
+import {
+  SEARCH_TABLE_RESIZE_MS,
+  useSmoothListHeight,
+} from "@/hooks/use-smooth-list-height";
 import { cn, formatPrice, formatQty } from "@/lib/utils";
 import { formatDeliveryDateDisplay, parseDateOnlyYmd } from "@/lib/delivery-date";
 
@@ -62,6 +66,9 @@ export function AdminStockSummarySection({
   const error =
     !loading && snapshot.key === fetchKey ? snapshot.error : null;
   const showStaleBlur = loading && data != null;
+  const contentLockRef = useRef<HTMLDivElement>(null);
+  // Animate shell height when fresh payload lands (same hook as admin tables).
+  useSmoothListHeight(contentLockRef, snapshot.key || "empty");
 
   useEffect(() => {
     const bump = () => setRefreshNonce((n) => n + 1);
@@ -130,12 +137,16 @@ export function AdminStockSummarySection({
         <p className="text-sm text-neutral-500">Cargando resumen…</p>
       ) : data ? (
         <div
+          ref={contentLockRef}
           aria-busy={loading || undefined}
           className={cn(
-            "space-y-6 transition-[filter,opacity] duration-200",
+            "space-y-6 transition-[filter,opacity] ease-out",
             showStaleBlur &&
               "pointer-events-none select-none opacity-70 blur-[2px]",
           )}
+          style={{
+            transitionDuration: `${SEARCH_TABLE_RESIZE_MS}ms`,
+          }}
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <SummaryCard
