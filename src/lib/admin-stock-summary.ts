@@ -118,6 +118,12 @@ function mapDailyRows(
   }));
 }
 
+function sqlProductFilter(productId?: string) {
+  return productId
+    ? Prisma.sql`AND l."productId" = ${productId}`
+    : Prisma.empty;
+}
+
 async function loadDesperdiciosSummary(
   fromDate: Date,
   toDate: Date,
@@ -125,6 +131,7 @@ async function loadDesperdiciosSummary(
   from: string,
   to: string,
   dayCount: number,
+  productId?: string,
 ): Promise<Omit<StockSummaryPayload, "tab" | "from" | "to">> {
   const customerFilter =
     customerIds.length === 1
@@ -136,13 +143,22 @@ async function loadDesperdiciosSummary(
     AND e."entryDate" <= ${toDate}
     AND ${customerFilter}
   `;
+  const productFilter = sqlProductFilter(productId);
 
   const [entryCountRow, productRows, dailyRows] = await Promise.all([
-    db.$queryRaw<{ count: bigint }[]>`
-      SELECT COUNT(*)::bigint AS count
-      FROM "DesperdicioEntry" e
-      WHERE ${entryWhere}
-    `,
+    productId
+      ? db.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(DISTINCT e.id)::bigint AS count
+          FROM "DesperdicioEntry" e
+          INNER JOIN "DesperdicioLine" l ON l."entryId" = e.id
+          WHERE ${entryWhere}
+            ${productFilter}
+        `
+      : db.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(*)::bigint AS count
+          FROM "DesperdicioEntry" e
+          WHERE ${entryWhere}
+        `,
     db.$queryRaw<ProductAggRow[]>`
       SELECT
         l."productId",
@@ -157,6 +173,7 @@ async function loadDesperdiciosSummary(
       INNER JOIN "DesperdicioEntry" e ON e.id = l."entryId"
       INNER JOIN "Product" p ON p.id = l."productId"
       WHERE ${entryWhere}
+        ${productFilter}
       GROUP BY l."productId", l.unit
       ORDER BY "totalCost" DESC
     `,
@@ -166,6 +183,7 @@ async function loadDesperdiciosSummary(
       INNER JOIN "DesperdicioLine" l ON l."entryId" = e.id
       INNER JOIN "Product" p ON p.id = l."productId"
       WHERE ${entryWhere}
+        ${productFilter}
       GROUP BY e."entryDate"
       ORDER BY e."entryDate"
     `,
@@ -188,6 +206,7 @@ async function loadConsumiblesSummary(
   from: string,
   to: string,
   dayCount: number,
+  productId?: string,
 ): Promise<Omit<StockSummaryPayload, "tab" | "from" | "to">> {
   const customerFilter =
     customerIds.length === 1
@@ -199,13 +218,22 @@ async function loadConsumiblesSummary(
     AND c."entryDate" <= ${toDate}
     AND ${customerFilter}
   `;
+  const productFilter = sqlProductFilter(productId);
 
   const [entryCountRow, productRows, dailyRows] = await Promise.all([
-    db.$queryRaw<{ count: bigint }[]>`
-      SELECT COUNT(*)::bigint AS count
-      FROM "ConsumableCount" c
-      WHERE ${entryWhere}
-    `,
+    productId
+      ? db.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(DISTINCT c.id)::bigint AS count
+          FROM "ConsumableCount" c
+          INNER JOIN "ConsumableCountLine" l ON l."countId" = c.id
+          WHERE ${entryWhere}
+            ${productFilter}
+        `
+      : db.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(*)::bigint AS count
+          FROM "ConsumableCount" c
+          WHERE ${entryWhere}
+        `,
     db.$queryRaw<ProductAggRow[]>`
       SELECT
         l."productId",
@@ -220,6 +248,7 @@ async function loadConsumiblesSummary(
       INNER JOIN "ConsumableCount" c ON c.id = l."countId"
       INNER JOIN "Product" p ON p.id = l."productId"
       WHERE ${entryWhere}
+        ${productFilter}
       GROUP BY l."productId", l.unit
       ORDER BY "totalCost" DESC
     `,
@@ -229,6 +258,7 @@ async function loadConsumiblesSummary(
       INNER JOIN "ConsumableCountLine" l ON l."countId" = c.id
       INNER JOIN "Product" p ON p.id = l."productId"
       WHERE ${entryWhere}
+        ${productFilter}
       GROUP BY c."entryDate"
       ORDER BY c."entryDate"
     `,
@@ -251,6 +281,7 @@ async function loadActivosSummary(
   from: string,
   to: string,
   dayCount: number,
+  productId?: string,
 ): Promise<Omit<StockSummaryPayload, "tab" | "from" | "to">> {
   const customerFilter =
     customerIds.length === 1
@@ -262,13 +293,22 @@ async function loadActivosSummary(
     AND a."entryDate" <= ${toDate}
     AND ${customerFilter}
   `;
+  const productFilter = sqlProductFilter(productId);
 
   const [entryCountRow, productRows, dailyRows] = await Promise.all([
-    db.$queryRaw<{ count: bigint }[]>`
-      SELECT COUNT(*)::bigint AS count
-      FROM "LocalAssetCount" a
-      WHERE ${entryWhere}
-    `,
+    productId
+      ? db.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(DISTINCT a.id)::bigint AS count
+          FROM "LocalAssetCount" a
+          INNER JOIN "LocalAssetCountLine" l ON l."countId" = a.id
+          WHERE ${entryWhere}
+            ${productFilter}
+        `
+      : db.$queryRaw<{ count: bigint }[]>`
+          SELECT COUNT(*)::bigint AS count
+          FROM "LocalAssetCount" a
+          WHERE ${entryWhere}
+        `,
     db.$queryRaw<ProductAggRow[]>`
       SELECT
         l."productId",
@@ -283,6 +323,7 @@ async function loadActivosSummary(
       INNER JOIN "LocalAssetCount" a ON a.id = l."countId"
       INNER JOIN "Product" p ON p.id = l."productId"
       WHERE ${entryWhere}
+        ${productFilter}
       GROUP BY l."productId", l.unit
       ORDER BY "totalCost" DESC
     `,
@@ -292,6 +333,7 @@ async function loadActivosSummary(
       INNER JOIN "LocalAssetCountLine" l ON l."countId" = a.id
       INNER JOIN "Product" p ON p.id = l."productId"
       WHERE ${entryWhere}
+        ${productFilter}
       GROUP BY a."entryDate"
       ORDER BY a."entryDate"
     `,
@@ -312,6 +354,7 @@ export async function getStockSummary(input: {
   from: string;
   to: string;
   customerId?: string;
+  productId?: string;
 }): Promise<StockSummaryPayload> {
   const fromDate = parseDateOnlyYmd(input.from);
   const toDate = parseDateOnlyYmd(input.to);
@@ -335,6 +378,7 @@ export async function getStockSummary(input: {
     : customers.map((customer) => customer.id);
 
   const dayCount = stockSummaryDayCount(input.from, input.to);
+  const productId = input.productId?.trim() || undefined;
 
   if (customerIds.length === 0) {
     return {
@@ -354,6 +398,7 @@ export async function getStockSummary(input: {
           input.from,
           input.to,
           dayCount,
+          productId,
         )
       : input.tab === "activos"
         ? await loadActivosSummary(
@@ -363,6 +408,7 @@ export async function getStockSummary(input: {
             input.from,
             input.to,
             dayCount,
+            productId,
           )
         : await loadDesperdiciosSummary(
             fromDate,
@@ -371,6 +417,7 @@ export async function getStockSummary(input: {
             input.from,
             input.to,
             dayCount,
+            productId,
           );
 
   return {
