@@ -49,6 +49,7 @@ export function CustomerStockPageHeader({
       </div>
 
       <StockRecountForm
+        key={stockModule}
         title={formTitle}
         description={formDescription}
         apiPath={apiPath}

@@ -30,7 +30,8 @@ export function useAnchoredFloatingStyle(
         top: r.bottom + gapPx,
         left: r.left,
         width: r.width,
-        zIndex: 50,
+        // Above stock recount modal (z-90); below admin toasts is OK while picking.
+        zIndex: 110,
       });
     }
 
