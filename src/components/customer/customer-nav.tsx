@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
 import {
   useExitPresence,
   QUOTE_PICKER_FLOAT_MS,
@@ -75,8 +74,6 @@ function CustomerSidebarPanel({
   pathname,
   modules,
   onNavigate,
-  showCloseButton = false,
-  onClose,
   userName,
   customerCode,
   staggerEnter = false,
@@ -84,29 +81,12 @@ function CustomerSidebarPanel({
   pathname: string;
   modules: CustomerModuleSession[];
   onNavigate?: () => void;
-  showCloseButton?: boolean;
-  onClose?: () => void;
   userName?: string | null;
   customerCode?: string | null;
   staggerEnter?: boolean;
 }) {
   return (
     <div className="flex h-auto flex-col">
-      {showCloseButton ? (
-        <div className="mb-3 flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar menú"
-            className={cn(
-              "rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900",
-              FOCUS_BRAND_OUTLINE,
-            )}
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      ) : null}
       <nav
         aria-label="Secciones del cliente"
         className={cn(
@@ -205,8 +185,6 @@ function CustomerMobileDrawer({
           pathname={pathname}
           modules={modules}
           onNavigate={closeForNavigate}
-          showCloseButton
-          onClose={close}
           userName={userName}
           customerCode={customerCode}
           staggerEnter

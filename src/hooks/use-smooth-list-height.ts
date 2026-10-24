@@ -12,18 +12,12 @@ import { useLayoutEffect, useRef, type RefObject } from "react";
  * `useSmoothColumnWidths`.
  */
 export const SEARCH_TABLE_RESIZE_MS = 480;
-const SEARCH_TABLE_RESIZE_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}
+export const SEARCH_TABLE_RESIZE_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 /**
- * One-shot FLIP height: caller measures `fromPx` *before* swapping content,
- * then call this in a layout effect after the new DOM is committed.
+ * FLIP height when "from" was measured *before* React swapped DOM content
+ * (e.g. right before setState). More reliable than ResizeObserver when the
+ * shell also runs filter/opacity transitions on a sibling/parent.
  */
 export function flipHeightFrom(
   el: HTMLElement,
@@ -63,6 +57,13 @@ export function flipHeightFrom(
     window.clearTimeout(fallback);
     el.removeEventListener("transitionend", onEnd);
   };
+}
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
 }
 
 function borderBoxHeight(entry: ResizeObserverEntry): number {
