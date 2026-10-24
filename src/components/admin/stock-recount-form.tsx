@@ -1,9 +1,17 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ClipboardPlus, Trash2 } from "lucide-react";
 import { useExitPresence } from "@/hooks/use-exit-presence";
+import { useIsClient } from "@/hooks/use-is-client";
 import { ProductPicker } from "@/components/quote/product-picker";
 import type { CatalogSearchProduct } from "@/components/quote/product-picker";
 import { Button } from "@/components/ui/button";
@@ -63,6 +71,7 @@ export function StockRecountForm({
   customerStockModule,
   open: openProp,
   onOpenChange,
+  onDraftChange,
 }: {
   title: string;
   description: string;
@@ -77,8 +86,11 @@ export function StockRecountForm({
   customerStockModule?: StockModuleKey;
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
+  /** Header button: draft minimized (session alive, modal closed). */
+  onDraftChange?: (draft: { pending: boolean; itemCount: number }) => void;
 }) {
   const router = useRouter();
+  const isClient = useIsClient();
   const [customerId, setCustomerId] = useState(
     fixedCustomerId ?? customers[0]?.id ?? "",
   );
@@ -94,9 +106,76 @@ export function StockRecountForm({
   const [loadingEntry, setLoadingEntry] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  /** Keeps form mounted (and draft alive) while modal is hidden. */
+  const [sessionActive, setSessionActive] = useState(false);
+
+  const [openInternal, setOpenInternal] = useState(false);
+  const controlled = openProp !== undefined;
+  const open = controlled ? Boolean(openProp) : openInternal;
+  const setOpen = useCallback(
+    (v: boolean) => {
+      if (v) setSessionActive(true);
+      if (controlled) onOpenChange?.(v);
+      else setOpenInternal(v);
+    },
+    [controlled, onOpenChange],
+  );
+
+  // Controlled parent may open without going through setOpen.
+  if (open && !sessionActive) {
+    setSessionActive(true);
+  }
+
+  // Header keeps "Continuar recuento" for the whole session (open or minimized).
+  const draftPending = sessionActive;
+  const draftItemCount = lines.length;
 
   useEffect(() => {
-    if (!activeCustomerId || !date) return;
+    onDraftChange?.({ pending: draftPending, itemCount: draftItemCount });
+    return () => {
+      onDraftChange?.({ pending: false, itemCount: 0 });
+    };
+  }, [draftPending, draftItemCount, onDraftChange]);
+
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  const minimize = useCallback(() => {
+    setOpen(false);
+  }, [setOpen]);
+
+  function discardDraft() {
+    setCustomerId(fixedCustomerId ?? customers[0]?.id ?? "");
+    setDateValue(ymdToPickerValue(todayYmdAr()));
+    setNotes("");
+    setLines([]);
+    setPicked(null);
+    setError(null);
+    setMessage(null);
+    setSessionActive(false);
+    setOpen(false);
+  }
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        minimize();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, minimize]);
+
+  useEffect(() => {
+    if (!activeCustomerId || !date || !sessionActive) return;
 
     let cancelled = false;
 
@@ -120,7 +199,12 @@ export function StockRecountForm({
             productId: string;
             unit: string;
             qty: number;
-            product: { code: string; name: string; rubro: string | null; allowsUnitOrder: boolean };
+            product: {
+              code: string;
+              name: string;
+              rubro: string | null;
+              allowsUnitOrder: boolean;
+            };
           }>;
         } | null;
       };
@@ -151,7 +235,7 @@ export function StockRecountForm({
     return () => {
       cancelled = true;
     };
-  }, [apiPath, activeCustomerId, date, fixedCustomerId]);
+  }, [apiPath, activeCustomerId, date, fixedCustomerId, sessionActive]);
 
   const sortedLines = useMemo(
     () =>
@@ -264,222 +348,307 @@ export function StockRecountForm({
     if (refreshAdminSummary) {
       dispatchAdminStockSummaryRefresh();
     }
+    setSessionActive(false);
+    setOpen(false);
     router.refresh();
   }
 
-  const [openInternal, setOpenInternal] = useState(false);
-  const controlled = openProp !== undefined;
-  const open = controlled ? openProp : openInternal;
-  const setOpen = (v: boolean) => {
-    if (controlled) onOpenChange?.(v);
-    else setOpenInternal(v);
-  };
-  const { present, exiting, animKey } = useExitPresence(open, 250);
+  const { present, exiting, animKey } = useExitPresence(open, 200);
+  const showShell = isClient && (sessionActive || present);
+  const showChip = isClient && sessionActive && !open;
+  const itemCount = lines.length;
 
-  return (
-    <div>
-      <div
-        className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
-        style={{ gridTemplateRows: present && !exiting ? "1fr" : "0fr" }}
-      >
-        <div className="min-h-0 overflow-hidden">
-          {present ? (
-            <form
-              key={animKey}
-              onSubmit={onSubmit}
-              className={cn(
-                "space-y-4 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm",
-                exiting ? "payment-form-exit" : "payment-form-enter",
-              )}
-            >
-      <div>
-        <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
+  const formBody = (
+    <form onSubmit={onSubmit} className="flex max-h-[min(90vh,52rem)] flex-col">
+      <div className="shrink-0 border-b border-neutral-200 px-4 py-3 sm:px-5">
+        <h2
+          id="stock-recount-title"
+          className="text-lg font-semibold text-neutral-900"
+        >
+          {title}
+        </h2>
         <p className="text-sm text-neutral-600">{description}</p>
       </div>
 
-      <div className={cn("grid gap-3", fixedCustomerId ? "" : "sm:grid-cols-2")}>
-        {!fixedCustomerId ? (
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
+        <div
+          className={cn("grid gap-3", fixedCustomerId ? "" : "sm:grid-cols-2")}
+        >
+          {!fixedCustomerId ? (
+            <div className="space-y-1">
+              <Label>Sucursal / cliente</Label>
+              <select
+                className={cn(
+                  "h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm",
+                  FOCUS_BRAND_BORDER,
+                )}
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+                required
+              >
+                {customers.length === 0 ? (
+                  <option value="">Sin clientes con módulo</option>
+                ) : (
+                  customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.code} · {c.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          ) : null}
           <div className="space-y-1">
-            <Label>Sucursal / cliente</Label>
-            <select
-              className={cn(
-                "h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm",
-                FOCUS_BRAND_BORDER,
-              )}
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-              required
-            >
-              {customers.length === 0 ? (
-                <option value="">Sin clientes con módulo</option>
-              ) : (
-                customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.code} · {c.name}
-                  </option>
-                ))
-              )}
-            </select>
+            <Label>Fecha</Label>
+            <DatetimeLocalPicker
+              value={dateValue}
+              onChange={setDateValue}
+              aria-label="Fecha de carga"
+            />
           </div>
-        ) : null}
+        </div>
+
         <div className="space-y-1">
-          <Label>Fecha</Label>
-          <DatetimeLocalPicker
-            value={dateValue}
-            onChange={setDateValue}
-            aria-label="Fecha de carga"
+          <Label>Observaciones</Label>
+          <textarea
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className={cn(
+              "flex w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm",
+              FOCUS_BRAND_BORDER,
+            )}
           />
         </div>
-      </div>
 
-      <div className="space-y-1">
-        <Label>Observaciones</Label>
-        <textarea
-          rows={2}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className={cn(
-            "flex w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm",
-            FOCUS_BRAND_BORDER,
-          )}
-        />
-      </div>
+        <div className="space-y-2">
+          <Label>Agregar producto</Label>
+          <ProductPicker
+            value={picked}
+            adminStockModule={customerStockModule ? undefined : stockModule}
+            customerStockModule={customerStockModule}
+            filterProduct={filterProduct}
+            onChange={(p) => {
+              if (p) addProduct(p);
+              else setPicked(null);
+            }}
+          />
+          <p className="text-xs text-neutral-500">
+            {stockModule === "DESPERDICIOS"
+              ? "Solo panes, masas y rubros de desperdicio (no insumos ni regalo)."
+              : stockModule === "CONSUMABLES"
+                ? "Solo insumos y regalo (gaseosas, etc.) — no son bajas del día."
+                : "Solo productos marcados como activo del local (carritos, bandejas, etc.)."}
+          </p>
+        </div>
 
-      <div className="space-y-2">
-        <Label>Agregar producto</Label>
-        <ProductPicker
-          value={picked}
-          adminStockModule={customerStockModule ? undefined : stockModule}
-          customerStockModule={customerStockModule}
-          filterProduct={filterProduct}
-          onChange={(p) => {
-            if (p) addProduct(p);
-            else setPicked(null);
-          }}
-        />
-        <p className="text-xs text-neutral-500">
-          {stockModule === "DESPERDICIOS"
-            ? "Solo panes, masas y rubros de desperdicio (no insumos ni regalo)."
-            : stockModule === "CONSUMABLES"
-              ? "Solo insumos y regalo (gaseosas, etc.) — no son bajas del día."
-              : "Solo productos marcados como activo del local (carritos, bandejas, etc.)."}
-        </p>
-      </div>
-
-      {loadingEntry ? (
-        <p className="text-sm text-neutral-500">Cargando carga del día…</p>
-      ) : lines.length === 0 ? (
-        <p className="text-sm text-neutral-500">
-          Buscá productos y agregalos a la lista. Solo se guardan líneas con
-          cantidad &gt; 0.
-        </p>
-      ) : (
-        <DataTableScroll>
-          <table className="w-full min-w-[36rem] text-left text-sm">
-            <thead className="bg-neutral-50 text-xs uppercase text-neutral-500">
-              <tr>
-                <th className="px-3 py-2">Producto</th>
-                <th className="px-3 py-2">Tipo</th>
-                <th className="px-3 py-2">Unidad</th>
-                <th className="px-3 py-2">Cantidad</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {sortedLines.map((l) => (
-                <tr key={l.productId} className="border-t border-neutral-100">
-                  <td className="px-3 py-2">
-                    <span className="font-mono text-xs text-neutral-500">
-                      {l.code}
-                    </span>{" "}
-                    {l.name}
-                  </td>
-                  <td className="px-3 py-2 text-neutral-600">
-                    {l.rubro ?? "—"}
-                  </td>
-                  <td className="px-3 py-2">
-                    {l.allowsUnitOrder ? (
-                      <select
-                        className={cn(
-                          "h-9 rounded-md border border-neutral-200 bg-white px-2 text-sm",
-                          FOCUS_BRAND_BORDER,
-                        )}
-                        value={l.unit}
-                        onChange={(e) =>
-                          updateLine(l.productId, {
-                            unit: e.target.value as ProductMeasureUnit,
-                          })
-                        }
-                        aria-label={`Unidad de ${l.name}`}
-                      >
-                        {stockUnitsForProduct(l.allowsUnitOrder).map((u) => (
-                          <option key={u} value={u}>
-                            {u === "kg" ? "Kg" : "Unidades"}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="text-neutral-700">unid.</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <ArNumberValueInput
-                      value={l.qty}
-                      onValueChange={(qty) => updateLine(l.productId, { qty })}
-                      min={0}
-                      className="w-28"
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      className="rounded p-1 text-neutral-500 hover:bg-neutral-100 hover:text-red-600"
-                      aria-label="Quitar"
-                      onClick={() => removeLine(l.productId)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
+        {loadingEntry ? (
+          <p className="text-sm text-neutral-500">Cargando carga del día…</p>
+        ) : lines.length === 0 ? (
+          <p className="text-sm text-neutral-500">
+            Buscá productos y agregalos a la lista. Solo se guardan líneas con
+            cantidad &gt; 0.
+          </p>
+        ) : (
+          <DataTableScroll>
+            <table className="w-full min-w-[36rem] text-left text-sm">
+              <thead className="bg-neutral-50 text-xs uppercase text-neutral-500">
+                <tr>
+                  <th className="px-3 py-2">Producto</th>
+                  <th className="px-3 py-2">Tipo</th>
+                  <th className="px-3 py-2">Unidad</th>
+                  <th className="px-3 py-2">Cantidad</th>
+                  <th className="px-3 py-2" />
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </DataTableScroll>
-      )}
+              </thead>
+              <tbody>
+                {sortedLines.map((l) => (
+                  <tr key={l.productId} className="border-t border-neutral-100">
+                    <td className="px-3 py-2">
+                      <span className="font-mono text-xs text-neutral-500">
+                        {l.code}
+                      </span>{" "}
+                      {l.name}
+                    </td>
+                    <td className="px-3 py-2 text-neutral-600">
+                      {l.rubro ?? "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {l.allowsUnitOrder ? (
+                        <select
+                          className={cn(
+                            "h-9 rounded-md border border-neutral-200 bg-white px-2 text-sm",
+                            FOCUS_BRAND_BORDER,
+                          )}
+                          value={l.unit}
+                          onChange={(e) =>
+                            updateLine(l.productId, {
+                              unit: e.target.value as ProductMeasureUnit,
+                            })
+                          }
+                          aria-label={`Unidad de ${l.name}`}
+                        >
+                          {stockUnitsForProduct(l.allowsUnitOrder).map((u) => (
+                            <option key={u} value={u}>
+                              {u === "kg" ? "Kg" : "Unidades"}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-neutral-700">unid.</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      <ArNumberValueInput
+                        value={l.qty}
+                        onValueChange={(qty) =>
+                          updateLine(l.productId, { qty })
+                        }
+                        min={0}
+                        className="w-28"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        className="rounded p-1 text-neutral-500 hover:bg-neutral-100 hover:text-red-600"
+                        aria-label="Quitar"
+                        onClick={() => removeLine(l.productId)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </DataTableScroll>
+        )}
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {message ? <p className="text-sm text-green-700">{message}</p> : null}
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        {message ? <p className="text-sm text-green-700">{message}</p> : null}
+      </div>
 
-      <div className="flex flex-wrap justify-end gap-2">
+      <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-neutral-200 px-4 py-3 sm:px-5">
         <Button
           type="button"
           variant="outline"
-          onClick={() => setOpen(false)}
+          onClick={minimize}
           disabled={saving}
         >
-          Cancelar
+          Minimizar
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={discardDraft}
+          disabled={saving}
+        >
+          Descartar
         </Button>
         <Button type="submit" disabled={saving || customers.length === 0}>
           {saving ? "Guardando…" : "Guardar carga"}
         </Button>
       </div>
-            </form>
-          ) : null}
-        </div>
-      </div>
-    </div>
+    </form>
+  );
+
+  return (
+    <>
+      {showShell
+        ? createPortal(
+            <div
+              className={cn(
+                "fixed inset-0 z-[90] flex items-end justify-center p-0 sm:items-center sm:p-4",
+                !open && "pointer-events-none invisible",
+              )}
+              aria-hidden={!open}
+            >
+              <button
+                type="button"
+                className={cn(
+                  "absolute inset-0 bg-black/40 transition-opacity duration-200",
+                  exiting || !open ? "opacity-0" : "opacity-100",
+                )}
+                aria-label="Minimizar recuento"
+                onClick={minimize}
+                tabIndex={open ? 0 : -1}
+              />
+              <div
+                key={animKey}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="stock-recount-title"
+                className={cn(
+                  "relative z-[1] flex w-full max-w-3xl flex-col overflow-hidden rounded-t-lg border border-neutral-200 bg-white shadow-lg sm:rounded-lg",
+                  exiting ? "payment-form-exit" : "payment-form-enter",
+                )}
+              >
+                {formBody}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {showChip
+        ? createPortal(
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className={cn(
+                "fixed bottom-4 right-4 z-[95] flex max-w-[min(100vw-2rem,20rem)] items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-left text-sm shadow-lg",
+                FOCUS_BRAND_BORDER,
+              )}
+            >
+              <ClipboardPlus
+                className="h-4 w-4 shrink-0 text-[var(--brand-primary)]"
+                aria-hidden
+              />
+              <span className="min-w-0">
+                <span className="block font-medium text-neutral-900">
+                  Recuento en curso
+                </span>
+                <span className="block truncate text-xs text-neutral-500">
+                  {itemCount === 1 ? "1 ítem" : `${itemCount} ítems`}
+                  {date ? ` · ${date}` : ""}
+                </span>
+              </span>
+            </button>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }
 
 export function StockRecountTrigger({
   onClick,
+  pending = false,
+  itemCount = 0,
 }: {
   onClick: () => void;
+  /** Minimized draft — label + badge so header shows pending work. */
+  pending?: boolean;
+  itemCount?: number;
 }) {
   return (
-    <Button type="button" onClick={onClick}>
+    <Button
+      type="button"
+      onClick={onClick}
+      aria-label={
+        pending
+          ? `Continuar recuento pendiente, ${itemCount === 1 ? "1 ítem" : `${itemCount} ítems`}`
+          : "Registrar stock"
+      }
+    >
       <ClipboardPlus className="mr-1.5 h-4 w-4" aria-hidden />
-      Registrar stock
+      {pending ? "Continuar recuento" : "Registrar stock"}
+      {pending ? (
+        <span className="ml-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-white/20 px-1.5 py-0.5 text-xs font-medium tabular-nums">
+          {itemCount}
+        </span>
+      ) : null}
     </Button>
   );
 }

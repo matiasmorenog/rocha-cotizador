@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   StockRecountForm,
   StockRecountTrigger,
@@ -31,6 +31,13 @@ export function CustomerStockPageHeader({
   sectionLabel?: string;
 }) {
   const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState({ pending: false, itemCount: 0 });
+  const onDraftChange = useCallback(
+    (next: { pending: boolean; itemCount: number }) => {
+      setDraft(next);
+    },
+    [],
+  );
 
   return (
     <>
@@ -45,10 +52,15 @@ export function CustomerStockPageHeader({
           <p className="text-sm text-neutral-600">{description}</p>
           <p className="mt-1 text-sm text-neutral-500">{customerLabel}</p>
         </div>
-        <StockRecountTrigger onClick={() => setOpen((v) => !v)} />
+        <StockRecountTrigger
+          pending={draft.pending}
+          itemCount={draft.itemCount}
+          onClick={() => setOpen((v) => !v)}
+        />
       </div>
 
       <StockRecountForm
+        key={stockModule}
         title={formTitle}
         description={formDescription}
         apiPath={apiPath}
@@ -59,6 +71,7 @@ export function CustomerStockPageHeader({
         customerStockModule={stockModule}
         open={open}
         onOpenChange={setOpen}
+        onDraftChange={onDraftChange}
       />
     </>
   );
