@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { StockTab } from "@/lib/admin-stock-data";
 import type { StockSummaryPayload } from "@/lib/admin-stock-summary-shared";
 import { ADMIN_STOCK_SUMMARY_REFRESH_EVENT } from "@/lib/admin-stock-summary-refresh";
 import { AdminStockSummaryChart } from "@/components/admin/admin-stock-summary-chart";
 import { DataTableScroll } from "@/components/ui/data-table";
-import {
-  SEARCH_TABLE_RESIZE_MS,
-  useSmoothListHeight,
-} from "@/hooks/use-smooth-list-height";
+import { SEARCH_TABLE_RESIZE_MS } from "@/hooks/use-smooth-list-height";
 import { cn, formatPrice, formatQty } from "@/lib/utils";
 import { formatDeliveryDateDisplay, parseDateOnlyYmd } from "@/lib/delivery-date";
+
+/** ~5 body rows (3.5rem) — keeps Evolución diaria from jumping when the list filters. */
+const PRODUCT_TABLE_SHELL = "min-h-[17.5rem] max-h-[17.5rem]";
 
 function formatLastEntryDate(value: string | null): string {
   if (!value) return "—";
@@ -66,15 +66,6 @@ export function AdminStockSummarySection({
   const error =
     !loading && snapshot.key === fetchKey ? snapshot.error : null;
   const showStaleBlur = loading && data != null;
-  /** Only the product table grows/shrinks — lock that shell (not the blur node). */
-  const tableLockRef = useRef<HTMLDivElement>(null);
-  const tableResizeKey =
-    data == null
-      ? "empty"
-      : data.products.length === 0
-        ? `${snapshot.key}:empty`
-        : `${snapshot.key}:${data.products.length}`;
-  useSmoothListHeight(tableLockRef, tableResizeKey);
 
   useEffect(() => {
     const bump = () => setRefreshNonce((n) => n + 1);
@@ -178,14 +169,18 @@ export function AdminStockSummarySection({
                   : "Click en una fila para filtrar resumen e historial."}
               </p>
             </div>
-            {/* Height lock only here — must not share the blur transition node. */}
-            <div ref={tableLockRef}>
+            <div className={cn(PRODUCT_TABLE_SHELL, "overflow-hidden")}>
               {data.products.length === 0 ? (
-                <p className="text-sm text-neutral-500">
+                <p className="flex h-full items-center text-sm text-neutral-500">
                   Sin líneas en el período con los filtros actuales.
                 </p>
               ) : (
-                <DataTableScroll className="data-table-rows-2l">
+                <DataTableScroll
+                  className={cn(
+                    "data-table-rows-2l h-full overflow-y-auto",
+                    PRODUCT_TABLE_SHELL,
+                  )}
+                >
                   <table className="w-full min-w-[40rem] text-sm">
                     <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
                       <tr>
@@ -293,7 +288,10 @@ export function AdminStockSummarySection({
             <h3 className="text-sm font-medium text-neutral-900">
               Evolución diaria
             </h3>
-            <AdminStockSummaryChart daily={data.daily} />
+            {/* Fixed shell so empty ↔ series does not shove layout under the chart. */}
+            <div className="min-h-[13.5rem] sm:min-h-[14.5rem]">
+              <AdminStockSummaryChart daily={data.daily} />
+            </div>
           </div>
         </div>
       ) : null}
