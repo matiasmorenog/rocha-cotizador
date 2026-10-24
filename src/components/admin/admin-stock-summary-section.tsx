@@ -1,18 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { StockTab } from "@/lib/admin-stock-data";
 import type { StockSummaryPayload } from "@/lib/admin-stock-summary-shared";
 import { ADMIN_STOCK_SUMMARY_REFRESH_EVENT } from "@/lib/admin-stock-summary-refresh";
 import { AdminStockSummaryChart } from "@/components/admin/admin-stock-summary-chart";
 import { DataTableScroll } from "@/components/ui/data-table";
-import { SEARCH_TABLE_RESIZE_MS } from "@/hooks/use-smooth-list-height";
+import {
+  flipHeightFrom,
+  SEARCH_TABLE_RESIZE_MS,
+} from "@/hooks/use-smooth-list-height";
 import { cn, formatPrice, formatQty } from "@/lib/utils";
 import { formatDeliveryDateDisplay, parseDateOnlyYmd } from "@/lib/delivery-date";
-
-/** ~5 body rows (3.5rem) — keeps Evolución diaria from jumping when the list filters. */
-const PRODUCT_TABLE_SHELL = "min-h-[17.5rem] max-h-[17.5rem]";
 
 function formatLastEntryDate(value: string | null): string {
   if (!value) return "—";
@@ -66,6 +66,9 @@ export function AdminStockSummarySection({
   const error =
     !loading && snapshot.key === fetchKey ? snapshot.error : null;
   const showStaleBlur = loading && data != null;
+  const tableShellRef = useRef<HTMLDivElement>(null);
+  /** Height of Por producto shell measured before swapping to the new payload. */
+  const heightBeforeSwapRef = useRef<number | null>(null);
 
   useEffect(() => {
     const bump = () => setRefreshNonce((n) => n + 1);
@@ -96,6 +99,10 @@ export function AdminStockSummarySection({
       })
       .then((payload) => {
         if (controller.signal.aborted) return;
+        const shell = tableShellRef.current;
+        if (shell) {
+          heightBeforeSwapRef.current = shell.getBoundingClientRect().height;
+        }
         setSnapshot({ key: fetchKey, data: payload, error: null });
       })
       .catch((err: unknown) => {
@@ -110,6 +117,14 @@ export function AdminStockSummarySection({
 
     return () => controller.abort();
   }, [fetchKey, tab, from, to, customerId, productId]);
+
+  useLayoutEffect(() => {
+    const fromPx = heightBeforeSwapRef.current;
+    heightBeforeSwapRef.current = null;
+    const el = tableShellRef.current;
+    if (fromPx == null || !el) return;
+    return flipHeightFrom(el, fromPx);
+  }, [snapshot.key]);
 
   const filterHint = [
     `${from} — ${to}`,
@@ -169,18 +184,13 @@ export function AdminStockSummarySection({
                   : "Click en una fila para filtrar resumen e historial."}
               </p>
             </div>
-            <div className={cn(PRODUCT_TABLE_SHELL, "overflow-hidden")}>
+            <div ref={tableShellRef}>
               {data.products.length === 0 ? (
-                <p className="flex h-full items-center text-sm text-neutral-500">
+                <p className="text-sm text-neutral-500">
                   Sin líneas en el período con los filtros actuales.
                 </p>
               ) : (
-                <DataTableScroll
-                  className={cn(
-                    "data-table-rows-2l h-full overflow-y-auto",
-                    PRODUCT_TABLE_SHELL,
-                  )}
-                >
+                <DataTableScroll className="data-table-rows-2l">
                   <table className="w-full min-w-[40rem] text-sm">
                     <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
                       <tr>
@@ -288,10 +298,7 @@ export function AdminStockSummarySection({
             <h3 className="text-sm font-medium text-neutral-900">
               Evolución diaria
             </h3>
-            {/* Fixed shell so empty ↔ series does not shove layout under the chart. */}
-            <div className="min-h-[13.5rem] sm:min-h-[14.5rem]">
-              <AdminStockSummaryChart daily={data.daily} />
-            </div>
+            <AdminStockSummaryChart daily={data.daily} />
           </div>
         </div>
       ) : null}
