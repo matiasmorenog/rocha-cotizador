@@ -9,7 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ClipboardPlus, Trash2, X } from "lucide-react";
+import { ClipboardPlus, Trash2 } from "lucide-react";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 import { useIsClient } from "@/hooks/use-is-client";
 import { ProductPicker } from "@/components/quote/product-picker";
@@ -360,27 +360,14 @@ export function StockRecountForm({
 
   const formBody = (
     <form onSubmit={onSubmit} className="flex max-h-[min(90vh,52rem)] flex-col">
-      <div className="flex shrink-0 items-start justify-between gap-3 border-b border-neutral-200 px-4 py-3 sm:px-5">
-        <div className="min-w-0">
-          <h2
-            id="stock-recount-title"
-            className="text-lg font-semibold text-neutral-900"
-          >
-            {title}
-          </h2>
-          <p className="text-sm text-neutral-600">{description}</p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="icon-sm"
-          aria-label="Minimizar"
-          onClick={minimize}
-          disabled={saving}
-          className="shadow-none"
+      <div className="shrink-0 border-b border-neutral-200 px-4 py-3 sm:px-5">
+        <h2
+          id="stock-recount-title"
+          className="text-lg font-semibold text-neutral-900"
         >
-          <X className="h-4 w-4" aria-hidden />
-        </Button>
+          {title}
+        </h2>
+        <p className="text-sm text-neutral-600">{description}</p>
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
