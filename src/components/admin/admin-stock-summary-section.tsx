@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { StockTab } from "@/lib/admin-stock-data";
 import type { StockSummaryPayload } from "@/lib/admin-stock-summary-shared";
 import { ADMIN_STOCK_SUMMARY_REFRESH_EVENT } from "@/lib/admin-stock-summary-refresh";
@@ -16,19 +17,39 @@ function formatLastEntryDate(value: string | null): string {
   return formatDeliveryDateDisplay(date);
 }
 
+function stockFilterHref(input: {
+  tab: StockTab;
+  from: string;
+  to: string;
+  customerId: string;
+  productId?: string;
+}): string {
+  const params = new URLSearchParams({ tab: input.tab });
+  if (input.from) params.set("from", input.from);
+  if (input.to) params.set("to", input.to);
+  if (input.customerId) params.set("customer", input.customerId);
+  if (input.productId) params.set("product", input.productId);
+  return `/admin/stock?${params.toString()}`;
+}
+
 export function AdminStockSummarySection({
   tab,
   from,
   to,
   customerId,
+  productId = "",
+  productLabel,
 }: {
   tab: StockTab;
   from: string;
   to: string;
   customerId: string;
+  productId?: string;
+  productLabel?: string;
 }) {
+  const router = useRouter();
   const [refreshNonce, setRefreshNonce] = useState(0);
-  const fetchKey = `${tab}:${from}:${to}:${customerId}:${refreshNonce}`;
+  const fetchKey = `${tab}:${from}:${to}:${customerId}:${productId}:${refreshNonce}`;
   const [snapshot, setSnapshot] = useState<{
     key: string;
     data: StockSummaryPayload | null;
@@ -51,6 +72,7 @@ export function AdminStockSummarySection({
 
     const params = new URLSearchParams({ tab, from, to });
     if (customerId) params.set("customerId", customerId);
+    if (productId) params.set("productId", productId);
 
     fetch(`/api/admin/stock/summary?${params.toString()}`, {
       signal: controller.signal,
@@ -80,15 +102,22 @@ export function AdminStockSummarySection({
       });
 
     return () => controller.abort();
-  }, [fetchKey, tab, from, to, customerId]);
+  }, [fetchKey, tab, from, to, customerId, productId]);
+
+  const filterHint = [
+    `${from} — ${to}`,
+    customerId ? "sucursal filtrada" : "todas las sucursales",
+    productLabel ? `producto ${productLabel}` : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <div className="space-y-6 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm sm:p-5">
       <div>
         <h2 className="text-lg font-semibold text-neutral-900">Resumen</h2>
         <p className="text-sm text-neutral-600">
-          Cantidades y costo a precio base ({from} — {to}
-          {customerId ? ", sucursal filtrada" : ", todas las sucursales"}).
+          Cantidades y costo a precio base ({filterHint}).
         </p>
       </div>
 
@@ -115,9 +144,16 @@ export function AdminStockSummarySection({
           </div>
 
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-neutral-900">
-              Por producto
-            </h3>
+            <div className="flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className="text-sm font-medium text-neutral-900">
+                Por producto
+              </h3>
+              <p className="text-xs text-neutral-500">
+                {productId
+                  ? "Click de nuevo en la fila para quitar el filtro."
+                  : "Click en una fila para filtrar resumen e historial."}
+              </p>
+            </div>
             {data.products.length === 0 ? (
               <p className="text-sm text-neutral-500">
                 Sin líneas en el período con los filtros actuales.
@@ -146,34 +182,78 @@ export function AdminStockSummarySection({
                     </tr>
                   </thead>
                   <tbody>
-                    {data.products.map((row) => (
-                      <tr
-                        key={`${row.productId}-${row.unit}`}
-                        className="border-t border-neutral-100"
-                      >
-                        <td className="px-3 py-2">
-                          <p className="font-medium text-neutral-900">
-                            {row.name}
-                          </p>
-                          <p className="text-xs text-neutral-500">{row.code}</p>
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums font-medium text-neutral-900">
-                          {formatQty(row.totalQty)} {row.unit}
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
-                          {formatPrice(row.basePrice)}
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums font-medium text-neutral-900">
-                          {formatPrice(row.totalCost)}
-                        </td>
-                        <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
-                          {formatPrice(row.avgCostPerDay)}
-                        </td>
-                        <td className="px-3 py-2 text-right text-neutral-600">
-                          {formatLastEntryDate(row.lastEntryDate)}
-                        </td>
-                      </tr>
-                    ))}
+                    {data.products.map((row) => {
+                      const selected = productId === row.productId;
+                      return (
+                        <tr
+                          key={`${row.productId}-${row.unit}`}
+                          role="button"
+                          tabIndex={0}
+                          aria-pressed={selected}
+                          aria-label={
+                            selected
+                              ? `Quitar filtro de ${row.code} ${row.name}`
+                              : `Filtrar por ${row.code} ${row.name}`
+                          }
+                          className={cn(
+                            "admin-table-row cursor-pointer border-t border-neutral-100",
+                            selected && "bg-[var(--brand-primary-soft)]",
+                          )}
+                          onClick={() => {
+                            router.push(
+                              stockFilterHref({
+                                tab,
+                                from,
+                                to,
+                                customerId,
+                                productId: selected
+                                  ? undefined
+                                  : row.productId,
+                              }),
+                            );
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key !== "Enter" && e.key !== " ") return;
+                            e.preventDefault();
+                            router.push(
+                              stockFilterHref({
+                                tab,
+                                from,
+                                to,
+                                customerId,
+                                productId: selected
+                                  ? undefined
+                                  : row.productId,
+                              }),
+                            );
+                          }}
+                        >
+                          <td className="px-3 py-2">
+                            <p className="font-medium text-neutral-900">
+                              {row.name}
+                            </p>
+                            <p className="text-xs text-neutral-500">
+                              {row.code}
+                            </p>
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums font-medium text-neutral-900">
+                            {formatQty(row.totalQty)} {row.unit}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
+                            {formatPrice(row.basePrice)}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums font-medium text-neutral-900">
+                            {formatPrice(row.totalCost)}
+                          </td>
+                          <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
+                            {formatPrice(row.avgCostPerDay)}
+                          </td>
+                          <td className="px-3 py-2 text-right text-neutral-600">
+                            {formatLastEntryDate(row.lastEntryDate)}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </DataTableScroll>
