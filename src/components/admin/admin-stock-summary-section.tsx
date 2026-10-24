@@ -57,8 +57,11 @@ export function AdminStockSummarySection({
   }>({ key: "", data: null, error: null });
 
   const loading = snapshot.key !== fetchKey;
-  const data = snapshot.key === fetchKey ? snapshot.data : null;
-  const error = snapshot.key === fetchKey ? snapshot.error : null;
+  /** Keep last successful payload while refetching — blur instead of empty flash. */
+  const data = snapshot.data;
+  const error =
+    !loading && snapshot.key === fetchKey ? snapshot.error : null;
+  const showStaleBlur = loading && data != null;
 
   useEffect(() => {
     const bump = () => setRefreshNonce((n) => n + 1);
@@ -93,12 +96,12 @@ export function AdminStockSummarySection({
       })
       .catch((err: unknown) => {
         if (controller.signal.aborted) return;
-        setSnapshot({
+        setSnapshot((prev) => ({
           key: fetchKey,
-          data: null,
+          data: prev.data,
           error:
             err instanceof Error ? err.message : "No se pudo cargar el resumen",
-        });
+        }));
       });
 
     return () => controller.abort();
@@ -121,12 +124,19 @@ export function AdminStockSummarySection({
         </p>
       </div>
 
-      {loading ? (
+      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+
+      {loading && !data ? (
         <p className="text-sm text-neutral-500">Cargando resumen…</p>
-      ) : error ? (
-        <p className="text-sm text-red-600">{error}</p>
       ) : data ? (
-        <>
+        <div
+          aria-busy={loading || undefined}
+          className={cn(
+            "space-y-6 transition-[filter,opacity] duration-200",
+            showStaleBlur &&
+              "pointer-events-none select-none opacity-70 blur-[2px]",
+          )}
+        >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <SummaryCard
               label="Entradas en el período"
@@ -266,7 +276,7 @@ export function AdminStockSummarySection({
             </h3>
             <AdminStockSummaryChart daily={data.daily} />
           </div>
-        </>
+        </div>
       ) : null}
     </div>
   );
