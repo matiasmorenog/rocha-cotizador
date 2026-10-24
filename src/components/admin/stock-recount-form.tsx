@@ -126,7 +126,8 @@ export function StockRecountForm({
     setSessionActive(true);
   }
 
-  const draftPending = sessionActive && !open;
+  // Header keeps "Continuar recuento" for the whole session (open or minimized).
+  const draftPending = sessionActive;
   const draftItemCount = lines.length;
 
   useEffect(() => {
@@ -369,15 +370,16 @@ export function StockRecountForm({
           </h2>
           <p className="text-sm text-neutral-600">{description}</p>
         </div>
-        <button
+        <Button
           type="button"
-          className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+          variant="outline"
+          size="icon-sm"
           aria-label="Minimizar"
           onClick={minimize}
           disabled={saving}
         >
           <X className="h-4 w-4" aria-hidden />
-        </button>
+        </Button>
       </div>
 
       <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
