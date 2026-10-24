@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { ENTITY_ENABLED_FEMININE_LABELS } from "@/lib/entity-status-labels";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { formatArInput, formatPrice, parseArNumber } from "@/lib/utils";
 import { filterFoldedSearch } from "@/lib/search-fold";
 import {
@@ -21,6 +22,9 @@ import {
   RevealMoreTableRow,
   useIncrementalReveal,
 } from "@/hooks/use-incremental-reveal";
+import { sortRows, useTableSort } from "@/hooks/use-table-sort";
+
+type ItemSortKey = "code" | "name" | "base" | "lista";
 
 type ItemRow = {
   productId: string;
@@ -65,6 +69,7 @@ export function PriceListEditor({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [filling, setFilling] = useState(false);
+  const { sort, toggle } = useTableSort<ItemSortKey>();
 
   const metaDirty =
     name.trim() !== priceList.name || active !== priceList.active;
@@ -90,15 +95,29 @@ export function PriceListEditor({
     [filter, priceList.items],
   );
 
+  const sorted = useMemo(
+    () =>
+      sortRows(filtered, sort, {
+        code: (i) => i.product.code,
+        name: (i) => i.product.name,
+        base: (i) => i.product.basePrice,
+        lista: (i) => {
+          const n = parseArNumber(prices[i.productId] ?? "");
+          return Number.isFinite(n) ? n : i.unitPrice;
+        },
+      }),
+    [filtered, sort, prices],
+  );
+
   const {
     visible,
     hasMore,
     revealMore,
     total,
-  } = useIncrementalReveal(filtered, {
+  } = useIncrementalReveal(sorted, {
     initial: INCREMENTAL_REVEAL_INITIAL,
     step: INCREMENTAL_REVEAL_STEP,
-    resetKey: filter,
+    resetKey: `${filter}|${sort?.key ?? ""}|${sort?.dir ?? ""}`,
   });
 
   const colSpan = isBase ? 3 : 4;
@@ -283,14 +302,36 @@ export function PriceListEditor({
           <table className="w-full min-w-[40rem] text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
-                <th className="px-3 py-2">Código</th>
-                <th className="px-3 py-2">Producto</th>
+                <SortableTh
+                  label="Código"
+                  sortKey="code"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
+                <SortableTh
+                  label="Producto"
+                  sortKey="name"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
                 {!isBase ? (
-                  <th className="px-3 py-2">Precio base</th>
+                  <SortableTh
+                    label="Precio base"
+                    sortKey="base"
+                    activeKey={sort?.key}
+                    dir={sort?.dir}
+                    onToggle={toggle}
+                  />
                 ) : null}
-                <th className="px-3 py-2">
-                  {isBase ? "Precio base" : "Precio lista"}
-                </th>
+                <SortableTh
+                  label={isBase ? "Precio base" : "Precio lista"}
+                  sortKey={isBase ? "base" : "lista"}
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
               </tr>
             </thead>
             <tbody>

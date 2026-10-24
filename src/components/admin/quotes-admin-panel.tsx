@@ -14,6 +14,7 @@ import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-rout
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
@@ -31,6 +32,7 @@ import {
   useSelectedRow,
   type RowSelectionProps,
 } from "@/hooks/use-selected-row";
+import { sortRows, useTableSort } from "@/hooks/use-table-sort";
 import type { AdminProductSalesRow } from "@/lib/admin-quotes-by-product";
 import {
   ARGENTINA_TZ,
@@ -42,6 +44,21 @@ import { quoteStatusLabel } from "@/lib/quote-status";
 import { cn, formatPrice, formatQty } from "@/lib/utils";
 import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { filterFoldedSearch } from "@/lib/search-fold";
+
+type QuoteSortKey =
+  | "number"
+  | "customer"
+  | "pedido"
+  | "entrega"
+  | "estado"
+  | "total";
+
+type ProductSalesSortKey =
+  | "code"
+  | "name"
+  | "kg"
+  | "units"
+  | "amount";
 
 type CotizacionesView = "list" | "product";
 
@@ -173,6 +190,10 @@ export function QuotesAdminPanel({
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lateOpen, setLateOpen] = useState(false);
+  const { sort: listSort, toggle: toggleListSort } =
+    useTableSort<QuoteSortKey>();
+  const { sort: productSort, toggle: toggleProductSort } =
+    useTableSort<ProductSalesSortKey>();
   const {
     present: latePresent,
     exiting: lateExiting,
@@ -212,12 +233,25 @@ export function QuotesAdminPanel({
     [quotes, query],
   );
 
+  const sortedQuotes = useMemo(
+    () =>
+      sortRows(filtered, listSort, {
+        number: (q) => q.number,
+        customer: (q) => `${q.customer.name}\0${q.customer.code}`,
+        pedido: (q) => q.createdAt,
+        entrega: (q) => q.deliveryDate,
+        estado: (q) => quoteStatusLabel(q.status),
+        total: (q) => q.total,
+      }),
+    [filtered, listSort],
+  );
+
   const { main, afterCutoff } = useMemo(() => {
     if (!isOrderCutoffEnforced()) {
-      return { main: filtered, afterCutoff: [] as typeof filtered };
+      return { main: sortedQuotes, afterCutoff: [] as typeof sortedQuotes };
     }
-    return splitQuotesByDayCutoff(filtered, to, orderCutoffHourAr);
-  }, [filtered, to, orderCutoffHourAr]);
+    return splitQuotesByDayCutoff(sortedQuotes, to, orderCutoffHourAr);
+  }, [sortedQuotes, to, orderCutoffHourAr]);
 
   // Freeze late rows while exit plays (filter can clear afterCutoff same tick).
   const [frozenLate, setFrozenLate] = useState(afterCutoff);
@@ -406,6 +440,18 @@ export function QuotesAdminPanel({
     [productRows, productQuery],
   );
 
+  const sortedProducts = useMemo(
+    () =>
+      sortRows(filteredProducts, productSort, {
+        code: (row) => row.productCode,
+        name: (row) => row.productName,
+        kg: (row) => row.qtyKg,
+        units: (row) => row.qtyUnits,
+        amount: (row) => row.amount,
+      }),
+    [filteredProducts, productSort],
+  );
+
   /** Sum of visible product line amounts (not full remito totals). */
   const filteredProductSum = useMemo(
     () =>
@@ -554,12 +600,48 @@ export function QuotesAdminPanel({
               <table ref={tableRef} className="w-full min-w-[42rem] text-sm">
                 <thead className="border-b border-neutral-200 bg-neutral-50 text-left text-neutral-600">
                   <tr>
-                    <th className="px-3 py-2">Número</th>
-                    <th className="px-3 py-2">Cliente</th>
-                    <th className="px-3 py-2">Pedido</th>
-                    <th className="px-3 py-2">Entrega</th>
-                    <th className="px-3 py-2">Estado</th>
-                    <th className="px-3 py-2">Total</th>
+                    <SortableTh
+                      label="Número"
+                      sortKey="number"
+                      activeKey={listSort?.key}
+                      dir={listSort?.dir}
+                      onToggle={toggleListSort}
+                    />
+                    <SortableTh
+                      label="Cliente"
+                      sortKey="customer"
+                      activeKey={listSort?.key}
+                      dir={listSort?.dir}
+                      onToggle={toggleListSort}
+                    />
+                    <SortableTh
+                      label="Pedido"
+                      sortKey="pedido"
+                      activeKey={listSort?.key}
+                      dir={listSort?.dir}
+                      onToggle={toggleListSort}
+                    />
+                    <SortableTh
+                      label="Entrega"
+                      sortKey="entrega"
+                      activeKey={listSort?.key}
+                      dir={listSort?.dir}
+                      onToggle={toggleListSort}
+                    />
+                    <SortableTh
+                      label="Estado"
+                      sortKey="estado"
+                      activeKey={listSort?.key}
+                      dir={listSort?.dir}
+                      onToggle={toggleListSort}
+                    />
+                    <SortableTh
+                      label="Total"
+                      sortKey="total"
+                      activeKey={listSort?.key}
+                      dir={listSort?.dir}
+                      onToggle={toggleListSort}
+                    />
                   </tr>
                 </thead>
                 <tbody>
@@ -688,15 +770,48 @@ export function QuotesAdminPanel({
             <table className="w-full min-w-[36rem] text-sm">
               <thead className="border-b border-neutral-200 bg-neutral-50 text-left text-neutral-600">
                 <tr>
-                  <th className="px-3 py-2">Código</th>
-                  <th className="px-3 py-2">Producto</th>
-                  <th className="px-3 py-2 text-right">Kg</th>
-                  <th className="px-3 py-2 text-right">Unidades</th>
-                  <th className="px-3 py-2 text-right">Importe</th>
+                  <SortableTh
+                    label="Código"
+                    sortKey="code"
+                    activeKey={productSort?.key}
+                    dir={productSort?.dir}
+                    onToggle={toggleProductSort}
+                  />
+                  <SortableTh
+                    label="Producto"
+                    sortKey="name"
+                    activeKey={productSort?.key}
+                    dir={productSort?.dir}
+                    onToggle={toggleProductSort}
+                  />
+                  <SortableTh
+                    label="Kg"
+                    sortKey="kg"
+                    activeKey={productSort?.key}
+                    dir={productSort?.dir}
+                    onToggle={toggleProductSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    label="Unidades"
+                    sortKey="units"
+                    activeKey={productSort?.key}
+                    dir={productSort?.dir}
+                    onToggle={toggleProductSort}
+                    align="right"
+                  />
+                  <SortableTh
+                    label="Importe"
+                    sortKey="amount"
+                    activeKey={productSort?.key}
+                    dir={productSort?.dir}
+                    onToggle={toggleProductSort}
+                    align="right"
+                  />
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map((row) => (
+                {sortedProducts.map((row) => (
                   <tr
                     key={row.productCode}
                     className="admin-table-row border-t border-neutral-200"
@@ -714,7 +829,7 @@ export function QuotesAdminPanel({
                     </td>
                   </tr>
                 ))}
-                {!loading && filteredProducts.length === 0 ? (
+                {!loading && sortedProducts.length === 0 ? (
                   <tr>
                     <td
                       colSpan={5}

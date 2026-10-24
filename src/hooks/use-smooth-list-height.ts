@@ -21,6 +21,50 @@ function prefersReducedMotion(): boolean {
   );
 }
 
+/**
+ * One-shot FLIP height: caller measures `fromPx` *before* swapping content,
+ * then call this in a layout effect after the new DOM is committed.
+ */
+export function flipHeightFrom(
+  el: HTMLElement,
+  fromPx: number,
+): () => void {
+  if (prefersReducedMotion()) return () => {};
+
+  el.style.transition = "none";
+  el.style.height = "";
+  const toPx = el.scrollHeight;
+  if (Math.abs(fromPx - toPx) < 0.5) {
+    el.style.height = "";
+    el.style.overflow = "";
+    el.style.transition = "";
+    return () => {};
+  }
+
+  el.style.height = `${fromPx}px`;
+  el.style.overflow = "hidden";
+  void el.offsetHeight;
+  el.style.transition = `height ${SEARCH_TABLE_RESIZE_MS}ms ${SEARCH_TABLE_RESIZE_EASE}`;
+  el.style.height = `${toPx}px`;
+
+  const clear = () => {
+    el.style.height = "";
+    el.style.overflow = "";
+    el.style.transition = "";
+  };
+  const onEnd = (e: TransitionEvent) => {
+    if (e.target !== el || e.propertyName !== "height") return;
+    clear();
+    el.removeEventListener("transitionend", onEnd);
+  };
+  el.addEventListener("transitionend", onEnd);
+  const fallback = window.setTimeout(clear, SEARCH_TABLE_RESIZE_MS + 40);
+  return () => {
+    window.clearTimeout(fallback);
+    el.removeEventListener("transitionend", onEnd);
+  };
+}
+
 function borderBoxHeight(entry: ResizeObserverEntry): number {
   const box = entry.borderBoxSize?.[0];
   return box ? box.blockSize : entry.contentRect.height;

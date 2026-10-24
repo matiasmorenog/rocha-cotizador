@@ -169,6 +169,31 @@ body {
   vertical-align: middle;
 }
 
+/*
+  Cap body viewport to ~6 uniform 2-line rows (+ thead). Pair with
+  DataTableScroll `bottomScrollFade` and sticky thead.
+*/
+.data-table-scroll.data-table-rows-2l.data-table-max-rows-6 {
+  max-height: calc(2.25rem + 6 * 3.5rem);
+  overflow-y: auto;
+}
+
+.data-table-bottom-fade {
+  background: linear-gradient(
+    to top,
+    rgb(255 255 255) 10%,
+    rgb(255 255 255 / 0%)
+  );
+}
+
+html[data-admin-theme="dark"] .data-table-bottom-fade {
+  background: linear-gradient(
+    to top,
+    #202c33 10%,
+    color-mix(in srgb, #202c33 0%, transparent)
+  );
+}
+
 /* Fixed 2-line name slot: short names keep the same row height; long names
    clamp at two lines with ellipsis. */
 .admin-table-name-2l {
