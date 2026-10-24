@@ -66,9 +66,15 @@ export function AdminStockSummarySection({
   const error =
     !loading && snapshot.key === fetchKey ? snapshot.error : null;
   const showStaleBlur = loading && data != null;
-  const contentLockRef = useRef<HTMLDivElement>(null);
-  // Animate shell height when fresh payload lands (same hook as admin tables).
-  useSmoothListHeight(contentLockRef, snapshot.key || "empty");
+  /** Only the product table grows/shrinks — lock that shell (not the blur node). */
+  const tableLockRef = useRef<HTMLDivElement>(null);
+  const tableResizeKey =
+    data == null
+      ? "empty"
+      : data.products.length === 0
+        ? `${snapshot.key}:empty`
+        : `${snapshot.key}:${data.products.length}`;
+  useSmoothListHeight(tableLockRef, tableResizeKey);
 
   useEffect(() => {
     const bump = () => setRefreshNonce((n) => n + 1);
@@ -137,16 +143,13 @@ export function AdminStockSummarySection({
         <p className="text-sm text-neutral-500">Cargando resumen…</p>
       ) : data ? (
         <div
-          ref={contentLockRef}
           aria-busy={loading || undefined}
           className={cn(
             "space-y-6 transition-[filter,opacity] ease-out",
             showStaleBlur &&
               "pointer-events-none select-none opacity-70 blur-[2px]",
           )}
-          style={{
-            transitionDuration: `${SEARCH_TABLE_RESIZE_MS}ms`,
-          }}
+          style={{ transitionDuration: `${SEARCH_TABLE_RESIZE_MS}ms` }}
         >
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <SummaryCard
@@ -175,112 +178,115 @@ export function AdminStockSummarySection({
                   : "Click en una fila para filtrar resumen e historial."}
               </p>
             </div>
-            {data.products.length === 0 ? (
-              <p className="text-sm text-neutral-500">
-                Sin líneas en el período con los filtros actuales.
-              </p>
-            ) : (
-              <DataTableScroll className="data-table-rows-2l">
-                <table className="w-full min-w-[40rem] text-sm">
-                  <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
-                    <tr>
-                      <th className="px-3 py-2 font-medium">Producto</th>
-                      <th className="px-3 py-2 font-medium text-right">
-                        Cantidad
-                      </th>
-                      <th className="px-3 py-2 font-medium text-right">
-                        Precio base
-                      </th>
-                      <th className="px-3 py-2 font-medium text-right">
-                        Costo período
-                      </th>
-                      <th className="px-3 py-2 font-medium text-right">
-                        Promedio / día (costo)
-                      </th>
-                      <th className="px-3 py-2 font-medium text-right">
-                        Última carga
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.products.map((row) => {
-                      const selected = productId === row.productId;
-                      return (
-                        <tr
-                          key={`${row.productId}-${row.unit}`}
-                          role="button"
-                          tabIndex={0}
-                          aria-pressed={selected}
-                          aria-label={
-                            selected
-                              ? `Quitar filtro de ${row.code} ${row.name}`
-                              : `Filtrar por ${row.code} ${row.name}`
-                          }
-                          className={cn(
-                            "admin-table-row cursor-pointer border-t border-neutral-100",
-                            selected && "bg-[var(--brand-primary-soft)]",
-                          )}
-                          onClick={() => {
-                            router.push(
-                              stockFilterHref({
-                                tab,
-                                from,
-                                to,
-                                customerId,
-                                productId: selected
-                                  ? undefined
-                                  : row.productId,
-                              }),
-                              { scroll: false },
-                            );
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key !== "Enter" && e.key !== " ") return;
-                            e.preventDefault();
-                            router.push(
-                              stockFilterHref({
-                                tab,
-                                from,
-                                to,
-                                customerId,
-                                productId: selected
-                                  ? undefined
-                                  : row.productId,
-                              }),
-                              { scroll: false },
-                            );
-                          }}
-                        >
-                          <td className="px-3 py-2">
-                            <p className="font-medium text-neutral-900">
-                              {row.name}
-                            </p>
-                            <p className="text-xs text-neutral-500">
-                              {row.code}
-                            </p>
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums font-medium text-neutral-900">
-                            {formatQty(row.totalQty)} {row.unit}
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
-                            {formatPrice(row.basePrice)}
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums font-medium text-neutral-900">
-                            {formatPrice(row.totalCost)}
-                          </td>
-                          <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
-                            {formatPrice(row.avgCostPerDay)}
-                          </td>
-                          <td className="px-3 py-2 text-right text-neutral-600">
-                            {formatLastEntryDate(row.lastEntryDate)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </DataTableScroll>
-            )}
+            {/* Height lock only here — must not share the blur transition node. */}
+            <div ref={tableLockRef}>
+              {data.products.length === 0 ? (
+                <p className="text-sm text-neutral-500">
+                  Sin líneas en el período con los filtros actuales.
+                </p>
+              ) : (
+                <DataTableScroll className="data-table-rows-2l">
+                  <table className="w-full min-w-[40rem] text-sm">
+                    <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
+                      <tr>
+                        <th className="px-3 py-2 font-medium">Producto</th>
+                        <th className="px-3 py-2 font-medium text-right">
+                          Cantidad
+                        </th>
+                        <th className="px-3 py-2 font-medium text-right">
+                          Precio base
+                        </th>
+                        <th className="px-3 py-2 font-medium text-right">
+                          Costo período
+                        </th>
+                        <th className="px-3 py-2 font-medium text-right">
+                          Promedio / día (costo)
+                        </th>
+                        <th className="px-3 py-2 font-medium text-right">
+                          Última carga
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.products.map((row) => {
+                        const selected = productId === row.productId;
+                        return (
+                          <tr
+                            key={`${row.productId}-${row.unit}`}
+                            role="button"
+                            tabIndex={0}
+                            aria-pressed={selected}
+                            aria-label={
+                              selected
+                                ? `Quitar filtro de ${row.code} ${row.name}`
+                                : `Filtrar por ${row.code} ${row.name}`
+                            }
+                            className={cn(
+                              "admin-table-row cursor-pointer border-t border-neutral-100",
+                              selected && "bg-[var(--brand-primary-soft)]",
+                            )}
+                            onClick={() => {
+                              router.push(
+                                stockFilterHref({
+                                  tab,
+                                  from,
+                                  to,
+                                  customerId,
+                                  productId: selected
+                                    ? undefined
+                                    : row.productId,
+                                }),
+                                { scroll: false },
+                              );
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key !== "Enter" && e.key !== " ") return;
+                              e.preventDefault();
+                              router.push(
+                                stockFilterHref({
+                                  tab,
+                                  from,
+                                  to,
+                                  customerId,
+                                  productId: selected
+                                    ? undefined
+                                    : row.productId,
+                                }),
+                                { scroll: false },
+                              );
+                            }}
+                          >
+                            <td className="px-3 py-2">
+                              <p className="font-medium text-neutral-900">
+                                {row.name}
+                              </p>
+                              <p className="text-xs text-neutral-500">
+                                {row.code}
+                              </p>
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums font-medium text-neutral-900">
+                              {formatQty(row.totalQty)} {row.unit}
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
+                              {formatPrice(row.basePrice)}
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums font-medium text-neutral-900">
+                              {formatPrice(row.totalCost)}
+                            </td>
+                            <td className="px-3 py-2 text-right tabular-nums text-neutral-600">
+                              {formatPrice(row.avgCostPerDay)}
+                            </td>
+                            <td className="px-3 py-2 text-right text-neutral-600">
+                              {formatLastEntryDate(row.lastEntryDate)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </DataTableScroll>
+              )}
+            </div>
           </div>
 
           <div className="space-y-3">
