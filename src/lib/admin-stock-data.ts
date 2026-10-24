@@ -9,6 +9,9 @@ import {
   stockLineFlatSelect,
   type ProductReportRow,
 } from "@/lib/stock-line-serialize";
+import type { StockModuleKey } from "@/lib/stock-product-kind-shared";
+import { productWhereForModule } from "@/lib/stock-rubros";
+import { getStockModuleProducts } from "@/lib/stock-products-cache";
 
 export type StockTab = "desperdicios" | "consumibles" | "activos";
 
@@ -18,6 +21,17 @@ export type StockModuleCustomer = {
   id: string;
   code: string;
   name: string;
+};
+
+/** Product selected in stock filters (URL `product=`). */
+export type StockFilterProduct = {
+  id: string;
+  code: string;
+  name: string;
+  rubro: string | null;
+  unitPrice: number;
+  allowsUnitOrder: boolean;
+  stockKind: "DESPERDICIO" | "CONSUMABLE" | "LOCAL_ASSET" | null;
 };
 
 export function parseStockTab(tab?: string): StockTab {
@@ -34,6 +48,54 @@ export function resolveStockCustomerId(
   const id = (customerParam ?? "").trim();
   if (!id) return "";
   return customers.some((c) => c.id === id) ? id : "";
+}
+
+/** Resolve URL `product=` against the active stock module catalog. */
+export async function resolveStockFilterProduct(
+  module: StockModuleKey,
+  productParam?: string,
+): Promise<StockFilterProduct | null> {
+  const id = (productParam ?? "").trim();
+  if (!id) return null;
+
+  const catalog = await getStockModuleProducts(module);
+  const hit = catalog.find((p) => p.id === id);
+  if (hit) {
+    return {
+      id: hit.id,
+      code: hit.code,
+      name: hit.name,
+      rubro: hit.rubro,
+      unitPrice: hit.basePrice,
+      allowsUnitOrder: hit.allowsUnitOrder,
+      stockKind: hit.stockKind,
+    };
+  }
+
+  // Cache miss / brand-new product — one DB check, still module-scoped.
+  const row = await db.product.findFirst({
+    where: { id, ...productWhereForModule(module) },
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      rubro: true,
+      basePrice: true,
+      allowsUnitOrder: true,
+      stockKind: true,
+    },
+  });
+  if (!row) return null;
+
+  return {
+    id: row.id,
+    code: row.code,
+    name: row.name,
+    rubro: row.rubro,
+    unitPrice: Number(row.basePrice),
+    allowsUnitOrder: row.allowsUnitOrder,
+    stockKind: row.stockKind,
+  };
 }
 
 async function fetchModuleCustomersUncached(
@@ -71,6 +133,7 @@ function stockEntryWhere(
   from: string,
   to: string,
   customerId?: string,
+  productId?: string,
 ) {
   const fromDate = from ? parseDateOnlyYmd(from) : null;
   const toDate = to ? parseDateOnlyYmd(to) : null;
@@ -87,6 +150,7 @@ function stockEntryWhere(
   return {
     ...dateFilter,
     ...(customerId ? { customerId } : {}),
+    ...(productId ? { lines: { some: { productId } } } : {}),
   };
 }
 
@@ -129,12 +193,21 @@ async function hydrateStockEntryListRows(
   rows: StockEntryListRow[],
   catalog: Awaited<ReturnType<typeof getActiveProductsBase>>,
   customers: StockModuleCustomer[],
+  productId?: string,
 ) {
+  const narrowed = productId
+    ? rows.map((row) => ({
+        ...row,
+        lines: row.lines.filter((line) => line.productId === productId),
+      }))
+    : rows;
   const productIds = [
-    ...new Set(rows.flatMap((row) => row.lines.map((line) => line.productId))),
+    ...new Set(
+      narrowed.flatMap((row) => row.lines.map((line) => line.productId)),
+    ),
   ];
   const productById = await resolveStockProductReportMap(productIds, catalog);
-  return mapStockEntryListRows(rows, customers, productById);
+  return mapStockEntryListRows(narrowed, customers, productById);
 }
 
 const stockEntryListSelect = {
@@ -151,10 +224,11 @@ export async function loadDesperdiciosEntries(
   to: string,
   customerId?: string,
   limit = STOCK_HISTORY_LIMIT,
+  productId?: string,
 ) {
   const [rows, customers, catalog] = await Promise.all([
     db.desperdicioEntry.findMany({
-      where: stockEntryWhere(from, to, customerId),
+      where: stockEntryWhere(from, to, customerId, productId),
       orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
       take: limit,
       select: stockEntryListSelect,
@@ -163,7 +237,7 @@ export async function loadDesperdiciosEntries(
     getActiveProductsBase(),
   ]);
 
-  return hydrateStockEntryListRows(rows, catalog, customers);
+  return hydrateStockEntryListRows(rows, catalog, customers, productId);
 }
 
 export async function loadConsumiblesEntries(
@@ -171,10 +245,11 @@ export async function loadConsumiblesEntries(
   to: string,
   customerId?: string,
   limit = STOCK_HISTORY_LIMIT,
+  productId?: string,
 ) {
   const [rows, customers, catalog] = await Promise.all([
     db.consumableCount.findMany({
-      where: stockEntryWhere(from, to, customerId),
+      where: stockEntryWhere(from, to, customerId, productId),
       orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
       take: limit,
       select: stockEntryListSelect,
@@ -183,7 +258,7 @@ export async function loadConsumiblesEntries(
     getActiveProductsBase(),
   ]);
 
-  return hydrateStockEntryListRows(rows, catalog, customers);
+  return hydrateStockEntryListRows(rows, catalog, customers, productId);
 }
 
 export async function loadActivosEntries(
@@ -191,10 +266,11 @@ export async function loadActivosEntries(
   to: string,
   customerId?: string,
   limit = STOCK_HISTORY_LIMIT,
+  productId?: string,
 ) {
   const [rows, customers, catalog] = await Promise.all([
     db.localAssetCount.findMany({
-      where: stockEntryWhere(from, to, customerId),
+      where: stockEntryWhere(from, to, customerId, productId),
       orderBy: [{ entryDate: "desc" }, { createdAt: "desc" }],
       take: limit,
       select: stockEntryListSelect,
@@ -203,5 +279,5 @@ export async function loadActivosEntries(
     getActiveProductsBase(),
   ]);
 
-  return hydrateStockEntryListRows(rows, catalog, customers);
+  return hydrateStockEntryListRows(rows, catalog, customers, productId);
 }

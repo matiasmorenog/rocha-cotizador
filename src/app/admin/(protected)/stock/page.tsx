@@ -13,11 +13,14 @@ import {
   moduleCustomers,
   parseStockTab,
   resolveStockCustomerId,
+  resolveStockFilterProduct,
   STOCK_HISTORY_LIMIT,
+  type StockFilterProduct,
   type StockModuleCustomer,
   type StockTab,
 } from "@/lib/admin-stock-data";
 import { resolveStockDateRange } from "@/lib/admin-stock-summary-shared";
+import type { StockModuleKey } from "@/lib/stock-product-kind-shared";
 
 function StockHistorialFallback() {
   return <p className="text-sm text-neutral-500">Cargando historial…</p>;
@@ -29,6 +32,8 @@ function StockPanel({
   to,
   customerId,
   customers,
+  stockModule,
+  product,
   children,
 }: {
   tab: StockTab;
@@ -36,17 +41,21 @@ function StockPanel({
   to: string;
   customerId: string;
   customers: StockModuleCustomer[];
+  stockModule: StockModuleKey;
+  product: StockFilterProduct | null;
   children: ReactNode;
 }) {
   return (
     <div className="space-y-4">
       <StockPanelFilters
-        key={`${from}-${to}-${customerId}`}
+        key={`${from}-${to}-${customerId}-${product?.id ?? ""}`}
         customers={customers}
         customerId={customerId}
         from={from}
         to={to}
         tab={tab}
+        stockModule={stockModule}
+        product={product}
       />
 
       <AdminStockSummarySection
@@ -54,6 +63,10 @@ function StockPanel({
         from={from}
         to={to}
         customerId={customerId}
+        productId={product?.id ?? ""}
+        productLabel={
+          product ? `${product.code} · ${product.name}` : undefined
+        }
       />
 
       <div>
@@ -64,8 +77,8 @@ function StockPanel({
             : tab === "activos"
               ? "Recuentos de activos del local guardados por sucursal."
               : "Cargas de desperdicios guardadas por sucursal."}{" "}
-          Hasta {STOCK_HISTORY_LIMIT} por consulta — filtrá por sucursal o
-          fechas.
+          Hasta {STOCK_HISTORY_LIMIT} por consulta — filtrá por sucursal,
+          fechas o producto.
         </p>
       </div>
       {children}
@@ -79,19 +92,39 @@ async function StockHistorial({
   to,
   customerId,
   customers,
+  productId,
 }: {
   tab: StockTab;
   from: string;
   to: string;
   customerId: string;
   customers: StockModuleCustomer[];
+  productId?: string;
 }) {
   const entries =
     tab === "consumibles"
-      ? await loadConsumiblesEntries(from, to, customerId || undefined)
+      ? await loadConsumiblesEntries(
+          from,
+          to,
+          customerId || undefined,
+          STOCK_HISTORY_LIMIT,
+          productId,
+        )
       : tab === "activos"
-        ? await loadActivosEntries(from, to, customerId || undefined)
-        : await loadDesperdiciosEntries(from, to, customerId || undefined);
+        ? await loadActivosEntries(
+            from,
+            to,
+            customerId || undefined,
+            STOCK_HISTORY_LIMIT,
+            productId,
+          )
+        : await loadDesperdiciosEntries(
+            from,
+            to,
+            customerId || undefined,
+            STOCK_HISTORY_LIMIT,
+            productId,
+          );
 
   return (
     <AdminStockReports
@@ -117,6 +150,7 @@ export default async function AdminStockPage({
     from?: string;
     to?: string;
     customer?: string;
+    product?: string;
   }>;
 }) {
   const [params] = await Promise.all([
@@ -125,7 +159,7 @@ export default async function AdminStockPage({
   ]);
   const tab: StockTab = parseStockTab(params.tab);
   const { from, to } = resolveStockDateRange(params.from, params.to);
-  const stockModule =
+  const stockModule: StockModuleKey =
     tab === "consumibles"
       ? "CONSUMABLES"
       : tab === "activos"
@@ -133,6 +167,7 @@ export default async function AdminStockPage({
         : "DESPERDICIOS";
   const customers = await moduleCustomers(stockModule);
   const customerId = resolveStockCustomerId(customers, params.customer);
+  const product = await resolveStockFilterProduct(stockModule, params.product);
 
   return (
     <div className="space-y-6">
@@ -173,6 +208,8 @@ export default async function AdminStockPage({
           to={to}
           customerId={customerId}
           customers={customers}
+          stockModule={stockModule}
+          product={product}
         >
           <Suspense fallback={<StockHistorialFallback />}>
             <StockHistorial
@@ -181,6 +218,7 @@ export default async function AdminStockPage({
               to={to}
               customerId={customerId}
               customers={customers}
+              productId={product?.id}
             />
           </Suspense>
         </StockPanel>

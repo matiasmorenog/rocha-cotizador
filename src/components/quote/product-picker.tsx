@@ -52,6 +52,8 @@ type ProductPickerProps = {
   filterProduct?: (product: CatalogSearchProduct) => boolean;
   /** Focus the search field after adding a line, etc. */
   inputRef?: RefObject<HTMLInputElement | null>;
+  /** Avoid duplicate ids when more than one picker is on the page. */
+  inputId?: string;
 };
 
 type ProductOptionProps = {
@@ -108,6 +110,7 @@ function ProductPickerInner({
   onChange,
   filterProduct,
   inputRef,
+  inputId = "product-search",
 }: ProductPickerProps) {
   const catalog = useProductCatalog({ customerId });
   const { searchAsync } = catalog;
@@ -521,16 +524,18 @@ function ProductPickerInner({
     }
   }
 
+  const listboxId = `${inputId}-listbox`;
+
   return (
     <div className="relative" ref={boxRef}>
-      <Label htmlFor="product-search">Producto</Label>
+      <Label htmlFor={inputId}>Producto</Label>
       <div className="relative" ref={anchorRef}>
         <Input
           ref={inputElRef}
-          id="product-search"
+          id={inputId}
           role="combobox"
           aria-expanded={floatingOpen}
-          aria-controls="product-search-listbox"
+          aria-controls={listboxId}
           aria-autocomplete="list"
           aria-busy={searchBusy || catalogLoading || undefined}
           aria-activedescendant={
@@ -587,7 +592,7 @@ function ProductPickerInner({
               {floatView.showList ? (
                 <ul
                   ref={listRef}
-                  id="product-search-listbox"
+                  id={listboxId}
                   role="listbox"
                   className="max-h-64 overflow-auto rounded-md border border-neutral-200 bg-white shadow-lg"
                   onMouseOver={onListMouseOver}
@@ -622,7 +627,7 @@ function ProductPickerInner({
               ) : null}
               {floatView.showSearching ? (
                 <p
-                  id="product-search-listbox"
+                  id={listboxId}
                   role="status"
                   className="rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-500 shadow-lg"
                 >
