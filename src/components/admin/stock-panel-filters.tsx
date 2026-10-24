@@ -68,7 +68,7 @@ export function StockPanelFilters({
     if (toYmd) params.set("to", toYmd);
     if (customerValue) params.set("customer", customerValue);
     if (picked?.id) params.set("product", picked.id);
-    router.push(`/admin/stock?${params.toString()}`);
+    router.push(`/admin/stock?${params.toString()}`, { scroll: false });
   }
 
   return (

@@ -220,6 +220,7 @@ export function AdminStockSummarySection({
                                   ? undefined
                                   : row.productId,
                               }),
+                              { scroll: false },
                             );
                           }}
                           onKeyDown={(e) => {
@@ -235,6 +236,7 @@ export function AdminStockSummarySection({
                                   ? undefined
                                   : row.productId,
                               }),
+                              { scroll: false },
                             );
                           }}
                         >
