@@ -71,6 +71,7 @@ export function StockRecountForm({
   customerStockModule,
   open: openProp,
   onOpenChange,
+  onDraftChange,
 }: {
   title: string;
   description: string;
@@ -85,6 +86,8 @@ export function StockRecountForm({
   customerStockModule?: StockModuleKey;
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
+  /** Header button: draft minimized (session alive, modal closed). */
+  onDraftChange?: (draft: { pending: boolean; itemCount: number }) => void;
 }) {
   const router = useRouter();
   const isClient = useIsClient();
@@ -122,6 +125,16 @@ export function StockRecountForm({
   if (open && !sessionActive) {
     setSessionActive(true);
   }
+
+  const draftPending = sessionActive && !open;
+  const draftItemCount = lines.length;
+
+  useEffect(() => {
+    onDraftChange?.({ pending: draftPending, itemCount: draftItemCount });
+    return () => {
+      onDraftChange?.({ pending: false, itemCount: 0 });
+    };
+  }, [draftPending, draftItemCount, onDraftChange]);
 
   useEffect(() => {
     if (!open) return;
@@ -621,13 +634,31 @@ export function StockRecountForm({
 
 export function StockRecountTrigger({
   onClick,
+  pending = false,
+  itemCount = 0,
 }: {
   onClick: () => void;
+  /** Minimized draft — label + badge so header shows pending work. */
+  pending?: boolean;
+  itemCount?: number;
 }) {
   return (
-    <Button type="button" onClick={onClick}>
+    <Button
+      type="button"
+      onClick={onClick}
+      aria-label={
+        pending
+          ? `Continuar recuento pendiente, ${itemCount === 1 ? "1 ítem" : `${itemCount} ítems`}`
+          : "Registrar stock"
+      }
+    >
       <ClipboardPlus className="mr-1.5 h-4 w-4" aria-hidden />
-      Registrar stock
+      {pending ? "Continuar recuento" : "Registrar stock"}
+      {pending ? (
+        <span className="ml-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-white/20 px-1.5 py-0.5 text-xs font-medium tabular-nums">
+          {itemCount}
+        </span>
+      ) : null}
     </Button>
   );
 }
