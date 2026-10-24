@@ -13,6 +13,7 @@ import { AdminCustomerName } from "@/components/admin/admin-customer-name";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { Input } from "@/components/ui/input";
 import { whatsappUrl } from "@/lib/whatsapp";
 import { filterFoldedSearch } from "@/lib/search-fold";
@@ -25,6 +26,7 @@ import {
 import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
 import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
 import { useSelectedRow } from "@/hooks/use-selected-row";
+import { sortRows, useTableSort } from "@/hooks/use-table-sort";
 import {
   CUSTOMER_ACCOUNT_STATUS_LABELS,
   type CustomerModuleFlags,
@@ -54,6 +56,14 @@ export type PriceListOption = {
   isBase?: boolean;
 };
 
+type CustomerSortKey =
+  | "code"
+  | "name"
+  | "address"
+  | "phone"
+  | "lista"
+  | "estado";
+
 export function CustomersAdminPanel({
   customers,
   priceLists,
@@ -68,6 +78,7 @@ export function CustomersAdminPanel({
   const [editingId, setEditingId] = useState<string | null>(
     initialEditId ?? null,
   );
+  const { sort, toggle } = useTableSort<CustomerSortKey>();
 
   const filtered = useMemo(
     () =>
@@ -79,22 +90,35 @@ export function CustomersAdminPanel({
     [customers, query],
   );
 
+  const sorted = useMemo(
+    () =>
+      sortRows(filtered, sort, {
+        code: (c) => c.code,
+        name: (c) => c.name,
+        address: (c) => c.address,
+        phone: (c) => c.phone,
+        lista: (c) => c.priceListName ?? "Precio base",
+        estado: (c) => (c.active ? 1 : 0),
+      }),
+    [filtered, sort],
+  );
+
   const {
     visible,
     hasMore,
     revealMore,
     total,
-  } = useIncrementalReveal(filtered, {
+  } = useIncrementalReveal(sorted, {
     initial: INCREMENTAL_REVEAL_INITIAL,
     step: INCREMENTAL_REVEAL_STEP,
-    resetKey: query,
+    resetKey: `${query}|${sort?.key ?? ""}|${sort?.dir ?? ""}`,
   });
 
   const tableHeightLockRef = useRef<HTMLDivElement>(null);
   useSmoothListHeight(tableHeightLockRef, visible.length);
 
   const tableRef = useRef<HTMLTableElement>(null);
-  useSmoothColumnWidths(tableRef, `${query}|${visible.length}`);
+  useSmoothColumnWidths(tableRef, `${query}|${visible.length}|${sort?.key ?? ""}`);
   const { rowProps } = useSelectedRow(visible.map((c) => c.id));
 
   const editing = editingId
@@ -174,17 +198,54 @@ export function CustomersAdminPanel({
           <table ref={tableRef} className="w-full min-w-[40rem] text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
-                <th className="px-3 py-2">Código</th>
-                <th className="px-3 py-2">Nombre</th>
-                <th className="px-3 py-2">Dirección</th>
-                <th className="px-3 py-2 whitespace-nowrap">Teléfono</th>
-                <th className="px-3 py-2">Lista</th>
-                <th className="px-3 py-2">Estado</th>
+                <SortableTh
+                  label="Código"
+                  sortKey="code"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
+                <SortableTh
+                  label="Nombre"
+                  sortKey="name"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
+                <SortableTh
+                  label="Dirección"
+                  sortKey="address"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
+                <SortableTh
+                  label="Teléfono"
+                  sortKey="phone"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                  className="whitespace-nowrap"
+                />
+                <SortableTh
+                  label="Lista"
+                  sortKey="lista"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
+                <SortableTh
+                  label="Estado"
+                  sortKey="estado"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
                 <th className="px-3 py-2" />
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {sorted.length === 0 ? (
                 <tr>
                   <td
                     colSpan={7}

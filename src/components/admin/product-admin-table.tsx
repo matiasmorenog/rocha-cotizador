@@ -29,6 +29,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { SortableTh } from "@/components/ui/sortable-th";
+import { sortRows, useTableSort } from "@/hooks/use-table-sort";
 import { cn, formatArInput, formatPrice, parseArNumber } from "@/lib/utils";
 import { notifyCatalogStale } from "@/lib/client-catalog-cache";
 import { dispatchAdminInAppToast } from "@/lib/push-sw-client";
@@ -451,6 +453,7 @@ export function ProductAdminTable({
   const [editingId, setEditingId] = useState<string | null>(null);
   const activeLists = priceLists.filter((l) => l.active);
   const isBusy = editingId !== null;
+  const { sort, toggle } = useTableSort<string>();
 
   const filtered = useMemo(
     () =>
@@ -462,22 +465,51 @@ export function ProductAdminTable({
     [products, query],
   );
 
+  const sorted = useMemo(() => {
+    const getters: Record<
+      string,
+      (p: ProductTableRow) => string | number | boolean | null
+    > = {
+      code: (p) => p.code,
+      name: (p) => p.name,
+      rubro: (p) => p.rubro,
+      base: (p) => p.basePrice,
+      stock: (p) =>
+        PRODUCT_STOCK_KIND_LABELS[resolveProductStockKind(p.stockKind)],
+      available: (p) => (p.available ? 1 : 0),
+      measure: (p) =>
+        normalizeAllowsUnitOrder(
+          resolveProductStockKind(p.stockKind),
+          p.allowsUnitOrder,
+        )
+          ? 1
+          : 0,
+    };
+    for (const list of activeLists) {
+      getters[`list:${list.id}`] = (p) => p.listPrices[list.id] ?? null;
+    }
+    return sortRows(filtered, sort, getters);
+  }, [filtered, sort, activeLists]);
+
   const {
     visible,
     hasMore,
     revealMore,
     total,
-  } = useIncrementalReveal(filtered, {
+  } = useIncrementalReveal(sorted, {
     initial: INCREMENTAL_REVEAL_INITIAL,
     step: INCREMENTAL_REVEAL_STEP,
-    resetKey: query,
+    resetKey: `${query}|${sort?.key ?? ""}|${sort?.dir ?? ""}`,
   });
 
   const tableHeightLockRef = useRef<HTMLDivElement>(null);
   useSmoothListHeight(tableHeightLockRef, visible.length);
 
   const tableRef = useRef<HTMLTableElement>(null);
-  useSmoothColumnWidths(tableRef, `${query}|${visible.length}`);
+  useSmoothColumnWidths(
+    tableRef,
+    `${query}|${visible.length}|${sort?.key ?? ""}`,
+  );
   const { rowProps } = useSelectedRow(visible.map((p) => p.id));
 
   const colSpan = 7 + activeLists.length;
@@ -535,18 +567,66 @@ export function ProductAdminTable({
           <table ref={tableRef} className="w-full min-w-[36rem] text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
-                <th className="px-3 py-2">Código</th>
-                <th className="px-3 py-2">Nombre</th>
-                <th className="px-3 py-2">Tipo</th>
-                <th className="px-3 py-2">Base</th>
+                <SortableTh
+                  label="Código"
+                  sortKey="code"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
+                <SortableTh
+                  label="Nombre"
+                  sortKey="name"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
+                <SortableTh
+                  label="Tipo"
+                  sortKey="rubro"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
+                <SortableTh
+                  label="Base"
+                  sortKey="base"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
                 {activeLists.map((l) => (
-                  <th key={l.id} className="whitespace-nowrap px-3 py-2">
-                    {l.name}
-                  </th>
+                  <SortableTh
+                    key={l.id}
+                    label={l.name}
+                    sortKey={`list:${l.id}`}
+                    activeKey={sort?.key}
+                    dir={sort?.dir}
+                    onToggle={toggle}
+                    className="whitespace-nowrap"
+                  />
                 ))}
-                <th className="px-3 py-2">Stock</th>
-                <th className="px-3 py-2">Habilitado</th>
-                <th className="px-3 py-2">Medida</th>
+                <SortableTh
+                  label="Stock"
+                  sortKey="stock"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
+                <SortableTh
+                  label="Habilitado"
+                  sortKey="available"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
+                <SortableTh
+                  label="Medida"
+                  sortKey="measure"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                />
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -579,7 +659,7 @@ export function ProductAdminTable({
                 shown={visible.length}
                 total={total}
               />
-              {filtered.length === 0 ? (
+              {sorted.length === 0 ? (
                 <tr>
                   <td
                     colSpan={colSpan}

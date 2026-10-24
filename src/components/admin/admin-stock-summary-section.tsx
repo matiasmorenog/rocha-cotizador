@@ -1,18 +1,43 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { StockTab } from "@/lib/admin-stock-data";
-import type { StockSummaryPayload } from "@/lib/admin-stock-summary-shared";
+import type {
+  StockSummaryPayload,
+  StockSummaryProductRow,
+} from "@/lib/admin-stock-summary-shared";
 import { ADMIN_STOCK_SUMMARY_REFRESH_EVENT } from "@/lib/admin-stock-summary-refresh";
 import { AdminStockSummaryChart } from "@/components/admin/admin-stock-summary-chart";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { SortableTh } from "@/components/ui/sortable-th";
 import {
   flipHeightFrom,
   SEARCH_TABLE_RESIZE_MS,
 } from "@/hooks/use-smooth-list-height";
+import { sortRows, useTableSort } from "@/hooks/use-table-sort";
 import { cn, formatPrice, formatQty } from "@/lib/utils";
 import { formatDeliveryDateDisplay, parseDateOnlyYmd } from "@/lib/delivery-date";
+
+type ProductSortKey =
+  | "name"
+  | "qty"
+  | "basePrice"
+  | "totalCost"
+  | "avgCost"
+  | "lastEntry";
+
+const PRODUCT_SORT_GETTERS: Record<
+  ProductSortKey,
+  (row: StockSummaryProductRow) => string | number | null
+> = {
+  name: (row) => `${row.name}\0${row.code}`,
+  qty: (row) => row.totalQty,
+  basePrice: (row) => row.basePrice,
+  totalCost: (row) => row.totalCost,
+  avgCost: (row) => row.avgCostPerDay,
+  lastEntry: (row) => row.lastEntryDate,
+};
 
 function formatLastEntryDate(value: string | null): string {
   if (!value) return "—";
@@ -59,6 +84,7 @@ export function AdminStockSummarySection({
     data: StockSummaryPayload | null;
     error: string | null;
   }>({ key: "", data: null, error: null });
+  const { sort, toggle } = useTableSort<ProductSortKey>();
 
   const loading = snapshot.key !== fetchKey;
   /** Keep last successful payload while refetching — blur instead of empty flash. */
@@ -69,6 +95,14 @@ export function AdminStockSummarySection({
   const tableShellRef = useRef<HTMLDivElement>(null);
   /** Height of Por producto shell measured before swapping to the new payload. */
   const heightBeforeSwapRef = useRef<number | null>(null);
+  /** Unfiltered daily peak — keep chart Y scale when drilling into one product. */
+  const [chartYMax, setChartYMax] = useState(1);
+
+  const sortedProducts = useMemo(
+    () =>
+      data ? sortRows(data.products, sort, PRODUCT_SORT_GETTERS) : [],
+    [data, sort],
+  );
 
   useEffect(() => {
     const bump = () => setRefreshNonce((n) => n + 1);
@@ -102,6 +136,11 @@ export function AdminStockSummarySection({
         const shell = tableShellRef.current;
         if (shell) {
           heightBeforeSwapRef.current = shell.getBoundingClientRect().height;
+        }
+        if (!productId) {
+          setChartYMax(
+            Math.max(...payload.daily.map((p) => p.totalCost), 1),
+          );
         }
         setSnapshot({ key: fetchKey, data: payload, error: null });
       })
@@ -190,30 +229,70 @@ export function AdminStockSummarySection({
                   Sin líneas en el período con los filtros actuales.
                 </p>
               ) : (
-                <DataTableScroll className="data-table-rows-2l">
+                <DataTableScroll
+                  className="data-table-rows-2l data-table-max-rows-6"
+                  bottomScrollFade
+                >
                   <table className="w-full min-w-[40rem] text-sm">
-                    <thead className="bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
+                    <thead className="sticky top-0 z-[1] bg-neutral-50 text-left text-xs uppercase tracking-wide text-neutral-500">
                       <tr>
-                        <th className="px-3 py-2 font-medium">Producto</th>
-                        <th className="px-3 py-2 font-medium text-right">
-                          Cantidad
-                        </th>
-                        <th className="px-3 py-2 font-medium text-right">
-                          Precio base
-                        </th>
-                        <th className="px-3 py-2 font-medium text-right">
-                          Costo período
-                        </th>
-                        <th className="px-3 py-2 font-medium text-right">
-                          Promedio / día (costo)
-                        </th>
-                        <th className="px-3 py-2 font-medium text-right">
-                          Última carga
-                        </th>
+                        <SortableTh
+                          label="Producto"
+                          sortKey="name"
+                          activeKey={sort?.key}
+                          dir={sort?.dir}
+                          onToggle={toggle}
+                          className="text-xs uppercase tracking-wide"
+                        />
+                        <SortableTh
+                          label="Cantidad"
+                          sortKey="qty"
+                          activeKey={sort?.key}
+                          dir={sort?.dir}
+                          onToggle={toggle}
+                          align="right"
+                          className="text-xs uppercase tracking-wide"
+                        />
+                        <SortableTh
+                          label="Precio base"
+                          sortKey="basePrice"
+                          activeKey={sort?.key}
+                          dir={sort?.dir}
+                          onToggle={toggle}
+                          align="right"
+                          className="text-xs uppercase tracking-wide"
+                        />
+                        <SortableTh
+                          label="Costo período"
+                          sortKey="totalCost"
+                          activeKey={sort?.key}
+                          dir={sort?.dir}
+                          onToggle={toggle}
+                          align="right"
+                          className="text-xs uppercase tracking-wide"
+                        />
+                        <SortableTh
+                          label="Promedio / día (costo)"
+                          sortKey="avgCost"
+                          activeKey={sort?.key}
+                          dir={sort?.dir}
+                          onToggle={toggle}
+                          align="right"
+                          className="text-xs uppercase tracking-wide"
+                        />
+                        <SortableTh
+                          label="Última carga"
+                          sortKey="lastEntry"
+                          activeKey={sort?.key}
+                          dir={sort?.dir}
+                          onToggle={toggle}
+                          align="right"
+                          className="text-xs uppercase tracking-wide"
+                        />
                       </tr>
                     </thead>
                     <tbody>
-                      {data.products.map((row) => {
+                      {sortedProducts.map((row) => {
                         const selected = productId === row.productId;
                         return (
                           <tr
@@ -298,7 +377,11 @@ export function AdminStockSummarySection({
             <h3 className="text-sm font-medium text-neutral-900">
               Evolución diaria
             </h3>
-            <AdminStockSummaryChart daily={data.daily} />
+            <AdminStockSummaryChart
+              key={snapshot.key}
+              daily={data.daily}
+              yMax={productId ? chartYMax : undefined}
+            />
           </div>
         </div>
       ) : null}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import type { StockSummaryDailyPoint } from "@/lib/admin-stock-summary-shared";
 import { cn, formatPrice } from "@/lib/utils";
 
@@ -70,7 +70,13 @@ function ChartTooltip({
   );
 }
 
-function DailyLineSvg({ plotPoints }: { plotPoints: PlotPoint[] }) {
+function DailyLineSvg({
+  plotPoints,
+  gradientId,
+}: {
+  plotPoints: PlotPoint[];
+  gradientId: string;
+}) {
   const plotHeight = PLOT.height - PLOT.top - PLOT.bottom;
   const bottomY = PLOT.top + plotHeight;
 
@@ -98,7 +104,7 @@ function DailyLineSvg({ plotPoints }: { plotPoints: PlotPoint[] }) {
       aria-hidden
     >
       <defs>
-        <linearGradient id="stock-daily-area" x1="0" x2="0" y1="0" y2="1">
+        <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
           <stop
             offset="0%"
             stopColor="var(--brand-primary)"
@@ -129,7 +135,7 @@ function DailyLineSvg({ plotPoints }: { plotPoints: PlotPoint[] }) {
 
       {linePath ? (
         <g>
-          <path d={areaPath} fill="url(#stock-daily-area)" />
+          <path d={areaPath} fill={`url(#${gradientId})`} />
           <path
             d={linePath}
             fill="none"
@@ -147,14 +153,23 @@ function DailyLineSvg({ plotPoints }: { plotPoints: PlotPoint[] }) {
 
 export function AdminStockSummaryChart({
   daily,
-  emptyLabel = "Sin cargas en el período.",
+  emptyLabel = "Sin datos en el período.",
+  /** Pin Y scale (e.g. unfiltered period max) so a product filter visibly shrinks the line. */
+  yMax,
 }: {
   daily: StockSummaryDailyPoint[];
   emptyLabel?: string;
+  yMax?: number;
 }) {
   const [activeDate, setActiveDate] = useState<string | null>(null);
+  const reactId = useId();
+  const gradientId = `stock-daily-area-${reactId.replace(/:/g, "")}`;
 
-  const maxTotal = Math.max(...daily.map((point) => point.totalCost), 1);
+  const dataMax = Math.max(...daily.map((point) => point.totalCost), 1);
+  const maxTotal =
+    yMax != null && Number.isFinite(yMax) && yMax > 0
+      ? Math.max(yMax, dataMax)
+      : dataMax;
   const hasData = daily.some((point) => point.totalCost > 0);
   const plotPoints = useMemo(
     () => buildPlotPoints(daily, maxTotal),
@@ -178,16 +193,19 @@ export function AdminStockSummaryChart({
   return (
     <div>
       <p className="mb-2 text-xs text-neutral-400">
-        Costo diario a precio base en el período. Pasá el mouse para detalles.
+        Costo diario a precio base en el período
+        {yMax != null ? " (escala del total, sin filtro)" : ""}. Pasá el mouse
+        para detalles.
       </p>
       <div
         className={cn(
-          daily.length > 14 && "-mx-1 overflow-x-auto overflow-y-visible px-1 pb-1 sm:-mx-2 sm:px-2",
+          daily.length > 14 &&
+            "-mx-1 overflow-x-auto overflow-y-visible px-1 pb-1 sm:-mx-2 sm:px-2",
         )}
       >
         <div className={cn(daily.length > 14 ? "min-w-[28rem]" : "w-full")}>
           <div className="relative h-44 overflow-visible sm:h-48">
-            <DailyLineSvg plotPoints={plotPoints} />
+            <DailyLineSvg plotPoints={plotPoints} gradientId={gradientId} />
 
             {plotPoints.map((plot) => {
               const isActive = activeDate === plot.point.date;

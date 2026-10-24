@@ -108,15 +108,19 @@ export function DataTableScroll({
   children,
   className,
   id,
+  /** Soft fade at the bottom while more rows remain below the viewport. */
+  bottomScrollFade = false,
 }: {
   children: ReactNode;
   className?: string;
   id?: string;
+  bottomScrollFade?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
   const midOffset = useMidViewportOffset(containerRef);
   const chevronStyle = {
     top: midOffset != null ? `${midOffset}px` : "50%",
@@ -125,10 +129,16 @@ export function DataTableScroll({
   const updateEdges = useCallback(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const maxScroll = el.scrollWidth - el.clientWidth;
+    const maxScrollX = el.scrollWidth - el.clientWidth;
     setCanScrollLeft(el.scrollLeft > EDGE_TOLERANCE_PX);
-    setCanScrollRight(el.scrollLeft < maxScroll - EDGE_TOLERANCE_PX);
-  }, []);
+    setCanScrollRight(el.scrollLeft < maxScrollX - EDGE_TOLERANCE_PX);
+    if (bottomScrollFade) {
+      const maxScrollY = el.scrollHeight - el.clientHeight;
+      setCanScrollDown(maxScrollY > EDGE_TOLERANCE_PX && el.scrollTop < maxScrollY - EDGE_TOLERANCE_PX);
+    } else {
+      setCanScrollDown(false);
+    }
+  }, [bottomScrollFade]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -173,6 +183,12 @@ export function DataTableScroll({
       >
         {children}
       </div>
+      {bottomScrollFade && canScrollDown ? (
+        <div
+          className="data-table-bottom-fade pointer-events-none absolute inset-x-0 bottom-0 z-[5] h-10 rounded-b-lg"
+          aria-hidden
+        />
+      ) : null}
       {canScrollLeft ? (
         <button
           type="button"
