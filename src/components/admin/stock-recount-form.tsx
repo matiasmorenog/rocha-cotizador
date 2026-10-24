@@ -377,6 +377,7 @@ export function StockRecountForm({
           aria-label="Minimizar"
           onClick={minimize}
           disabled={saving}
+          className="shadow-none"
         >
           <X className="h-4 w-4" aria-hidden />
         </Button>
