@@ -1,11 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
 import { fetchBlueDollarRate } from "@/lib/blue-dollar";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { Label } from "@/components/ui/label";
 import {
   AR_PRICE_FORMAT,
@@ -21,6 +22,16 @@ import {
 } from "@/lib/subscription-payments";
 import { cn } from "@/lib/utils";
 import { useExitPresence } from "@/hooks/use-exit-presence";
+import { sortRows, useTableSort } from "@/hooks/use-table-sort";
+
+type PaymentSortKey =
+  | "period"
+  | "estado"
+  | "fecha"
+  | "usd"
+  | "ars"
+  | "fx"
+  | "note";
 
 function toArgentinaDateOnly(date: Date): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -71,9 +82,25 @@ export function PlatformPaymentsPanel({
   const { year: currentYear, month: currentMonth } = argentinaYearMonth();
   const [payments, setPayments] = useState(initial);
   const [creating, setCreating] = useState(false);
+  const { sort, toggle } = useTableSort<PaymentSortKey>();
   const { present, exiting, animKey } = useExitPresence(
     creating,
     PAYMENT_FORM_EXIT_MS,
+  );
+
+  const sortedPayments = useMemo(
+    () =>
+      sortRows(payments, sort, {
+        period: (p) =>
+          `${p.periodYear}-${String(p.periodMonth).padStart(2, "0")}`,
+        estado: (p) => (p.paidAt ? 1 : 0),
+        fecha: (p) => p.paidAt,
+        usd: (p) => p.amountUsd,
+        ars: (p) => p.amountArs,
+        fx: (p) => p.fxRate,
+        note: (p) => p.note,
+      }),
+    [payments, sort],
   );
 
   return (
@@ -119,17 +146,66 @@ export function PlatformPaymentsPanel({
           <table className="min-w-full text-left text-sm">
             <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
               <tr>
-                <th className="px-3 py-2 font-medium">Período</th>
-                <th className="px-3 py-2 font-medium">Estado</th>
-                <th className="px-3 py-2 font-medium">Fecha</th>
-                <th className="px-3 py-2 font-medium">USD</th>
-                <th className="px-3 py-2 font-medium">ARS</th>
-                <th className="px-3 py-2 font-medium">Tipo de cambio</th>
-                <th className="px-3 py-2 font-medium">Nota</th>
+                <SortableTh
+                  label="Período"
+                  sortKey="period"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                  className="text-xs uppercase tracking-wide"
+                />
+                <SortableTh
+                  label="Estado"
+                  sortKey="estado"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                  className="text-xs uppercase tracking-wide"
+                />
+                <SortableTh
+                  label="Fecha"
+                  sortKey="fecha"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                  className="text-xs uppercase tracking-wide"
+                />
+                <SortableTh
+                  label="USD"
+                  sortKey="usd"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                  className="text-xs uppercase tracking-wide"
+                />
+                <SortableTh
+                  label="ARS"
+                  sortKey="ars"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                  className="text-xs uppercase tracking-wide"
+                />
+                <SortableTh
+                  label="Tipo de cambio"
+                  sortKey="fx"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                  className="text-xs uppercase tracking-wide"
+                />
+                <SortableTh
+                  label="Nota"
+                  sortKey="note"
+                  activeKey={sort?.key}
+                  dir={sort?.dir}
+                  onToggle={toggle}
+                  className="text-xs uppercase tracking-wide"
+                />
               </tr>
             </thead>
             <tbody>
-              {payments.map((p) => {
+              {sortedPayments.map((p) => {
                 const paid = Boolean(p.paidAt);
                 return (
                   <tr

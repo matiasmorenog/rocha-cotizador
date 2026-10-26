@@ -26,7 +26,7 @@ export function CustomerStockDateFilters({
     const toYmd = toValue.trim();
     if (fromYmd) params.set("from", fromYmd);
     if (toYmd) params.set("to", toYmd);
-    router.push(`/stock?${params.toString()}`);
+    router.push(`/stock?${params.toString()}`, { scroll: false });
   }
 
   return (

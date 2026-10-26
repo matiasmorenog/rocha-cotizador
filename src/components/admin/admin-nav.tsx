@@ -11,7 +11,6 @@ import {
   UserCog,
   Users,
   Warehouse,
-  X,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -21,7 +20,6 @@ import {
 import { useShellNavEnterOnce } from "@/hooks/use-shell-nav-enter-once";
 import { StaffPreviewControl } from "@/components/admin/staff-preview-ui";
 import { SolapasNavLink, SolapasNavList } from "@/components/ui/solapas-tabs";
-import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import type { StaffPermission } from "@/lib/staff-permissions";
 import { cn } from "@/lib/utils";
 import { useAdminNavStore } from "@/stores/admin-nav-store";
@@ -144,8 +142,6 @@ function AdminSidebarUserInfo({
 function AdminSidebarPanel({
   pathname,
   onNavigate,
-  showCloseButton = false,
-  onClose,
   permissions,
   userName,
   userEmail,
@@ -154,8 +150,6 @@ function AdminSidebarPanel({
 }: {
   pathname: string;
   onNavigate?: () => void;
-  showCloseButton?: boolean;
-  onClose?: () => void;
   permissions: StaffPermission[];
   userName?: string | null;
   userEmail?: string | null;
@@ -164,21 +158,6 @@ function AdminSidebarPanel({
 }) {
   return (
     <div className="flex h-auto flex-col">
-      {showCloseButton ? (
-        <div className="mb-3 flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Cerrar menú"
-            className={cn(
-              "rounded-md p-1.5 text-neutral-500 transition-colors hover:bg-neutral-100 hover:text-neutral-900",
-              FOCUS_BRAND_OUTLINE,
-            )}
-          >
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-      ) : null}
       <NavLinks
         pathname={pathname}
         onNavigate={onNavigate}
@@ -274,8 +253,6 @@ function AdminMobileDrawer({
         <AdminSidebarPanel
           pathname={pathname}
           onNavigate={closeForNavigate}
-          showCloseButton
-          onClose={close}
           permissions={permissions}
           userName={userName}
           userEmail={userEmail}

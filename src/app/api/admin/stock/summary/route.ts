@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireStaffApi } from "@/lib/api-auth";
 import { getStockSummary } from "@/lib/admin-stock-summary";
+import { resolveStockFilterProduct } from "@/lib/admin-stock-data";
 import {
   parseStockSummaryTab,
   resolveStockDateRange,
 } from "@/lib/admin-stock-summary-shared";
+import type { StockModuleKey } from "@/lib/stock-product-kind-shared";
 
 /**
- * GET /api/admin/stock/summary?tab=desperdicios|consumibles|activos&customerId=&from=&to=
+ * GET /api/admin/stock/summary?tab=desperdicios|consumibles|activos&customerId=&from=&to=&productId=
  *
  * Server-side stock aggregates (quantities and base-price cost) for summary cards, product table, and chart.
  */
@@ -27,9 +29,25 @@ export async function GET(req: NextRequest) {
     params.get("to") ?? undefined,
   );
   const customerId = (params.get("customerId") ?? "").trim() || undefined;
+  const stockModule: StockModuleKey =
+    tab === "consumibles"
+      ? "CONSUMABLES"
+      : tab === "activos"
+        ? "ACTIVOS"
+        : "DESPERDICIOS";
+  const product = await resolveStockFilterProduct(
+    stockModule,
+    params.get("productId") ?? undefined,
+  );
 
   try {
-    const summary = await getStockSummary({ tab, from, to, customerId });
+    const summary = await getStockSummary({
+      tab,
+      from,
+      to,
+      customerId,
+      productId: product?.id,
+    });
     return NextResponse.json(summary, {
       headers: { "Cache-Control": "private, no-store, max-age=0" },
     });

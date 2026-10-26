@@ -1,14 +1,18 @@
 "use client";
 
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { RemitoAdminItemRows } from "@/components/quote/remito-admin-item-rows";
 import { useRemitoEditMode } from "@/components/quote/remito-edit-mode";
 import { DataTableScroll } from "@/components/ui/data-table";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
 import { SEARCH_TABLE_RESIZE_MS } from "@/hooks/use-smooth-list-height";
 import { useSelectedRow } from "@/hooks/use-selected-row";
+import { sortRows, useTableSort } from "@/hooks/use-table-sort";
 import { cn } from "@/lib/utils";
+
+type RemitoSortKey = "code" | "qty" | "name" | "price" | "importe";
 
 export type RemitoAdminLine = {
   itemId: string;
@@ -45,24 +49,73 @@ export function RemitoAdminTable({ quoteId, lines, canDeleteLine }: Props) {
   const colSpan = showEditChrome ? 6 : 5;
 
   const tableRef = useRef<HTMLTableElement>(null);
+  const { sort, toggle } = useTableSort<RemitoSortKey>();
+  const sortedLines = useMemo(
+    () =>
+      sortRows(lines, sort, {
+        code: (line) => line.productCode,
+        qty: (line) => line.qty,
+        name: (line) => line.productName,
+        price: (line) => line.unitPrice,
+        importe: (line) => line.lineTotal,
+      }),
+    [lines, sort],
+  );
   // Include showEditChrome so unmount after exit FLIP can releaseLock cleanly
   // (exit keeps a fixed-width lock until the actions column is gone).
   useSmoothColumnWidths(
     tableRef,
-    `${lines.length}|${editLayoutOpen}|${showEditChrome}`,
+    `${lines.length}|${editLayoutOpen}|${showEditChrome}|${sort?.key ?? ""}`,
   );
-  const { rowProps } = useSelectedRow(lines.map((line) => line.itemId));
+  const { rowProps } = useSelectedRow(sortedLines.map((line) => line.itemId));
 
   return (
     <DataTableScroll className="data-table-rows-2l rounded-none border-0 bg-transparent shadow-none">
       <table ref={tableRef} className="w-full min-w-[28rem] text-sm">
         <thead>
           <tr className="border-b border-neutral-200 text-left text-neutral-600">
-            <th className="py-2.5 pl-2 pr-2 font-medium">Cód.</th>
-            <th className="py-2.5 pr-2 font-medium">Cant.</th>
-            <th className="py-2.5 pr-2 font-medium">Artículo</th>
-            <th className="py-2.5 pr-2 text-right font-medium">Precio</th>
-            <th className="py-2.5 pr-2 text-right font-medium">Importe</th>
+            <SortableTh
+              label="Cód."
+              sortKey="code"
+              activeKey={sort?.key}
+              dir={sort?.dir}
+              onToggle={toggle}
+              className="py-2.5 pl-2 pr-2"
+            />
+            <SortableTh
+              label="Cant."
+              sortKey="qty"
+              activeKey={sort?.key}
+              dir={sort?.dir}
+              onToggle={toggle}
+              className="py-2.5 pr-2"
+            />
+            <SortableTh
+              label="Artículo"
+              sortKey="name"
+              activeKey={sort?.key}
+              dir={sort?.dir}
+              onToggle={toggle}
+              className="py-2.5 pr-2"
+            />
+            <SortableTh
+              label="Precio"
+              sortKey="price"
+              activeKey={sort?.key}
+              dir={sort?.dir}
+              onToggle={toggle}
+              align="right"
+              className="py-2.5 pr-2"
+            />
+            <SortableTh
+              label="Importe"
+              sortKey="importe"
+              activeKey={sort?.key}
+              dir={sort?.dir}
+              onToggle={toggle}
+              align="right"
+              className="py-2.5 pr-2"
+            />
             {showEditChrome ? (
               <th
                 className={cn(
@@ -76,7 +129,7 @@ export function RemitoAdminTable({ quoteId, lines, canDeleteLine }: Props) {
           </tr>
         </thead>
         <tbody className="divide-y divide-neutral-100">
-          {lines.map((line) => (
+          {sortedLines.map((line) => (
             <RemitoAdminItemRows
               key={line.itemId}
               quoteId={quoteId}

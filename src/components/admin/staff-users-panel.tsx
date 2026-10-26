@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { SortableTh } from "@/components/ui/sortable-th";
 import { useExitPresence } from "@/hooks/use-exit-presence";
+import { sortRows, useTableSort } from "@/hooks/use-table-sort";
 import {
   formatStaffPermissionLabels,
   staffSwitchesFromProfile,
@@ -19,6 +21,8 @@ import {
 import { ENTITY_ENABLED_LABELS } from "@/lib/entity-status-labels";
 import { cn } from "@/lib/utils";
 import type { StaffRole } from "@/types/auth";
+
+type StaffSortKey = "email" | "name" | "permisos" | "estado";
 
 type StaffUser = {
   id: string;
@@ -45,7 +49,17 @@ export function StaffUsersPanel({
     () => users.find((u) => u.id === editingId) ?? null,
     [users, editingId],
   );
-  const visibleUsers = users;
+  const { sort, toggle } = useTableSort<StaffSortKey>();
+  const visibleUsers = useMemo(
+    () =>
+      sortRows(users, sort, {
+        email: (u) => u.email,
+        name: (u) => u.name,
+        permisos: (u) => formatStaffPermissionLabels(u),
+        estado: (u) => (u.active ? 1 : 0),
+      }),
+    [users, sort],
+  );
   const showForm = Boolean(editing) || creating;
   const { present, exiting, animKey } = useExitPresence(showForm, 250);
 
@@ -111,10 +125,38 @@ export function StaffUsersPanel({
         <table className="min-w-full text-left text-sm">
           <thead className="border-b border-neutral-200 bg-neutral-50 text-xs uppercase tracking-wide text-neutral-500">
             <tr>
-              <th className="px-3 py-2 font-medium">Email</th>
-              <th className="px-3 py-2 font-medium">Nombre</th>
-              <th className="px-3 py-2 font-medium">Permisos</th>
-              <th className="px-3 py-2 font-medium">Estado</th>
+              <SortableTh
+                label="Email"
+                sortKey="email"
+                activeKey={sort?.key}
+                dir={sort?.dir}
+                onToggle={toggle}
+                className="text-xs uppercase tracking-wide"
+              />
+              <SortableTh
+                label="Nombre"
+                sortKey="name"
+                activeKey={sort?.key}
+                dir={sort?.dir}
+                onToggle={toggle}
+                className="text-xs uppercase tracking-wide"
+              />
+              <SortableTh
+                label="Permisos"
+                sortKey="permisos"
+                activeKey={sort?.key}
+                dir={sort?.dir}
+                onToggle={toggle}
+                className="text-xs uppercase tracking-wide"
+              />
+              <SortableTh
+                label="Estado"
+                sortKey="estado"
+                activeKey={sort?.key}
+                dir={sort?.dir}
+                onToggle={toggle}
+                className="text-xs uppercase tracking-wide"
+              />
               <th className="px-3 py-2 font-medium" />
             </tr>
           </thead>

@@ -1,16 +1,29 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 import { ClipboardPlus, Trash2 } from "lucide-react";
-import { useExitPresence } from "@/hooks/use-exit-presence";
 import { ProductPicker } from "@/components/quote/product-picker";
 import type { CatalogSearchProduct } from "@/components/quote/product-picker";
+import {
+  AdminDraftModal,
+  AdminDraftModalBody,
+  AdminDraftModalFooter,
+  AdminDraftModalHeader,
+  AdminDraftTrigger,
+} from "@/components/ui/admin-draft-modal";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
 import { Label } from "@/components/ui/label";
 import { ArNumberValueInput } from "@/components/ui/ar-number-input";
+import { useDraftSession } from "@/hooks/use-draft-session";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import {
   coerceStockUnitForProduct,
@@ -63,6 +76,7 @@ export function StockRecountForm({
   customerStockModule,
   open: openProp,
   onOpenChange,
+  onDraftChange,
 }: {
   title: string;
   description: string;
@@ -77,6 +91,8 @@ export function StockRecountForm({
   customerStockModule?: StockModuleKey;
   open?: boolean;
   onOpenChange?: (v: boolean) => void;
+  /** Header button: draft minimized (session alive, modal closed). */
+  onDraftChange?: (draft: { pending: boolean; itemCount: number }) => void;
 }) {
   const router = useRouter();
   const [customerId, setCustomerId] = useState(
@@ -95,8 +111,36 @@ export function StockRecountForm({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
+  const {
+    open,
+    setOpen,
+    sessionActive,
+    minimize,
+    endSession,
+    showShell,
+    showChip,
+    exiting,
+    animKey,
+  } = useDraftSession({
+    open: openProp,
+    onOpenChange,
+    itemCount: lines.length,
+    onDraftChange,
+  });
+
+  function discardDraft() {
+    setCustomerId(fixedCustomerId ?? customers[0]?.id ?? "");
+    setDateValue(ymdToPickerValue(todayYmdAr()));
+    setNotes("");
+    setLines([]);
+    setPicked(null);
+    setError(null);
+    setMessage(null);
+    endSession();
+  }
+
   useEffect(() => {
-    if (!activeCustomerId || !date) return;
+    if (!activeCustomerId || !date || !sessionActive) return;
 
     let cancelled = false;
 
@@ -120,7 +164,12 @@ export function StockRecountForm({
             productId: string;
             unit: string;
             qty: number;
-            product: { code: string; name: string; rubro: string | null; allowsUnitOrder: boolean };
+            product: {
+              code: string;
+              name: string;
+              rubro: string | null;
+              allowsUnitOrder: boolean;
+            };
           }>;
         } | null;
       };
@@ -151,7 +200,7 @@ export function StockRecountForm({
     return () => {
       cancelled = true;
     };
-  }, [apiPath, activeCustomerId, date, fixedCustomerId]);
+  }, [apiPath, activeCustomerId, date, fixedCustomerId, sessionActive]);
 
   const sortedLines = useMemo(
     () =>
@@ -264,222 +313,242 @@ export function StockRecountForm({
     if (refreshAdminSummary) {
       dispatchAdminStockSummaryRefresh();
     }
+    endSession();
     router.refresh();
   }
 
-  const [openInternal, setOpenInternal] = useState(false);
-  const controlled = openProp !== undefined;
-  const open = controlled ? openProp : openInternal;
-  const setOpen = (v: boolean) => {
-    if (controlled) onOpenChange?.(v);
-    else setOpenInternal(v);
-  };
-  const { present, exiting, animKey } = useExitPresence(open, 250);
+  const itemCount = lines.length;
+  const titleId = "stock-recount-title";
 
   return (
-    <div>
-      <div
-        className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
-        style={{ gridTemplateRows: present && !exiting ? "1fr" : "0fr" }}
+    <AdminDraftModal
+      open={open}
+      showShell={showShell}
+      showChip={showChip}
+      exiting={exiting}
+      animKey={animKey}
+      labelledBy={titleId}
+      onMinimize={minimize}
+      onResume={() => setOpen(true)}
+      chip={{
+        title: "Recuento en curso",
+        subtitle: `${itemCount === 1 ? "1 ítem" : `${itemCount} ítems`}${date ? ` · ${date}` : ""}`,
+        icon: ClipboardPlus,
+      }}
+    >
+      <form
+        onSubmit={onSubmit}
+        className="flex max-h-[min(90vh,52rem)] flex-col"
       >
-        <div className="min-h-0 overflow-hidden">
-          {present ? (
-            <form
-              key={animKey}
-              onSubmit={onSubmit}
-              className={cn(
-                "space-y-4 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm",
-                exiting ? "payment-form-exit" : "payment-form-enter",
-              )}
-            >
-      <div>
-        <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
-        <p className="text-sm text-neutral-600">{description}</p>
-      </div>
+        <AdminDraftModalHeader
+          titleId={titleId}
+          title={title}
+          description={description}
+        />
 
-      <div className={cn("grid gap-3", fixedCustomerId ? "" : "sm:grid-cols-2")}>
-        {!fixedCustomerId ? (
+        <AdminDraftModalBody>
+        <div
+          className={cn("grid gap-3", fixedCustomerId ? "" : "sm:grid-cols-2")}
+        >
+          {!fixedCustomerId ? (
+            <div className="space-y-1">
+              <Label>Sucursal / cliente</Label>
+              <select
+                className={cn(
+                  "h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm",
+                  FOCUS_BRAND_BORDER,
+                )}
+                value={customerId}
+                onChange={(e) => setCustomerId(e.target.value)}
+                required
+              >
+                {customers.length === 0 ? (
+                  <option value="">Sin clientes con módulo</option>
+                ) : (
+                  customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.code} · {c.name}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          ) : null}
           <div className="space-y-1">
-            <Label>Sucursal / cliente</Label>
-            <select
-              className={cn(
-                "h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm",
-                FOCUS_BRAND_BORDER,
-              )}
-              value={customerId}
-              onChange={(e) => setCustomerId(e.target.value)}
-              required
-            >
-              {customers.length === 0 ? (
-                <option value="">Sin clientes con módulo</option>
-              ) : (
-                customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.code} · {c.name}
-                  </option>
-                ))
-              )}
-            </select>
+            <Label>Fecha</Label>
+            <DatetimeLocalPicker
+              value={dateValue}
+              onChange={setDateValue}
+              aria-label="Fecha de carga"
+            />
           </div>
-        ) : null}
+        </div>
+
         <div className="space-y-1">
-          <Label>Fecha</Label>
-          <DatetimeLocalPicker
-            value={dateValue}
-            onChange={setDateValue}
-            aria-label="Fecha de carga"
+          <Label>Observaciones</Label>
+          <textarea
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className={cn(
+              "flex w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm",
+              FOCUS_BRAND_BORDER,
+            )}
           />
         </div>
-      </div>
 
-      <div className="space-y-1">
-        <Label>Observaciones</Label>
-        <textarea
-          rows={2}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className={cn(
-            "flex w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm",
-            FOCUS_BRAND_BORDER,
-          )}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Agregar producto</Label>
-        <ProductPicker
-          value={picked}
-          adminStockModule={customerStockModule ? undefined : stockModule}
-          customerStockModule={customerStockModule}
-          filterProduct={filterProduct}
-          onChange={(p) => {
-            if (p) addProduct(p);
-            else setPicked(null);
-          }}
-        />
-        <p className="text-xs text-neutral-500">
-          {stockModule === "DESPERDICIOS"
-            ? "Solo panes, masas y rubros de desperdicio (no insumos ni regalo)."
-            : stockModule === "CONSUMABLES"
-              ? "Solo insumos y regalo (gaseosas, etc.) — no son bajas del día."
-              : "Solo productos marcados como activo del local (carritos, bandejas, etc.)."}
-        </p>
-      </div>
-
-      {loadingEntry ? (
-        <p className="text-sm text-neutral-500">Cargando carga del día…</p>
-      ) : lines.length === 0 ? (
-        <p className="text-sm text-neutral-500">
-          Buscá productos y agregalos a la lista. Solo se guardan líneas con
-          cantidad &gt; 0.
-        </p>
-      ) : (
-        <DataTableScroll>
-          <table className="w-full min-w-[36rem] text-left text-sm">
-            <thead className="bg-neutral-50 text-xs uppercase text-neutral-500">
-              <tr>
-                <th className="px-3 py-2">Producto</th>
-                <th className="px-3 py-2">Tipo</th>
-                <th className="px-3 py-2">Unidad</th>
-                <th className="px-3 py-2">Cantidad</th>
-                <th className="px-3 py-2" />
-              </tr>
-            </thead>
-            <tbody>
-              {sortedLines.map((l) => (
-                <tr key={l.productId} className="border-t border-neutral-100">
-                  <td className="px-3 py-2">
-                    <span className="font-mono text-xs text-neutral-500">
-                      {l.code}
-                    </span>{" "}
-                    {l.name}
-                  </td>
-                  <td className="px-3 py-2 text-neutral-600">
-                    {l.rubro ?? "—"}
-                  </td>
-                  <td className="px-3 py-2">
-                    {l.allowsUnitOrder ? (
-                      <select
-                        className={cn(
-                          "h-9 rounded-md border border-neutral-200 bg-white px-2 text-sm",
-                          FOCUS_BRAND_BORDER,
-                        )}
-                        value={l.unit}
-                        onChange={(e) =>
-                          updateLine(l.productId, {
-                            unit: e.target.value as ProductMeasureUnit,
-                          })
-                        }
-                        aria-label={`Unidad de ${l.name}`}
-                      >
-                        {stockUnitsForProduct(l.allowsUnitOrder).map((u) => (
-                          <option key={u} value={u}>
-                            {u === "kg" ? "Kg" : "Unidades"}
-                          </option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="text-neutral-700">unid.</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    <ArNumberValueInput
-                      value={l.qty}
-                      onValueChange={(qty) => updateLine(l.productId, { qty })}
-                      min={0}
-                      className="w-28"
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <button
-                      type="button"
-                      className="rounded p-1 text-neutral-500 hover:bg-neutral-100 hover:text-red-600"
-                      aria-label="Quitar"
-                      onClick={() => removeLine(l.productId)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </DataTableScroll>
-      )}
-
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      {message ? <p className="text-sm text-green-700">{message}</p> : null}
-
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setOpen(false)}
-          disabled={saving}
-        >
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={saving || customers.length === 0}>
-          {saving ? "Guardando…" : "Guardar carga"}
-        </Button>
-      </div>
-            </form>
-          ) : null}
+        <div className="space-y-2">
+          <Label>Agregar producto</Label>
+          <ProductPicker
+            value={picked}
+            adminStockModule={customerStockModule ? undefined : stockModule}
+            customerStockModule={customerStockModule}
+            filterProduct={filterProduct}
+            onChange={(p) => {
+              if (p) addProduct(p);
+              else setPicked(null);
+            }}
+          />
+          <p className="text-xs text-neutral-500">
+            {stockModule === "DESPERDICIOS"
+              ? "Solo panes, masas y rubros de desperdicio (no insumos ni regalo)."
+              : stockModule === "CONSUMABLES"
+                ? "Solo insumos y regalo (gaseosas, etc.) — no son bajas del día."
+                : "Solo productos marcados como activo del local (carritos, bandejas, etc.)."}
+          </p>
         </div>
-      </div>
-    </div>
+
+        {loadingEntry ? (
+          <p className="text-sm text-neutral-500">Cargando carga del día…</p>
+        ) : lines.length === 0 ? (
+          <p className="text-sm text-neutral-500">
+            Buscá productos y agregalos a la lista. Solo se guardan líneas con
+            cantidad &gt; 0.
+          </p>
+        ) : (
+          <DataTableScroll>
+            <table className="w-full min-w-[36rem] text-left text-sm">
+              <thead className="bg-neutral-50 text-xs uppercase text-neutral-500">
+                <tr>
+                  <th className="px-3 py-2">Producto</th>
+                  <th className="px-3 py-2">Tipo</th>
+                  <th className="px-3 py-2">Unidad</th>
+                  <th className="px-3 py-2">Cantidad</th>
+                  <th className="px-3 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {sortedLines.map((l) => (
+                  <tr key={l.productId} className="border-t border-neutral-100">
+                    <td className="px-3 py-2">
+                      <span className="font-mono text-xs text-neutral-500">
+                        {l.code}
+                      </span>{" "}
+                      {l.name}
+                    </td>
+                    <td className="px-3 py-2 text-neutral-600">
+                      {l.rubro ?? "—"}
+                    </td>
+                    <td className="px-3 py-2">
+                      {l.allowsUnitOrder ? (
+                        <select
+                          className={cn(
+                            "h-9 rounded-md border border-neutral-200 bg-white px-2 text-sm",
+                            FOCUS_BRAND_BORDER,
+                          )}
+                          value={l.unit}
+                          onChange={(e) =>
+                            updateLine(l.productId, {
+                              unit: e.target.value as ProductMeasureUnit,
+                            })
+                          }
+                          aria-label={`Unidad de ${l.name}`}
+                        >
+                          {stockUnitsForProduct(l.allowsUnitOrder).map((u) => (
+                            <option key={u} value={u}>
+                              {u === "kg" ? "Kg" : "Unidades"}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-neutral-700">unid.</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      <ArNumberValueInput
+                        value={l.qty}
+                        onValueChange={(qty) =>
+                          updateLine(l.productId, { qty })
+                        }
+                        min={0}
+                        className="w-28"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        className="rounded p-1 text-neutral-500 hover:bg-neutral-100 hover:text-red-600"
+                        aria-label="Quitar"
+                        onClick={() => removeLine(l.productId)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </DataTableScroll>
+        )}
+
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        {message ? <p className="text-sm text-green-700">{message}</p> : null}
+        </AdminDraftModalBody>
+
+        <AdminDraftModalFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={minimize}
+            disabled={saving}
+          >
+            Minimizar
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={discardDraft}
+            disabled={saving}
+          >
+            Descartar
+          </Button>
+          <Button type="submit" disabled={saving || customers.length === 0}>
+            {saving ? "Guardando…" : "Guardar carga"}
+          </Button>
+        </AdminDraftModalFooter>
+      </form>
+    </AdminDraftModal>
   );
 }
 
 export function StockRecountTrigger({
   onClick,
+  pending = false,
+  itemCount = 0,
 }: {
   onClick: () => void;
+  /** Minimized draft — label + badge so header shows pending work. */
+  pending?: boolean;
+  itemCount?: number;
 }) {
   return (
-    <Button type="button" onClick={onClick}>
-      <ClipboardPlus className="mr-1.5 h-4 w-4" aria-hidden />
-      Registrar stock
-    </Button>
+    <AdminDraftTrigger
+      onClick={onClick}
+      pending={pending}
+      itemCount={itemCount}
+      idleLabel="Registrar stock"
+      pendingLabel="Continuar recuento"
+      icon={ClipboardPlus}
+    />
   );
 }
