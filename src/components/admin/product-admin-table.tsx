@@ -1,7 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useRef, useState } from "react";
-import { useExitPresence } from "@/hooks/use-exit-presence";
+import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, PackagePlus, Pencil, X } from "lucide-react";
 import {
@@ -17,7 +16,7 @@ import {
   productOrderModeBadge,
   productOrderModeDescription,
 } from "@/lib/order-measure";
-import { Button } from "@/components/ui/button";
+import { AdminDraftTrigger } from "@/components/ui/admin-draft-modal";
 import { Badge } from "@/components/ui/badge";
 import {
   ENTITY_ENABLED_LABELS,
@@ -30,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { SortableTh } from "@/components/ui/sortable-th";
+import type { DraftSessionInfo } from "@/hooks/use-draft-session";
 import { sortRows, useTableSort } from "@/hooks/use-table-sort";
 import { cn, formatArInput, formatPrice, parseArNumber } from "@/lib/utils";
 import { notifyCatalogStale } from "@/lib/client-catalog-cache";
@@ -450,10 +450,17 @@ export function ProductAdminTable({
 }) {
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
+  const [createDraft, setCreateDraft] = useState<DraftSessionInfo>({
+    pending: false,
+    itemCount: 0,
+  });
   const [editingId, setEditingId] = useState<string | null>(null);
   const activeLists = priceLists.filter((l) => l.active);
   const isBusy = editingId !== null;
   const { sort, toggle } = useTableSort<string>();
+  const onCreateDraftChange = useCallback((next: DraftSessionInfo) => {
+    setCreateDraft(next);
+  }, []);
 
   const filtered = useMemo(
     () =>
@@ -513,36 +520,15 @@ export function ProductAdminTable({
   const { rowProps } = useSelectedRow(visible.map((p) => p.id));
 
   const colSpan = 7 + activeLists.length;
-  const {
-    present: formPresent,
-    exiting: formExiting,
-    animKey: formAnimKey,
-  } = useExitPresence(creating, 250);
 
   return (
     <div className="space-y-3">
-      <div
-        className="grid transition-[grid-template-rows] duration-[250ms] ease-in"
-        style={{
-          gridTemplateRows: formPresent && !formExiting ? "1fr" : "0fr",
-        }}
-      >
-        <div className="min-h-0 overflow-hidden">
-          {formPresent ? (
-            <div
-              key={formAnimKey}
-              className={cn(
-                formExiting ? "payment-form-exit" : "payment-form-enter",
-              )}
-            >
-              <ProductAdminForm
-                rubros={rubros}
-                onCancel={() => setCreating(false)}
-              />
-            </div>
-          ) : null}
-        </div>
-      </div>
+      <ProductAdminForm
+        rubros={rubros}
+        open={creating}
+        onOpenChange={setCreating}
+        onDraftChange={onCreateDraftChange}
+      />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input
           value={query}
@@ -551,16 +537,14 @@ export function ProductAdminTable({
           aria-label="Buscar productos"
           className="min-w-0 flex-1"
         />
-        {!creating ? (
-          <Button
-            type="button"
-            className="w-full shrink-0 sm:w-auto"
-            onClick={() => setCreating(true)}
-          >
-            <PackagePlus className="mr-1.5 h-4 w-4" aria-hidden />
-            Nuevo producto
-          </Button>
-        ) : null}
+        <AdminDraftTrigger
+          onClick={() => setCreating((v) => !v)}
+          pending={createDraft.pending}
+          itemCount={createDraft.itemCount}
+          idleLabel="Nuevo producto"
+          pendingLabel="Continuar producto"
+          icon={PackagePlus}
+        />
       </div>
       <div ref={tableHeightLockRef}>
         <DataTableScroll className="data-table-rows-2l">
