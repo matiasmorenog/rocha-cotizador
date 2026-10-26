@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 import { cn } from "@/lib/utils";
 import { Pencil, UserPlus } from "lucide-react";
@@ -8,10 +8,11 @@ import {
   AdminTableActions,
   AdminTableIconAction,
 } from "@/components/admin/admin-table";
+import { CustomerAdminCreateModal } from "@/components/admin/customer-admin-create-modal";
 import { CustomerAdminForm } from "@/components/admin/customer-admin-form";
 import { AdminCustomerName } from "@/components/admin/admin-customer-name";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { AdminDraftTrigger } from "@/components/ui/admin-draft-modal";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { Input } from "@/components/ui/input";
@@ -23,6 +24,7 @@ import {
   RevealMoreTableRow,
   useIncrementalReveal,
 } from "@/hooks/use-incremental-reveal";
+import type { DraftSessionInfo } from "@/hooks/use-draft-session";
 import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
 import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
 import { useSelectedRow } from "@/hooks/use-selected-row";
@@ -75,10 +77,17 @@ export function CustomersAdminPanel({
 }) {
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
+  const [createDraft, setCreateDraft] = useState<DraftSessionInfo>({
+    pending: false,
+    itemCount: 0,
+  });
   const [editingId, setEditingId] = useState<string | null>(
     initialEditId ?? null,
   );
   const { sort, toggle } = useTableSort<CustomerSortKey>();
+  const onCreateDraftChange = useCallback((next: DraftSessionInfo) => {
+    setCreateDraft(next);
+  }, []);
 
   const filtered = useMemo(
     () =>
@@ -124,11 +133,20 @@ export function CustomersAdminPanel({
   const editing = editingId
     ? customers.find((c) => c.id === editingId)
     : undefined;
-  const showForm = Boolean(editing) || creating;
-  const { present, exiting, animKey } = useExitPresence(showForm, 250);
+  const showEditForm = Boolean(editing);
+  const { present, exiting, animKey } = useExitPresence(showEditForm, 250);
 
   return (
     <div className="space-y-3">
+      <CustomerAdminCreateModal
+        priceLists={priceLists}
+        open={creating}
+        onOpenChange={(v) => {
+          if (v) setEditingId(null);
+          setCreating(v);
+        }}
+        onDraftChange={onCreateDraftChange}
+      />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input
           value={query}
@@ -137,19 +155,17 @@ export function CustomersAdminPanel({
           aria-label="Buscar clientes"
           className="min-w-0 flex-1"
         />
-        {!showForm ? (
-          <Button
-            type="button"
-            className="w-full shrink-0 sm:w-auto"
-            onClick={() => {
-              setEditingId(null);
-              setCreating(true);
-            }}
-          >
-            <UserPlus className="mr-1.5 h-4 w-4" aria-hidden />
-            Nuevo cliente
-          </Button>
-        ) : null}
+        <AdminDraftTrigger
+          onClick={() => {
+            setEditingId(null);
+            setCreating((v) => !v);
+          }}
+          pending={createDraft.pending}
+          itemCount={createDraft.itemCount}
+          idleLabel="Nuevo cliente"
+          pendingLabel="Continuar cliente"
+          icon={UserPlus}
+        />
       </div>
 
       <div
@@ -157,36 +173,29 @@ export function CustomersAdminPanel({
         style={{ gridTemplateRows: present && !exiting ? "1fr" : "0fr" }}
       >
         <div className="min-h-0 overflow-hidden">
-          {present ? (
+          {present && editing ? (
             <div
-              key={`${animKey}-${editing?.id ?? "new"}`}
+              key={`${animKey}-${editing.id}`}
               className={cn(exiting ? "payment-form-exit" : "payment-form-enter")}
             >
               <CustomerAdminForm
                 priceLists={priceLists}
-                onCancel={() => {
-                  setCreating(false);
-                  setEditingId(null);
+                onCancel={() => setEditingId(null)}
+                customer={{
+                  id: editing.id,
+                  code: editing.code,
+                  name: editing.name,
+                  nameNote: editing.nameNote,
+                  priceListId: editing.priceListId,
+                  address: editing.address,
+                  phone: editing.phone,
+                  email: editing.email,
+                  notes: editing.notes,
+                  paymentTerms: editing.paymentTerms,
+                  deliveryHours: editing.deliveryHours,
+                  active: editing.active,
+                  modules: editing.modules,
                 }}
-                customer={
-                  editing
-                    ? {
-                        id: editing.id,
-                        code: editing.code,
-                        name: editing.name,
-                        nameNote: editing.nameNote,
-                        priceListId: editing.priceListId,
-                        address: editing.address,
-                        phone: editing.phone,
-                        email: editing.email,
-                        notes: editing.notes,
-                        paymentTerms: editing.paymentTerms,
-                        deliveryHours: editing.deliveryHours,
-                        active: editing.active,
-                        modules: editing.modules,
-                      }
-                    : undefined
-                }
               />
             </div>
           ) : null}

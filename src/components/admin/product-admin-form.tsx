@@ -1,11 +1,18 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { PackagePlus } from "lucide-react";
 import { FormSection } from "@/components/admin/form-section";
 import { FormToggleCard } from "@/components/admin/form-toggle-card";
 import { ProductStockKindPicker } from "@/components/admin/product-stock-kind-picker";
 import { ProductTipoField } from "@/components/admin/product-tipo-field";
+import {
+  AdminDraftModal,
+  AdminDraftModalBody,
+  AdminDraftModalFooter,
+  AdminDraftModalHeader,
+} from "@/components/ui/admin-draft-modal";
 import { Button } from "@/components/ui/button";
 import {
   AR_PRICE_FORMAT,
@@ -13,6 +20,8 @@ import {
 } from "@/components/ui/ar-number-input";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDraftSession } from "@/hooks/use-draft-session";
+import type { DraftSessionInfo } from "@/hooks/use-draft-session";
 import { notifyCatalogStale } from "@/lib/client-catalog-cache";
 import { CATALOG_PRODUCT_ENABLED_LABEL } from "@/lib/entity-status-labels";
 import { dispatchAdminInAppToast } from "@/lib/push-sw-client";
@@ -30,15 +39,22 @@ export type PriceListOption = {
   active: boolean;
 };
 
-/** Compact create-only form. Edits (incl. list prices) happen inline in ProductAdminTable. */
+const TITLE_ID = "product-create-title";
+
+/** Create-only form in draft modal. Edits stay inline in ProductAdminTable. */
 export function ProductAdminForm({
   rubros,
-  onCancel,
+  open,
+  onOpenChange,
+  onDraftChange,
 }: {
   rubros: string[];
-  onCancel: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDraftChange?: (draft: DraftSessionInfo) => void;
 }) {
   const router = useRouter();
+  const [formKey, setFormKey] = useState(0);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [rubro, setRubro] = useState("");
@@ -49,6 +65,48 @@ export function ProductAdminForm({
   const [allowsUnitOrder, setAllowsUnitOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const dirtyCount = useMemo(() => {
+    let n = 0;
+    if (code.trim()) n += 1;
+    if (name.trim()) n += 1;
+    if (rubro.trim()) n += 1;
+    if (basePrice.trim()) n += 1;
+    return n;
+  }, [code, name, rubro, basePrice]);
+
+  const {
+    open: modalOpen,
+    setOpen,
+    minimize,
+    endSession,
+    showShell,
+    showChip,
+    exiting,
+    animKey,
+  } = useDraftSession({
+    open,
+    onOpenChange,
+    itemCount: dirtyCount,
+    onDraftChange,
+  });
+
+  function resetFields() {
+    setCode("");
+    setName("");
+    setRubro("");
+    setBasePrice("");
+    setAvailable(true);
+    setStockKind(DEFAULT_PRODUCT_STOCK_KIND);
+    setAllowsUnitOrder(false);
+    setError(null);
+    setFormKey((k) => k + 1);
+  }
+
+  function discardDraft() {
+    resetFields();
+    endSession();
+  }
 
   function onRubroChange(nextRubro: string) {
     setRubro(nextRubro);
@@ -116,8 +174,9 @@ export function ProductAdminForm({
         tone: "success",
       });
       notifyCatalogStale();
+      resetFields();
+      endSession();
       router.refresh();
-      onCancel();
     } catch {
       const detail = "No se pudo conectar con el servidor. Revisá tu conexión.";
       setError(detail);
@@ -131,102 +190,148 @@ export function ProductAdminForm({
     }
   }
 
+  const chipSubtitle = name.trim()
+    ? name.trim()
+    : code.trim()
+      ? code.trim()
+      : dirtyCount > 0
+        ? `${dirtyCount} campo${dirtyCount === 1 ? "" : "s"}`
+        : "Sin datos aún";
+
   return (
-    <form
-      onSubmit={onSubmit}
-      className="space-y-4 rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
+    <AdminDraftModal
+      open={modalOpen}
+      showShell={showShell}
+      showChip={showChip}
+      exiting={exiting}
+      animKey={animKey}
+      labelledBy={TITLE_ID}
+      onMinimize={minimize}
+      onResume={() => setOpen(true)}
+      maxWidthClassName="max-w-2xl"
+      chip={{
+        title: "Producto en curso",
+        subtitle: chipSubtitle,
+        icon: PackagePlus,
+      }}
     >
-      <p className="text-sm font-medium text-neutral-800">Nuevo producto</p>
-
-      <FormSection
-        title="Identificación"
-        description="Código, nombre y rubro del producto en el catálogo."
+      <form
+        key={formKey}
+        onSubmit={onSubmit}
+        className="flex max-h-[min(90vh,52rem)] flex-col"
       >
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <div className="space-y-1">
-            <Label htmlFor="product-code">Código</Label>
-            <Input
-              id="product-code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              required
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="product-name">Nombre</Label>
-            <Input
-              id="product-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </div>
-          <ProductTipoField rubros={rubros} value={rubro} onChange={onRubroChange} />
-        </div>
-      </FormSection>
-
-      <FormSection
-        title="Precio base"
-        description="Precio de la lista base; las demás listas pueden tener valores distintos."
-      >
-        <div className="max-w-xs space-y-1">
-          <Label htmlFor="product-base-price">Precio base</Label>
-          <ArNumberInput
-            id="product-base-price"
-            value={basePrice}
-            onValueChange={setBasePrice}
-            maxFractionDigits={2}
-            formatOptions={AR_PRICE_FORMAT}
-            placeholder="0,00"
-            required
-          />
-        </div>
-      </FormSection>
-
-      <FormSection
-        title="Tipo de stock"
-        description="Define en qué módulo de stock aparece al recuentar (desperdicios, consumibles o activos)."
-      >
-        <ProductStockKindPicker value={stockKind} onChange={onStockKindChange} />
-      </FormSection>
-
-      <FormSection
-        title="Opciones"
-        description="Disponibilidad en cotizaciones y reglas de pedido."
-        className="space-y-3"
-      >
-        <FormToggleCard
-          id="product-available-create"
-          label={CATALOG_PRODUCT_ENABLED_LABEL}
-          description="Si está deshabilitado, no aparece en cotizaciones ni listas de clientes."
-          checked={available}
-          onChange={setAvailable}
+        <AdminDraftModalHeader
+          titleId={TITLE_ID}
+          title="Nuevo producto"
+          description="Alta de catálogo. Los precios de listas se editan después en la fila."
         />
-        {productSupportsUnitOrKgOrder(stockKind) ? (
-          <FormToggleCard
-            id="product-unit-order-create"
-            label="Pedido por unidades o kg"
-            description="Solo productos elaborados. Permite cotizar por unidad o al peso."
-            checked={allowsUnitOrder}
-            onChange={setAllowsUnitOrder}
-          />
-        ) : null}
-      </FormSection>
+        <AdminDraftModalBody>
+          <FormSection
+            title="Identificación"
+            description="Código, nombre y rubro del producto en el catálogo."
+          >
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-1">
+                <Label htmlFor="product-code">Código</Label>
+                <Input
+                  id="product-code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="product-name">Nombre</Label>
+                <Input
+                  id="product-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+              </div>
+              <ProductTipoField
+                rubros={rubros}
+                value={rubro}
+                onChange={onRubroChange}
+              />
+            </div>
+          </FormSection>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          disabled={loading}
-          onClick={onCancel}
-        >
-          Cancelar
-        </Button>
-        <Button type="submit" disabled={loading}>
-          {loading ? "Guardando…" : "Crear producto"}
-        </Button>
-      </div>
-    </form>
+          <FormSection
+            title="Precio base"
+            description="Precio de la lista base; las demás listas pueden tener valores distintos."
+          >
+            <div className="max-w-xs space-y-1">
+              <Label htmlFor="product-base-price">Precio base</Label>
+              <ArNumberInput
+                id="product-base-price"
+                value={basePrice}
+                onValueChange={setBasePrice}
+                maxFractionDigits={2}
+                formatOptions={AR_PRICE_FORMAT}
+                placeholder="0,00"
+                required
+              />
+            </div>
+          </FormSection>
+
+          <FormSection
+            title="Tipo de stock"
+            description="Define en qué módulo de stock aparece al recuentar (desperdicios, consumibles o activos)."
+          >
+            <ProductStockKindPicker
+              value={stockKind}
+              onChange={onStockKindChange}
+            />
+          </FormSection>
+
+          <FormSection
+            title="Opciones"
+            description="Disponibilidad en cotizaciones y reglas de pedido."
+            className="space-y-3"
+          >
+            <FormToggleCard
+              id="product-available-create"
+              label={CATALOG_PRODUCT_ENABLED_LABEL}
+              description="Si está deshabilitado, no aparece en cotizaciones ni listas de clientes."
+              checked={available}
+              onChange={setAvailable}
+            />
+            {productSupportsUnitOrKgOrder(stockKind) ? (
+              <FormToggleCard
+                id="product-unit-order-create"
+                label="Pedido por unidades o kg"
+                description="Solo productos elaborados. Permite cotizar por unidad o al peso."
+                checked={allowsUnitOrder}
+                onChange={setAllowsUnitOrder}
+              />
+            ) : null}
+          </FormSection>
+
+          {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        </AdminDraftModalBody>
+        <AdminDraftModalFooter>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading}
+            onClick={minimize}
+          >
+            Minimizar
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading}
+            onClick={discardDraft}
+          >
+            Descartar
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Guardando…" : "Crear producto"}
+          </Button>
+        </AdminDraftModalFooter>
+      </form>
+    </AdminDraftModal>
   );
 }

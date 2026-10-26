@@ -7,18 +7,23 @@ import {
   useMemo,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { ClipboardPlus, Trash2 } from "lucide-react";
-import { useExitPresence } from "@/hooks/use-exit-presence";
-import { useIsClient } from "@/hooks/use-is-client";
 import { ProductPicker } from "@/components/quote/product-picker";
 import type { CatalogSearchProduct } from "@/components/quote/product-picker";
+import {
+  AdminDraftModal,
+  AdminDraftModalBody,
+  AdminDraftModalFooter,
+  AdminDraftModalHeader,
+  AdminDraftTrigger,
+} from "@/components/ui/admin-draft-modal";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
 import { Label } from "@/components/ui/label";
 import { ArNumberValueInput } from "@/components/ui/ar-number-input";
+import { useDraftSession } from "@/hooks/use-draft-session";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import {
   coerceStockUnitForProduct,
@@ -90,7 +95,6 @@ export function StockRecountForm({
   onDraftChange?: (draft: { pending: boolean; itemCount: number }) => void;
 }) {
   const router = useRouter();
-  const isClient = useIsClient();
   const [customerId, setCustomerId] = useState(
     fixedCustomerId ?? customers[0]?.id ?? "",
   );
@@ -106,49 +110,23 @@ export function StockRecountForm({
   const [loadingEntry, setLoadingEntry] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  /** Keeps form mounted (and draft alive) while modal is hidden. */
-  const [sessionActive, setSessionActive] = useState(false);
 
-  const [openInternal, setOpenInternal] = useState(false);
-  const controlled = openProp !== undefined;
-  const open = controlled ? Boolean(openProp) : openInternal;
-  const setOpen = useCallback(
-    (v: boolean) => {
-      if (v) setSessionActive(true);
-      if (controlled) onOpenChange?.(v);
-      else setOpenInternal(v);
-    },
-    [controlled, onOpenChange],
-  );
-
-  // Controlled parent may open without going through setOpen.
-  if (open && !sessionActive) {
-    setSessionActive(true);
-  }
-
-  // Header keeps "Continuar recuento" for the whole session (open or minimized).
-  const draftPending = sessionActive;
-  const draftItemCount = lines.length;
-
-  useEffect(() => {
-    onDraftChange?.({ pending: draftPending, itemCount: draftItemCount });
-    return () => {
-      onDraftChange?.({ pending: false, itemCount: 0 });
-    };
-  }, [draftPending, draftItemCount, onDraftChange]);
-
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  const minimize = useCallback(() => {
-    setOpen(false);
-  }, [setOpen]);
+  const {
+    open,
+    setOpen,
+    sessionActive,
+    minimize,
+    endSession,
+    showShell,
+    showChip,
+    exiting,
+    animKey,
+  } = useDraftSession({
+    open: openProp,
+    onOpenChange,
+    itemCount: lines.length,
+    onDraftChange,
+  });
 
   function discardDraft() {
     setCustomerId(fixedCustomerId ?? customers[0]?.id ?? "");
@@ -158,21 +136,8 @@ export function StockRecountForm({
     setPicked(null);
     setError(null);
     setMessage(null);
-    setSessionActive(false);
-    setOpen(false);
+    endSession();
   }
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        minimize();
-      }
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, minimize]);
 
   useEffect(() => {
     if (!activeCustomerId || !date || !sessionActive) return;
@@ -348,29 +313,40 @@ export function StockRecountForm({
     if (refreshAdminSummary) {
       dispatchAdminStockSummaryRefresh();
     }
-    setSessionActive(false);
-    setOpen(false);
+    endSession();
     router.refresh();
   }
 
-  const { present, exiting, animKey } = useExitPresence(open, 200);
-  const showShell = isClient && (sessionActive || present);
-  const showChip = isClient && sessionActive && !open;
   const itemCount = lines.length;
+  const titleId = "stock-recount-title";
 
-  const formBody = (
-    <form onSubmit={onSubmit} className="flex max-h-[min(90vh,52rem)] flex-col">
-      <div className="shrink-0 border-b border-neutral-200 px-4 py-3 sm:px-5">
-        <h2
-          id="stock-recount-title"
-          className="text-lg font-semibold text-neutral-900"
-        >
-          {title}
-        </h2>
-        <p className="text-sm text-neutral-600">{description}</p>
-      </div>
+  return (
+    <AdminDraftModal
+      open={open}
+      showShell={showShell}
+      showChip={showChip}
+      exiting={exiting}
+      animKey={animKey}
+      labelledBy={titleId}
+      onMinimize={minimize}
+      onResume={() => setOpen(true)}
+      chip={{
+        title: "Recuento en curso",
+        subtitle: `${itemCount === 1 ? "1 ítem" : `${itemCount} ítems`}${date ? ` · ${date}` : ""}`,
+        icon: ClipboardPlus,
+      }}
+    >
+      <form
+        onSubmit={onSubmit}
+        className="flex max-h-[min(90vh,52rem)] flex-col"
+      >
+        <AdminDraftModalHeader
+          titleId={titleId}
+          title={title}
+          description={description}
+        />
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
+        <AdminDraftModalBody>
         <div
           className={cn("grid gap-3", fixedCustomerId ? "" : "sm:grid-cols-2")}
         >
@@ -527,98 +503,31 @@ export function StockRecountForm({
 
         {error ? <p className="text-sm text-red-600">{error}</p> : null}
         {message ? <p className="text-sm text-green-700">{message}</p> : null}
-      </div>
+        </AdminDraftModalBody>
 
-      <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-neutral-200 px-4 py-3 sm:px-5">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={minimize}
-          disabled={saving}
-        >
-          Minimizar
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={discardDraft}
-          disabled={saving}
-        >
-          Descartar
-        </Button>
-        <Button type="submit" disabled={saving || customers.length === 0}>
-          {saving ? "Guardando…" : "Guardar carga"}
-        </Button>
-      </div>
-    </form>
-  );
-
-  return (
-    <>
-      {showShell
-        ? createPortal(
-            <div
-              className={cn(
-                "fixed inset-0 z-[90] flex items-end justify-center p-0 sm:items-center sm:p-4",
-                !open && "pointer-events-none invisible",
-              )}
-              aria-hidden={!open}
-            >
-              <button
-                type="button"
-                className={cn(
-                  "absolute inset-0 bg-black/40 transition-opacity duration-200",
-                  exiting || !open ? "opacity-0" : "opacity-100",
-                )}
-                aria-label="Minimizar recuento"
-                onClick={minimize}
-                tabIndex={open ? 0 : -1}
-              />
-              <div
-                key={animKey}
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="stock-recount-title"
-                className={cn(
-                  "relative z-[1] flex w-full max-w-3xl flex-col overflow-hidden rounded-t-lg border border-neutral-200 bg-white shadow-lg sm:rounded-lg",
-                  exiting ? "payment-form-exit" : "payment-form-enter",
-                )}
-              >
-                {formBody}
-              </div>
-            </div>,
-            document.body,
-          )
-        : null}
-
-      {showChip
-        ? createPortal(
-            <button
-              type="button"
-              onClick={() => setOpen(true)}
-              className={cn(
-                "fixed bottom-4 right-4 z-[95] flex max-w-[min(100vw-2rem,20rem)] items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-left text-sm shadow-lg",
-                FOCUS_BRAND_BORDER,
-              )}
-            >
-              <ClipboardPlus
-                className="h-4 w-4 shrink-0 text-[var(--brand-primary)]"
-                aria-hidden
-              />
-              <span className="min-w-0">
-                <span className="block font-medium text-neutral-900">
-                  Recuento en curso
-                </span>
-                <span className="block truncate text-xs text-neutral-500">
-                  {itemCount === 1 ? "1 ítem" : `${itemCount} ítems`}
-                  {date ? ` · ${date}` : ""}
-                </span>
-              </span>
-            </button>,
-            document.body,
-          )
-        : null}
-    </>
+        <AdminDraftModalFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={minimize}
+            disabled={saving}
+          >
+            Minimizar
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={discardDraft}
+            disabled={saving}
+          >
+            Descartar
+          </Button>
+          <Button type="submit" disabled={saving || customers.length === 0}>
+            {saving ? "Guardando…" : "Guardar carga"}
+          </Button>
+        </AdminDraftModalFooter>
+      </form>
+    </AdminDraftModal>
   );
 }
 
@@ -633,22 +542,13 @@ export function StockRecountTrigger({
   itemCount?: number;
 }) {
   return (
-    <Button
-      type="button"
+    <AdminDraftTrigger
       onClick={onClick}
-      aria-label={
-        pending
-          ? `Continuar recuento pendiente, ${itemCount === 1 ? "1 ítem" : `${itemCount} ítems`}`
-          : "Registrar stock"
-      }
-    >
-      <ClipboardPlus className="mr-1.5 h-4 w-4" aria-hidden />
-      {pending ? "Continuar recuento" : "Registrar stock"}
-      {pending ? (
-        <span className="ml-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-white/20 px-1.5 py-0.5 text-xs font-medium tabular-nums">
-          {itemCount}
-        </span>
-      ) : null}
-    </Button>
+      pending={pending}
+      itemCount={itemCount}
+      idleLabel="Registrar stock"
+      pendingLabel="Continuar recuento"
+      icon={ClipboardPlus}
+    />
   );
 }
