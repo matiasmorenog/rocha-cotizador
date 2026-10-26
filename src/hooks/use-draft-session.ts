@@ -10,8 +10,9 @@ export type DraftSessionInfo = {
 };
 
 /**
- * Modal draft session: keep form mounted while minimized; Escape / backdrop
- * minimize; discard ends session. Parent owns field reset on discard.
+ * Modal draft session: keep form mounted while minimized only if dirty
+ * (`itemCount > 0`). Clean close / Escape / backdrop ends the session — no
+ * pending chip or Continuar state. Discard always ends session; parent resets fields.
  */
 export function useDraftSession({
   open: openProp,
@@ -22,6 +23,7 @@ export function useDraftSession({
 }: {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Dirty score — pending UI only when > 0. */
   itemCount?: number;
   onDraftChange?: (draft: DraftSessionInfo) => void;
   exitMs?: number;
@@ -31,14 +33,22 @@ export function useDraftSession({
   const [openInternal, setOpenInternal] = useState(false);
   const controlled = openProp !== undefined;
   const open = controlled ? Boolean(openProp) : openInternal;
+  const dirty = itemCount > 0;
 
   const setOpen = useCallback(
     (v: boolean) => {
-      if (v) setSessionActive(true);
-      if (controlled) onOpenChange?.(v);
-      else setOpenInternal(v);
+      if (v) {
+        setSessionActive(true);
+        if (controlled) onOpenChange?.(true);
+        else setOpenInternal(true);
+        return;
+      }
+      // Close: keep session only if there are unsaved changes.
+      if (!dirty) setSessionActive(false);
+      if (controlled) onOpenChange?.(false);
+      else setOpenInternal(false);
     },
-    [controlled, onOpenChange],
+    [controlled, onOpenChange, dirty],
   );
 
   // Controlled parent may open without going through setOpen.
@@ -46,7 +56,7 @@ export function useDraftSession({
     setSessionActive(true);
   }
 
-  const draftPending = sessionActive;
+  const draftPending = sessionActive && dirty;
 
   useEffect(() => {
     onDraftChange?.({ pending: draftPending, itemCount });
@@ -70,8 +80,9 @@ export function useDraftSession({
 
   const endSession = useCallback(() => {
     setSessionActive(false);
-    setOpen(false);
-  }, [setOpen]);
+    if (controlled) onOpenChange?.(false);
+    else setOpenInternal(false);
+  }, [controlled, onOpenChange]);
 
   useEffect(() => {
     if (!open) return;
@@ -87,7 +98,7 @@ export function useDraftSession({
 
   const { present, exiting, animKey } = useExitPresence(open, exitMs);
   const showShell = isClient && (sessionActive || present);
-  const showChip = isClient && sessionActive && !open;
+  const showChip = isClient && draftPending && !open;
 
   return {
     open,
