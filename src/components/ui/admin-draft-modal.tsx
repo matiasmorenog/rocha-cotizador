@@ -171,13 +171,13 @@ export function AdminDraftModalFooter({
 export function AdminDraftTrigger({
   onClick,
   pending = false,
-  itemCount = 0,
   idleLabel,
   pendingLabel,
   icon: Icon,
 }: {
   onClick: () => void;
   pending?: boolean;
+  /** Ignored — dirty state is a dot, not a count (call sites may still pass it). */
   itemCount?: number;
   idleLabel: string;
   pendingLabel: string;
@@ -187,18 +187,15 @@ export function AdminDraftTrigger({
     <Button
       type="button"
       onClick={onClick}
-      aria-label={
-        pending
-          ? `${pendingLabel}, ${itemCount === 1 ? "1 ítem" : `${itemCount} ítems`}`
-          : idleLabel
-      }
+      aria-label={pending ? `${pendingLabel} (borrador pendiente)` : idleLabel}
     >
       <Icon className="mr-1.5 h-4 w-4" aria-hidden />
       {pending ? pendingLabel : idleLabel}
       {pending ? (
-        <span className="ml-2 inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-white/20 px-1.5 py-0.5 text-xs font-medium tabular-nums">
-          {itemCount}
-        </span>
+        <span
+          className="ml-2 size-2 shrink-0 rounded-full bg-current opacity-90"
+          aria-hidden
+        />
       ) : null}
     </Button>
   );
