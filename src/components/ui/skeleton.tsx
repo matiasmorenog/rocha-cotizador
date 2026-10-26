@@ -1025,6 +1025,45 @@ export function SkeletonAdminPriceListsPage() {
   );
 }
 
+/**
+ * Stock resumen body (KPIs + Por producto + chart). First load / tab swap when
+ * there is no stale payload — filter refetch keeps blur on existing data.
+ * Wrap with SkeletonRegion when used alone (section does that).
+ */
+export function SkeletonAdminStockSummaryBody({
+  className,
+}: {
+  className?: string;
+} = {}) {
+  return (
+    <div className={cn("space-y-6", className)}>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div
+            key={i}
+            className="space-y-2 rounded-lg border border-neutral-200 bg-neutral-50/60 px-4 py-3"
+          >
+            <Skeleton className="h-3 w-36" />
+            <Skeleton className="h-7 w-20" />
+            {i === 2 ? <Skeleton className="h-3 w-28" /> : null}
+          </div>
+        ))}
+      </div>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-3 w-52 max-w-full" />
+        </div>
+        <SkeletonTableRows rows={4} cols={4} admin tableMinWidth="min-w-[40rem]" />
+      </div>
+      <div className="space-y-3">
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="h-44 w-full rounded-md sm:h-48" />
+      </div>
+    </div>
+  );
+}
+
 /** Stock — header + CTA, tabs, filters, summary card, history rows. */
 export function SkeletonAdminStockPage() {
   return (
@@ -1045,18 +1084,7 @@ export function SkeletonAdminStockPage() {
           <Skeleton className="h-5 w-24" />
           <Skeleton className="h-4 w-80 max-w-full" />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }, (_, i) => (
-            <div
-              key={i}
-              className="space-y-2 rounded-md border border-neutral-100 p-3"
-            >
-              <Skeleton className="h-3 w-32" />
-              <Skeleton className="h-7 w-16" />
-            </div>
-          ))}
-        </div>
-        <Skeleton className="h-44 w-full rounded-md sm:h-48" />
+        <SkeletonAdminStockSummaryBody />
       </div>
       <div className="space-y-2">
         <Skeleton className="h-5 w-28" />

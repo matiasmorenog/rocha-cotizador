@@ -10,6 +10,10 @@ import type {
 import { ADMIN_STOCK_SUMMARY_REFRESH_EVENT } from "@/lib/admin-stock-summary-refresh";
 import { AdminStockSummaryChart } from "@/components/admin/admin-stock-summary-chart";
 import { DataTableScroll } from "@/components/ui/data-table";
+import {
+  SkeletonAdminStockSummaryBody,
+  SkeletonRegion,
+} from "@/components/ui/skeleton";
 import { SortableTh } from "@/components/ui/sortable-th";
 import {
   flipHeightFrom,
@@ -185,10 +189,12 @@ export function AdminStockSummarySection({
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
       {loading && !data ? (
-        <p className="text-sm text-neutral-500">Cargando resumen…</p>
+        <SkeletonRegion label="Cargando resumen">
+          <SkeletonAdminStockSummaryBody />
+        </SkeletonRegion>
       ) : data ? (
         <div
-          aria-busy={loading || undefined}
+          aria-busy={showStaleBlur || undefined}
           className={cn(
             "space-y-6 transition-[filter,opacity] ease-out",
             showStaleBlur &&
