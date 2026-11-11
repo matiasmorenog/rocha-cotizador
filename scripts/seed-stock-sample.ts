@@ -1,8 +1,13 @@
 /**
- * Idempotent sample data for stock catalog + 1 desperdicio + 1 consumible entry.
- * Dev Neon only (assertSafeDestructiveDb).
+ * Dev-only: wipe stock sample entries and seed multi-day Desperdicios /
+ * Consumibles / Activos data for admin Stock tabs.
  *
- *   SEED_TARGET=development npx tsx scripts/seed-stock-sample.ts
+ * Safety: assertSafeDestructiveDb() — Neon main blocked; needs SEED_TARGET=development.
+ *
+ *   npm run dev:seed-stock
+ *   DAYS_BACK=21 ENTRIES_PER_CUSTOMER=10 npm run dev:seed-stock
+ *
+ * Optional env: DAYS_BACK, ENTRIES_PER_CUSTOMER, CUSTOMERS_PER_MODULE, LINES_PER_ENTRY
  */
 import "dotenv/config";
 import { assertSafeDestructiveDb } from "../prisma/assert-safe-db";
@@ -15,11 +20,11 @@ async function main() {
   assertSafeDestructiveDb();
   const modules = await seedCustomerModuleAccess();
   console.log(
-    `Customer modules: Desperdicios=${modules.desperdicios}, Consumibles=${modules.consumables}`,
+    `Customer modules: Desperdicios=${modules.desperdicios}, Consumibles=${modules.consumables}, Activos=${modules.activos}`,
   );
   const stock = await seedStockSampleData();
   console.log(
-    `Stock sample: desperdicio lines=${stock.desperdicioLines}, consumibles lines=${stock.consumableLines}, desperdicios customer=${stock.desperdiciosCustomer ?? "n/a"}, consumibles customer=${stock.consumableCustomer ?? "n/a"}`,
+    `Stock sample: desperdicios=${stock.desperdiciosCustomer ?? "n/a"} entries=${stock.desperdicioEntries} lines=${stock.desperdicioLines}; consumibles=${stock.consumableCustomer ?? "n/a"} entries=${stock.consumableEntries} lines=${stock.consumableLines}; activos=${stock.activoCustomer ?? "n/a"} entries=${stock.activoEntries} lines=${stock.activoLines}`,
   );
 }
 
