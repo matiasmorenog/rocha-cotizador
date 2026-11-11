@@ -1,10 +1,13 @@
 import { db } from "@/lib/db";
 import {
+  ACTIVOS_SEED_CODES,
   CONSUMABLES_SEED_CODES,
   DESPERDICIOS_SEED_CODES,
 } from "@/lib/customer-modules";
 import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
+import { addCalendarDaysYmd } from "@/lib/delivery-date";
 import { productWhereForModule } from "@/lib/stock-rubros";
+import type { StockModuleKey } from "@/lib/stock-product-kind-shared";
 import { defaultStockUnitForProduct } from "@/lib/stock-units";
 
 type SeedStockSpec = {
@@ -16,7 +19,7 @@ type SeedStockSpec = {
 
 /**
  * Real Product rows from Rocha catalog (dev Neon), not invented SKUs.
- * Module split (desperdicios vs consumibles) uses Product.rubro via productWhereForModule.
+ * Module split uses Product.stockKind / rubro via productWhereForModule.
  */
 export const SAMPLE_STOCK_FROM_PRODUCTS: SeedStockSpec[] = [
   { code: "1902", nameIncludes: "LEVADURA" },
@@ -42,6 +45,29 @@ function parseYmdToDate(ymd: string): Date {
   return new Date(`${ymd}T12:00:00.000Z`);
 }
 
+function envInt(name: string, fallback: number, min: number, max: number): number {
+  const raw = process.env[name];
+  if (raw == null || raw.trim() === "") return fallback;
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < min || n > max) {
+    throw new Error(`${name} must be an integer ${min}..${max}, got ${raw}`);
+  }
+  return n;
+}
+
+function randInt(min: number, max: number): number {
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+function randQty(module: StockModuleKey): number {
+  if (module === "CONSUMABLES") return randInt(1, 48);
+  if (module === "ACTIVOS") return randInt(1, 12);
+  // desperdicios: mix of whole + fractional kg-like
+  const whole = randInt(0, 1) === 1;
+  if (whole) return randInt(1, 8);
+  return Number((Math.random() * 4 + 0.25).toFixed(2));
+}
+
 async function resolveProductId(spec: SeedStockSpec): Promise<string | null> {
   if (spec.code) {
     const byCode = await db.product.findFirst({
@@ -65,7 +91,7 @@ async function resolveProductId(spec: SeedStockSpec): Promise<string | null> {
 }
 
 async function resolveProductsForModule(
-  module: "DESPERDICIOS" | "CONSUMABLES",
+  module: StockModuleKey,
   limit: number,
 ): Promise<Array<{ id: string; unit: string }>> {
   const out: Array<{ id: string; unit: string }> = [];
@@ -93,7 +119,7 @@ async function resolveProductsForModule(
   const extras = await db.product.findMany({
     where: moduleFilter,
     orderBy: [{ rubro: "asc" }, { name: "asc" }],
-    take: limit - out.length,
+    take: limit - out.length + 20,
     select: { id: true, allowsUnitOrder: true },
   });
   for (const p of extras) {
@@ -108,115 +134,197 @@ async function resolveProductsForModule(
   return out;
 }
 
-/** Wipe sample desperdicio/consumible entries (dev seed only). */
-export async function clearStockSampleData(): Promise<void> {
-  await db.desperdicioLine.deleteMany({});
-  await db.consumableCountLine.deleteMany({});
-  await db.desperdicioEntry.deleteMany({});
-  await db.consumableCount.deleteMany({});
-}
-
-async function findFirstCustomerWithCode(
+async function findCustomersWithCodes(
   codes: readonly string[],
-): Promise<{ id: string; code: string } | null> {
+  max: number,
+): Promise<Array<{ id: string; code: string }>> {
+  const out: Array<{ id: string; code: string }> = [];
   for (const code of codes) {
+    if (out.length >= max) break;
     const customer = await db.customer.findUnique({
       where: { code },
       select: { id: true, code: true },
     });
-    if (customer) return customer;
+    if (customer) out.push(customer);
   }
-  return null;
+  return out;
 }
 
-/** Seed 1 sample DesperdicioEntry + 1 ConsumableCount if customers/products exist. Idempotent. */
+function pickEntryDates(daysBack: number, entriesPerCustomer: number): string[] {
+  const today = todayYmdAr();
+  const pool: string[] = [];
+  for (let i = 0; i < daysBack; i++) {
+    pool.push(addCalendarDaysYmd(today, -i));
+  }
+  // Prefer denser recent days: shuffle then take N unique
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j]!, pool[i]!];
+  }
+  return pool.slice(0, Math.min(entriesPerCustomer, pool.length)).sort();
+}
+
+/** Wipe sample desperdicio / consumible / activos entries (dev seed only). */
+export async function clearStockSampleData(): Promise<void> {
+  await db.desperdicioLine.deleteMany({});
+  await db.consumableCountLine.deleteMany({});
+  await db.localAssetCountLine.deleteMany({});
+  await db.desperdicioEntry.deleteMany({});
+  await db.consumableCount.deleteMany({});
+  await db.localAssetCount.deleteMany({});
+}
+
+type ModuleSeedResult = {
+  customers: string[];
+  entries: number;
+  lines: number;
+};
+
+async function seedModuleEntries(
+  module: StockModuleKey,
+  codes: readonly string[],
+  opts: {
+    daysBack: number;
+    entriesPerCustomer: number;
+    customersMax: number;
+    linesPerEntry: number;
+  },
+): Promise<ModuleSeedResult> {
+  const customers = await findCustomersWithCodes(codes, opts.customersMax);
+  const products = await resolveProductsForModule(module, opts.linesPerEntry + 4);
+  if (customers.length === 0 || products.length === 0) {
+    return { customers: [], entries: 0, lines: 0 };
+  }
+
+  let entries = 0;
+  let lines = 0;
+
+  for (const customer of customers) {
+    const dates = pickEntryDates(opts.daysBack, opts.entriesPerCustomer);
+    for (const ymd of dates) {
+      const entryDate = parseYmdToDate(ymd);
+      const lineCount = Math.min(
+        products.length,
+        randInt(Math.max(2, Math.floor(opts.linesPerEntry / 2)), opts.linesPerEntry),
+      );
+      const lineProducts = products.slice(0, lineCount);
+      // shuffle lightly
+      for (let i = lineProducts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [lineProducts[i], lineProducts[j]] = [lineProducts[j]!, lineProducts[i]!];
+      }
+      const createLines = lineProducts.map((item) => ({
+        productId: item.id,
+        unit: item.unit,
+        qty: randQty(module),
+      }));
+
+      if (module === "DESPERDICIOS") {
+        await db.desperdicioEntry.deleteMany({
+          where: { customerId: customer.id, entryDate },
+        });
+        await db.desperdicioEntry.create({
+          data: {
+            customerId: customer.id,
+            entryDate,
+            notes: "Carga de prueba (seed)",
+            submittedBy: "seed",
+            lines: { create: createLines },
+          },
+        });
+      } else if (module === "CONSUMABLES") {
+        await db.consumableCount.deleteMany({
+          where: { customerId: customer.id, entryDate },
+        });
+        await db.consumableCount.create({
+          data: {
+            customerId: customer.id,
+            entryDate,
+            notes: "Conteo de prueba (seed)",
+            submittedBy: "seed",
+            lines: { create: createLines },
+          },
+        });
+      } else {
+        await db.localAssetCount.deleteMany({
+          where: { customerId: customer.id, entryDate },
+        });
+        await db.localAssetCount.create({
+          data: {
+            customerId: customer.id,
+            entryDate,
+            notes: "Activos de prueba (seed)",
+            submittedBy: "seed",
+            lines: { create: createLines },
+          },
+        });
+      }
+
+      entries += 1;
+      lines += createLines.length;
+    }
+  }
+
+  return {
+    customers: customers.map((c) => c.code),
+    entries,
+    lines,
+  };
+}
+
+/**
+ * Multi-day sample across Desperdicios / Consumibles / Activos.
+ * Env: DAYS_BACK (default 18), ENTRIES_PER_CUSTOMER (default 8),
+ * CUSTOMERS_PER_MODULE (default 3), LINES_PER_ENTRY (default 6).
+ */
 export async function seedSampleStockEntries(): Promise<{
-  desperdicios: string | null;
-  consumable: string | null;
-  desperdicioLines: number;
-  consumableLines: number;
+  desperdicios: ModuleSeedResult;
+  consumables: ModuleSeedResult;
+  activos: ModuleSeedResult;
 }> {
-  const entryDate = parseYmdToDate(todayYmdAr());
-  let desperdicios: string | null = null;
-  let consumable: string | null = null;
-  let desperdicioLines = 0;
-  let consumableLines = 0;
+  const daysBack = envInt("DAYS_BACK", 18, 3, 60);
+  const entriesPerCustomer = envInt("ENTRIES_PER_CUSTOMER", 8, 1, 30);
+  const customersMax = envInt("CUSTOMERS_PER_MODULE", 3, 1, 10);
+  const linesPerEntry = envInt("LINES_PER_ENTRY", 6, 2, 20);
+  const opts = { daysBack, entriesPerCustomer, customersMax, linesPerEntry };
 
-  const desperdiciosCustomer = await findFirstCustomerWithCode(
+  const desperdicios = await seedModuleEntries(
+    "DESPERDICIOS",
     DESPERDICIOS_SEED_CODES,
+    opts,
   );
-  if (desperdiciosCustomer) {
-    const products = await resolveProductsForModule("DESPERDICIOS", 6);
-    if (products.length > 0) {
-      const qtys = [1.5, 0.5, 3, 2, 1, 0.25];
-      await db.desperdicioEntry.deleteMany({
-        where: { customerId: desperdiciosCustomer.id, entryDate },
-      });
-      await db.desperdicioEntry.create({
-        data: {
-          customerId: desperdiciosCustomer.id,
-          entryDate,
-          notes: "Carga de prueba (seed)",
-          submittedBy: "seed",
-          lines: {
-            create: products.map((item, i) => ({
-              productId: item.id,
-              unit: item.unit,
-              qty: qtys[i % qtys.length]!,
-            })),
-          },
-        },
-      });
-      desperdicios = desperdiciosCustomer.code;
-      desperdicioLines = products.length;
-    }
-  }
-
-  const consumableCustomer = await findFirstCustomerWithCode(
+  const consumables = await seedModuleEntries(
+    "CONSUMABLES",
     CONSUMABLES_SEED_CODES,
+    opts,
   );
-  if (consumableCustomer) {
-    const products = await resolveProductsForModule("CONSUMABLES", 5);
-    if (products.length > 0) {
-      const qtys = [12, 8, 40, 2, 1];
-      await db.consumableCount.deleteMany({
-        where: { customerId: consumableCustomer.id, entryDate },
-      });
-      await db.consumableCount.create({
-        data: {
-          customerId: consumableCustomer.id,
-          entryDate,
-          notes: "Conteo de prueba (seed)",
-          submittedBy: "seed",
-          lines: {
-            create: products.map((item, i) => ({
-              productId: item.id,
-              unit: item.unit,
-              qty: qtys[i % qtys.length]!,
-            })),
-          },
-        },
-      });
-      consumable = consumableCustomer.code;
-      consumableLines = products.length;
-    }
-  }
+  const activos = await seedModuleEntries("ACTIVOS", ACTIVOS_SEED_CODES, opts);
 
-  return { desperdicios, consumable, desperdicioLines, consumableLines };
+  return { desperdicios, consumables, activos };
 }
 
 export async function seedStockSampleData(): Promise<{
   desperdicioLines: number;
   consumableLines: number;
+  activoLines: number;
   desperdiciosCustomer: string | null;
   consumableCustomer: string | null;
+  activoCustomer: string | null;
+  desperdicioEntries: number;
+  consumableEntries: number;
+  activoEntries: number;
 }> {
   await clearStockSampleData();
   const entries = await seedSampleStockEntries();
   return {
-    desperdicioLines: entries.desperdicioLines,
-    consumableLines: entries.consumableLines,
-    desperdiciosCustomer: entries.desperdicios,
-    consumableCustomer: entries.consumable,
+    desperdicioLines: entries.desperdicios.lines,
+    consumableLines: entries.consumables.lines,
+    activoLines: entries.activos.lines,
+    desperdiciosCustomer: entries.desperdicios.customers[0] ?? null,
+    consumableCustomer: entries.consumables.customers[0] ?? null,
+    activoCustomer: entries.activos.customers[0] ?? null,
+    desperdicioEntries: entries.desperdicios.entries,
+    consumableEntries: entries.consumables.entries,
+    activoEntries: entries.activos.entries,
   };
 }

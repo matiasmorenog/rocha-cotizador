@@ -458,11 +458,11 @@ async function main() {
     await seedUnitOrderFlags();
     const modules = await seedCustomerModuleAccess();
     console.log(
-      `Customer modules: Desperdicios=${modules.desperdicios}, Consumibles=${modules.consumables}`,
+      `Customer modules: Desperdicios=${modules.desperdicios}, Consumibles=${modules.consumables}, Activos=${modules.activos}`,
     );
     const stock = await seedStockSampleData();
     console.log(
-      `Stock sample: desperdicio lines=${stock.desperdicioLines}, consumibles lines=${stock.consumableLines}, desperdicios=${stock.desperdiciosCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
+      `Stock sample: desperdicios=${stock.desperdiciosCustomer ?? "n/a"} (${stock.desperdicioEntries}e/${stock.desperdicioLines}l), consumibles=${stock.consumableCustomer ?? "n/a"} (${stock.consumableEntries}e/${stock.consumableLines}l), activos=${stock.activoCustomer ?? "n/a"} (${stock.activoEntries}e/${stock.activoLines}l)`,
     );
     const staffMigrated = await migrateStaffRolesToAdmin();
     console.log(`Staff roles migrated to ADMIN: ${staffMigrated}`);
@@ -472,11 +472,11 @@ async function main() {
   await seedFromExcel(xlsxPath);
   const modules = await seedCustomerModuleAccess();
   console.log(
-    `Customer modules: Desperdicios=${modules.desperdicios}, Consumibles=${modules.consumables}`,
+    `Customer modules: Desperdicios=${modules.desperdicios}, Consumibles=${modules.consumables}, Activos=${modules.activos}`,
   );
   const stock = await seedStockSampleData();
   console.log(
-    `Stock sample: desperdicio lines=${stock.desperdicioLines}, consumibles lines=${stock.consumableLines}, desperdicios=${stock.desperdiciosCustomer ?? "n/a"}, consumibles=${stock.consumableCustomer ?? "n/a"}`,
+    `Stock sample: desperdicios=${stock.desperdiciosCustomer ?? "n/a"} (${stock.desperdicioEntries}e/${stock.desperdicioLines}l), consumibles=${stock.consumableCustomer ?? "n/a"} (${stock.consumableEntries}e/${stock.consumableLines}l), activos=${stock.activoCustomer ?? "n/a"} (${stock.activoEntries}e/${stock.activoLines}l)`,
   );
   const staffMigrated = await migrateStaffRolesToAdmin();
   console.log(`Staff roles migrated to ADMIN: ${staffMigrated}`);

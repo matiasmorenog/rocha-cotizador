@@ -271,7 +271,7 @@ async function main() {
 
   const stock = await seedStockSampleData();
   console.log(
-    `Stock sample: desperdicios=${stock.desperdiciosCustomer ?? "n/a"} (${stock.desperdicioLines} lines), consumibles=${stock.consumableCustomer ?? "n/a"} (${stock.consumableLines} lines)`,
+    `Stock sample: desperdicios=${stock.desperdiciosCustomer ?? "n/a"} (${stock.desperdicioEntries}e/${stock.desperdicioLines}l), consumibles=${stock.consumableCustomer ?? "n/a"} (${stock.consumableEntries}e/${stock.consumableLines}l), activos=${stock.activoCustomer ?? "n/a"} (${stock.activoEntries}e/${stock.activoLines}l)`,
   );
 
   await seedDemoPersonas(db);
