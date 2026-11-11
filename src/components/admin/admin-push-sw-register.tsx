@@ -19,6 +19,14 @@ import {
   unlockAdminNotificationSound,
 } from "@/lib/admin-notification-sound";
 import { scheduleIdleWork } from "@/lib/schedule-idle";
+import {
+  markSubscriptionDueDismissedToday,
+  maybeShowSubscriptionDueOsNotification,
+  subscriptionDueCopy,
+  subscriptionDueToastId,
+  wasSubscriptionDueDismissedToday,
+  type SubscriptionDueApi,
+} from "@/lib/subscription-due-reminder-client";
 
 type InboxItem = {
   id: string;
@@ -31,6 +39,8 @@ type InboxItem = {
 const POLL_MS = 8_000;
 /** Defer inbox poll + SW register so first admin paint is not competing with RSC. */
 const PUSH_BOOT_DEFER_MS = 2_500;
+/** Subscription due check after paint — slightly after inbox boot. */
+const SUB_DUE_DEFER_MS = 3_500;
 const TOAST_TTL_MS = 6_000;
 const MAX_TOASTS = 4;
 /** Only for Web Push double-delivery (BroadcastChannel + postMessage). */
@@ -71,6 +81,10 @@ export function AdminPushSwRegister() {
   const { data: session } = useSession();
   const inAppEnabled = session?.user?.inAppNotificationsEnabled !== false;
   const enabledRef = useRef(inAppEnabled);
+  const sessionRef = useRef(session);
+  const subDueMetaRef = useRef<{ userId: string; todayAr: string } | null>(
+    null,
+  );
 
   const [toasts, setToasts] = useState<AdminToastItem[]>([]);
   const sinceRef = useRef<string>(new Date().toISOString());
@@ -83,17 +97,18 @@ export function AdminPushSwRegister() {
   /** Toast ids that already played their chime — sound fires once per id, never on re-delivery or dismiss. */
   const playedSoundIdsRef = useRef<Set<string>>(new Set());
 
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
+
   // Keep poll/toast gates in sync with session without reading refs during render.
   useEffect(() => {
     enabledRef.current = inAppEnabled;
-    if (inAppEnabled) return;
-    for (const t of timersRef.current.values()) clearTimeout(t);
-    timersRef.current.clear();
   }, [inAppEnabled]);
 
-  // Drop toast state when pref turns off so they don't reappear on re-enable.
-  if (!inAppEnabled && toasts.length > 0) {
-    setToasts([]);
+  // Drop non-forced toasts when pref turns off so they don't reappear on re-enable.
+  if (!inAppEnabled && toasts.some((t) => !t.forceShow)) {
+    setToasts((prev) => prev.filter((t) => t.forceShow));
   }
 
   function dismiss(id: string) {
@@ -105,6 +120,12 @@ export function AdminPushSwRegister() {
     // Every dismiss path (X, body click, TTL timeout above) lands here —
     // cut any still-ringing appear chime so closing a toast is never heard.
     stopAdminNotificationSound();
+    if (id.startsWith("subscription-due-")) {
+      const meta = subDueMetaRef.current;
+      if (meta) {
+        markSubscriptionDueDismissedToday(meta.userId, meta.todayAr);
+      }
+    }
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }
 
@@ -117,7 +138,8 @@ export function AdminPushSwRegister() {
   }
 
   function pushToast(next: Omit<AdminToastItem, "id"> & { id?: string }) {
-    if (!enabledRef.current) return;
+    const force = next.forceShow === true;
+    if (!enabledRef.current && !force) return;
 
     const id =
       next.id ??
@@ -152,14 +174,21 @@ export function AdminPushSwRegister() {
     }
     setToasts((prev) => {
       const withoutDup = prev.filter((t) => t.id !== id);
-      return [...withoutDup, { ...next, id }].slice(-MAX_TOASTS);
+      const merged = [...withoutDup, { ...next, id }];
+      if (merged.length <= MAX_TOASTS) return merged;
+      const keep = merged.filter((t) => t.sticky || t.forceShow);
+      const rest = merged.filter((t) => !t.sticky && !t.forceShow);
+      const room = Math.max(0, MAX_TOASTS - keep.length);
+      return [...keep, ...rest.slice(-room)];
     });
     const existing = timersRef.current.get(id);
     if (existing) clearTimeout(existing);
-    timersRef.current.set(
-      id,
-      setTimeout(() => dismiss(id), TOAST_TTL_MS),
-    );
+    if (!next.sticky) {
+      timersRef.current.set(
+        id,
+        setTimeout(() => dismiss(id), TOAST_TTL_MS),
+      );
+    }
   }
 
   useEffect(() => {
@@ -226,18 +255,74 @@ export function AdminPushSwRegister() {
         markInboxSeen(inboxId);
       }
       pushToast({
-        id: inboxId ? `inbox-${inboxId}` : undefined,
+        id: detail.id ?? (inboxId ? `inbox-${inboxId}` : undefined),
         title: detail.title,
         body: detail.body ?? "",
         url: detail.url,
         tone: detail.tone ?? "success",
-        source: "test",
+        source: detail.source ?? "test",
+        sticky: detail.sticky,
+        forceShow: detail.forceShow,
       });
     }
     window.addEventListener(ADMIN_INAPP_TOAST_EVENT, onCustomToast);
 
     let cancelled = false;
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
+
+    async function maybeShowSubscriptionDue() {
+      if (cancelled || document.visibilityState === "hidden") return;
+      const user = sessionRef.current?.user;
+      const userId = user?.id;
+      if (!userId) return;
+
+      try {
+        const res = await fetch("/api/admin/subscription-due", {
+          credentials: "same-origin",
+        });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json().catch(() => null)) as
+          | SubscriptionDueApi
+          | null;
+        if (!data?.due || cancelled) return;
+        if (wasSubscriptionDueDismissedToday(userId, data.todayAr)) return;
+
+        const canRegisterPayments =
+          Boolean(user.isSuperuser) && !user.staffPreview;
+        const copy = subscriptionDueCopy({
+          periodLabel: data.periodLabel,
+          canRegisterPayments,
+        });
+        const toastId = subscriptionDueToastId(
+          data.periodYear,
+          data.periodMonth,
+        );
+        subDueMetaRef.current = { userId, todayAr: data.todayAr };
+        pushToast({
+          id: toastId,
+          title: copy.title,
+          body: copy.body,
+          url: copy.url,
+          tone: "info",
+          source: "subscription",
+          sticky: true,
+          forceShow: true,
+        });
+        void maybeShowSubscriptionDueOsNotification({
+          userId,
+          todayAr: data.todayAr,
+          title: copy.title,
+          body: copy.body,
+          url: copy.url,
+          periodYear: data.periodYear,
+          periodMonth: data.periodMonth,
+        }).catch((err) => {
+          console.warn("[sub-due] OS notification failed", err);
+        });
+      } catch (err) {
+        console.warn("[sub-due] reminder check failed", err);
+      }
+    }
 
     async function pollOnce() {
       if (cancelled || document.visibilityState === "hidden") return;
@@ -305,14 +390,26 @@ export function AdminPushSwRegister() {
       { timeoutMs: PUSH_BOOT_DEFER_MS + 2_000, fallbackMs: PUSH_BOOT_DEFER_MS },
     );
 
+    const cancelSubDueBoot = scheduleIdleWork(
+      () => {
+        if (cancelled) return;
+        void maybeShowSubscriptionDue();
+      },
+      { timeoutMs: SUB_DUE_DEFER_MS + 2_000, fallbackMs: SUB_DUE_DEFER_MS },
+    );
+
     const onVisible = () => {
-      if (document.visibilityState === "visible") void pollOnce();
+      if (document.visibilityState === "visible") {
+        void pollOnce();
+        void maybeShowSubscriptionDue();
+      }
     };
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       cancelled = true;
       cancelIdleBoot();
+      cancelSubDueBoot();
       if (pollTimer) clearTimeout(pollTimer);
       for (const t of toastTimers.values()) clearTimeout(t);
       toastTimers.clear();
@@ -327,10 +424,11 @@ export function AdminPushSwRegister() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const visibleToasts = inAppEnabled
+    ? toasts
+    : toasts.filter((t) => t.forceShow);
+
   return (
-    <AdminNotificationToasts
-      toasts={inAppEnabled ? toasts : []}
-      onDismiss={dismiss}
-    />
+    <AdminNotificationToasts toasts={visibleToasts} onDismiss={dismiss} />
   );
 }

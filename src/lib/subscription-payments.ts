@@ -1,8 +1,15 @@
 import { unstable_cache } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { ARGENTINA_TZ, toArgentinaDatetimeLocal } from "@/lib/argentina-time";
+import {
+  ARGENTINA_TZ,
+  argentinaTodayYmd,
+  toArgentinaDatetimeLocal,
+} from "@/lib/argentina-time";
 import { CACHE_TAGS } from "@/lib/cache-tag-names";
+
+/** First calendar day (AR) when unpaid-month reminder may show. */
+export const SUBSCRIPTION_DUE_REMINDER_DAY_AR = 5;
 
 const MONTH_FORMATTER = new Intl.DateTimeFormat("es-AR", {
   timeZone: "UTC",
@@ -158,4 +165,43 @@ export function buildRochaSubscriptionStatus(
 export async function getRochaSubscriptionStatus(): Promise<RochaSubscriptionStatus> {
   const payments = await getSubscriptionPayments();
   return buildRochaSubscriptionStatus(payments);
+}
+
+export type SubscriptionDueReminderDto = {
+  /** Unpaid current month and calendar day (AR) ≥ {@link SUBSCRIPTION_DUE_REMINDER_DAY_AR}. */
+  due: boolean;
+  paid: boolean;
+  periodYear: number;
+  periodMonth: number;
+  periodLabel: string;
+  dayAr: number;
+  todayAr: string;
+};
+
+export function buildSubscriptionDueReminder(
+  status: RochaSubscriptionStatus,
+  now = new Date(),
+): SubscriptionDueReminderDto {
+  const todayAr = argentinaTodayYmd(now);
+  const dayAr = Number(todayAr.slice(8, 10));
+  const paid = status.current.paid;
+  const due =
+    !paid &&
+    Number.isInteger(dayAr) &&
+    dayAr >= SUBSCRIPTION_DUE_REMINDER_DAY_AR;
+
+  return {
+    due,
+    paid,
+    periodYear: status.current.periodYear,
+    periodMonth: status.current.periodMonth,
+    periodLabel: status.current.periodLabel,
+    dayAr,
+    todayAr,
+  };
+}
+
+export async function getSubscriptionDueReminder(): Promise<SubscriptionDueReminderDto> {
+  const status = await getRochaSubscriptionStatus();
+  return buildSubscriptionDueReminder(status);
 }

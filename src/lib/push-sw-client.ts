@@ -12,6 +12,12 @@ export type AdminInAppToastDetail = {
   tone?: "info" | "success" | "error";
   /** When set, toast id = inbox-{id} and poll skips this row. */
   inboxId?: string;
+  /** Stable toast id (e.g. subscription-due-…). */
+  id?: string;
+  sticky?: boolean;
+  /** Show even when in-app notifications pref is off. */
+  forceShow?: boolean;
+  source?: "inbox" | "push" | "test" | "subscription";
 };
 
 /** Show an admin corner toast even if macOS/Chrome hides OS notifications. */
