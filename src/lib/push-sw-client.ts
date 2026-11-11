@@ -9,7 +9,7 @@ export type AdminInAppToastDetail = {
   title: string;
   body: string;
   url?: string;
-  tone?: "info" | "success" | "error";
+  tone?: "info" | "success" | "warning" | "error";
   /** When set, toast id = inbox-{id} and poll skips this row. */
   inboxId?: string;
   /** Stable toast id (e.g. subscription-due-…). */

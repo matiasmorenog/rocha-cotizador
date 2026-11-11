@@ -303,7 +303,7 @@ export function AdminPushSwRegister() {
           title: copy.title,
           body: copy.body,
           url: copy.url,
-          tone: "info",
+          tone: "warning",
           source: "subscription",
           sticky: true,
           forceShow: true,
