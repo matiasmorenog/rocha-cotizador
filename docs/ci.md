@@ -3,6 +3,7 @@
 Workflows:
 - [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) — lint/typecheck (PRs ready + push)
 - [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) — push only (`main` ship + `development` cache purge)
+- [`.github/workflows/refresh-demo.yml`](../.github/workflows/refresh-demo.yml) — cron weekly + `workflow_dispatch`: `npm run dev:refresh-demo` on Neon **development** only
 
 Feature PR **preview deploys are off** (Hobby Function Storage). Validate via `lint-and-typecheck`; smoke on `rocha-cotizador-dev` after merge to `development`, or local.
 
@@ -60,6 +61,20 @@ Corre en PR **ready** y push a `development`. En push a `main` solo corre en `de
 
 Push `main`: lint/typecheck → schema gate → build → production deploy → smoke → cache.
 Push `development`: cache purge for demo project (see workflow).
+
+## Refresh demo (`refresh-demo.yml`)
+
+Keeps portfolio/demo charts current on Neon **development** (stock + quotes relative to “today”).
+
+| Trigger | When |
+|---------|------|
+| `schedule` | Mondays **09:00** America/Argentina (`0 12 * * 1` UTC) |
+| `workflow_dispatch` | Actions → Run workflow (manual) |
+
+- Env: `SEED_TARGET=development` + secret **`DATABASE_URL_DEVELOPMENT`** (Neon development; prefer **direct** host, same as local `.env` — not Production / not `DATABASE_URL_PRODUCTION`).
+- Guard: `assertSafeDestructiveDb` refuses Neon `main`.
+- Cron only runs from the **default** branch (`development`). Merge the workflow there before the first scheduled run.
+- Manual local: `npm run dev:refresh-demo`.
 
 ## Branch protection
 

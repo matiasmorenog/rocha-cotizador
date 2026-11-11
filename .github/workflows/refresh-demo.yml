@@ -1,0 +1,56 @@
+# Weekly wipe+reseed of demo stock + quotes on Neon development (portfolio charts stay current).
+# Never touches Neon main / production — SEED_TARGET=development + assertSafeDestructiveDb.
+#
+# Requires repo secret: DATABASE_URL_DEVELOPMENT (Neon development, prefer direct host).
+# Manual run: Actions → "Refresh demo (Neon development)" → Run workflow.
+
+name: Refresh demo (Neon development)
+
+on:
+  schedule:
+    # Mondays 09:00 America/Argentina (UTC-3) → 12:00 UTC
+    - cron: "0 12 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: refresh-demo-development
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh-demo:
+    name: refresh-demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      SEED_TARGET: development
+      DATABASE_URL: ${{ secrets.DATABASE_URL_DEVELOPMENT }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Require DATABASE_URL_DEVELOPMENT
+        run: |
+          if [[ -z "${DATABASE_URL:-}" ]]; then
+            echo "error: missing secret DATABASE_URL_DEVELOPMENT (Neon development URL)." >&2
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Refresh demo (stock + quotes)
+        run: npm run dev:refresh-demo
