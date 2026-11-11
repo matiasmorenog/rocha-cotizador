@@ -46,6 +46,8 @@ Abrí [http://localhost:3000](http://localhost:3000).
 | `npm run db:seed` | Seed admin + Excel (requires `SEED_TARGET=development` or `ALLOW_DESTRUCTIVE_DB=1`; refuses Neon main) |
 | `npm run dev:wipe-customers` | Wipe customer PII on Neon **development** only; seeds fictitious clients (`SEED_TARGET=development`; refuses production/main) |
 | `npm run dev:seed-quotes` | Wipe all quotes/remitos on Neon **development** and seed random ones for testing Cotizaciones (`QUOTE_COUNT`, `DAYS_BACK` optional) |
+| `npm run dev:seed-stock` | Wipe stock sample entries on Neon **development** and seed multi-day Desperdicios / Consumibles / Activos (`DAYS_BACK`, `ENTRIES_PER_CUSTOMER` optional) |
+| `npm run dev:refresh-demo` | Refresh demo charts: stock + quotes relative to today (`STOCK_DAYS_BACK`, `QUOTE_DAYS_BACK`, `QUOTE_COUNT` optional). Also weekly via Actions cron (secret `DATABASE_URL_DEVELOPMENT`) |
 | `npm run db:studio` | Prisma Studio |
 
 ## Precios

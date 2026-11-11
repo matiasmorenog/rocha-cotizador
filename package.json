@@ -24,7 +24,9 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "dev:wipe-customers": "SEED_TARGET=development tsx scripts/dev-wipe-customers.ts",
-    "dev:seed-quotes": "SEED_TARGET=development tsx scripts/dev-seed-quotes.ts"
+    "dev:seed-quotes": "SEED_TARGET=development tsx scripts/dev-seed-quotes.ts",
+    "dev:seed-stock": "SEED_TARGET=development tsx scripts/seed-stock-sample.ts",
+    "dev:refresh-demo": "SEED_TARGET=development tsx scripts/dev-refresh-demo.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

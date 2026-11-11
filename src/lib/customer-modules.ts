@@ -111,6 +111,14 @@ export const CONSUMABLES_SEED_CODES = [
   "047",
 ] as const;
 
+/** Seed codes that should have Activos del local enabled. */
+export const ACTIVOS_SEED_CODES = [
+  "905",
+  "168",
+  "172",
+  "125",
+] as const;
+
 export async function getEnabledModulesForCustomer(
   customerId: string,
 ): Promise<CustomerModule[]> {
@@ -136,9 +144,11 @@ export async function customerHasModule(
 export async function seedCustomerModuleAccess(): Promise<{
   desperdicios: number;
   consumables: number;
+  activos: number;
 }> {
   let desperdicios = 0;
   let consumables = 0;
+  let activos = 0;
 
   for (const code of DESPERDICIOS_SEED_CODES) {
     const customer = await db.customer.findUnique({
@@ -183,5 +193,28 @@ export async function seedCustomerModuleAccess(): Promise<{
     consumables += 1;
   }
 
-  return { desperdicios, consumables };
+  for (const code of ACTIVOS_SEED_CODES) {
+    const customer = await db.customer.findUnique({
+      where: { code },
+      select: { id: true },
+    });
+    if (!customer) continue;
+    await db.customerModuleAccess.upsert({
+      where: {
+        customerId_module: {
+          customerId: customer.id,
+          module: "ACTIVOS",
+        },
+      },
+      create: {
+        customerId: customer.id,
+        module: "ACTIVOS",
+        enabled: true,
+      },
+      update: { enabled: true },
+    });
+    activos += 1;
+  }
+
+  return { desperdicios, consumables, activos };
 }

@@ -13,7 +13,11 @@ export type AdminToastItem = {
   /** When absent, toast is informational only (no navigation). */
   url?: string;
   tone: AdminToastTone;
-  source: "inbox" | "push" | "test";
+  source: "inbox" | "push" | "test" | "subscription";
+  /** Stay until user closes — no auto TTL. */
+  sticky?: boolean;
+  /** Show even when in-app notifications pref is off. */
+  forceShow?: boolean;
 };
 
 type Props = {
