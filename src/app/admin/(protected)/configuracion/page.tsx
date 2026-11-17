@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { requireStaffPermission } from "@/lib/session";
 import { staffHasPermission } from "@/lib/staff-permissions";
 import { getRochaSubscriptionStatus } from "@/lib/subscription-payments";
+import { isSubscriptionBillingEnabled } from "@/lib/subscription-billing";
 import { parseConfigTab } from "@/lib/admin-config-tabs";
 import { PushNotificationsSettings } from "@/components/admin/push-notifications-settings";
 import { OrderCutoffSettingsSection } from "@/components/admin/order-cutoff-settings-section";
@@ -27,7 +28,9 @@ export default async function AdminConfigPage({
   const canRegisterPayments =
     Boolean(session.user.isSuperuser) && !session.user.staffPreview;
   const subscriptionStatus =
-    tab === "servicio" ? await getRochaSubscriptionStatus() : null;
+    tab === "servicio" && isSubscriptionBillingEnabled()
+      ? await getRochaSubscriptionStatus()
+      : null;
 
   if (tab === "cotizaciones") {
     // Reachable only while ORDER_CUTOFF_ENFORCEMENT_ENABLED is true
