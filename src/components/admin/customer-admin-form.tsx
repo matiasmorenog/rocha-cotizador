@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { FormSection } from "@/components/admin/form-section";
 import { FormToggleCard } from "@/components/admin/form-toggle-card";
+import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -263,27 +264,27 @@ export function CustomerAdminForm({
           </div>
           <div className="space-y-1">
             <Label htmlFor="customer-price-list">Lista de precios</Label>
-            <select
+            <AppSelect
               id="customer-price-list"
               value={priceListId}
-              onChange={(e) => setPriceListId(e.target.value)}
-              className={cn(
-                "flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-10 text-sm",
-                FOCUS_BRAND_BORDER,
-              )}
+              onChange={setPriceListId}
+              options={[
+                ...(inactiveSelected
+                  ? [
+                      {
+                        value: inactiveSelected.id,
+                        label: `${inactiveSelected.name} (deshabilitada)`,
+                      },
+                    ]
+                  : []),
+                ...activeLists.map((l) => ({
+                  value: l.id,
+                  label: l.name,
+                })),
+              ]}
               required
-            >
-              {inactiveSelected ? (
-                <option value={inactiveSelected.id}>
-                  {inactiveSelected.name} (deshabilitada)
-                </option>
-              ) : null}
-              {activeLists.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
+              aria-label="Lista de precios"
+            />
             <p className="text-xs text-neutral-500">
               Precios fijos de la lista. El cliente solo ve el precio final.
             </p>

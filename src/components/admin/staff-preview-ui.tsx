@@ -4,12 +4,12 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTransition } from "react";
 import { Eye } from "lucide-react";
+import { AppSelect } from "@/components/ui/app-select";
 import {
   STAFF_PREVIEW_PRESET_ORDER,
   staffPreviewPresetLabel,
   type StaffPreviewPresetId,
 } from "@/lib/staff-preview";
-import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 async function setStaffPreview(
@@ -58,26 +58,25 @@ export function StaffPreviewControl({
         <Eye className="h-3.5 w-3.5 shrink-0 text-current" aria-hidden />
         Ver como
       </span>
-      <select
+      <AppSelect
         aria-label="Vista previa de permisos de staff"
         disabled={pending}
         value={activePreset}
-        onChange={(e) => onChange(e.target.value)}
-        className={cn(
-          "h-8 w-full min-w-0 truncate rounded-md border px-2 text-xs shadow-none",
+        onChange={onChange}
+        size="sm"
+        triggerClassName={
           isPreviewActive
             ? "border-amber-200 bg-amber-50 text-amber-950"
-            : "border-neutral-200 bg-white text-neutral-800",
-          FOCUS_BRAND_BORDER,
-        )}
-      >
-        <option value="">Superusuario</option>
-        {STAFF_PREVIEW_PRESET_ORDER.map((id) => (
-          <option key={id} value={id}>
-            {staffPreviewPresetLabel(id)}
-          </option>
-        ))}
-      </select>
+            : undefined
+        }
+        options={[
+          { value: "", label: "Superusuario" },
+          ...STAFF_PREVIEW_PRESET_ORDER.map((id) => ({
+            value: id,
+            label: staffPreviewPresetLabel(id),
+          })),
+        ]}
+      />
     </label>
   );
 }

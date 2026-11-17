@@ -11,6 +11,7 @@ import {
   AdminDraftModalFooter,
   AdminDraftModalHeader,
 } from "@/components/ui/admin-draft-modal";
+import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -324,22 +325,17 @@ export function CustomerAdminCreateModal({
                 <Label htmlFor="customer-create-price-list">
                   Lista de precios
                 </Label>
-                <select
+                <AppSelect
                   id="customer-create-price-list"
                   value={priceListId}
-                  onChange={(e) => setPriceListId(e.target.value)}
-                  className={cn(
-                    "flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-10 text-sm",
-                    FOCUS_BRAND_BORDER,
-                  )}
+                  onChange={setPriceListId}
+                  options={activeLists.map((l) => ({
+                    value: l.id,
+                    label: l.name,
+                  }))}
                   required
-                >
-                  {activeLists.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}
-                    </option>
-                  ))}
-                </select>
+                  aria-label="Lista de precios"
+                />
               </div>
             </div>
           </FormSection>

@@ -13,6 +13,7 @@ export function SortableTh<K extends string>({
   onToggle,
   className,
   align = "left",
+  collapsing = false,
 }: {
   label: ReactNode;
   sortKey: K;
@@ -21,6 +22,8 @@ export function SortableTh<K extends string>({
   onToggle: (key: K) => void;
   className?: string;
   align?: "left" | "right";
+  /** Width→0 FLIP via `useSmoothColumnWidths` (`data-col-collapse`). */
+  collapsing?: boolean;
 }) {
   const active = activeKey === sortKey;
   const ariaSort = !active
@@ -37,9 +40,11 @@ export function SortableTh<K extends string>({
         "px-3 py-2 font-medium transition-colors",
         align === "right" && "text-right",
         active && "font-semibold text-[var(--brand-primary)]",
+        collapsing && "overflow-hidden",
         className,
       )}
       aria-sort={ariaSort}
+      data-col-collapse={collapsing ? "" : undefined}
     >
       <button
         type="button"

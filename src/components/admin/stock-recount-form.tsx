@@ -18,6 +18,7 @@ import {
   AdminDraftModalHeader,
   AdminDraftTrigger,
 } from "@/components/ui/admin-draft-modal";
+import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { DatetimeLocalPicker } from "@/components/ui/datetime-local-picker";
@@ -353,25 +354,22 @@ export function StockRecountForm({
           {!fixedCustomerId ? (
             <div className="space-y-1">
               <Label>Sucursal / cliente</Label>
-              <select
-                className={cn(
-                  "h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm",
-                  FOCUS_BRAND_BORDER,
-                )}
+              <AppSelect
                 value={customerId}
-                onChange={(e) => setCustomerId(e.target.value)}
+                onChange={setCustomerId}
                 required
-              >
-                {customers.length === 0 ? (
-                  <option value="">Sin clientes con módulo</option>
-                ) : (
-                  customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.code} · {c.name}
-                    </option>
-                  ))
-                )}
-              </select>
+                searchable
+                searchPlaceholder="Buscar sucursal…"
+                aria-label="Sucursal / cliente"
+                options={
+                  customers.length === 0
+                    ? [{ value: "", label: "Sin clientes con módulo" }]
+                    : customers.map((c) => ({
+                        value: c.id,
+                        label: `${c.code} · ${c.name}`,
+                      }))
+                }
+              />
             </div>
           ) : null}
           <div className="space-y-1">
@@ -451,25 +449,22 @@ export function StockRecountForm({
                     </td>
                     <td className="px-3 py-2">
                       {l.allowsUnitOrder ? (
-                        <select
-                          className={cn(
-                            "h-9 rounded-md border border-neutral-200 bg-white px-2 text-sm",
-                            FOCUS_BRAND_BORDER,
-                          )}
+                        <AppSelect
                           value={l.unit}
-                          onChange={(e) =>
+                          onChange={(unit) =>
                             updateLine(l.productId, {
-                              unit: e.target.value as ProductMeasureUnit,
+                              unit: unit as ProductMeasureUnit,
                             })
                           }
+                          size="sm"
                           aria-label={`Unidad de ${l.name}`}
-                        >
-                          {stockUnitsForProduct(l.allowsUnitOrder).map((u) => (
-                            <option key={u} value={u}>
-                              {u === "kg" ? "Kg" : "Unidades"}
-                            </option>
-                          ))}
-                        </select>
+                          options={stockUnitsForProduct(l.allowsUnitOrder).map(
+                            (u) => ({
+                              value: u,
+                              label: u === "kg" ? "Kg" : "Unidades",
+                            }),
+                          )}
+                        />
                       ) : (
                         <span className="text-neutral-700">unid.</span>
                       )}
