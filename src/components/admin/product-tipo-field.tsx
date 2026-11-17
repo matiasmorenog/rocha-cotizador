@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AppSelect } from "@/components/ui/app-select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 const OTHER_VALUE = "__other__";
@@ -57,34 +57,26 @@ export function ProductTipoField({
     onChange(next);
   }
 
-  const selectClass = cn(
-    compact
-      ? "h-8 min-w-[7rem] rounded-md border border-neutral-200 bg-white px-2 text-sm"
-      : "h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm",
-    FOCUS_BRAND_BORDER,
-  );
-
   return (
     <div className={cn("space-y-1", compact && "min-w-[8rem]")}>
       {compact ? null : <Label htmlFor={id}>Tipo</Label>}
-      <select
+      <AppSelect
         id={id}
         form={form}
-        className={selectClass}
         value={selectValue}
-        onChange={(e) => onSelectChange(e.target.value)}
+        onChange={onSelectChange}
         disabled={disabled}
         required={required && !otherMode}
+        size={compact ? "sm" : "md"}
+        searchable
+        searchPlaceholder="Buscar tipo…"
         aria-label="Tipo"
-      >
-        <option value="">{compact ? "—" : "Sin tipo"}</option>
-        {rubros.map((r) => (
-          <option key={r} value={r}>
-            {r}
-          </option>
-        ))}
-        <option value={OTHER_VALUE}>Otro / nuevo…</option>
-      </select>
+        options={[
+          { value: "", label: compact ? "—" : "Sin tipo" },
+          ...rubros.map((r) => ({ value: r, label: r })),
+          { value: OTHER_VALUE, label: "Otro / nuevo…" },
+        ]}
+      />
       {otherMode ? (
         <Input
           form={form}

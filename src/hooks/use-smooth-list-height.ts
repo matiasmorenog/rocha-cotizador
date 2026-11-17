@@ -106,14 +106,26 @@ function borderBoxHeight(entry: ResizeObserverEntry): number {
 export function useSmoothListHeight(
   lockRef: RefObject<HTMLElement | null>,
   resizeKey: string | number,
+  /**
+   * When false (e.g. portaled listbox closed), reset so the next open skips
+   * the enter FLIP and rebinds ResizeObserver to the new DOM node.
+   */
+  enabled = true,
 ): void {
   const prevKeyRef = useRef<string | number | null>(null);
   const mountedRef = useRef(false);
   const lastHeightRef = useRef<number | null>(null);
 
-  // Mount-only: track the shell's real rendered height continuously, from a
-  // proper effect callback (not render) — see doc comment above.
+  // Track the shell's real rendered height continuously, from a proper effect
+  // callback (not render) — see doc comment above. Rebind when `enabled`.
   useLayoutEffect(() => {
+    if (!enabled) {
+      mountedRef.current = false;
+      prevKeyRef.current = null;
+      lastHeightRef.current = null;
+      return;
+    }
+
     const el = lockRef.current;
     if (!el) return;
 
@@ -126,9 +138,11 @@ export function useSmoothListHeight(
     });
     ro.observe(el);
     return () => ro.disconnect();
-  }, [lockRef]);
+  }, [lockRef, enabled]);
 
   useLayoutEffect(() => {
+    if (!enabled) return;
+
     const el = lockRef.current;
     const keyChanged = prevKeyRef.current !== resizeKey;
     prevKeyRef.current = resizeKey;
@@ -180,5 +194,5 @@ export function useSmoothListHeight(
       window.clearTimeout(fallback);
       el.removeEventListener("transitionend", onEnd);
     };
-  }, [lockRef, resizeKey]);
+  }, [lockRef, resizeKey, enabled]);
 }

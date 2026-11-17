@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
+import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
@@ -78,41 +79,32 @@ export function DemoLoginForm({ kind, defaultCallback }: DemoLoginFormProps) {
     <form onSubmit={onSubmit} className="mx-auto flex w-full max-w-sm flex-col gap-4">
       <div className="space-y-1.5">
         <Label htmlFor="demo-persona">Persona demo</Label>
-        <select
+        <AppSelect
           id="demo-persona"
           value={personaId}
-          onChange={(e) => setPersonaId(e.target.value)}
-          className={cn(
-            "flex h-10 w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-sm",
-            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--brand-primary)]/40",
-          )}
+          onChange={setPersonaId}
           required
-        >
-          {kind === "all" ? (
-            <>
-              <optgroup label={groupLabel("customer")}>
-                {customerPersonas.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label={groupLabel("staff")}>
-                {staffPersonas.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.label}
-                  </option>
-                ))}
-              </optgroup>
-            </>
-          ) : (
-            personas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
-            ))
-          )}
-        </select>
+          aria-label="Persona demo"
+          options={
+            kind === "all"
+              ? [
+                  ...customerPersonas.map((p) => ({
+                    value: p.id,
+                    label: p.label,
+                    group: groupLabel("customer"),
+                  })),
+                  ...staffPersonas.map((p) => ({
+                    value: p.id,
+                    label: p.label,
+                    group: groupLabel("staff"),
+                  })),
+                ]
+              : personas.map((p) => ({
+                  value: p.id,
+                  label: p.label,
+                }))
+          }
+        />
         {personaId ? (
           <p className="text-xs text-neutral-500">
             {personas.find((p) => p.id === personaId)?.description}

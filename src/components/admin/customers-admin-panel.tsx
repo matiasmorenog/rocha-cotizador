@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useExitPresence } from "@/hooks/use-exit-presence";
 import { cn } from "@/lib/utils";
 import { Pencil, UserPlus } from "lucide-react";
@@ -16,6 +17,7 @@ import { AdminDraftTrigger } from "@/components/ui/admin-draft-modal";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { Input } from "@/components/ui/input";
+import { TableColumnPicker } from "@/components/ui/table-column-picker";
 import { whatsappUrl } from "@/lib/whatsapp";
 import { filterFoldedSearch } from "@/lib/search-fold";
 import {
@@ -30,9 +32,23 @@ import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
 import { useSelectedRow } from "@/hooks/use-selected-row";
 import { sortRows, useTableSort } from "@/hooks/use-table-sort";
 import {
+  useTableColumnVisibility,
+  type TableColumnDef,
+} from "@/hooks/use-table-column-visibility";
+import {
   CUSTOMER_ACCOUNT_STATUS_LABELS,
   type CustomerModuleFlags,
 } from "@/lib/customer-modules";
+
+const CUSTOMER_TABLE_COLUMNS: TableColumnDef[] = [
+  { id: "code", label: "Código", locked: true },
+  { id: "name", label: "Nombre", locked: true },
+  { id: "address", label: "Dirección" },
+  { id: "phone", label: "Teléfono" },
+  { id: "lista", label: "Lista" },
+  { id: "estado", label: "Estado" },
+  { id: "actions", label: "Acciones", locked: true },
+];
 
 export type CustomerListRow = {
   id: string;
@@ -75,6 +91,7 @@ export function CustomersAdminPanel({
   priceLists: PriceListOption[];
   initialEditId?: string | null;
 }) {
+  const { data: session } = useSession();
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [createDraft, setCreateDraft] = useState<DraftSessionInfo>({
@@ -85,6 +102,19 @@ export function CustomersAdminPanel({
     initialEditId ?? null,
   );
   const { sort, toggle } = useTableSort<CustomerSortKey>();
+  const {
+    toggleableColumns,
+    isVisible,
+    setColumnVisible,
+    showAllColumns,
+    colSpan,
+    visibilityKey,
+    hiddenCount,
+  } = useTableColumnVisibility(
+    "admin-customers",
+    CUSTOMER_TABLE_COLUMNS,
+    session?.user?.id,
+  );
   const onCreateDraftChange = useCallback((next: DraftSessionInfo) => {
     setCreateDraft(next);
   }, []);
@@ -127,7 +157,10 @@ export function CustomersAdminPanel({
   useSmoothListHeight(tableHeightLockRef, visible.length);
 
   const tableRef = useRef<HTMLTableElement>(null);
-  useSmoothColumnWidths(tableRef, `${query}|${visible.length}|${sort?.key ?? ""}`);
+  useSmoothColumnWidths(
+    tableRef,
+    `${query}|${visible.length}|${sort?.key ?? ""}|${visibilityKey}`,
+  );
   const { rowProps } = useSelectedRow(visible.map((c) => c.id));
 
   const editing = editingId
@@ -155,17 +188,26 @@ export function CustomersAdminPanel({
           aria-label="Buscar clientes"
           className="min-w-0 flex-1"
         />
-        <AdminDraftTrigger
-          onClick={() => {
-            setEditingId(null);
-            setCreating((v) => !v);
-          }}
-          pending={createDraft.pending}
-          itemCount={createDraft.itemCount}
-          idleLabel="Nuevo cliente"
-          pendingLabel="Continuar cliente"
-          icon={UserPlus}
-        />
+        <div className="flex shrink-0 items-center gap-2">
+          <TableColumnPicker
+            columns={toggleableColumns}
+            isVisible={isVisible}
+            onChange={setColumnVisible}
+            onShowAll={showAllColumns}
+            hiddenCount={hiddenCount}
+          />
+          <AdminDraftTrigger
+            onClick={() => {
+              setEditingId(null);
+              setCreating((v) => !v);
+            }}
+            pending={createDraft.pending}
+            itemCount={createDraft.itemCount}
+            idleLabel="Nuevo cliente"
+            pendingLabel="Continuar cliente"
+            icon={UserPlus}
+          />
+        </div>
       </div>
 
       <div
@@ -204,7 +246,7 @@ export function CustomersAdminPanel({
 
       <div ref={tableHeightLockRef}>
         <DataTableScroll className="data-table-rows-2l">
-          <table ref={tableRef} className="w-full min-w-[40rem] text-sm">
+          <table ref={tableRef} className="w-full text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
                 <SortableTh
@@ -221,35 +263,43 @@ export function CustomersAdminPanel({
                   dir={sort?.dir}
                   onToggle={toggle}
                 />
-                <SortableTh
-                  label="Dirección"
-                  sortKey="address"
-                  activeKey={sort?.key}
-                  dir={sort?.dir}
-                  onToggle={toggle}
-                />
-                <SortableTh
-                  label="Teléfono"
-                  sortKey="phone"
-                  activeKey={sort?.key}
-                  dir={sort?.dir}
-                  onToggle={toggle}
-                  className="whitespace-nowrap"
-                />
-                <SortableTh
-                  label="Lista"
-                  sortKey="lista"
-                  activeKey={sort?.key}
-                  dir={sort?.dir}
-                  onToggle={toggle}
-                />
-                <SortableTh
-                  label="Estado"
-                  sortKey="estado"
-                  activeKey={sort?.key}
-                  dir={sort?.dir}
-                  onToggle={toggle}
-                />
+                {isVisible("address") ? (
+                  <SortableTh
+                    label="Dirección"
+                    sortKey="address"
+                    activeKey={sort?.key}
+                    dir={sort?.dir}
+                    onToggle={toggle}
+                  />
+                ) : null}
+                {isVisible("phone") ? (
+                  <SortableTh
+                    label="Teléfono"
+                    sortKey="phone"
+                    activeKey={sort?.key}
+                    dir={sort?.dir}
+                    onToggle={toggle}
+                    className="whitespace-nowrap"
+                  />
+                ) : null}
+                {isVisible("lista") ? (
+                  <SortableTh
+                    label="Lista"
+                    sortKey="lista"
+                    activeKey={sort?.key}
+                    dir={sort?.dir}
+                    onToggle={toggle}
+                  />
+                ) : null}
+                {isVisible("estado") ? (
+                  <SortableTh
+                    label="Estado"
+                    sortKey="estado"
+                    activeKey={sort?.key}
+                    dir={sort?.dir}
+                    onToggle={toggle}
+                  />
+                ) : null}
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -257,7 +307,7 @@ export function CustomersAdminPanel({
               {sorted.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={7}
+                    colSpan={colSpan}
                     className="px-3 py-8 text-center text-neutral-500"
                   >
                     {query.trim()
@@ -284,35 +334,43 @@ export function CustomersAdminPanel({
                             className="admin-table-name-2l max-w-[14rem]"
                           />
                         </td>
-                        <td className="px-3 py-2 text-neutral-700">
-                          <span className="admin-table-name-2l max-w-[16rem]">
-                            {c.address ?? "—"}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2 text-neutral-700">
-                          {c.phone && wa ? (
-                            <a
-                              href={wa}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[var(--brand-primary)] underline hover:opacity-80"
-                            >
-                              {c.phone}
-                            </a>
-                          ) : (
-                            (c.phone ?? "—")
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          {c.priceListName ?? "Precio base"}
-                        </td>
-                        <td className="px-3 py-2">
-                          <Badge variant={c.active ? "success" : "danger"}>
-                            {c.active
-                              ? CUSTOMER_ACCOUNT_STATUS_LABELS.enabled
-                              : CUSTOMER_ACCOUNT_STATUS_LABELS.disabled}
-                          </Badge>
-                        </td>
+                        {isVisible("address") ? (
+                          <td className="px-3 py-2 text-neutral-700">
+                            <span className="admin-table-name-2l max-w-[16rem]">
+                              {c.address ?? "—"}
+                            </span>
+                          </td>
+                        ) : null}
+                        {isVisible("phone") ? (
+                          <td className="whitespace-nowrap px-3 py-2 text-neutral-700">
+                            {c.phone && wa ? (
+                              <a
+                                href={wa}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[var(--brand-primary)] underline hover:opacity-80"
+                              >
+                                {c.phone}
+                              </a>
+                            ) : (
+                              (c.phone ?? "—")
+                            )}
+                          </td>
+                        ) : null}
+                        {isVisible("lista") ? (
+                          <td className="px-3 py-2">
+                            {c.priceListName ?? "Precio base"}
+                          </td>
+                        ) : null}
+                        {isVisible("estado") ? (
+                          <td className="px-3 py-2">
+                            <Badge variant={c.active ? "success" : "danger"}>
+                              {c.active
+                                ? CUSTOMER_ACCOUNT_STATUS_LABELS.enabled
+                                : CUSTOMER_ACCOUNT_STATUS_LABELS.disabled}
+                            </Badge>
+                          </td>
+                        ) : null}
                         <td className="px-3 py-2 text-right">
                           <AdminTableActions className="justify-end">
                             <AdminTableIconAction
@@ -329,7 +387,7 @@ export function CustomersAdminPanel({
                     );
                   })}
                   <RevealMoreTableRow
-                    colSpan={7}
+                    colSpan={colSpan}
                     enabled={hasMore}
                     onReveal={revealMore}
                     shown={visible.length}

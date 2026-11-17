@@ -127,6 +127,11 @@ function buildDayBuckets(
   return buckets;
 }
 
+/**
+ * Bucket axes stop at `todayKey` (Argentina). Future days/months omitted so
+ * the chart does not drop to zero for time that has not happened yet.
+ * Current day / current month stay (partial period with real data).
+ */
 function buildBuckets(
   period: QuoteActivityPeriod,
   todayKey: string,
@@ -137,17 +142,20 @@ function buildBuckets(
 } {
   if (period === "year") {
     const year = todayKey.slice(0, 4);
+    const currentMonth = Number(todayKey.slice(5, 7));
     const buckets: QuoteActivityPoint[] = [];
 
-    for (let month = 1; month <= 12; month++) {
+    for (let month = 1; month <= currentMonth; month++) {
       const yearMonth = `${year}-${String(month).padStart(2, "0")}`;
+      const monthEnd = lastDayOfMonth(yearMonth);
       buckets.push({
         key: yearMonth,
         label: monthShortLabel(yearMonth),
         quotes: 0,
         revenue: 0,
         desde: `${yearMonth}-01`,
-        hasta: lastDayOfMonth(yearMonth),
+        // Clip open month so “ver cotizaciones” matches elapsed days.
+        hasta: yearMonth === todayKey.slice(0, 7) ? todayKey : monthEnd,
       });
     }
 
@@ -161,7 +169,7 @@ function buildBuckets(
   if (period === "month") {
     const yearMonth = todayKey.slice(0, 7);
     const startKey = `${yearMonth}-01`;
-    const dayCount = Number(lastDayOfMonth(yearMonth).slice(8, 10));
+    const dayCount = Number(todayKey.slice(8, 10));
     return {
       buckets: buildDayBuckets(startKey, dayCount, dayOfMonthLabel),
       rangeStart: argentinaDayStart(startKey),
@@ -169,10 +177,18 @@ function buildBuckets(
     };
   }
 
-  // week: calendar Mon–Sun containing today (Argentina); future days stay 0
+  // week: Mon → today (Argentina); omit days after today
   const startKey = argentinaWeekMondayKey(todayKey);
+  let dayCount = 1;
+  for (
+    let cursor = startKey;
+    cursor < todayKey;
+    cursor = shiftArgentinaDay(cursor, 1)
+  ) {
+    dayCount += 1;
+  }
   return {
-    buckets: buildDayBuckets(startKey, 7, weekdayShortLabel),
+    buckets: buildDayBuckets(startKey, dayCount, weekdayShortLabel),
     rangeStart: argentinaDayStart(startKey),
     grain: "day",
   };
@@ -242,7 +258,7 @@ function fillBuckets(
 /**
  * Quote activity series for the dashboard chart.
  * Cache key args: Argentina day + period (`week` | `month` | `year`).
- * Key prefix `admin-quote-activity-v3` (calendar week + month); tag `admin-dashboard`.
+ * Key prefix `admin-quote-activity-v4` (clip buckets to today); tag `admin-dashboard`.
  */
 const getCachedQuoteActivity = unstable_cache(
   async (day: string, period: QuoteActivityPeriod): Promise<QuoteActivitySeries> => {
@@ -250,7 +266,7 @@ const getCachedQuoteActivity = unstable_cache(
     const rows = await fetchQuoteActivityRows(rangeStart, grain);
     return fillBuckets(buckets, rows, period);
   },
-  ["admin-quote-activity-v3"],
+  ["admin-quote-activity-v4"],
   { tags: [CACHE_TAGS.adminDashboard], revalidate: 86400 },
 );
 

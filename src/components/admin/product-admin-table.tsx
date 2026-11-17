@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { Check, PackagePlus, Pencil, X } from "lucide-react";
 import {
   AdminTableActions,
@@ -29,8 +30,14 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { SortableTh } from "@/components/ui/sortable-th";
+import { AppSelect } from "@/components/ui/app-select";
+import { TableColumnPicker } from "@/components/ui/table-column-picker";
 import type { DraftSessionInfo } from "@/hooks/use-draft-session";
 import { sortRows, useTableSort } from "@/hooks/use-table-sort";
+import {
+  useTableColumnVisibility,
+  type TableColumnDef,
+} from "@/hooks/use-table-column-visibility";
 import { cn, formatArInput, formatPrice, parseArNumber } from "@/lib/utils";
 import { notifyCatalogStale } from "@/lib/client-catalog-cache";
 import { dispatchAdminInAppToast } from "@/lib/push-sw-client";
@@ -44,7 +51,6 @@ import {
   normalizeAllowsUnitOrder,
   productSupportsUnitOrKgOrder,
 } from "@/lib/stock-product-kind-shared";
-import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { filterFoldedSearch } from "@/lib/search-fold";
 import {
   INCREMENTAL_REVEAL_INITIAL,
@@ -58,6 +64,29 @@ import {
   useSelectedRow,
   type RowSelectionProps,
 } from "@/hooks/use-selected-row";
+
+function productListColumnId(listId: string): string {
+  return `list:${listId}`;
+}
+
+function buildProductTableColumns(
+  activeLists: PriceListOption[],
+): TableColumnDef[] {
+  return [
+    { id: "code", label: "Código", locked: true },
+    { id: "name", label: "Nombre", locked: true },
+    { id: "rubro", label: "Tipo" },
+    { id: "base", label: "Base" },
+    ...activeLists.map((l) => ({
+      id: productListColumnId(l.id),
+      label: l.name,
+    })),
+    { id: "stock", label: "Stock" },
+    { id: "available", label: "Habilitado" },
+    { id: "measure", label: "Medida" },
+    { id: "actions", label: "Acciones", locked: true },
+  ];
+}
 
 export type ProductTableRow = {
   id: string;
@@ -96,12 +125,14 @@ function ProductEditRow({
   rubros,
   onCancel,
   rowProps,
+  colVisible,
 }: {
   product: ProductTableRow;
   activeLists: PriceListOption[];
   rubros: string[];
   onCancel: () => void;
   rowProps?: RowSelectionProps;
+  colVisible: (id: string) => boolean;
 }) {
   const router = useRouter();
   const formId = `product-edit-${product.id}`;
@@ -240,108 +271,115 @@ function ProductEditRow({
           aria-label="Nombre"
         />
       </td>
-      <td className="px-3 py-2">
-        <ProductTipoField
-          rubros={rubros}
-          value={rubro}
-          onChange={setRubro}
-          form={formId}
-          disabled={loading}
-          compact
-        />
-      </td>
-      <td className="px-3 py-2">
-        <ArNumberInput
-          form={formId}
-          className={cn(cellInputClass, "min-w-[6rem] font-mono")}
-          value={basePrice}
-          onValueChange={setBasePrice}
-          maxFractionDigits={2}
-          formatOptions={AR_PRICE_FORMAT}
-          required
-          disabled={loading}
-          aria-label="Precio base"
-        />
-      </td>
-      {activeLists.map((l) => (
-        <td key={l.id} className="px-3 py-2">
+      {colVisible("rubro") ? (
+        <td className="px-3 py-2">
+          <ProductTipoField
+            rubros={rubros}
+            value={rubro}
+            onChange={setRubro}
+            form={formId}
+            disabled={loading}
+            compact
+          />
+        </td>
+      ) : null}
+      {colVisible("base") ? (
+        <td className="px-3 py-2">
           <ArNumberInput
             form={formId}
             className={cn(cellInputClass, "min-w-[6rem] font-mono")}
-            value={listPrices[l.id] ?? ""}
-            onValueChange={(raw) =>
-              setListPrices((prev) => ({ ...prev, [l.id]: raw }))
-            }
+            value={basePrice}
+            onValueChange={setBasePrice}
             maxFractionDigits={2}
             formatOptions={AR_PRICE_FORMAT}
-            placeholder="—"
+            required
             disabled={loading}
-            aria-label={`Precio ${l.name}`}
+            aria-label="Precio base"
           />
         </td>
-      ))}
-      <td className="px-3 py-2">
-        <select
-          form={formId}
-          value={stockKind}
-          onChange={(e) => {
-            const nextKind = e.target.value as ProductStockKindValue;
-            setStockKind(nextKind);
-            if (!productSupportsUnitOrKgOrder(nextKind)) {
-              setAllowsUnitOrder(false);
-            }
-          }}
-          disabled={loading}
-          aria-label="Tipo de stock"
-          className={cn(
-            "h-8 max-w-[9rem] rounded-md border border-neutral-300 bg-white px-2 text-xs",
-            FOCUS_BRAND_BORDER,
-          )}
-        >
-          {PRODUCT_STOCK_KIND_OPTIONS.map((kind) => (
-            <option key={kind} value={kind}>
-              {PRODUCT_STOCK_KIND_LABELS[kind]}
-            </option>
-          ))}
-        </select>
-      </td>
-      <td className="px-3 py-2">
-        <label
-          className="inline-flex cursor-pointer items-center gap-2"
-          title={
-            available
-              ? ENTITY_ENABLED_LABELS.enabled
-              : ENTITY_ENABLED_LABELS.disabled
-          }
-        >
-          <Switch
+      ) : null}
+      {activeLists.map((l) =>
+        colVisible(productListColumnId(l.id)) ? (
+          <td key={l.id} className="px-3 py-2">
+            <ArNumberInput
+              form={formId}
+              className={cn(cellInputClass, "min-w-[6rem] font-mono")}
+              value={listPrices[l.id] ?? ""}
+              onValueChange={(raw) =>
+                setListPrices((prev) => ({ ...prev, [l.id]: raw }))
+              }
+              maxFractionDigits={2}
+              formatOptions={AR_PRICE_FORMAT}
+              placeholder="—"
+              disabled={loading}
+              aria-label={`Precio ${l.name}`}
+            />
+          </td>
+        ) : null,
+      )}
+      {colVisible("stock") ? (
+        <td className="px-3 py-2">
+          <AppSelect
             form={formId}
-            checked={available}
-            onChange={(e) => setAvailable(e.target.checked)}
+            value={stockKind}
+            onChange={(nextKind) => {
+              setStockKind(nextKind);
+              if (!productSupportsUnitOrKgOrder(nextKind)) {
+                setAllowsUnitOrder(false);
+              }
+            }}
             disabled={loading}
-            aria-label={ENTITY_ENABLED_LABELS.enabled}
+            size="sm"
+            className="max-w-[9rem]"
+            aria-label="Tipo de stock"
+            options={PRODUCT_STOCK_KIND_OPTIONS.map((kind) => ({
+              value: kind,
+              label: PRODUCT_STOCK_KIND_LABELS[kind],
+            }))}
           />
-        </label>
-        {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
-      </td>
-      <td className="px-3 py-2">
-        {productSupportsUnitOrKgOrder(stockKind) ? (
+        </td>
+      ) : null}
+      {colVisible("available") ? (
+        <td className="px-3 py-2">
           <label
             className="inline-flex cursor-pointer items-center gap-2"
-            title={productOrderModeDescription(allowsUnitOrder)}
+            title={
+              available
+                ? ENTITY_ENABLED_LABELS.enabled
+                : ENTITY_ENABLED_LABELS.disabled
+            }
           >
             <Switch
               form={formId}
-              checked={allowsUnitOrder}
-              onChange={(e) => setAllowsUnitOrder(e.target.checked)}
+              checked={available}
+              onChange={(e) => setAvailable(e.target.checked)}
               disabled={loading}
-              aria-label="Permite pedido por unidades"
+              aria-label={ENTITY_ENABLED_LABELS.enabled}
             />
           </label>
-        ) : (
-          <span className="text-xs text-neutral-400">—</span>
-        )}
-      </td>
+          {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+        </td>
+      ) : null}
+      {colVisible("measure") ? (
+        <td className="px-3 py-2">
+          {productSupportsUnitOrKgOrder(stockKind) ? (
+            <label
+              className="inline-flex cursor-pointer items-center gap-2"
+              title={productOrderModeDescription(allowsUnitOrder)}
+            >
+              <Switch
+                form={formId}
+                checked={allowsUnitOrder}
+                onChange={(e) => setAllowsUnitOrder(e.target.checked)}
+                disabled={loading}
+                aria-label="Permite pedido por unidades"
+              />
+            </label>
+          ) : (
+            <span className="text-xs text-neutral-400">—</span>
+          )}
+        </td>
+      ) : null}
       <td className="px-3 py-2 text-right">
         <AdminTableActions className="justify-end">
           <AdminTableIconAction
@@ -360,6 +398,9 @@ function ProductEditRow({
             disabled={loading}
           />
         </AdminTableActions>
+        {!colVisible("available") && error ? (
+          <p className="mt-1 text-xs text-red-600">{error}</p>
+        ) : null}
       </td>
     </tr>
   );
@@ -371,12 +412,14 @@ function ProductViewRow({
   editDisabled,
   onStartEdit,
   rowProps,
+  colVisible,
 }: {
   product: ProductTableRow;
   activeLists: PriceListOption[];
   editDisabled: boolean;
   onStartEdit: () => void;
   rowProps?: RowSelectionProps;
+  colVisible: (id: string) => boolean;
 }) {
   return (
     <tr {...rowProps} tabIndex={0} className="admin-table-row border-t border-neutral-100">
@@ -386,9 +429,14 @@ function ProductViewRow({
           {product.name}
         </span>
       </td>
-      <td className="px-3 py-2 text-neutral-600">{product.rubro ?? "—"}</td>
-      <td className="px-3 py-2">{formatPrice(product.basePrice)}</td>
+      {colVisible("rubro") ? (
+        <td className="px-3 py-2 text-neutral-600">{product.rubro ?? "—"}</td>
+      ) : null}
+      {colVisible("base") ? (
+        <td className="px-3 py-2">{formatPrice(product.basePrice)}</td>
+      ) : null}
       {activeLists.map((l) => {
+        if (!colVisible(productListColumnId(l.id))) return null;
         const price = product.listPrices[l.id];
         return (
           <td key={l.id} className="px-3 py-2 text-neutral-700">
@@ -396,31 +444,41 @@ function ProductViewRow({
           </td>
         );
       })}
-      <td className="px-3 py-2">
-        <Badge variant="default">
-          {PRODUCT_STOCK_KIND_LABELS[resolveProductStockKind(product.stockKind)]}
-        </Badge>
-      </td>
-      <td className="px-3 py-2">
-        <Badge variant={product.available ? "success" : "danger"}>
-          {product.available
-            ? ENTITY_ENABLED_LABELS.enabled
-            : ENTITY_ENABLED_LABELS.disabled}
-        </Badge>
-      </td>
-      <td className="px-3 py-2">
-        {(() => {
-          const effectiveAllows = normalizeAllowsUnitOrder(
-            resolveProductStockKind(product.stockKind),
-            product.allowsUnitOrder,
-          );
-          return (
-            <Badge variant={effectiveAllows ? "success" : "default"}>
-              {productOrderModeBadge(effectiveAllows)}
-            </Badge>
-          );
-        })()}
-      </td>
+      {colVisible("stock") ? (
+        <td className="px-3 py-2">
+          <Badge variant="default">
+            {
+              PRODUCT_STOCK_KIND_LABELS[
+                resolveProductStockKind(product.stockKind)
+              ]
+            }
+          </Badge>
+        </td>
+      ) : null}
+      {colVisible("available") ? (
+        <td className="px-3 py-2">
+          <Badge variant={product.available ? "success" : "danger"}>
+            {product.available
+              ? ENTITY_ENABLED_LABELS.enabled
+              : ENTITY_ENABLED_LABELS.disabled}
+          </Badge>
+        </td>
+      ) : null}
+      {colVisible("measure") ? (
+        <td className="px-3 py-2">
+          {(() => {
+            const effectiveAllows = normalizeAllowsUnitOrder(
+              resolveProductStockKind(product.stockKind),
+              product.allowsUnitOrder,
+            );
+            return (
+              <Badge variant={effectiveAllows ? "success" : "default"}>
+                {productOrderModeBadge(effectiveAllows)}
+              </Badge>
+            );
+          })()}
+        </td>
+      ) : null}
       <td className="px-3 py-2 text-right">
         <AdminTableActions className="justify-end">
           <AdminTableIconAction
@@ -448,6 +506,7 @@ export function ProductAdminTable({
   /** Uniq Tipo options derived from the loaded product list. */
   rubros: string[];
 }) {
+  const { data: session } = useSession();
   const [query, setQuery] = useState("");
   const [creating, setCreating] = useState(false);
   const [createDraft, setCreateDraft] = useState<DraftSessionInfo>({
@@ -456,6 +515,23 @@ export function ProductAdminTable({
   });
   const [editingId, setEditingId] = useState<string | null>(null);
   const activeLists = priceLists.filter((l) => l.active);
+  const tableColumns = useMemo(
+    () => buildProductTableColumns(activeLists),
+    [activeLists],
+  );
+  const {
+    toggleableColumns,
+    isVisible,
+    setColumnVisible,
+    showAllColumns,
+    colSpan,
+    visibilityKey,
+    hiddenCount,
+  } = useTableColumnVisibility(
+    "admin-products",
+    tableColumns,
+    session?.user?.id,
+  );
   const isBusy = editingId !== null;
   const { sort, toggle } = useTableSort<string>();
   const onCreateDraftChange = useCallback((next: DraftSessionInfo) => {
@@ -515,11 +591,9 @@ export function ProductAdminTable({
   const tableRef = useRef<HTMLTableElement>(null);
   useSmoothColumnWidths(
     tableRef,
-    `${query}|${visible.length}|${sort?.key ?? ""}`,
+    `${query}|${visible.length}|${sort?.key ?? ""}|${visibilityKey}`,
   );
   const { rowProps } = useSelectedRow(visible.map((p) => p.id));
-
-  const colSpan = 7 + activeLists.length;
 
   return (
     <div className="space-y-3">
@@ -537,18 +611,27 @@ export function ProductAdminTable({
           aria-label="Buscar productos"
           className="min-w-0 flex-1"
         />
-        <AdminDraftTrigger
-          onClick={() => setCreating((v) => !v)}
-          pending={createDraft.pending}
-          itemCount={createDraft.itemCount}
-          idleLabel="Nuevo producto"
-          pendingLabel="Continuar producto"
-          icon={PackagePlus}
-        />
+        <div className="flex shrink-0 items-center gap-2">
+          <TableColumnPicker
+            columns={toggleableColumns}
+            isVisible={isVisible}
+            onChange={setColumnVisible}
+            onShowAll={showAllColumns}
+            hiddenCount={hiddenCount}
+          />
+          <AdminDraftTrigger
+            onClick={() => setCreating((v) => !v)}
+            pending={createDraft.pending}
+            itemCount={createDraft.itemCount}
+            idleLabel="Nuevo producto"
+            pendingLabel="Continuar producto"
+            icon={PackagePlus}
+          />
+        </div>
       </div>
       <div ref={tableHeightLockRef}>
         <DataTableScroll className="data-table-rows-2l">
-          <table ref={tableRef} className="w-full min-w-[36rem] text-sm">
+          <table ref={tableRef} className="w-full text-sm">
             <thead className="bg-neutral-50 text-left text-neutral-600">
               <tr>
                 <SortableTh
@@ -565,52 +648,64 @@ export function ProductAdminTable({
                   dir={sort?.dir}
                   onToggle={toggle}
                 />
-                <SortableTh
-                  label="Tipo"
-                  sortKey="rubro"
-                  activeKey={sort?.key}
-                  dir={sort?.dir}
-                  onToggle={toggle}
-                />
-                <SortableTh
-                  label="Base"
-                  sortKey="base"
-                  activeKey={sort?.key}
-                  dir={sort?.dir}
-                  onToggle={toggle}
-                />
-                {activeLists.map((l) => (
+                {isVisible("rubro") ? (
                   <SortableTh
-                    key={l.id}
-                    label={l.name}
-                    sortKey={`list:${l.id}`}
+                    label="Tipo"
+                    sortKey="rubro"
                     activeKey={sort?.key}
                     dir={sort?.dir}
                     onToggle={toggle}
-                    className="whitespace-nowrap"
                   />
-                ))}
-                <SortableTh
-                  label="Stock"
-                  sortKey="stock"
-                  activeKey={sort?.key}
-                  dir={sort?.dir}
-                  onToggle={toggle}
-                />
-                <SortableTh
-                  label="Habilitado"
-                  sortKey="available"
-                  activeKey={sort?.key}
-                  dir={sort?.dir}
-                  onToggle={toggle}
-                />
-                <SortableTh
-                  label="Medida"
-                  sortKey="measure"
-                  activeKey={sort?.key}
-                  dir={sort?.dir}
-                  onToggle={toggle}
-                />
+                ) : null}
+                {isVisible("base") ? (
+                  <SortableTh
+                    label="Base"
+                    sortKey="base"
+                    activeKey={sort?.key}
+                    dir={sort?.dir}
+                    onToggle={toggle}
+                  />
+                ) : null}
+                {activeLists.map((l) =>
+                  isVisible(productListColumnId(l.id)) ? (
+                    <SortableTh
+                      key={l.id}
+                      label={l.name}
+                      sortKey={productListColumnId(l.id)}
+                      activeKey={sort?.key}
+                      dir={sort?.dir}
+                      onToggle={toggle}
+                      className="whitespace-nowrap"
+                    />
+                  ) : null,
+                )}
+                {isVisible("stock") ? (
+                  <SortableTh
+                    label="Stock"
+                    sortKey="stock"
+                    activeKey={sort?.key}
+                    dir={sort?.dir}
+                    onToggle={toggle}
+                  />
+                ) : null}
+                {isVisible("available") ? (
+                  <SortableTh
+                    label="Habilitado"
+                    sortKey="available"
+                    activeKey={sort?.key}
+                    dir={sort?.dir}
+                    onToggle={toggle}
+                  />
+                ) : null}
+                {isVisible("measure") ? (
+                  <SortableTh
+                    label="Medida"
+                    sortKey="measure"
+                    activeKey={sort?.key}
+                    dir={sort?.dir}
+                    onToggle={toggle}
+                  />
+                ) : null}
                 <th className="px-3 py-2" />
               </tr>
             </thead>
@@ -624,6 +719,7 @@ export function ProductAdminTable({
                     rubros={rubros}
                     onCancel={() => setEditingId(null)}
                     rowProps={rowProps(p.id)}
+                    colVisible={isVisible}
                   />
                 ) : (
                   <ProductViewRow
@@ -633,6 +729,7 @@ export function ProductAdminTable({
                     editDisabled={isBusy}
                     onStartEdit={() => setEditingId(p.id)}
                     rowProps={rowProps(p.id)}
+                    colVisible={isVisible}
                   />
                 ),
               )}

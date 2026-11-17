@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock } from "lucide-react";
 import { fetchBlueDollarRate } from "@/lib/blue-dollar";
+import { AppSelect } from "@/components/ui/app-select";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
 import { SortableTh } from "@/components/ui/sortable-th";
@@ -59,11 +60,6 @@ const MONTHS = [
 ] as const;
 
 const PAYMENT_FORM_EXIT_MS = 250;
-
-const selectClass = cn(
-  "flex h-10 w-full rounded-md border border-neutral-300 bg-white py-2 pl-3 pr-10 text-sm",
-  FOCUS_BRAND_BORDER,
-);
 
 function yearOptions(currentYear: number) {
   const years: number[] = [];
@@ -328,33 +324,29 @@ function PaymentForm({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
           <Label htmlFor="pay-month">Mes</Label>
-          <select
+          <AppSelect
             id="pay-month"
-            value={periodMonth}
-            onChange={(e) => setPeriodMonth(Number(e.target.value))}
-            className={selectClass}
-          >
-            {MONTHS.map((label, i) => (
-              <option key={label} value={i + 1}>
-                {label}
-              </option>
-            ))}
-          </select>
+            value={String(periodMonth)}
+            onChange={(v) => setPeriodMonth(Number(v))}
+            aria-label="Mes"
+            options={MONTHS.map((label, i) => ({
+              value: String(i + 1),
+              label,
+            }))}
+          />
         </div>
         <div className="space-y-1">
           <Label htmlFor="pay-year">Año</Label>
-          <select
+          <AppSelect
             id="pay-year"
-            value={periodYear}
-            onChange={(e) => setPeriodYear(Number(e.target.value))}
-            className={selectClass}
-          >
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+            value={String(periodYear)}
+            onChange={(v) => setPeriodYear(Number(v))}
+            aria-label="Año"
+            options={years.map((y) => ({
+              value: String(y),
+              label: String(y),
+            }))}
+          />
         </div>
         <div className="space-y-1 sm:col-span-2">
           <Label htmlFor="pay-date">Fecha de pago</Label>
