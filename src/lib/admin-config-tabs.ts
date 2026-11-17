@@ -1,4 +1,5 @@
 import { isOrderCutoffEnforced } from "@/lib/order-cutoff";
+import { isSubscriptionBillingEnabled } from "@/lib/subscription-billing";
 
 export type ConfigTab = "cotizaciones" | "notificaciones" | "servicio" | "cuenta";
 
@@ -10,9 +11,14 @@ export const ALL_CONFIG_TABS: ConfigTab[] = [
   "cuenta",
 ];
 
-/** Visible config tabs — Cotizaciones hidden while order cutoff is paused. */
+/**
+ * Visible config tabs —
+ * Cotizaciones hidden while order cutoff is paused;
+ * Servicio hidden when subscription billing is off (demo / dev).
+ */
 export const CONFIG_TABS: ConfigTab[] = ALL_CONFIG_TABS.filter((tab) => {
   if (tab === "cotizaciones" && !isOrderCutoffEnforced()) return false;
+  if (tab === "servicio" && !isSubscriptionBillingEnabled()) return false;
   return true;
 });
 

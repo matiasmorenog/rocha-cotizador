@@ -27,6 +27,7 @@ import {
   wasSubscriptionDueDismissedToday,
   type SubscriptionDueApi,
 } from "@/lib/subscription-due-reminder-client";
+import { isSubscriptionBillingEnabled } from "@/lib/subscription-billing";
 
 type InboxItem = {
   id: string;
@@ -272,6 +273,7 @@ export function AdminPushSwRegister() {
 
     async function maybeShowSubscriptionDue() {
       if (cancelled || document.visibilityState === "hidden") return;
+      if (!isSubscriptionBillingEnabled()) return;
       const user = sessionRef.current?.user;
       const userId = user?.id;
       if (!userId) return;
@@ -282,8 +284,9 @@ export function AdminPushSwRegister() {
         });
         if (!res.ok || cancelled) return;
         const data = (await res.json().catch(() => null)) as
-          | SubscriptionDueApi
+          | (SubscriptionDueApi & { billingEnabled?: boolean })
           | null;
+        if (data?.billingEnabled === false) return;
         if (!data?.due || cancelled) return;
         if (wasSubscriptionDueDismissedToday(userId, data.todayAr)) return;
 
