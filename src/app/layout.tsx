@@ -17,6 +17,27 @@ const sourceSans = Source_Sans_3({
 export const metadata: Metadata = {
   title: "Rocha Cotizador",
   description: "Cotizador mayorista de productos",
+  applicationName: "Rocha Cotizador",
+  manifest: "/manifest.webmanifest",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#046c5d" },
+    { media: "(prefers-color-scheme: dark)", color: "#046c5d" },
+  ],
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Rocha Cotizador",
+  },
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export default async function RootLayout({

@@ -12,6 +12,7 @@ import { WhatsAppSettingsSection } from "@/components/admin/whatsapp-settings-se
 import { WhatsAppSettingsSectionSkeleton } from "@/components/admin/whatsapp-settings-section-skeleton";
 import { AdminChangeEmailForm } from "@/components/account/admin-change-email-form";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
+import { PwaInstallSettingsCard } from "@/components/pwa/pwa-install-settings-card";
 
 type SearchParams = Promise<{ tab?: string }>;
 
@@ -91,6 +92,7 @@ export default async function AdminConfigPage({
         {session.user.email ? ` · ${session.user.email}` : null}
       </p>
       <div className="space-y-4">
+        <PwaInstallSettingsCard />
         <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-800">
           <p className="font-semibold text-neutral-900">Cambiar email</p>
           <p className="mt-1 text-neutral-600">
