@@ -23,7 +23,7 @@ Solo **dos** branches Neon. Preview **no** crea branch Neon por deploy.
 
 **Vercel Preview ≡ Development:** mismas variables (`DATABASE_URL`, `AUTH_SECRET`, `AUTH_URL`, …) y mismo Neon `development`. **Production** aislado (Neon `main` + secrets propios). No copiar Production → Preview/Development.
 
-En el proyecto **`rocha-cotizador`**, Preview de git branch `development` usa overrides `gitBranch=development`: `DATABASE_URL` = Neon `development` pooled (`ep-noisy-darkness…-pooler`); `AUTH_URL` = alias git de esa branch. El scope **Production** no se toca.
+Scopes Vercel: **Production** del proyecto **`rocha-cotizador`** = Neon `main` (no tocar). Proyecto demo **`rocha-cotizador-dev`** Production = Neon `development` (portfolio; `SEED_TARGET=development`). Preview/Development del proyecto prod, si existieran, = Neon `development` — hoy Git Preview está off.
 
 ### Schema drift / wrong DB (léelo antes de un release)
 
@@ -135,7 +135,7 @@ Helpers: `src/lib/cache-tags.ts` (`invalidateAfterProductMutation`, `invalidateA
 
 Ops / wipe / scripts out-of-band: `POST /api/revalidate` con `REVALIDATE_SECRET` + `AUTH_URL` → `invalidateAfterDbScript` (todas las tags + paths admin/remitos). Obligatorio tras cualquier mutación DB fuera de la app.
 
-**Después de cada deploy** (automático: Actions `deploy-production` en `main`, y `post-deploy-cache-development` en push a `development`):
+**Después de cada deploy** (automático en push/merge a `main`: Actions `deploy-production` + `deploy-demo`):
 
 ```bash
 # Prefer the script (CDN + Data + tags + brand Image Optimization):
@@ -149,13 +149,16 @@ Tags = `Object.values(CACHE_TAGS)` en `src/lib/cache-tags.ts`. Si agregás una t
 
 Build command (Vercel): `npm run build` → `prisma generate && next build` (`postinstall` también corre `prisma generate`). `binaryTargets` in `schema.prisma` must include `rhel-openssl-3.0.x` so the client works on Vercel when CI generates on Debian.
 
-### CI → producción (gate)
+### CI → producción + demo (gate)
 
-- Auto-deploy Vercel en **`main` está OFF** (`vercel.json`).
-- Push/merge a `main` → Actions: **lint-and-typecheck** → **deploy-production** (incluye **pre-deploy schema sync** + **post-deploy smoke**: `/api/health` + homepage + **post-deploy cache revalidate**: CDN + Data + tags + brand images).
-- Push a `development` → Git Preview en **`rocha-cotizador`** (SSO; `DATABASE_URL`/`AUTH_URL` override `gitBranch=development` → Neon development) **y** Git Production en **`rocha-cotizador-dev`** (público, portfolio). Después Actions **post-deploy-cache-development** (purge contra el proyecto demo).
-- Ready feature PRs → Preview **solo** en **`rocha-cotizador`**. **`rocha-cotizador-dev`** no lanza Preview de PRs (ignore cancela; solo actualiza al merge a `development`).
-- Secrets en GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (ver [`docs/ci.md`](docs/ci.md)).
+- Auto-deploy Git Vercel **OFF** para `main`, `development` y `**` (`vercel.json`). Ignore cancela residuales.
+- Push/merge a **`main`** → Actions (`deploy.yml`):
+  - **lint-and-typecheck**
+  - **deploy-production** → proyecto `rocha-cotizador` (Neon **main**): schema gate + smoke + cache
+  - **deploy-demo** → proyecto `rocha-cotizador-dev` (mismo SHA; env Production del proyecto = Neon **development**): smoke + cache — **sin** schema gate de Neon main; **no** cambiar `DATABASE_URL` de `-dev` a Neon `main`
+- Push a **`development`**: CI only — **sin** deploy Vercel (ni prod ni demo).
+- Feature PRs: sin Preview Git en ningún proyecto.
+- Secrets en GitHub: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` (prod; demo usa `prj_Oagw7Pq3…` hardcodeado en el workflow) — ver [`docs/ci.md`](docs/ci.md).
 - Opcional pero recomendado: `DATABASE_URL_PRODUCTION` (Neon `main`, preferible URL **direct**) para el gate de schema sin depender solo de `vercel pull`.
 
 ## Client production (obligatorio)
@@ -207,8 +210,8 @@ Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1
 
 ## Branches (Git)
 
-- `development` — integración / preview (default del repo); misma DB Neon `development`
-- `main` — producción (Vercel Production branch; release PR `development` → `main`; deploy solo vía Actions); DB Neon `main`
+- `development` — integración (default del repo); CI en push; **sin** deploy Vercel; DB local/Preview = Neon `development`
+- `main` — release PR `development` → `main`; Actions deploys **prod** (`rocha-cotizador` → Neon `main`) **y** **demo** (`rocha-cotizador-dev` → Neon `development`)
 
 ## Checklist go-live (semana de uso real)
 
@@ -244,8 +247,9 @@ Admin seed default (constantes en `prisma/seed.ts`): `admin@rocha.com` / `admin1
 
 - [ ] Secrets GitHub `VERCEL_*` cargados (+ opcional `DATABASE_URL_PRODUCTION`)
 - [ ] Merge a `development` solo con `lint-and-typecheck` verde
-- [ ] Release: PR `development` → `main`; esperar job `deploy-production` verde (schema gate + smoke health/homepage)
-- [ ] Smoke en https://rocha-cotizador.vercel.app tras el release — `GET /api/health` → `{ "ok": true }` + homepage 200
+- [ ] Release: PR `development` → `main`; esperar `deploy-production` **y** `deploy-demo` verdes
+- [ ] Smoke prod: https://rocha-cotizador.vercel.app — `GET /api/health` → `{ "ok": true }` + homepage 200
+- [ ] Smoke demo: https://rocha-cotizador-dev.vercel.app — health + homepage 200 (sigue en Neon `development`)
 
 ### Smoke test producción
 
