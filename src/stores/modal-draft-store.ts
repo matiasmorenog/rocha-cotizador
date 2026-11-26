@@ -125,10 +125,38 @@ export function emptyCustomerCreateDraft(
   };
 }
 
+/** Admin “Nueva cotización” modal — lines live in quote-draft-store. */
+export type AdminNewQuoteCustomer = {
+  id: string;
+  code: string;
+  name: string;
+  nameNote: string | null;
+  priceListName: string | null;
+  active: boolean;
+};
+
+export type AdminNewQuoteDraft = {
+  open: boolean;
+  sessionActive: boolean;
+  customer: AdminNewQuoteCustomer | null;
+  /** Bump to re-focus customer search after confirm-create-new. */
+  focusSearchToken: number;
+};
+
+export function emptyAdminNewQuoteDraft(): AdminNewQuoteDraft {
+  return {
+    open: false,
+    sessionActive: false,
+    customer: null,
+    focusSearchToken: 0,
+  };
+}
+
 type ModalDraftState = {
   stock: Record<string, StockRecountDraft>;
   productCreate: ProductCreateDraft;
   customerCreate: CustomerCreateDraft;
+  adminNewQuote: AdminNewQuoteDraft;
 
   getStock: (key: string) => StockRecountDraft;
   patchStock: (key: string, patch: Partial<StockRecountDraft>) => void;
@@ -139,12 +167,16 @@ type ModalDraftState = {
 
   patchCustomerCreate: (patch: Partial<CustomerCreateDraft>) => void;
   clearCustomerCreate: (priceListId?: string) => void;
+
+  patchAdminNewQuote: (patch: Partial<AdminNewQuoteDraft>) => void;
+  clearAdminNewQuote: () => void;
 };
 
 export const useModalDraftStore = create<ModalDraftState>((set, get) => ({
   stock: {},
   productCreate: emptyProductCreateDraft(),
   customerCreate: emptyCustomerCreateDraft(),
+  adminNewQuote: emptyAdminNewQuoteDraft(),
 
   getStock: (key) => get().stock[key] ?? emptyStockRecountDraft(),
 
@@ -182,4 +214,12 @@ export const useModalDraftStore = create<ModalDraftState>((set, get) => ({
 
   clearCustomerCreate: (priceListId = "") =>
     set({ customerCreate: emptyCustomerCreateDraft(priceListId) }),
+
+  patchAdminNewQuote: (patch) =>
+    set((state) => ({
+      adminNewQuote: { ...state.adminNewQuote, ...patch },
+    })),
+
+  clearAdminNewQuote: () =>
+    set({ adminNewQuote: emptyAdminNewQuoteDraft() }),
 }));

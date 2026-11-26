@@ -8,10 +8,7 @@ import {
   AdminTableActions,
   AdminTableIconAction,
 } from "@/components/admin/admin-table";
-import {
-  ProductAdminForm,
-  type PriceListOption,
-} from "@/components/admin/product-admin-form";
+import type { PriceListOption } from "@/components/admin/product-admin-form";
 import { ProductTipoField } from "@/components/admin/product-tipo-field";
 import {
   productOrderModeBadge,
@@ -508,7 +505,6 @@ export function ProductAdminTable({
 }) {
   const { data: session } = useSession();
   const [query, setQuery] = useState("");
-  const creating = useModalDraftStore((s) => s.productCreate.open);
   const productSessionActive = useModalDraftStore(
     (s) => s.productCreate.sessionActive,
   );
@@ -523,14 +519,10 @@ export function ProductAdminTable({
     pending: productSessionActive && productDirtyCount > 0,
     itemCount: productDirtyCount,
   };
-  const setCreating = useCallback(
-    (v: boolean | ((prev: boolean) => boolean)) => {
-      const prev = useModalDraftStore.getState().productCreate.open;
-      const next = typeof v === "function" ? v(prev) : v;
-      patchProductCreate({ open: next });
-    },
-    [patchProductCreate],
-  );
+  const toggleCreating = useCallback(() => {
+    const prev = useModalDraftStore.getState().productCreate.open;
+    patchProductCreate({ open: !prev });
+  }, [patchProductCreate]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const activeLists = priceLists.filter((l) => l.active);
   const tableColumns = useMemo(
@@ -612,11 +604,6 @@ export function ProductAdminTable({
 
   return (
     <div className="space-y-3">
-      <ProductAdminForm
-        rubros={rubros}
-        open={creating}
-        onOpenChange={setCreating}
-      />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input
           value={query}
@@ -634,7 +621,7 @@ export function ProductAdminTable({
             hiddenCount={hiddenCount}
           />
           <AdminDraftTrigger
-            onClick={() => setCreating((v) => !v)}
+            onClick={toggleCreating}
             pending={createDraft.pending}
             itemCount={createDraft.itemCount}
             idleLabel="Nuevo producto"

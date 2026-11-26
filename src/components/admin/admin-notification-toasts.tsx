@@ -57,7 +57,10 @@ const TOAST_EXIT_MS = 280;
 type DisplayItem = { toast: AdminToastItem; exiting: boolean };
 
 /**
- * Compact toast stack (bottom-right).
+ * Compact toast stack (bottom-right, z-[100]).
+ * Above draft modals (z-[90]) and draft chips (z-[95], bottom-left) so push /
+ * in-app notices stay visible and dismissible while a modal is open.
+ *
  * Click body opens url when present; X dismisses.
  *
  * Keeps toasts mounted for `TOAST_EXIT_MS` after they leave `toasts` so the

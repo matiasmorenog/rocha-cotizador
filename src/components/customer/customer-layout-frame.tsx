@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import type { ReactNode } from "react";
 import { CustomerNav } from "@/components/customer/customer-nav";
 import { CustomerCatalogWarmup } from "@/components/customer/customer-catalog-warmup";
+import { CustomerDraftModalsHost } from "@/components/customer/customer-draft-modals-host";
 import { RoutePendingShell } from "@/components/route-pending-shell";
 import { normalizeCustomerModules } from "@/lib/customer-modules-normalize";
 import {
@@ -17,6 +18,7 @@ import { SkeletonHomePage } from "@/components/ui/skeleton";
 import { isAdminPanelRole } from "@/lib/staff-permissions";
 import { cn } from "@/lib/utils";
 import type { CustomerModuleSession } from "@/types/auth";
+import type { StockModuleKey } from "@/lib/stock-product-kind-shared";
 
 function isAdminShellPath(path: string) {
   return path.startsWith("/admin") && !path.startsWith("/admin/login");
@@ -99,9 +101,20 @@ export function CustomerLayoutFrame({
     </RoutePendingShell>
   );
 
+  const customerId = session?.user?.customerId;
+  const stockModules = customer.modules as StockModuleKey[];
+  const customerLabel = `${customer.userName ?? "Cliente"} · código ${customer.customerCode ?? "—"}`;
+
   return (
     <div className={cn("w-full", moduleShell && "admin-shell")}>
       <CustomerCatalogWarmup />
+      {customerId ? (
+        <CustomerDraftModalsHost
+          customerId={customerId}
+          customerLabel={customerLabel}
+          modules={stockModules}
+        />
+      ) : null}
       <CustomerNav
         modules={customer.modules}
         userName={customer.userName}

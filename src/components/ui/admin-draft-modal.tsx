@@ -10,6 +10,11 @@ import { cn } from "@/lib/utils";
 /**
  * Shared admin create-draft modal shell (stock recount pattern): portal overlay,
  * minimize via backdrop / Escape (caller), floating chip while minimized.
+ *
+ * Stacking vs admin push toasts (`AdminNotificationToasts`):
+ * - Modal overlay: z-[90]
+ * - Draft chip: z-[95] bottom-left (avoids toast corner)
+ * - Toasts: z-[100] bottom-right — above modal; dismiss stays clickable
  */
 export function AdminDraftModal({
   open,
@@ -87,7 +92,7 @@ export function AdminDraftModal({
               type="button"
               onClick={onResume}
               className={cn(
-                "fixed bottom-4 right-4 z-[95] flex max-w-[min(100vw-2rem,20rem)] items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-left text-sm shadow-lg",
+                "fixed bottom-4 left-4 z-[95] flex max-w-[min(100vw-2rem,20rem)] items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-left text-sm shadow-lg",
                 FOCUS_BRAND_BORDER,
               )}
             >

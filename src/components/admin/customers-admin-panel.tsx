@@ -9,7 +9,6 @@ import {
   AdminTableActions,
   AdminTableIconAction,
 } from "@/components/admin/admin-table";
-import { CustomerAdminCreateModal } from "@/components/admin/customer-admin-create-modal";
 import { CustomerAdminForm } from "@/components/admin/customer-admin-form";
 import { AdminCustomerName } from "@/components/admin/admin-customer-name";
 import { Badge } from "@/components/ui/badge";
@@ -93,7 +92,9 @@ export function CustomersAdminPanel({
 }) {
   const { data: session } = useSession();
   const [query, setQuery] = useState("");
-  const creating = useModalDraftStore((s) => s.customerCreate.open);
+  const [editingId, setEditingId] = useState<string | null>(
+    initialEditId ?? null,
+  );
   const customerDraft = useModalDraftStore((s) => s.customerCreate);
   const patchCustomerCreate = useModalDraftStore((s) => s.patchCustomerCreate);
   const customerDirtyCount =
@@ -107,17 +108,11 @@ export function CustomersAdminPanel({
     pending: customerDraft.sessionActive && customerDirtyCount > 0,
     itemCount: customerDirtyCount,
   };
-  const setCreating = useCallback(
-    (v: boolean | ((prev: boolean) => boolean)) => {
-      const prev = useModalDraftStore.getState().customerCreate.open;
-      const next = typeof v === "function" ? v(prev) : v;
-      patchCustomerCreate({ open: next });
-    },
-    [patchCustomerCreate],
-  );
-  const [editingId, setEditingId] = useState<string | null>(
-    initialEditId ?? null,
-  );
+  const toggleCreating = useCallback(() => {
+    setEditingId(null);
+    const prev = useModalDraftStore.getState().customerCreate.open;
+    patchCustomerCreate({ open: !prev });
+  }, [patchCustomerCreate]);
   const { sort, toggle } = useTableSort<CustomerSortKey>();
   const {
     toggleableColumns,
@@ -185,14 +180,6 @@ export function CustomersAdminPanel({
 
   return (
     <div className="space-y-3">
-      <CustomerAdminCreateModal
-        priceLists={priceLists}
-        open={creating}
-        onOpenChange={(v) => {
-          if (v) setEditingId(null);
-          setCreating(v);
-        }}
-      />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input
           value={query}
@@ -210,10 +197,7 @@ export function CustomersAdminPanel({
             hiddenCount={hiddenCount}
           />
           <AdminDraftTrigger
-            onClick={() => {
-              setEditingId(null);
-              setCreating((v) => !v);
-            }}
+            onClick={toggleCreating}
             pending={createDraft.pending}
             itemCount={createDraft.itemCount}
             idleLabel="Nuevo cliente"
@@ -390,7 +374,7 @@ export function CustomersAdminPanel({
                               label="Editar"
                               icon={Pencil}
                               onClick={() => {
-                                setCreating(false);
+                                patchCustomerCreate({ open: false });
                                 setEditingId(c.id);
                               }}
                             />

@@ -9,8 +9,11 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
-import { ChevronDown, ClipboardPlus, FileText } from "lucide-react";
-import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-route-transition";
+import { ChevronDown, FileText } from "lucide-react";
+import {
+  AdminNewQuoteTrigger,
+  useAdminNewQuoteTriggerState,
+} from "@/components/admin/admin-new-quote-modal";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTableScroll } from "@/components/ui/data-table";
@@ -42,7 +45,6 @@ import { formatDeliveryDateLabel } from "@/lib/delivery-date";
 import { formatOrderCutoffHourLabel, isOrderCutoffEnforced } from "@/lib/order-cutoff";
 import { quoteStatusLabel } from "@/lib/quote-status";
 import { cn, formatPrice, formatQty } from "@/lib/utils";
-import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
 import { filterFoldedSearch } from "@/lib/search-fold";
 
 type QuoteSortKey =
@@ -190,6 +192,7 @@ export function QuotesAdminPanel({
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lateOpen, setLateOpen] = useState(false);
+  const quoteTrigger = useAdminNewQuoteTriggerState();
   const { sort: listSort, toggle: toggleListSort } =
     useTableSort<QuoteSortKey>();
   const { sort: productSort, toggle: toggleProductSort } =
@@ -583,16 +586,11 @@ export function QuotesAdminPanel({
               aria-label="Buscar cotizaciones"
               className="min-w-0 flex-1"
             />
-            <CotizacionesTransitionLink
-              href="/admin/cotizaciones/nueva"
-              className={cn(
-                "inline-flex h-10 w-full shrink-0 items-center justify-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white shadow-sm hover:opacity-90 sm:w-auto",
-                FOCUS_BRAND_PRIMARY,
-              )}
-            >
-              <ClipboardPlus className="mr-1.5 h-4 w-4" aria-hidden />
-              Nueva cotización
-            </CotizacionesTransitionLink>
+            <AdminNewQuoteTrigger
+              pending={quoteTrigger.pending}
+              itemCount={quoteTrigger.itemCount}
+              onClick={quoteTrigger.toggle}
+            />
           </div>
 
           <div ref={tableHeightLockRef}>
