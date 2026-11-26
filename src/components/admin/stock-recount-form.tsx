@@ -33,10 +33,14 @@ import {
   type ProductMeasureUnit,
 } from "@/lib/stock-units";
 import { cn } from "@/lib/utils";
-import { toArgentinaDatetimeLocal } from "@/lib/argentina-time";
 import { dispatchAdminStockSummaryRefresh } from "@/lib/admin-stock-summary-refresh";
 import type { StockModuleKey } from "@/lib/stock-product-kind-shared";
 import { productMatchesStockModule } from "@/lib/stock-rubros-shared";
+import {
+  emptyStockRecountDraft,
+  useModalDraftStore,
+  type StockRecountLineDraft,
+} from "@/stores/modal-draft-store";
 
 export type StockRecountCustomer = {
   id: string;
@@ -44,23 +48,9 @@ export type StockRecountCustomer = {
   name: string;
 };
 
-type RecountLine = {
-  productId: string;
-  code: string;
-  name: string;
-  rubro: string | null;
-  allowsUnitOrder: boolean;
-  unit: ProductMeasureUnit;
-  qty: number;
-};
+type RecountLine = StockRecountLineDraft;
 
-function todayYmdAr(): string {
-  return toArgentinaDatetimeLocal(new Date()).slice(0, 10);
-}
-
-function ymdToPickerValue(ymd: string): string {
-  return `${ymd}T00:00`;
-}
+const EMPTY_LINES: RecountLine[] = [];
 
 function pickerValueToYmd(value: string): string {
   return value.slice(0, 10);
@@ -72,6 +62,7 @@ export function StockRecountForm({
   apiPath,
   customers,
   stockModule,
+  draftKey,
   fixedCustomerId,
   refreshAdminSummary = true,
   customerStockModule,
@@ -84,6 +75,8 @@ export function StockRecountForm({
   apiPath: string;
   customers: StockRecountCustomer[];
   stockModule: StockModuleKey;
+  /** Zustand key — survives admin/customer module navigation. */
+  draftKey: string;
   /** Hide branch picker — customer self-service stock. */
   fixedCustomerId?: string;
   /** Admin summary chart/cards refresh after save. */
@@ -96,21 +89,68 @@ export function StockRecountForm({
   onDraftChange?: (draft: { pending: boolean; itemCount: number }) => void;
 }) {
   const router = useRouter();
-  const [customerId, setCustomerId] = useState(
-    fixedCustomerId ?? customers[0]?.id ?? "",
+  const sessionActiveStored = useModalDraftStore(
+    (s) => s.stock[draftKey]?.sessionActive ?? false,
   );
+  const customerIdStored = useModalDraftStore(
+    (s) => s.stock[draftKey]?.customerId ?? "",
+  );
+  const dateValueStored = useModalDraftStore(
+    (s) => s.stock[draftKey]?.dateValue,
+  );
+  const notes = useModalDraftStore((s) => s.stock[draftKey]?.notes ?? "");
+  const linesRaw = useModalDraftStore((s) => s.stock[draftKey]?.lines);
+  const lines = linesRaw ?? EMPTY_LINES;
+  const patchStock = useModalDraftStore((s) => s.patchStock);
+  const clearStock = useModalDraftStore((s) => s.clearStock);
+
+  const customerId = customerIdStored || (customers[0]?.id ?? "");
+  const dateValue = dateValueStored ?? emptyStockRecountDraft().dateValue;
   const activeCustomerId = fixedCustomerId ?? customerId;
-  const [dateValue, setDateValue] = useState(() =>
-    ymdToPickerValue(todayYmdAr()),
-  );
   const date = pickerValueToYmd(dateValue);
-  const [notes, setNotes] = useState("");
-  const [lines, setLines] = useState<RecountLine[]>([]);
+
+  const setCustomerId = useCallback(
+    (id: string) => patchStock(draftKey, { customerId: id }),
+    [draftKey, patchStock],
+  );
+  const setDateValue = useCallback(
+    (v: string) => patchStock(draftKey, { dateValue: v }),
+    [draftKey, patchStock],
+  );
+  const setNotes = useCallback(
+    (v: string) => patchStock(draftKey, { notes: v }),
+    [draftKey, patchStock],
+  );
+  const setLines = useCallback(
+    (updater: RecountLine[] | ((prev: RecountLine[]) => RecountLine[])) => {
+      const prev =
+        useModalDraftStore.getState().stock[draftKey]?.lines ?? [];
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      patchStock(draftKey, { lines: next });
+    },
+    [draftKey, patchStock],
+  );
+
   const [picked, setPicked] = useState<CatalogSearchProduct | null>(null);
   const [saving, setSaving] = useState(false);
   const [loadingEntry, setLoadingEntry] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  // Seed default customer once when empty (store may outlive remount).
+  useEffect(() => {
+    const currentId =
+      useModalDraftStore.getState().stock[draftKey]?.customerId ?? "";
+    if (fixedCustomerId) {
+      if (currentId !== fixedCustomerId) {
+        patchStock(draftKey, { customerId: fixedCustomerId });
+      }
+      return;
+    }
+    if (!currentId && customers[0]?.id) {
+      patchStock(draftKey, { customerId: customers[0].id });
+    }
+  }, [customers, draftKey, fixedCustomerId, patchStock]);
 
   const {
     open,
@@ -127,13 +167,13 @@ export function StockRecountForm({
     onOpenChange,
     itemCount: lines.length,
     onDraftChange,
+    sessionActive: sessionActiveStored,
+    onSessionActiveChange: (active) =>
+      patchStock(draftKey, { sessionActive: active }),
   });
 
   function discardDraft() {
-    setCustomerId(fixedCustomerId ?? customers[0]?.id ?? "");
-    setDateValue(ymdToPickerValue(todayYmdAr()));
-    setNotes("");
-    setLines([]);
+    clearStock(draftKey, fixedCustomerId ?? customers[0]?.id ?? "");
     setPicked(null);
     setError(null);
     setMessage(null);
@@ -142,6 +182,12 @@ export function StockRecountForm({
 
   useEffect(() => {
     if (!activeCustomerId || !date || !sessionActive) return;
+
+    const current = useModalDraftStore.getState().getStock(draftKey);
+    if (current.skipEntryLoad) {
+      patchStock(draftKey, { skipEntryLoad: false });
+      return;
+    }
 
     let cancelled = false;
 
@@ -180,9 +226,9 @@ export function StockRecountForm({
         setError(data.error ?? "No se pudo cargar");
         return;
       }
-      setNotes(data.entry?.notes ?? "");
-      setLines(
-        (data.entry?.lines ?? []).map((l) => ({
+      patchStock(draftKey, {
+        notes: data.entry?.notes ?? "",
+        lines: (data.entry?.lines ?? []).map((l) => ({
           productId: l.productId,
           code: l.product.code,
           name: l.product.name,
@@ -191,7 +237,7 @@ export function StockRecountForm({
           unit: coerceStockUnitForProduct(l.unit, l.product.allowsUnitOrder),
           qty: l.qty,
         })),
-      );
+      });
     }
 
     void Promise.resolve().then(() => {
@@ -201,7 +247,30 @@ export function StockRecountForm({
     return () => {
       cancelled = true;
     };
-  }, [apiPath, activeCustomerId, date, fixedCustomerId, sessionActive]);
+  }, [
+    apiPath,
+    activeCustomerId,
+    date,
+    draftKey,
+    fixedCustomerId,
+    patchStock,
+    sessionActive,
+  ]);
+
+  // On unmount, skip one entry hydrate so restored draft lines survive remount.
+  useEffect(() => {
+    return () => {
+      const current = useModalDraftStore.getState().getStock(draftKey);
+      if (
+        current.sessionActive &&
+        (current.lines.length > 0 || current.notes.trim())
+      ) {
+        useModalDraftStore
+          .getState()
+          .patchStock(draftKey, { skipEntryLoad: true });
+      }
+    };
+  }, [draftKey]);
 
   const sortedLines = useMemo(
     () =>
@@ -314,6 +383,7 @@ export function StockRecountForm({
     if (refreshAdminSummary) {
       dispatchAdminStockSummaryRefresh();
     }
+    clearStock(draftKey, fixedCustomerId ?? customers[0]?.id ?? "");
     endSession();
     router.refresh();
   }

@@ -26,7 +26,6 @@ import {
   RevealMoreTableRow,
   useIncrementalReveal,
 } from "@/hooks/use-incremental-reveal";
-import type { DraftSessionInfo } from "@/hooks/use-draft-session";
 import { useSmoothListHeight } from "@/hooks/use-smooth-list-height";
 import { useSmoothColumnWidths } from "@/hooks/use-smooth-column-widths";
 import { useSelectedRow } from "@/hooks/use-selected-row";
@@ -39,6 +38,7 @@ import {
   CUSTOMER_ACCOUNT_STATUS_LABELS,
   type CustomerModuleFlags,
 } from "@/lib/customer-modules";
+import { useModalDraftStore } from "@/stores/modal-draft-store";
 
 const CUSTOMER_TABLE_COLUMNS: TableColumnDef[] = [
   { id: "code", label: "Código", locked: true },
@@ -93,11 +93,28 @@ export function CustomersAdminPanel({
 }) {
   const { data: session } = useSession();
   const [query, setQuery] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [createDraft, setCreateDraft] = useState<DraftSessionInfo>({
-    pending: false,
-    itemCount: 0,
-  });
+  const creating = useModalDraftStore((s) => s.customerCreate.open);
+  const customerDraft = useModalDraftStore((s) => s.customerCreate);
+  const patchCustomerCreate = useModalDraftStore((s) => s.patchCustomerCreate);
+  const customerDirtyCount =
+    (customerDraft.code.trim() ? 1 : 0) +
+    (customerDraft.name.trim() ? 1 : 0) +
+    (customerDraft.nameNote.trim() ? 1 : 0) +
+    (customerDraft.address.trim() ? 1 : 0) +
+    (customerDraft.phone.trim() ? 1 : 0) +
+    (customerDraft.email.trim() ? 1 : 0);
+  const createDraft = {
+    pending: customerDraft.sessionActive && customerDirtyCount > 0,
+    itemCount: customerDirtyCount,
+  };
+  const setCreating = useCallback(
+    (v: boolean | ((prev: boolean) => boolean)) => {
+      const prev = useModalDraftStore.getState().customerCreate.open;
+      const next = typeof v === "function" ? v(prev) : v;
+      patchCustomerCreate({ open: next });
+    },
+    [patchCustomerCreate],
+  );
   const [editingId, setEditingId] = useState<string | null>(
     initialEditId ?? null,
   );
@@ -115,9 +132,6 @@ export function CustomersAdminPanel({
     CUSTOMER_TABLE_COLUMNS,
     session?.user?.id,
   );
-  const onCreateDraftChange = useCallback((next: DraftSessionInfo) => {
-    setCreateDraft(next);
-  }, []);
 
   const filtered = useMemo(
     () =>
@@ -178,7 +192,6 @@ export function CustomersAdminPanel({
           if (v) setEditingId(null);
           setCreating(v);
         }}
-        onDraftChange={onCreateDraftChange}
       />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input

@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import {
   StockRecountForm,
   StockRecountTrigger,
 } from "@/components/admin/stock-recount-form";
 import { SolapasTabLabel } from "@/components/ui/solapas-tabs";
 import type { StockModuleKey } from "@/lib/stock-product-kind-shared";
+import {
+  stockDraftKey,
+  useModalDraftStore,
+} from "@/stores/modal-draft-store";
 
 export function CustomerStockPageHeader({
   title,
@@ -30,13 +34,24 @@ export function CustomerStockPageHeader({
   /** Single stock module — chip beside title instead of a one-item tab bar. */
   sectionLabel?: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState({ pending: false, itemCount: 0 });
-  const onDraftChange = useCallback(
-    (next: { pending: boolean; itemCount: number }) => {
-      setDraft(next);
+  const draftKey = stockDraftKey("customer", stockModule);
+  const open = useModalDraftStore((s) => s.stock[draftKey]?.open ?? false);
+  const sessionActive = useModalDraftStore(
+    (s) => s.stock[draftKey]?.sessionActive ?? false,
+  );
+  const itemCount = useModalDraftStore(
+    (s) => s.stock[draftKey]?.lines.length ?? 0,
+  );
+  const pending = sessionActive && itemCount > 0;
+  const patchStock = useModalDraftStore((s) => s.patchStock);
+
+  const setOpen = useCallback(
+    (v: boolean | ((prev: boolean) => boolean)) => {
+      const prev = useModalDraftStore.getState().stock[draftKey]?.open ?? false;
+      const next = typeof v === "function" ? v(prev) : v;
+      patchStock(draftKey, { open: next });
     },
-    [],
+    [draftKey, patchStock],
   );
 
   return (
@@ -53,14 +68,15 @@ export function CustomerStockPageHeader({
           <p className="mt-1 text-sm text-neutral-500">{customerLabel}</p>
         </div>
         <StockRecountTrigger
-          pending={draft.pending}
-          itemCount={draft.itemCount}
+          pending={pending}
+          itemCount={itemCount}
           onClick={() => setOpen((v) => !v)}
         />
       </div>
 
       <StockRecountForm
         key={stockModule}
+        draftKey={draftKey}
         title={formTitle}
         description={formDescription}
         apiPath={apiPath}
@@ -71,7 +87,6 @@ export function CustomerStockPageHeader({
         customerStockModule={stockModule}
         open={open}
         onOpenChange={setOpen}
-        onDraftChange={onDraftChange}
       />
     </>
   );

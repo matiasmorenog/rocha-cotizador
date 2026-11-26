@@ -13,6 +13,9 @@ export type DraftSessionInfo = {
  * Modal draft session: keep form mounted while minimized only if dirty
  * (`itemCount > 0`). Clean close / Escape / backdrop ends the session — no
  * pending chip or Continuar state. Discard always ends session; parent resets fields.
+ *
+ * Pass `sessionActive` + `onSessionActiveChange` (e.g. from Zustand) so the
+ * session survives route/module unmounts.
  */
 export function useDraftSession({
   open: openProp,
@@ -20,6 +23,8 @@ export function useDraftSession({
   itemCount = 0,
   onDraftChange,
   exitMs = 200,
+  sessionActive: sessionActiveProp,
+  onSessionActiveChange,
 }: {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -27,13 +32,27 @@ export function useDraftSession({
   itemCount?: number;
   onDraftChange?: (draft: DraftSessionInfo) => void;
   exitMs?: number;
+  sessionActive?: boolean;
+  onSessionActiveChange?: (active: boolean) => void;
 }) {
   const isClient = useIsClient();
-  const [sessionActive, setSessionActive] = useState(false);
+  const [sessionActiveInternal, setSessionActiveInternal] = useState(false);
   const [openInternal, setOpenInternal] = useState(false);
   const controlled = openProp !== undefined;
   const open = controlled ? Boolean(openProp) : openInternal;
+  const controlledSession = sessionActiveProp !== undefined;
+  const sessionActive = controlledSession
+    ? Boolean(sessionActiveProp)
+    : sessionActiveInternal;
   const dirty = itemCount > 0;
+
+  const setSessionActive = useCallback(
+    (active: boolean) => {
+      if (controlledSession) onSessionActiveChange?.(active);
+      else setSessionActiveInternal(active);
+    },
+    [controlledSession, onSessionActiveChange],
+  );
 
   const setOpen = useCallback(
     (v: boolean) => {
@@ -48,7 +67,7 @@ export function useDraftSession({
       if (controlled) onOpenChange?.(false);
       else setOpenInternal(false);
     },
-    [controlled, onOpenChange, dirty],
+    [controlled, onOpenChange, dirty, setSessionActive],
   );
 
   // Controlled parent may open without going through setOpen.
@@ -60,9 +79,7 @@ export function useDraftSession({
 
   useEffect(() => {
     onDraftChange?.({ pending: draftPending, itemCount });
-    return () => {
-      onDraftChange?.({ pending: false, itemCount: 0 });
-    };
+    // Do not clear pending on unmount — draft may live in a store across routes.
   }, [draftPending, itemCount, onDraftChange]);
 
   useEffect(() => {
@@ -82,7 +99,7 @@ export function useDraftSession({
     setSessionActive(false);
     if (controlled) onOpenChange?.(false);
     else setOpenInternal(false);
-  }, [controlled, onOpenChange]);
+  }, [controlled, onOpenChange, setSessionActive]);
 
   useEffect(() => {
     if (!open) return;
