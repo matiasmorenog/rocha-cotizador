@@ -25,13 +25,13 @@ import type { DraftSessionInfo } from "@/hooks/use-draft-session";
 import { notifyCatalogStale } from "@/lib/client-catalog-cache";
 import { CATALOG_PRODUCT_ENABLED_LABEL } from "@/lib/entity-status-labels";
 import { dispatchAdminInAppToast } from "@/lib/push-sw-client";
-import { DEFAULT_PRODUCT_STOCK_KIND } from "@/lib/stock-product-kind-labels";
 import {
   productSupportsUnitOrKgOrder,
   type ProductStockKindValue,
 } from "@/lib/stock-product-kind-shared";
 import { inferStockKindFromRubro } from "@/lib/stock-rubros-shared";
 import { parseArNumber } from "@/lib/utils";
+import { useModalDraftStore } from "@/stores/modal-draft-store";
 
 export type PriceListOption = {
   id: string;
@@ -54,15 +54,22 @@ export function ProductAdminForm({
   onDraftChange?: (draft: DraftSessionInfo) => void;
 }) {
   const router = useRouter();
+  const draft = useModalDraftStore((s) => s.productCreate);
+  const patchProductCreate = useModalDraftStore((s) => s.patchProductCreate);
+  const clearProductCreate = useModalDraftStore((s) => s.clearProductCreate);
+
+  const {
+    code,
+    name,
+    rubro,
+    basePrice,
+    available,
+    stockKind,
+    allowsUnitOrder,
+    sessionActive,
+  } = draft;
+
   const [formKey, setFormKey] = useState(0);
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [rubro, setRubro] = useState("");
-  const [basePrice, setBasePrice] = useState("");
-  const [available, setAvailable] = useState(true);
-  const [stockKind, setStockKind] =
-    useState<ProductStockKindValue>(DEFAULT_PRODUCT_STOCK_KIND);
-  const [allowsUnitOrder, setAllowsUnitOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -89,16 +96,13 @@ export function ProductAdminForm({
     onOpenChange,
     itemCount: dirtyCount,
     onDraftChange,
+    sessionActive,
+    onSessionActiveChange: (active) =>
+      patchProductCreate({ sessionActive: active }),
   });
 
   function resetFields() {
-    setCode("");
-    setName("");
-    setRubro("");
-    setBasePrice("");
-    setAvailable(true);
-    setStockKind(DEFAULT_PRODUCT_STOCK_KIND);
-    setAllowsUnitOrder(false);
+    clearProductCreate();
     setError(null);
     setFormKey((k) => k + 1);
   }
@@ -109,19 +113,23 @@ export function ProductAdminForm({
   }
 
   function onRubroChange(nextRubro: string) {
-    setRubro(nextRubro);
     const nextKind = inferStockKindFromRubro(nextRubro);
-    setStockKind(nextKind);
-    if (!productSupportsUnitOrKgOrder(nextKind)) {
-      setAllowsUnitOrder(false);
-    }
+    patchProductCreate({
+      rubro: nextRubro,
+      stockKind: nextKind,
+      allowsUnitOrder: productSupportsUnitOrKgOrder(nextKind)
+        ? allowsUnitOrder
+        : false,
+    });
   }
 
   function onStockKindChange(nextKind: ProductStockKindValue) {
-    setStockKind(nextKind);
-    if (!productSupportsUnitOrKgOrder(nextKind)) {
-      setAllowsUnitOrder(false);
-    }
+    patchProductCreate({
+      stockKind: nextKind,
+      allowsUnitOrder: productSupportsUnitOrKgOrder(nextKind)
+        ? allowsUnitOrder
+        : false,
+    });
   }
 
   async function onSubmit(e: FormEvent) {
@@ -236,7 +244,7 @@ export function ProductAdminForm({
                 <Input
                   id="product-code"
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
+                  onChange={(e) => patchProductCreate({ code: e.target.value })}
                   required
                 />
               </div>
@@ -245,7 +253,7 @@ export function ProductAdminForm({
                 <Input
                   id="product-name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) => patchProductCreate({ name: e.target.value })}
                   required
                 />
               </div>
@@ -266,7 +274,7 @@ export function ProductAdminForm({
               <ArNumberInput
                 id="product-base-price"
                 value={basePrice}
-                onValueChange={setBasePrice}
+                onValueChange={(v) => patchProductCreate({ basePrice: v })}
                 maxFractionDigits={2}
                 formatOptions={AR_PRICE_FORMAT}
                 placeholder="0,00"
@@ -295,7 +303,9 @@ export function ProductAdminForm({
               label={CATALOG_PRODUCT_ENABLED_LABEL}
               description="Si está deshabilitado, no aparece en cotizaciones ni listas de clientes."
               checked={available}
-              onChange={setAvailable}
+              onChange={(checked) =>
+                patchProductCreate({ available: checked })
+              }
             />
             {productSupportsUnitOrKgOrder(stockKind) ? (
               <FormToggleCard
@@ -303,7 +313,9 @@ export function ProductAdminForm({
                 label="Pedido por unidades o kg"
                 description="Solo productos elaborados. Permite cotizar por unidad o al peso."
                 checked={allowsUnitOrder}
-                onChange={setAllowsUnitOrder}
+                onChange={(checked) =>
+                  patchProductCreate({ allowsUnitOrder: checked })
+                }
               />
             ) : null}
           </FormSection>

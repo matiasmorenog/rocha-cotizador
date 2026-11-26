@@ -8,6 +8,7 @@ import {
   type PickedCustomer,
 } from "@/components/admin/customer-picker";
 import { useQuoteDraftStore } from "@/stores/quote-draft-store";
+import { useModalDraftStore } from "@/stores/modal-draft-store";
 
 /** Keep in sync with `.quote-panel-exit` duration in globals.css */
 const QUOTE_CUSTOMER_EXIT_MS = 200;
@@ -19,23 +20,30 @@ export function AdminNewQuoteForm({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [customer, setCustomer] = useState<PickedCustomer | null>(null);
-  const [exiting, setExiting] = useState(false);
-  /** Bumps so CustomerPicker re-focuses after each “crear nuevo remito”. */
-  const [focusSearchToken, setFocusSearchToken] = useState(0);
+  const customer = useModalDraftStore((s) => s.adminNewQuote.customer);
+  const focusSearchToken = useModalDraftStore(
+    (s) => s.adminNewQuote.focusSearchToken,
+  );
+  const patchAdminNewQuote = useModalDraftStore((s) => s.patchAdminNewQuote);
   const clearDraft = useQuoteDraftStore((s) => s.clear);
+
+  const [exiting, setExiting] = useState(false);
   const exitGenRef = useRef(0);
   /** When exit finishes, also bump focusSearchToken (confirm-create-new). */
   const focusSearchAfterExitRef = useRef(false);
 
   function finishCustomerExit() {
     clearDraft();
-    setCustomer(null);
+    const token =
+      useModalDraftStore.getState().adminNewQuote.focusSearchToken;
+    patchAdminNewQuote({
+      customer: null,
+      ...(focusSearchAfterExitRef.current
+        ? { focusSearchToken: token + 1 }
+        : {}),
+    });
+    focusSearchAfterExitRef.current = false;
     setExiting(false);
-    if (focusSearchAfterExitRef.current) {
-      focusSearchAfterExitRef.current = false;
-      setFocusSearchToken((n) => n + 1);
-    }
   }
 
   /** Same fade/slide as “Cambiar cliente”; optional focus search after. */
@@ -46,7 +54,6 @@ export function AdminNewQuoteForm({
   }
 
   // Soft nav to ?focus=customer (fallback when no onConfirmCreateNew) — clear + focus.
-  // Defer setState: avoid sync setState-in-effect lint; primary path uses exit animation.
   useEffect(() => {
     if (searchParams.get("focus") !== "customer") return;
     const t = window.setTimeout(() => {
@@ -54,8 +61,11 @@ export function AdminNewQuoteForm({
       focusSearchAfterExitRef.current = false;
       clearDraft();
       setExiting(false);
-      setCustomer(null);
-      setFocusSearchToken((n) => n + 1);
+      patchAdminNewQuote({
+        customer: null,
+        focusSearchToken:
+          useModalDraftStore.getState().adminNewQuote.focusSearchToken + 1,
+      });
       router.replace("/admin/cotizaciones/nueva", { scroll: false });
     }, 0);
     return () => window.clearTimeout(t);
@@ -87,7 +97,7 @@ export function AdminNewQuoteForm({
     focusSearchAfterExitRef.current = false;
     clearDraft();
     setExiting(false);
-    setCustomer(next);
+    patchAdminNewQuote({ customer: next });
   }
 
   return (

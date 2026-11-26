@@ -2,6 +2,9 @@
  * Dev-only: refresh demo charts/data relative to "today" (Argentina).
  * Wipes + re-seeds stock sample (multi-day) and quotes/remitos.
  *
+ * Quotes use biased seed (today/recent dense + MoM growth for year chart) —
+ * see `dev-seed-quotes.ts`.
+ *
  * Safety: assertSafeDestructiveDb() — Neon main blocked; SEED_TARGET=development.
  *
  *   npm run dev:refresh-demo
@@ -9,7 +12,7 @@
  * Optional env (passed through):
  *   STOCK_DAYS_BACK (default 21) — stock seed DAYS_BACK (3..60)
  *   ENTRIES_PER_CUSTOMER, CUSTOMERS_PER_MODULE, LINES_PER_ENTRY — stock
- *   QUOTE_COUNT (default 200) — quotes
+ *   QUOTE_COUNT (default 220) — quotes (enough for today KPIs + year MoM)
  *   QUOTE_DAYS_BACK — quotes DAYS_BACK (default: days since Jan 1 AR, min 35, max 365)
  */
 import "dotenv/config";
@@ -76,7 +79,7 @@ const quoteDaysBack = envInt(
   1,
   365,
 );
-const quoteCount = envInt("QUOTE_COUNT", 200, 1, 500);
+const quoteCount = envInt("QUOTE_COUNT", 220, 1, 500);
 
 console.log(
   `Refresh demo (dev): stock DAYS_BACK=${stockDaysBack}, quotes DAYS_BACK=${quoteDaysBack} QUOTE_COUNT=${quoteCount}`,

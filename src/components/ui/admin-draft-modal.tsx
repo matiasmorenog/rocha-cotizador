@@ -3,13 +3,28 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { LucideIcon } from "lucide-react";
+import {
+  ADMIN_BOTTOM_STACK_ID,
+  getAdminBottomStackEl,
+} from "@/components/admin/admin-bottom-stack";
+import {
+  ADMIN_BOTTOM_STACK_SLOT_MS,
+  AdminBottomStackSlot,
+} from "@/components/admin/admin-bottom-stack-slot";
 import { Button } from "@/components/ui/button";
+import { useExitPresence } from "@/hooks/use-exit-presence";
+import { useIsClient } from "@/hooks/use-is-client";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
 /**
  * Shared admin create-draft modal shell (stock recount pattern): portal overlay,
  * minimize via backdrop / Escape (caller), floating chip while minimized.
+ *
+ * Stacking vs admin push toasts (`AdminNotificationToasts`):
+ * - Modal overlay: z-[90]
+ * - Draft chip + toasts share `AdminBottomStackHost` (z-[100] bottom-right);
+ *   chip `order-1`, toast `order-2` so toasts sit on the edge and push chips up.
  */
 export function AdminDraftModal({
   open,
@@ -81,35 +96,76 @@ export function AdminDraftModal({
           )
         : null}
 
-      {showChip && chip
-        ? createPortal(
-            <button
-              type="button"
-              onClick={onResume}
-              className={cn(
-                "fixed bottom-4 right-4 z-[95] flex max-w-[min(100vw-2rem,20rem)] items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-left text-sm shadow-lg",
-                FOCUS_BRAND_BORDER,
-              )}
-            >
-              <chip.icon
-                className="h-4 w-4 shrink-0 text-[var(--brand-primary)]"
-                aria-hidden
-              />
-              <span className="min-w-0">
-                <span className="block font-medium text-neutral-900">
-                  {chip.title}
-                </span>
-                {chip.subtitle ? (
-                  <span className="block truncate text-xs text-neutral-500">
-                    {chip.subtitle}
-                  </span>
-                ) : null}
-              </span>
-            </button>,
-            document.body,
-          )
-        : null}
+      {chip ? (
+        <AdminDraftChipPortal
+          show={showChip}
+          chip={chip}
+          onResume={onResume}
+        />
+      ) : null}
     </>
+  );
+}
+
+function AdminDraftChipPortal({
+  show,
+  chip,
+  onResume,
+}: {
+  show: boolean;
+  chip: {
+    title: string;
+    subtitle?: string;
+    icon: LucideIcon;
+  };
+  onResume: () => void;
+}) {
+  const isClient = useIsClient();
+  const { present, exiting } = useExitPresence(
+    show,
+    ADMIN_BOTTOM_STACK_SLOT_MS,
+  );
+
+  if (!isClient || !present) return null;
+
+  const mount = getAdminBottomStackEl() ?? document.body;
+  const inStack = mount.id === ADMIN_BOTTOM_STACK_ID;
+
+  const button = (
+    <button
+      type="button"
+      onClick={onResume}
+      className={cn(
+        "pointer-events-auto flex w-full max-w-[min(100vw-2rem,20rem)] items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-left text-sm shadow-lg transition-opacity duration-[280ms] ease-in",
+        inStack ? "max-w-none" : "fixed bottom-4 right-4 z-[95]",
+        exiting && "opacity-0",
+        FOCUS_BRAND_BORDER,
+      )}
+    >
+      <chip.icon
+        className="h-4 w-4 shrink-0 text-[var(--brand-primary)]"
+        aria-hidden
+      />
+      <span className="min-w-0">
+        <span className="block font-medium text-neutral-900">{chip.title}</span>
+        {chip.subtitle ? (
+          <span className="block truncate text-xs text-neutral-500">
+            {chip.subtitle}
+          </span>
+        ) : null}
+      </span>
+    </button>
+  );
+
+  return createPortal(
+    inStack ? (
+      <AdminBottomStackSlot exiting={exiting} className="order-1">
+        {button}
+      </AdminBottomStackSlot>
+    ) : (
+      button
+    ),
+    mount,
   );
 }
 

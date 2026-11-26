@@ -174,28 +174,6 @@ export default async function AdminStockPage({
       <StockPageHeader
         title="Stock"
         description="Desperdicios, consumibles y activos del local por sucursal."
-        formTitle={
-          tab === "consumibles"
-            ? "Recuento de consumibles"
-            : tab === "activos"
-              ? "Recuento de activos del local"
-              : "Carga de desperdicios"
-        }
-        formDescription={
-          tab === "consumibles"
-            ? "Gaseosas, insumos y stock invertido por sucursal. No son desperdicios ni se «tiran» como pan del día."
-            : tab === "activos"
-              ? "Carritos, bandejas y otros activos del local. La fecha suele ser mensual pero podés elegir cualquier día."
-              : "Recuento fin de día de panes y masas por sucursal. Buscá productos y cargá cantidades a tirar."
-        }
-        apiPath={
-          tab === "consumibles"
-            ? "/api/admin/consumibles"
-            : tab === "activos"
-              ? "/api/admin/activos"
-              : "/api/admin/desperdicios"
-        }
-        customers={customers}
         stockModule={stockModule}
       />
 
