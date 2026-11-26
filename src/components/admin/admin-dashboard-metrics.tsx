@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AdminDashboardChartLoader } from "@/components/admin/admin-dashboard-chart-loader";
+import { AdminDashboardKpiSection } from "@/components/admin/admin-dashboard-kpi-section";
 import { AdminDashboardReveal } from "@/components/admin/admin-dashboard-reveal";
 import { RecentQuotesList } from "@/components/admin/recent-quotes-list";
 import { SkeletonAdminQuoteActivityCard } from "@/components/ui/skeleton";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
+import type { DashboardKpiValues } from "@/lib/admin-dashboard-kpi-catalog";
 import type { QuoteActivityPeriod } from "@/lib/admin-quote-activity";
 import { formatPrice } from "@/lib/utils";
 
@@ -12,71 +14,69 @@ type Props = {
   canQuotes: boolean;
   isAdmin: boolean;
   chartPeriod: QuoteActivityPeriod;
+  userId?: string | null;
 };
+
+function buildKpiValues(
+  data: Awaited<ReturnType<typeof getAdminDashboardData>>,
+): DashboardKpiValues {
+  return {
+    quotesToday: {
+      value: data.quotesToday,
+      hint: `${formatPrice(data.quotesTodayTotal)} · ayer ${data.quotesYesterday}`,
+    },
+    customersQuotedToday: {
+      value: data.customersQuotedToday,
+      hint: `esta semana: ${data.customersQuotedWeek}`,
+    },
+    pendingWeighAll: {
+      value: data.pendingWeighLines,
+      hint:
+        data.pendingWeighLines > 0
+          ? "todas las líneas · orderByUnit / $0"
+          : "Sin pendientes",
+    },
+    deliveriesToday: {
+      value: data.deliveriesToday,
+      hint: "remitos con deliveryDate = hoy",
+    },
+    pendingWeighLive: {
+      value: data.pendingWeighLive,
+      hint: "entrega hoy/ayer o creados ≤7d",
+    },
+    activeCustomersNoQuoteWeek: {
+      value: data.activeCustomersNoQuoteWeek,
+      hint: "clientes active sin quote desde lunes",
+    },
+    submittedQuotesToday: {
+      value: data.submittedQuotesToday,
+      hint: "status SUBMITTED · creados hoy",
+    },
+    branchesMissingDesperdicioToday: {
+      value: data.branchesMissingDesperdicioToday,
+      hint: "módulo DESPERDICIOS habilitado, sin cierre",
+    },
+  };
+}
 
 /**
  * Async KPI + recent (and nested chart Suspense). Streamed under the
  * dashboard shell so header/CTA paint before Neon round-trips finish.
- * Wrapped in `AdminDashboardReveal` so enter animation runs when this
- * chunk arrives (not only on the Suspense fallback / page shell).
+ * KPI visibility is client-picked (max 3); one cached SQL loads the catalog.
  */
 export async function AdminDashboardMetrics({
   canQuotes,
   isAdmin,
   chartPeriod,
+  userId,
 }: Props) {
-  const {
-    quotesToday,
-    quotesTodayTotal,
-    quotesYesterday,
-    customersQuotedToday,
-    customersQuotedWeek,
-    pendingWeighLines,
-    recent,
-  } = await getAdminDashboardData();
-
-  const stats: { label: string; value: number | string; hint: string }[] = [
-    ...(canQuotes
-      ? [
-          {
-            label: "Cotizaciones hoy",
-            value: quotesToday,
-            hint: `${formatPrice(quotesTodayTotal)} · ayer ${quotesYesterday}`,
-          },
-          {
-            label: "Clientes que cotizaron hoy",
-            value: customersQuotedToday,
-            hint: `esta semana: ${customersQuotedWeek}`,
-          },
-          {
-            label: "Líneas pendientes de pesaje",
-            value: pendingWeighLines,
-            hint:
-              pendingWeighLines > 0
-                ? "orden por unidad / precio $0"
-                : "Sin pendientes",
-          },
-        ]
-      : []),
-  ];
+  const data = await getAdminDashboardData();
+  const kpiValues = buildKpiValues(data);
 
   return (
     <AdminDashboardReveal>
-      {stats.length > 0 ? (
-        <div className="admin-dashboard-kpi-stagger grid gap-3 sm:grid-cols-3">
-          {stats.map((s) => (
-            <div
-              key={s.label}
-              className="rounded-lg border border-neutral-200 bg-white p-4 shadow-sm"
-            >
-              <p className="text-xs uppercase tracking-wide text-neutral-500">{s.label}</p>
-              <p className="mt-1 text-3xl font-semibold tabular-nums text-neutral-900">
-                {s.value}
-              </p>
-              <p className="mt-1 text-xs text-neutral-500">{s.hint}</p>
-            </div>
-          ))}
-        </div>
+      {canQuotes ? (
+        <AdminDashboardKpiSection values={kpiValues} userId={userId} />
       ) : (
         <p className="text-sm text-neutral-500">
           No hay métricas disponibles para tu rol.
@@ -99,7 +99,7 @@ export async function AdminDashboardMetrics({
               </Link>
             ) : null}
           </div>
-          <RecentQuotesList recent={recent} />
+          <RecentQuotesList recent={data.recent} />
         </div>
       ) : null}
     </AdminDashboardReveal>

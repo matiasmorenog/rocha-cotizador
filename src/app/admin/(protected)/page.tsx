@@ -48,6 +48,7 @@ export default async function AdminDashboardPage({
           canQuotes={canQuotes}
           isAdmin={isAdmin}
           chartPeriod={chartPeriod}
+          userId={session.user.id}
         />
       </Suspense>
     </div>

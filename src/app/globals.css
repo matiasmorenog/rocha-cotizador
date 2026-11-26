@@ -489,6 +489,24 @@ select:not([multiple]):disabled {
 .route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(3) {
   animation-delay: 110ms;
 }
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(4) {
+  animation-delay: 165ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(5) {
+  animation-delay: 220ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(6) {
+  animation-delay: 275ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(7) {
+  animation-delay: 330ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(8) {
+  animation-delay: 385ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(n + 9) {
+  animation-delay: 440ms;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .route-view-enter .admin-dashboard-kpi-stagger > * {
