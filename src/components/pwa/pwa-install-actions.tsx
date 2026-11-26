@@ -9,7 +9,7 @@ import {
   promptPwaInstall,
   PWA_INSTALL_PROMPT_EVENT,
 } from "@/lib/pwa-install-client";
-import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 function subscribePrompt(onStoreChange: () => void) {
@@ -78,24 +78,26 @@ export function PwaInstallActions({ compact = false, className }: Props) {
   }
 
   if (hasPrompt === "1") {
+    if (compact) {
+      return (
+        <div className={cn("flex flex-wrap items-center gap-2", className)}>
+          <Button
+            type="button"
+            size="sm"
+            disabled={busy}
+            onClick={() => void onInstall()}
+          >
+            {busy ? "Instalando…" : "Instalar app"}
+          </Button>
+        </div>
+      );
+    }
+    // Match sibling cuenta cards: primary CTA right-aligned.
     return (
-      <div className={cn(compact ? "flex flex-wrap items-center gap-2" : "space-y-2", className)}>
-        {!compact ? (
-          <p className="text-sm text-neutral-600">
-            Instalá Rocha Cotizador en el inicio para abrirla más rápido, como una app.
-          </p>
-        ) : null}
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void onInstall()}
-          className={cn(
-            "inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-[var(--brand-primary)] px-3 text-sm font-medium text-white hover:opacity-90 disabled:opacity-60",
-            FOCUS_BRAND_PRIMARY,
-          )}
-        >
+      <div className={cn("flex justify-end", className)}>
+        <Button type="button" disabled={busy} onClick={() => void onInstall()}>
           {busy ? "Instalando…" : "Instalar app"}
-        </button>
+        </Button>
       </div>
     );
   }

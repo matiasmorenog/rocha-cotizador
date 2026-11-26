@@ -18,8 +18,8 @@ export function PwaInstallSettingsCard() {
       <p className="mt-1 text-neutral-600">
         Abrí Rocha Cotizador desde el inicio, sin la barra del navegador.
       </p>
-      <div className="mt-3">
-        <PwaInstallActions />
+      <div className="mt-3 w-full">
+        <PwaInstallActions className="w-full" />
       </div>
     </div>
   );
