@@ -9,6 +9,10 @@ export const ADMIN_BOTTOM_STACK_SLOT_MS = 280;
 /**
  * Collapsing slot for the shared bottom stack — height eases open/closed so
  * siblings slide instead of jumping when a toast or chip leaves.
+ *
+ * Clip with `overflow:hidden` only while the row is closed/collapsing. When
+ * open, overflow is visible so chip/toast `box-shadow` follows `border-radius`
+ * instead of looking square-clipped at the corners.
  */
 export function AdminBottomStackSlot({
   exiting = false,
@@ -37,7 +41,12 @@ export function AdminBottomStackSlot({
       )}
       style={{ transitionDuration: `${ADMIN_BOTTOM_STACK_SLOT_MS}ms` }}
     >
-      <div className="min-h-0 overflow-hidden">
+      <div
+        className={cn(
+          "min-h-0",
+          open ? "overflow-visible" : "overflow-hidden",
+        )}
+      >
         {/* mb replaces parent gap so margin collapses with the slot */}
         <div className="mb-2">{children}</div>
       </div>
