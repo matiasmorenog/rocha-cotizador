@@ -1,5 +1,6 @@
-/* Rocha Cotizador — admin Web Push service worker */
-/* v12 — never cache HTML navigations (same-tab reload must hit the network) */
+/* Rocha Cotizador — shared service worker (PWA installability + admin Web Push) */
+/* v13 — never cache HTML navigations (same-tab reload must hit the network) */
+/* Push handlers unchanged; site-wide register enables Chrome install criteria. */
 
 const PUSH_CHANNEL = "rocha-admin-push";
 const FALLBACK_TITLE = "Nueva cotización";

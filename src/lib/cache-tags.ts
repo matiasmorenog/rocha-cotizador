@@ -93,7 +93,11 @@ export function invalidateAfterStockEntryMutation() {
   revalidatePath("/admin/stock");
 }
 
-/** Quote create — expire dashboard Data Cache + refresh list routes. */
+/**
+ * Quote create — expire KPI/recent/cotizaciones Data Cache + refresh list
+ * routes. Chart series (`admin-quote-activity`) keeps its TTL hit; wipe / full
+ * revalidate still clears it via `invalidateAllDataCaches`.
+ */
 export function invalidateAfterQuoteCreate() {
   invalidateAdminDashboardCache();
   revalidatePath("/admin");

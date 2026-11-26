@@ -1,4 +1,5 @@
 import { CustomerChangePasswordForm } from "@/components/account/customer-change-password-form";
+import { PwaInstallSettingsCard } from "@/components/pwa/pwa-install-settings-card";
 import { requireCustomerSession } from "@/lib/session";
 import { db } from "@/lib/db";
 
@@ -19,20 +20,23 @@ export async function CustomerCuentaConfigLoader() {
         Actualizá la contraseña con la que ingresás al cotizador.
       </p>
 
-      <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-800">
-        <p className="font-semibold text-neutral-900">Cambiar contraseña</p>
-        <p className="mt-1 text-neutral-600">
-          Elegí una contraseña segura. Si todavía usás el PIN inicial, ingresalo
-          como contraseña actual.
-        </p>
-        <div className="mt-3 space-y-3">
-          {customer?.mustChangePassword ? (
-            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              Todavía usás el PIN inicial. Podés cambiarlo por una contraseña más
-              segura cuando quieras.
-            </p>
-          ) : null}
-          <CustomerChangePasswordForm />
+      <div className="space-y-4">
+        <PwaInstallSettingsCard />
+        <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-3 text-sm text-neutral-800">
+          <p className="font-semibold text-neutral-900">Cambiar contraseña</p>
+          <p className="mt-1 text-neutral-600">
+            Elegí una contraseña segura. Si todavía usás el PIN inicial, ingresalo
+            como contraseña actual.
+          </p>
+          <div className="mt-3 space-y-3">
+            {customer?.mustChangePassword ? (
+              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                Todavía usás el PIN inicial. Podés cambiarlo por una contraseña más
+                segura cuando quieras.
+              </p>
+            ) : null}
+            <CustomerChangePasswordForm />
+          </div>
         </div>
       </div>
     </section>

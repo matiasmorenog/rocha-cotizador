@@ -1,5 +1,10 @@
-import { SkeletonCustomerCuentaConfigPage } from "@/components/ui/skeleton";
+import { CustomerModuleLoading } from "@/components/customer/customer-module-loading";
+import { SkeletonCustomerCuentaPanel } from "@/components/ui/skeleton";
 
 export default function CustomerCuentaConfigLoading() {
-  return <SkeletonCustomerCuentaConfigPage withShell={false} />;
+  return (
+    <CustomerModuleLoading path="/cuenta">
+      <SkeletonCustomerCuentaPanel />
+    </CustomerModuleLoading>
+  );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { AdminModulePageHeader } from "@/components/admin/admin-module-page-header";
 import { StockRecountForm, StockRecountTrigger } from "./stock-recount-form";
 import type { StockRecountCustomer } from "./stock-recount-form";
 
@@ -32,17 +33,18 @@ export function StockPageHeader({
 
   return (
     <>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-neutral-900">{title}</h1>
-          <p className="text-sm text-neutral-600">{description}</p>
-        </div>
-        <StockRecountTrigger
-          pending={draft.pending}
-          itemCount={draft.itemCount}
-          onClick={() => setOpen((v) => !v)}
-        />
-      </div>
+      <AdminModulePageHeader
+        title={title}
+        description={description}
+        titleClassName="text-xl font-semibold text-neutral-900"
+        actions={
+          <StockRecountTrigger
+            pending={draft.pending}
+            itemCount={draft.itemCount}
+            onClick={() => setOpen((v) => !v)}
+          />
+        }
+      />
 
       <StockRecountForm
         key={stockModule}

@@ -473,6 +473,47 @@ select:not([multiple]):disabled {
   }
 }
 
+/*
+ * Admin dashboard KPI stagger — only under `.route-view-enter` so keyframes
+ * do not burn while `AdminDashboardReveal` is still gated (opacity-0).
+ */
+.route-view-enter .admin-dashboard-kpi-stagger > * {
+  animation: customer-home-hub-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(2) {
+  animation-delay: 55ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(3) {
+  animation-delay: 110ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(4) {
+  animation-delay: 165ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(5) {
+  animation-delay: 220ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(6) {
+  animation-delay: 275ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(7) {
+  animation-delay: 330ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(8) {
+  animation-delay: 385ms;
+}
+.route-view-enter .admin-dashboard-kpi-stagger > *:nth-child(n + 9) {
+  animation-delay: 440ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-view-enter .admin-dashboard-kpi-stagger > * {
+    animation: none;
+  }
+}
+
 /* Sidebar — user row + nav links stagger on first mount */
 .shell-nav-reveal > * {
   animation: customer-home-hub-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -1609,6 +1650,7 @@ html[data-admin-theme="dark"] .admin-edit-hover:hover {
   .login-card-exit,
   .login-session-pane,
   .route-view-enter,
+  .route-view-enter .admin-dashboard-kpi-stagger > *,
   .shell-nav-reveal > *,
   .solapas-tab-indicator-animate,
   .solapas-tab-content-enter,
