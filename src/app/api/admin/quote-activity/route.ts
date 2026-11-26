@@ -8,8 +8,8 @@ import { getAdminQuoteActivity } from "@/lib/admin-quote-activity";
  * Chart-only data for the dashboard's period toggle — lets the client swap
  * Semana/Mes/Año without reloading KPIs or the recent-quotes list. Reuses
  * `getAdminQuoteActivity`'s tagged Data Cache (key: Argentina day + period,
- * tag `admin-dashboard`), so no extra DB round trip beyond the existing
- * Prisma singleton and no separate cache invalidation surface.
+ * tag `admin-quote-activity`), so no extra DB round trip beyond the existing
+ * Prisma singleton. Wipe / full revalidate clears it; quote create does not.
  */
 export async function GET(req: NextRequest) {
   if (!(await requireStaffApi("quotes"))) {

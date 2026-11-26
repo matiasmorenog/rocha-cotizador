@@ -994,6 +994,51 @@ export function SkeletonAdminQuoteActivityCard() {
   );
 }
 
+/**
+ * KPI cards + optional chart bone + recent list — header/CTA already painted
+ * above the Suspense boundary on `/admin`.
+ */
+export function SkeletonAdminDashboardMetrics({
+  showChart = true,
+}: {
+  showChart?: boolean;
+}) {
+  return (
+    <SkeletonRegion label="Cargando métricas del dashboard" className="space-y-6">
+      <div className="grid gap-3 sm:grid-cols-3">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div key={i} className={cn(ADMIN_SKELETON_CARD, "p-4")}>
+            <Skeleton className="h-3 w-40" />
+            <Skeleton className="mt-2 h-9 w-16" />
+            <Skeleton className="mt-2 h-3 w-36" />
+          </div>
+        ))}
+      </div>
+      {showChart ? <SkeletonAdminQuoteActivityCard /> : null}
+      <div className={ADMIN_SKELETON_CARD}>
+        <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
+          <Skeleton className="h-5 w-44" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <div className="divide-y divide-neutral-100">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="flex items-center justify-between px-4 py-3">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-40" />
+              </div>
+              <div className="space-y-2 text-right">
+                <Skeleton className="ml-auto h-4 w-20" />
+                <Skeleton className="ml-auto h-3 w-28" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </SkeletonRegion>
+  );
+}
+
 /** Listas de precios — title + 2-line description, create-list card, plain table (no search/Excel panel). */
 export function SkeletonAdminPriceListsPage() {
   return (
