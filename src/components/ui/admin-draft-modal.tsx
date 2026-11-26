@@ -7,7 +7,12 @@ import {
   ADMIN_BOTTOM_STACK_ID,
   getAdminBottomStackEl,
 } from "@/components/admin/admin-bottom-stack";
+import {
+  ADMIN_BOTTOM_STACK_SLOT_MS,
+  AdminBottomStackSlot,
+} from "@/components/admin/admin-bottom-stack-slot";
 import { Button } from "@/components/ui/button";
+import { useExitPresence } from "@/hooks/use-exit-presence";
 import { useIsClient } from "@/hooks/use-is-client";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
@@ -91,17 +96,23 @@ export function AdminDraftModal({
           )
         : null}
 
-      {showChip && chip ? (
-        <AdminDraftChipPortal chip={chip} onResume={onResume} />
+      {chip ? (
+        <AdminDraftChipPortal
+          show={showChip}
+          chip={chip}
+          onResume={onResume}
+        />
       ) : null}
     </>
   );
 }
 
 function AdminDraftChipPortal({
+  show,
   chip,
   onResume,
 }: {
+  show: boolean;
   chip: {
     title: string;
     subtitle?: string;
@@ -110,20 +121,24 @@ function AdminDraftChipPortal({
   onResume: () => void;
 }) {
   const isClient = useIsClient();
-  if (!isClient) return null;
+  const { present, exiting } = useExitPresence(
+    show,
+    ADMIN_BOTTOM_STACK_SLOT_MS,
+  );
+
+  if (!isClient || !present) return null;
 
   const mount = getAdminBottomStackEl() ?? document.body;
   const inStack = mount.id === ADMIN_BOTTOM_STACK_ID;
 
-  return createPortal(
+  const button = (
     <button
       type="button"
       onClick={onResume}
       className={cn(
-        "pointer-events-auto flex max-w-[min(100vw-2rem,20rem)] items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-left text-sm shadow-lg",
-        inStack
-          ? "order-1 w-full max-w-none"
-          : "fixed bottom-4 right-4 z-[95]",
+        "pointer-events-auto flex w-full max-w-[min(100vw-2rem,20rem)] items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2.5 text-left text-sm shadow-lg transition-opacity duration-[280ms] ease-in",
+        inStack ? "max-w-none" : "fixed bottom-4 right-4 z-[95]",
+        exiting && "opacity-0",
         FOCUS_BRAND_BORDER,
       )}
     >
@@ -139,7 +154,17 @@ function AdminDraftChipPortal({
           </span>
         ) : null}
       </span>
-    </button>,
+    </button>
+  );
+
+  return createPortal(
+    inStack ? (
+      <AdminBottomStackSlot exiting={exiting} className="order-1">
+        {button}
+      </AdminBottomStackSlot>
+    ) : (
+      button
+    ),
     mount,
   );
 }
