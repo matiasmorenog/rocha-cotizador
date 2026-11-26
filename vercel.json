@@ -3,8 +3,8 @@
   "git": {
     "deploymentEnabled": {
       "main": false,
-      "development": true,
-      "**": true
+      "development": false,
+      "**": false
     }
   },
   "ignoreCommand": "bash scripts/vercel-ignore-draft-pr.sh"

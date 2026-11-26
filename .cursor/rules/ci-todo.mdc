@@ -11,7 +11,7 @@ Workflow: `.github/workflows/ci.yml`. Details: `docs/ci.md`, `DEPLOY.md`.
 ## Done (short)
 
 - Actions `lint-and-typecheck` on PRs/push to `development`/`main`; draft PRs skip CI + preview (`draft-pr-checks.mdc`)
-- Prod deploy on `main` after lint + schema sync gate + `/api/health`; `vercel.json` auto-deploy OFF on `main`
+- Deploy on `main` only: `deploy-production` (Neon main) + `deploy-demo` (`rocha-cotizador-dev`, Neon development); `vercel.json` Git auto-deploy OFF for all branches
 - Node 24; `prisma generate` with dummy `DATABASE_URL` in CI
 
 ## Blockers / next

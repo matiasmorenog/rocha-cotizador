@@ -31,4 +31,4 @@ Baseline: global `git-and-prs.mdc` + `pr-always-draft.mdc`. This file = repo del
 
 ## CI note
 
-Draft = no Actions/preview until Ready — `draft-pr-checks.mdc`. Build = Vercel (not Actions yet). Merge = squash + delete branch.
+Draft = no Actions/preview until Ready — `draft-pr-checks.mdc`. Vercel ship only on `main` via Actions (prod + demo). Merge = squash + delete branch.
