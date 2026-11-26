@@ -1,6 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import {
+  ADMIN_BOTTOM_STACK_ID,
+  getAdminBottomStackEl,
+} from "@/components/admin/admin-bottom-stack";
+import { useIsClient } from "@/hooks/use-is-client";
 import { FOCUS_BRAND_OUTLINE } from "@/lib/focus-styles";
 import { cn } from "@/lib/utils";
 
@@ -57,9 +63,9 @@ const TOAST_EXIT_MS = 280;
 type DisplayItem = { toast: AdminToastItem; exiting: boolean };
 
 /**
- * Compact toast stack (bottom-right, z-[100]).
- * Above draft modals (z-[90]) and draft chips (z-[95], bottom-left) so push /
- * in-app notices stay visible and dismissible while a modal is open.
+ * Compact toast stack in `AdminBottomStackHost` (order-2, bottom of column).
+ * Draft chips use order-1 so a new toast pushes chips up. Still above modal
+ * overlay (z-[90]); dismiss stays clickable.
  *
  * Click body opens url when present; X dismisses.
  *
@@ -67,6 +73,7 @@ type DisplayItem = { toast: AdminToastItem; exiting: boolean };
  * exit animation can play instead of popping out of the DOM instantly.
  */
 export function AdminNotificationToasts({ toasts, onDismiss }: Props) {
+  const isClient = useIsClient();
   const [items, setItems] = useState<DisplayItem[]>(() =>
     toasts.map((toast) => ({ toast, exiting: false })),
   );
@@ -109,13 +116,21 @@ export function AdminNotificationToasts({ toasts, onDismiss }: Props) {
     };
   }, []);
 
-  if (items.length === 0) return null;
+  if (!isClient || items.length === 0) return null;
 
-  return (
+  const mount = getAdminBottomStackEl() ?? document.body;
+  const inStack = mount.id === ADMIN_BOTTOM_STACK_ID;
+
+  return createPortal(
     <div
       aria-live="polite"
       aria-relevant="additions"
-      className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-[min(100vw-2rem,22rem)] flex-col-reverse gap-2"
+      className={cn(
+        "pointer-events-none flex w-full flex-col-reverse gap-2",
+        inStack
+          ? "order-2"
+          : "fixed bottom-4 right-4 z-[100] w-[min(100vw-2rem,22rem)]",
+      )}
     >
       {items.map(({ toast, exiting }) => {
         const shell = toneShell[toast.tone];
@@ -185,6 +200,7 @@ export function AdminNotificationToasts({ toasts, onDismiss }: Props) {
           </div>
         );
       })}
-    </div>
+    </div>,
+    mount,
   );
 }
