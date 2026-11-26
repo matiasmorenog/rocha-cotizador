@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { isAuthSessionSurfaceNav, isCustomerHomePath } from "@/lib/customer-module-path";
@@ -10,6 +10,13 @@ import { useRouteLoading } from "@/lib/route-loading-context";
 const MIN_VISIBLE_AFTER_ROUTE_MS = 220;
 const SKELETON_POLL_MS = 50;
 const SKELETON_MAX_WAIT_MS = 8000;
+
+/** Avoid `useSearchParams` here — it suspends and delayed mount skipped first-load pending. */
+function readSearchString(): string {
+  if (typeof window === "undefined") return "";
+  const search = window.location.search;
+  return search.startsWith("?") ? search.slice(1) : search;
+}
 
 function isSameRoute(
   pathname: string,
@@ -77,25 +84,28 @@ function hasPendingSkeleton(): boolean {
   return false;
 }
 
-/** Segment loading.tsx still mounted under hidden route content. */
+/**
+ * Segment `loading.tsx` still mounted under hidden route content.
+ * Only `SkeletonRegion` (role=status aria-busy) — ignore in-page Suspense
+ * bones (e.g. dashboard chart) so reveal/enter is not blocked on them.
+ */
 function hasHiddenRouteSkeleton(): boolean {
   const hidden = document.querySelector("[data-route-content].hidden");
   if (!hidden) return false;
   return (
-    hidden.querySelector(
-      ".rocha-skeleton, [role=\"status\"][aria-busy=\"true\"]",
-    ) != null
+    hidden.querySelector('[role="status"][aria-busy="true"]') != null
   );
 }
 
 /**
  * Soft-nav + initial hard-load trickle — no full-screen overlay/blur.
  * Progress lives in the header edge bar.
+ *
+ * Must mount without Suspense/`useSearchParams` so first paint can set
+ * `pending` before `.route-view-enter` burns on the loading skeleton.
  */
 export function RouteLoadingOverlay() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const search = searchParams.toString();
   const { data: session, status } = useSession();
   const {
     visible,
@@ -112,9 +122,11 @@ export function RouteLoadingOverlay() {
   const isFirstRouteRef = useRef(true);
   const pathnameRef = useRef(pathname);
   const pendingPathRef = useRef(pendingPath);
+  const searchRef = useRef(readSearchString());
   useLayoutEffect(() => {
     pathnameRef.current = pathname;
     pendingPathRef.current = pendingPath;
+    searchRef.current = readSearchString();
   }, [pathname, pendingPath]);
 
   const clearSettle = useCallback(() => {
@@ -192,8 +204,11 @@ export function RouteLoadingOverlay() {
     }, 32);
   }, [clearSettle, finishLoading, isNavActive]);
 
-  /** Hard refresh / first paint — soft-nav only listened to clicks before. */
-  useEffect(() => {
+  /**
+   * Hard refresh / first paint — layout effect so pending covers before
+   * `.route-view-enter` can paint on the loading skeleton.
+   */
+  useLayoutEffect(() => {
     let cancelled = false;
     let pollId: ReturnType<typeof setInterval> | null = null;
     let rafId = 0;
@@ -249,13 +264,16 @@ export function RouteLoadingOverlay() {
   useEffect(() => {
     if (isFirstRouteRef.current) {
       isFirstRouteRef.current = false;
+      searchRef.current = readSearchString();
       return;
     }
+    searchRef.current = readSearchString();
     settleAfterRoute();
-  }, [pathname, search, settleAfterRoute]);
+  }, [pathname, settleAfterRoute]);
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => {
+      const search = readSearchString();
       const anchor = (event.target as HTMLElement).closest("a");
       if (!anchor) return;
       if (!shouldStartNavigation(event, anchor, pathname, search)) return;
@@ -284,7 +302,7 @@ export function RouteLoadingOverlay() {
       window.removeEventListener("popstate", onPopState);
       clearSettle();
     };
-  }, [pathname, search, beginNavigation, clearSettle, shouldSkipLightAuthNav]);
+  }, [pathname, beginNavigation, clearSettle, shouldSkipLightAuthNav]);
 
   if (!visible) return null;
 

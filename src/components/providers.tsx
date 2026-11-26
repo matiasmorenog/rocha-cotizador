@@ -2,7 +2,6 @@
 
 import { SessionProvider } from "next-auth/react";
 import type { Session } from "next-auth";
-import { Suspense } from "react";
 import { AdminThemeProvider } from "@/components/admin/admin-theme-provider";
 import { ClientBuildGuard } from "@/components/client-build-guard";
 import { RouteLoadingOverlay } from "@/components/route-loading-overlay";
@@ -23,9 +22,11 @@ export function Providers({
       <AdminThemeProvider isStaff={isStaff}>
         <RouteLoadingProvider>
           <ClientBuildGuard />
-          <Suspense fallback={null}>
-            <RouteLoadingOverlay />
-          </Suspense>
+          {/*
+            Mount eagerly (no Suspense/`useSearchParams`) so first-load pending
+            covers before route-view-enter can burn on the loading skeleton.
+          */}
+          <RouteLoadingOverlay />
           {children}
         </RouteLoadingProvider>
       </AdminThemeProvider>
