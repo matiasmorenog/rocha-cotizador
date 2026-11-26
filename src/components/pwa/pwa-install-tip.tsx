@@ -22,16 +22,23 @@ function subscribeTip(onStoreChange: () => void) {
   };
 }
 
+/** Cached server snapshot — must be referentially stable. */
+const SERVER_TIP_KEY = "1:0";
+
+let cachedTipKey = SERVER_TIP_KEY;
+
 /** Stable string: dismissed:eligible */
 function getTipKey(): string {
   const dismissed = readInstallTipDismissed() ? "1" : "0";
   const eligible =
     !isPwaStandalone() && isPwaInstallTipViewport() ? "1" : "0";
-  return `${dismissed}:${eligible}`;
+  const next = `${dismissed}:${eligible}`;
+  if (next !== cachedTipKey) cachedTipKey = next;
+  return cachedTipKey;
 }
 
 function getServerTipKey(): string {
-  return "1:0";
+  return SERVER_TIP_KEY;
 }
 
 /**

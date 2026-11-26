@@ -21,16 +21,23 @@ function subscribePrompt(onStoreChange: () => void) {
   };
 }
 
+/** Cached server snapshot — must be referentially stable. */
+const SERVER_ENV_KEY = "0:1:0";
+
+let cachedEnvKey = SERVER_ENV_KEY;
+
 /** Stable string snapshot for useSyncExternalStore. */
 function getEnvKey(): string {
   const hasPrompt = getDeferredInstallPrompt() !== null ? "1" : "0";
   const standalone = isPwaStandalone() ? "1" : "0";
   const ios = isIosDevice() ? "1" : "0";
-  return `${hasPrompt}:${standalone}:${ios}`;
+  const next = `${hasPrompt}:${standalone}:${ios}`;
+  if (next !== cachedEnvKey) cachedEnvKey = next;
+  return cachedEnvKey;
 }
 
 function getServerEnvKey(): string {
-  return "0:1:0";
+  return SERVER_ENV_KEY;
 }
 
 type Props = {
