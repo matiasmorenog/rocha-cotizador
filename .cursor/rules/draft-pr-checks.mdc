@@ -7,10 +7,10 @@ alwaysApply: true
 
 | State | Actions | Vercel |
 |-------|---------|--------|
-| **draft** | Skipped (`ci.yml` `if`) | Ignore cancela feature deploy (ambos proyectos) |
-| **ready** | lint/typecheck only | No feature preview (Git `previewDeploymentsDisabled` + no Actions preview) |
-| push `development` | Runs | `rocha-cotizador-dev` Production pública (portfolio demo) |
-| push `main` | CI + Deploy workflow | Auto-deploy off; Actions ships prod |
+| **draft** | Skipped (`ci.yml` `if`) | Ignore cancela cualquier Git build (ambos proyectos) |
+| **ready** | lint/typecheck only | No feature preview (`deploymentEnabled` all false + ignore) |
+| push `development` | Runs CI only | No Vercel deploy |
+| push `main` | CI + Deploy workflow | Auto-deploy off; Actions ships **prod** + **demo** (`rocha-cotizador-dev`) |
 
 ## Agent
 
@@ -18,6 +18,6 @@ alwaysApply: true
 - Never `gh pr ready` / undraft unless user ordered it
 - Draft: do not wait on `gh pr checks` (skipped on purpose)
 - Ready: wait `gh pr checks` — `lint-and-typecheck` only (ignore Vercel Git cancel en feature PRs)
-- No branch-only `deploymentEnabled` hacks (`**` true; draft gate = ignore script)
+- Git auto-deploy off for all branches (`vercel.json` `deploymentEnabled`); ignore script cancels residual Git builds
 
 Refs: `.github/workflows/ci.yml`, `.github/workflows/deploy.yml`, `scripts/vercel-ignore-draft-pr.sh`, `docs/ci.md`
