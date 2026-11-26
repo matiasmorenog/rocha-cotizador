@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import type { ReactNode } from "react";
+import { AdminModulePageHeader } from "@/components/admin/admin-module-page-header";
 import {
   SkeletonAdminConfigPage,
   SkeletonAdminDashboardPage,
@@ -21,11 +22,42 @@ import {
   SkeletonQuotePage,
   SkeletonRemitoDetailPage,
 } from "@/components/ui/skeleton";
+import { adminModuleChromeForPath } from "@/lib/admin-module-chrome";
+import { customerModuleChromeForPath } from "@/lib/customer-module-chrome";
 import {
   isAuthSessionSurfaceNav,
 } from "@/lib/customer-module-path";
 import { useRouteLoading } from "@/lib/route-loading-context";
 import { cn } from "@/lib/utils";
+
+function withModuleChrome(
+  path: string,
+  body: ReactNode,
+  variant: "admin" | "customer",
+): ReactNode {
+  const chrome =
+    variant === "admin"
+      ? adminModuleChromeForPath(path)
+      : customerModuleChromeForPath(path);
+  if (!chrome) return body;
+  return (
+    <div className="space-y-6">
+      <AdminModulePageHeader
+        title={chrome.title}
+        description={chrome.description}
+        titleClassName={
+          path.startsWith("/admin/stock") ||
+          path.startsWith("/admin/desperdicios") ||
+          path.startsWith("/admin/consumibles") ||
+          path.startsWith("/admin/mermas")
+            ? "text-xl font-semibold text-neutral-900"
+            : undefined
+        }
+      />
+      {body}
+    </div>
+  );
+}
 
 function customerSkeletonFor(path: string, isGuest: boolean) {
   /** Live sidebar sits outside pending — skeleton content column only. */
@@ -34,18 +66,36 @@ function customerSkeletonFor(path: string, isGuest: boolean) {
   if (path === "/" || path === "") {
     return isGuest ? <SkeletonChooserPage /> : <SkeletonHomePage />;
   }
-  if (path.startsWith("/cotizar")) return <SkeletonQuotePage withShell={withShell} />;
+  if (path.startsWith("/cotizar")) {
+    return withModuleChrome(
+      path,
+      <SkeletonQuotePage withShell={withShell} />,
+      "customer",
+    );
+  }
   if (path.startsWith("/remitos/") && path !== "/remitos") {
     return <SkeletonRemitoDetailPage withShell={withShell} />;
   }
   if (path.startsWith("/remitos")) {
-    return <SkeletonCustomerRemitosPage withShell={withShell} />;
+    return withModuleChrome(
+      path,
+      <SkeletonCustomerRemitosPage withShell={withShell} />,
+      "customer",
+    );
   }
   if (path.startsWith("/stock")) {
-    return <SkeletonCustomerStockPage withShell={withShell} />;
+    return withModuleChrome(
+      path,
+      <SkeletonCustomerStockPage withShell={withShell} />,
+      "customer",
+    );
   }
   if (path.startsWith("/cuenta")) {
-    return <SkeletonCustomerCuentaConfigPage withShell={withShell} />;
+    return withModuleChrome(
+      path,
+      <SkeletonCustomerCuentaConfigPage withShell={withShell} />,
+      "customer",
+    );
   }
   if (path.startsWith("/entrar")) return <SkeletonChooserPage />;
   if (path.startsWith("/login")) return <SkeletonLoginPage />;
@@ -68,38 +118,53 @@ function adminSkeletonFor(path: string) {
     return <SkeletonLoginPage title="Cargando acceso admin" />;
   }
   if (path.startsWith("/admin/clientes")) {
-    return <SkeletonAdminListPage label="Cargando clientes" titleWidth="w-28" />;
+    return withModuleChrome(
+      path,
+      <SkeletonAdminListPage label="Cargando clientes" />,
+      "admin",
+    );
   }
   if (path.startsWith("/admin/productos")) {
-    return (
-      <SkeletonAdminListPage label="Cargando productos" titleWidth="w-36" />
+    return withModuleChrome(
+      path,
+      <SkeletonAdminListPage label="Cargando productos" />,
+      "admin",
     );
   }
   if (path.startsWith("/admin/listas-precios")) {
-    return <SkeletonAdminPriceListsPage />;
+    return withModuleChrome(path, <SkeletonAdminPriceListsPage />, "admin");
   }
   if (path.startsWith("/admin/cotizaciones/nueva")) {
-    return <SkeletonAdminNewQuotePage />;
+    return withModuleChrome(path, <SkeletonAdminNewQuotePage />, "admin");
   }
   if (path.startsWith("/admin/cotizaciones")) {
-    return <SkeletonAdminQuotesPage />;
+    return withModuleChrome(path, <SkeletonAdminQuotesPage />, "admin");
   }
   if (path.startsWith("/admin/configuracion")) {
-    return <SkeletonAdminConfigPage />;
+    return withModuleChrome(path, <SkeletonAdminConfigPage />, "admin");
   }
-  if (path.startsWith("/admin/stock")) {
-    return <SkeletonAdminStockPage />;
+  if (
+    path.startsWith("/admin/stock") ||
+    path.startsWith("/admin/desperdicios") ||
+    path.startsWith("/admin/consumibles") ||
+    path.startsWith("/admin/mermas")
+  ) {
+    return withModuleChrome(path, <SkeletonAdminStockPage />, "admin");
   }
   if (path.startsWith("/admin/usuarios")) {
-    return <SkeletonAdminListPage label="Cargando usuarios" titleWidth="w-28" />;
+    return withModuleChrome(
+      path,
+      <SkeletonAdminListPage label="Cargando usuarios" />,
+      "admin",
+    );
   }
   if (path.startsWith("/admin/plataforma")) {
-    return <SkeletonAdminPriceListsPage />;
+    return withModuleChrome(path, <SkeletonAdminPriceListsPage />, "admin");
   }
   if (path === "/admin" || path === "/admin/") {
-    return <SkeletonAdminDashboardPage />;
+    return withModuleChrome(path, <SkeletonAdminDashboardPage />, "admin");
   }
-  return <SkeletonAdminDashboardPage />;
+  return withModuleChrome(path, <SkeletonAdminDashboardPage />, "admin");
 }
 
 type RoutePendingShellProps = {

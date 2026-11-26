@@ -258,7 +258,9 @@ function fillBuckets(
 /**
  * Quote activity series for the dashboard chart.
  * Cache key args: Argentina day + period (`week` | `month` | `year`).
- * Key prefix `admin-quote-activity-v4` (clip buckets to today); tag `admin-dashboard`.
+ * Key prefix `admin-quote-activity-v4` (clip buckets to today).
+ * Tag `admin-quote-activity` — not expired on every quote create (KPIs use
+ * `admin-dashboard`); wipe / POST /api/revalidate still clears all tags.
  */
 const getCachedQuoteActivity = unstable_cache(
   async (day: string, period: QuoteActivityPeriod): Promise<QuoteActivitySeries> => {
@@ -267,7 +269,7 @@ const getCachedQuoteActivity = unstable_cache(
     return fillBuckets(buckets, rows, period);
   },
   ["admin-quote-activity-v4"],
-  { tags: [CACHE_TAGS.adminDashboard], revalidate: 86400 },
+  { tags: [CACHE_TAGS.adminQuoteActivity], revalidate: 86400 },
 );
 
 export function getAdminQuoteActivity(

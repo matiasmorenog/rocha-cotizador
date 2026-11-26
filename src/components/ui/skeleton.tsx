@@ -409,7 +409,6 @@ export function SkeletonQuotePage({ withShell = true }: CustomerSkeletonShellPro
   return (
     <CustomerSkeletonFrame withShell={withShell}>
       <SkeletonRegion label="Cargando cotizador" className="space-y-4">
-        <SkeletonPageHeader titleWidth="w-52" descriptionWidth="w-48" />
         <SkeletonQuoteBuilderContent />
       </SkeletonRegion>
     </CustomerSkeletonFrame>
@@ -507,7 +506,6 @@ export function SkeletonCustomerRemitosPage({
   return (
     <CustomerSkeletonFrame withShell={withShell}>
       <SkeletonRegion label="Cargando remitos" className="space-y-4">
-        <Skeleton className="h-8 w-36" />
         <SkeletonCustomerRemitosPanel />
       </SkeletonRegion>
     </CustomerSkeletonFrame>
@@ -530,14 +528,13 @@ export function SkeletonCustomerCuentaPanel() {
   );
 }
 
-/** Customer `/cuenta` — header + single cuenta section. */
+/** Customer `/cuenta` — panel only (title chrome outside Suspense/loading). */
 export function SkeletonAccountPage({
   withShell = true,
 }: CustomerSkeletonShellProps = {}) {
   return (
     <CustomerSkeletonFrame withShell={withShell}>
       <SkeletonRegion label="Cargando configuración" className="space-y-6">
-        <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-48" />
         <SkeletonCustomerCuentaPanel />
       </SkeletonRegion>
     </CustomerSkeletonFrame>
@@ -757,15 +754,7 @@ export function SkeletonCustomerStockPage({
   return (
     <CustomerSkeletonFrame withShell={withShell}>
       <SkeletonRegion label="Cargando stock" className="space-y-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <Skeleton className="h-8 w-20" />
-              <Skeleton className="h-8 w-28 rounded-md" />
-            </div>
-            <Skeleton className="h-4 w-64 max-w-full" />
-            <Skeleton className="h-4 w-48" />
-          </div>
+        <div className="flex justify-end">
           <Skeleton className="h-10 w-40 shrink-0 rounded-md" />
         </div>
         <SkeletonCustomerStockHistoryPanel />
@@ -815,93 +804,25 @@ export function SkeletonAdminConfigPage() {
       label="Cargando configuración"
       className="space-y-6"
     >
-      <SkeletonPageHeader titleWidth="w-44" descriptionWidth="w-72" />
-
       <SkeletonSolapasTabList tabs={4} />
-
       <SkeletonAdminConfigCuentaSection />
     </SkeletonRegion>
   );
 }
 
+/** Dashboard body only — title/CTA chrome stays outside pending/loading. */
 export function SkeletonAdminDashboardPage() {
   return (
     <SkeletonRegion label="Cargando dashboard" className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <Skeleton className="h-8 w-36" />
-        <Skeleton className="h-10 w-40 rounded-md" />
-      </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className={cn(ADMIN_SKELETON_CARD, "p-4")}>
-            <Skeleton className="h-3 w-40" />
-            <Skeleton className="mt-2 h-9 w-16" />
-            <Skeleton className="mt-2 h-3 w-36" />
-          </div>
-        ))}
-      </div>
-      <div className={cn(ADMIN_SKELETON_CARD, "p-4 sm:p-5")}>
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
-          <div className="space-y-2">
-            <Skeleton className="h-5 w-52" />
-            <Skeleton className="h-4 w-72 max-w-full" />
-          </div>
-          <SkeletonSolapasTabList tabs={3} size="sm" />
-        </div>
-        <div className="mb-6 flex flex-wrap gap-6">
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-28" />
-            <Skeleton className="h-7 w-14" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-3 w-24" />
-            <Skeleton className="h-7 w-28" />
-          </div>
-        </div>
-        <Skeleton className="h-44 w-full rounded-md sm:h-48" />
-        <div className="mt-3 flex justify-between gap-1">
-          {Array.from({ length: 7 }, (_, i) => (
-            <Skeleton key={i} className="h-3 w-6" />
-          ))}
-        </div>
-      </div>
-      <div className={ADMIN_SKELETON_CARD}>
-        <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
-          <Skeleton className="h-5 w-44" />
-          <Skeleton className="h-4 w-16" />
-        </div>
-        <div className="divide-y divide-neutral-100">
-          {Array.from({ length: 5 }, (_, i) => (
-            <div key={i} className="flex items-center justify-between px-4 py-3">
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-3 w-40" />
-              </div>
-              <div className="space-y-2 text-right">
-                <Skeleton className="ml-auto h-4 w-20" />
-                <Skeleton className="ml-auto h-3 w-28" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
+      <SkeletonAdminDashboardMetrics showChart />
     </SkeletonRegion>
   );
 }
 
-/** Clientes / productos — title + Excel sync + search/CTA toolbar + table. */
-export function SkeletonAdminListPage({
-  label = "Cargando listado",
-  titleWidth = "w-32",
-  descriptionWidth = "w-80",
-}: {
-  label?: string;
-  titleWidth?: string;
-  descriptionWidth?: string;
-}) {
+/** Clientes / productos body — Excel sync + search/CTA + table (title outside). */
+export function SkeletonAdminListBody() {
   return (
-    <SkeletonRegion label={label} className="space-y-6">
-      <SkeletonPageHeader titleWidth={titleWidth} descriptionWidth={descriptionWidth} />
+    <>
       <SkeletonExcelSyncPanel />
       <div className="space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -910,6 +831,29 @@ export function SkeletonAdminListPage({
         </div>
         <SkeletonTableRows rows={8} cols={5} admin />
       </div>
+    </>
+  );
+}
+
+/** Clientes / productos — optional title bones; prefer real chrome + ListBody. */
+export function SkeletonAdminListPage({
+  label = "Cargando listado",
+  titleWidth = "w-32",
+  descriptionWidth = "w-80",
+  showChrome = false,
+}: {
+  label?: string;
+  titleWidth?: string;
+  descriptionWidth?: string;
+  /** When false (default), title/description stay outside as real text. */
+  showChrome?: boolean;
+}) {
+  return (
+    <SkeletonRegion label={label} className="space-y-6">
+      {showChrome ? (
+        <SkeletonPageHeader titleWidth={titleWidth} descriptionWidth={descriptionWidth} />
+      ) : null}
+      <SkeletonAdminListBody />
     </SkeletonRegion>
   );
 }
@@ -918,7 +862,6 @@ export function SkeletonAdminListPage({
 export function SkeletonAdminQuotesPage() {
   return (
     <SkeletonRegion label="Cargando cotizaciones" className="space-y-6">
-      <Skeleton className="h-8 w-40" />
       <SkeletonAdminQuotesPanel />
     </SkeletonRegion>
   );
@@ -994,15 +937,58 @@ export function SkeletonAdminQuoteActivityCard() {
   );
 }
 
-/** Listas de precios — title + 2-line description, create-list card, plain table (no search/Excel panel). */
-export function SkeletonAdminPriceListsPage() {
+/**
+ * KPI cards + optional chart bone + recent list — header/CTA already painted
+ * above the Suspense boundary on `/admin`.
+ *
+ * No `SkeletonRegion` / role=status: same as chart bones so route settle +
+ * `RouteViewEnter` are not blocked on streamed metrics (in-page Suspense).
+ */
+export function SkeletonAdminDashboardMetrics({
+  showChart = true,
+}: {
+  showChart?: boolean;
+}) {
   return (
-    <SkeletonRegion label="Cargando listas de precios" className="space-y-6">
-      <div>
-        <Skeleton className="h-8 w-44" />
-        <Skeleton className="mt-2 h-4 w-full max-w-2xl" />
-        <Skeleton className="mt-1 h-4 w-2/3 max-w-md" />
+    <div className="space-y-6" aria-hidden>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {Array.from({ length: 3 }, (_, i) => (
+          <div key={i} className={cn(ADMIN_SKELETON_CARD, "p-4")}>
+            <Skeleton className="h-3 w-40" />
+            <Skeleton className="mt-2 h-9 w-16" />
+            <Skeleton className="mt-2 h-3 w-36" />
+          </div>
+        ))}
       </div>
+      {showChart ? <SkeletonAdminQuoteActivityCard /> : null}
+      <div className={ADMIN_SKELETON_CARD}>
+        <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-3">
+          <Skeleton className="h-5 w-44" />
+          <Skeleton className="h-4 w-16" />
+        </div>
+        <div className="divide-y divide-neutral-100">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="flex items-center justify-between px-4 py-3">
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-3 w-40" />
+              </div>
+              <div className="space-y-2 text-right">
+                <Skeleton className="ml-auto h-4 w-20" />
+                <Skeleton className="ml-auto h-3 w-28" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Listas de precios body — create card + table (title outside). */
+export function SkeletonAdminPriceListsBody() {
+  return (
+    <>
       <div className={cn(ADMIN_SKELETON_CARD, "p-4")}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:gap-4">
           <div className="min-w-0 flex-1 space-y-1">
@@ -1019,8 +1005,16 @@ export function SkeletonAdminPriceListsPage() {
           <Skeleton className="h-10 w-20 shrink-0 rounded-md" />
         </div>
       </div>
-      {/* Nombre · Excel · Productos · Clientes · Estado · actions */}
       <SkeletonTableRows rows={5} cols={6} admin />
+    </>
+  );
+}
+
+/** Listas de precios — optional title bones; prefer real chrome + PriceListsBody. */
+export function SkeletonAdminPriceListsPage() {
+  return (
+    <SkeletonRegion label="Cargando listas de precios" className="space-y-6">
+      <SkeletonAdminPriceListsBody />
     </SkeletonRegion>
   );
 }
@@ -1064,12 +1058,11 @@ export function SkeletonAdminStockSummaryBody({
   );
 }
 
-/** Stock — header + CTA, tabs, filters, summary card, history rows. */
-export function SkeletonAdminStockPage() {
+/** Stock body — tabs/filters/summary/history (page header chrome outside). */
+export function SkeletonAdminStockBody() {
   return (
-    <SkeletonRegion label="Cargando stock" className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <SkeletonPageHeader titleWidth="w-20" descriptionWidth="w-72" />
+    <>
+      <div className="flex justify-end">
         <Skeleton className="h-10 w-40 shrink-0 rounded-md" />
       </div>
       <SkeletonSolapasTabList tabs={3} />
@@ -1103,22 +1096,35 @@ export function SkeletonAdminStockPage() {
           </div>
         ))}
       </div>
+    </>
+  );
+}
+
+/** Stock — body only; prefer real title/description chrome outside. */
+export function SkeletonAdminStockPage() {
+  return (
+    <SkeletonRegion label="Cargando stock" className="space-y-6">
+      <SkeletonAdminStockBody />
     </SkeletonRegion>
+  );
+}
+
+export function SkeletonAdminNewQuoteBody() {
+  return (
+    <>
+      <div className={cn(ADMIN_SKELETON_CARD, "p-4")}>
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="mt-2 h-10 w-full rounded-md" />
+      </div>
+      <Skeleton className="h-4 w-72" />
+    </>
   );
 }
 
 export function SkeletonAdminNewQuotePage() {
   return (
     <SkeletonRegion label="Cargando nueva cotización" className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <SkeletonPageHeader titleWidth="w-48" descriptionWidth="w-64" />
-        <Skeleton className="h-4 w-32" />
-      </div>
-      <div className={cn(ADMIN_SKELETON_CARD, "p-4")}>
-        <Skeleton className="h-4 w-16" />
-        <Skeleton className="mt-2 h-10 w-full rounded-md" />
-      </div>
-      <Skeleton className="h-4 w-72" />
+      <SkeletonAdminNewQuoteBody />
     </SkeletonRegion>
   );
 }

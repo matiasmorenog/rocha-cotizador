@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { AdminModulePageHeader } from "@/components/admin/admin-module-page-header";
 import { CustomerRemitosLoader } from "@/components/customer/customer-remitos-loader";
 import { SkeletonCustomerRemitosPanel } from "@/components/ui/skeleton";
 
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 export default function RemitosPage() {
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-neutral-900">Mis remitos</h1>
+      <AdminModulePageHeader title="Mis remitos" />
       <Suspense fallback={<SkeletonCustomerRemitosPanel />}>
         <CustomerRemitosLoader />
       </Suspense>
