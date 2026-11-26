@@ -1,6 +1,7 @@
-import { requireCustomerSession } from "@/lib/session";
-import { getOrderCutoffHourAr } from "@/lib/business-settings";
+import { AdminModulePageHeader } from "@/components/admin/admin-module-page-header";
 import { CotizarQuoteBuilder } from "@/components/quote/cotizar-quote-builder-lazy";
+import { getOrderCutoffHourAr } from "@/lib/business-settings";
+import { requireCustomerSession } from "@/lib/session";
 
 export default async function CotizarPage() {
   const [session, orderCutoffHourAr] = await Promise.all([
@@ -10,12 +11,10 @@ export default async function CotizarPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-semibold text-neutral-900">Nueva cotización</h1>
-        <p className="text-sm text-neutral-600">
-          {session.user.name} · código {session.user.customerCode}
-        </p>
-      </div>
+      <AdminModulePageHeader
+        title="Nueva cotización"
+        description={`${session.user.name} · código ${session.user.customerCode}`}
+      />
       <CotizarQuoteBuilder orderCutoffHourAr={orderCutoffHourAr} />
     </div>
   );

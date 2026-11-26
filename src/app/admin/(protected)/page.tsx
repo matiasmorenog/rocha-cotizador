@@ -1,8 +1,10 @@
 import { Suspense } from "react";
 import { AdminDashboardHeaderActions } from "@/components/admin/admin-dashboard-header-actions";
 import { AdminDashboardMetrics } from "@/components/admin/admin-dashboard-metrics";
+import { AdminModulePageHeader } from "@/components/admin/admin-module-page-header";
 import { SkeletonAdminDashboardMetrics } from "@/components/ui/skeleton";
 import { parseQuoteActivityPeriod } from "@/lib/admin-quote-activity";
+import { adminModuleChromeForPath } from "@/lib/admin-module-chrome";
 import { isSuperuserRole } from "@/lib/platform-owner";
 import { requireStaffSession } from "@/lib/session";
 import { isStaffAdmin, staffHasPermission } from "@/lib/staff-permissions";
@@ -21,16 +23,22 @@ export default async function AdminDashboardPage({
 
   const { chart: chartParam } = await searchParams;
   const chartPeriod = parseQuoteActivityPeriod(chartParam);
+  const chrome = adminModuleChromeForPath("/admin") ?? { title: "Dashboard" };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <h1 className="text-2xl font-semibold text-neutral-900">Dashboard</h1>
-        <AdminDashboardHeaderActions
-          canQuotes={canQuotes}
-          userId={session.user.id}
-        />
-      </div>
+      <AdminModulePageHeader
+        title={chrome.title}
+        description={
+          chrome.description ?? "Resumen de cotizaciones y actividad."
+        }
+        actions={
+          <AdminDashboardHeaderActions
+            canQuotes={canQuotes}
+            userId={session.user.id}
+          />
+        }
+      />
 
       <Suspense fallback={<SkeletonAdminDashboardMetrics showChart={isAdmin} />}>
         <AdminDashboardMetrics

@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatedCount } from "@/components/ui/animated-count";
 import { useDashboardKpiSelection } from "@/hooks/use-dashboard-kpi-selection";
 import {
   DASHBOARD_KPI_CATALOG,
@@ -12,6 +13,10 @@ type Props = {
   values: DashboardKpiValues;
   userId?: string | null;
 };
+
+/** Match `.admin-dashboard-kpi-stagger` delays so digits start as the card enters. */
+const KPI_STAGGER_MS = 55;
+const KPI_COUNT_BASE_DELAY_MS = 90;
 
 /**
  * Client KPI grid (max 3). Picker lives in the page header next to
@@ -42,8 +47,14 @@ export function AdminDashboardKpiSection({ values, userId }: Props) {
         selectedIds.length >= 3 && "sm:grid-cols-3",
       )}
     >
-      {selectedIds.map((id: DashboardKpiId) => {
+      {selectedIds.map((id: DashboardKpiId, index) => {
         const display = values[id];
+        const numeric =
+          typeof display.value === "number"
+            ? display.value
+            : Number(display.value);
+        const canTween = Number.isFinite(numeric);
+
         return (
           <div
             key={id}
@@ -53,7 +64,14 @@ export function AdminDashboardKpiSection({ values, userId }: Props) {
               {labelById.get(id) ?? id}
             </p>
             <p className="mt-1 text-3xl font-semibold tabular-nums text-neutral-900">
-              {display.value}
+              {canTween ? (
+                <AnimatedCount
+                  value={numeric}
+                  delayMs={KPI_COUNT_BASE_DELAY_MS + index * KPI_STAGGER_MS}
+                />
+              ) : (
+                display.value
+              )}
             </p>
             <p className="mt-1 text-xs text-neutral-500">{display.hint}</p>
           </div>

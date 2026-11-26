@@ -1,5 +1,10 @@
+import { AdminModuleLoading } from "@/components/admin/admin-module-loading";
 import { SkeletonAdminNewQuotePage } from "@/components/ui/skeleton";
 
-export default function AdminNuevaCotizacionLoading() {
-  return <SkeletonAdminNewQuotePage />;
+export default function Loading() {
+  return (
+    <AdminModuleLoading path="/admin/cotizaciones/nueva">
+      <SkeletonAdminNewQuotePage />
+    </AdminModuleLoading>
+  );
 }
