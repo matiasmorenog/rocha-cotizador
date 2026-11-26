@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { ensureFreshServiceWorker } from "@/lib/push-sw-client";
+import { ensureInstallPromptCapture } from "@/lib/pwa-install-client";
 
 /**
  * Registers `/sw.js` site-wide so Chrome can treat the app as installable.
@@ -10,6 +11,7 @@ import { ensureFreshServiceWorker } from "@/lib/push-sw-client";
  */
 export function PwaSwRegister() {
   useEffect(() => {
+    ensureInstallPromptCapture();
     if (!("serviceWorker" in navigator)) return;
 
     let cancelled = false;

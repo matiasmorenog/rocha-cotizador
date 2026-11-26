@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LogOut } from "lucide-react";
 import { signOut } from "@/lib/auth";
 import { PinChangeHint } from "@/components/account/pin-change-hint";
+import { PwaInstallTip } from "@/components/pwa/pwa-install-tip";
 import { AdminMenuButton } from "@/components/admin/admin-menu-button";
 import { AdminThemeToggle } from "@/components/admin/admin-theme-toggle";
 import { CustomerMenuButton } from "@/components/customer/customer-menu-button";
@@ -89,6 +90,7 @@ export async function AppHeader() {
         </div>
       </header>
       {isCustomer ? <PinChangeHint show={mustChangePassword} /> : null}
+      {isCustomer || isStaff ? <PwaInstallTip show /> : null}
     </>
   );
 }
