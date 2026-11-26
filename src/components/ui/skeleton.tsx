@@ -997,6 +997,9 @@ export function SkeletonAdminQuoteActivityCard() {
 /**
  * KPI cards + optional chart bone + recent list — header/CTA already painted
  * above the Suspense boundary on `/admin`.
+ *
+ * No `SkeletonRegion` / role=status: same as chart bones so route settle +
+ * `RouteViewEnter` are not blocked on streamed metrics (in-page Suspense).
  */
 export function SkeletonAdminDashboardMetrics({
   showChart = true,
@@ -1004,7 +1007,7 @@ export function SkeletonAdminDashboardMetrics({
   showChart?: boolean;
 }) {
   return (
-    <SkeletonRegion label="Cargando métricas del dashboard" className="space-y-6">
+    <div className="space-y-6" aria-hidden>
       <div className="grid gap-3 sm:grid-cols-3">
         {Array.from({ length: 3 }, (_, i) => (
           <div key={i} className={cn(ADMIN_SKELETON_CARD, "p-4")}>
@@ -1035,7 +1038,7 @@ export function SkeletonAdminDashboardMetrics({
           ))}
         </div>
       </div>
-    </SkeletonRegion>
+    </div>
   );
 }
 

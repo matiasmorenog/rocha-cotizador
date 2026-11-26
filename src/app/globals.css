@@ -473,6 +473,26 @@ select:not([multiple]):disabled {
   }
 }
 
+/* Admin dashboard KPI cards — short stagger when metrics stream in */
+.admin-dashboard-kpi-stagger > * {
+  animation: customer-home-hub-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.admin-dashboard-kpi-stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.admin-dashboard-kpi-stagger > *:nth-child(2) {
+  animation-delay: 55ms;
+}
+.admin-dashboard-kpi-stagger > *:nth-child(3) {
+  animation-delay: 110ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-dashboard-kpi-stagger > * {
+    animation: none;
+  }
+}
+
 /* Sidebar — user row + nav links stagger on first mount */
 .shell-nav-reveal > * {
   animation: customer-home-hub-enter 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -1609,6 +1629,7 @@ html[data-admin-theme="dark"] .admin-edit-hover:hover {
   .login-card-exit,
   .login-session-pane,
   .route-view-enter,
+  .admin-dashboard-kpi-stagger > *,
   .shell-nav-reveal > *,
   .solapas-tab-indicator-animate,
   .solapas-tab-content-enter,

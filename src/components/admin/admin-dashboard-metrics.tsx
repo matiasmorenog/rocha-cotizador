@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { AdminDashboardChartLoader } from "@/components/admin/admin-dashboard-chart-loader";
+import { AdminDashboardReveal } from "@/components/admin/admin-dashboard-reveal";
 import { RecentQuotesList } from "@/components/admin/recent-quotes-list";
 import { SkeletonAdminQuoteActivityCard } from "@/components/ui/skeleton";
 import { getAdminDashboardData } from "@/lib/admin-dashboard-cache";
@@ -16,6 +17,8 @@ type Props = {
 /**
  * Async KPI + recent (and nested chart Suspense). Streamed under the
  * dashboard shell so header/CTA paint before Neon round-trips finish.
+ * Wrapped in `AdminDashboardReveal` so enter animation runs when this
+ * chunk arrives (not only on the Suspense fallback / page shell).
  */
 export async function AdminDashboardMetrics({
   canQuotes,
@@ -58,9 +61,9 @@ export async function AdminDashboardMetrics({
   ];
 
   return (
-    <>
+    <AdminDashboardReveal>
       {stats.length > 0 ? (
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="admin-dashboard-kpi-stagger grid gap-3 sm:grid-cols-3">
           {stats.map((s) => (
             <div
               key={s.label}
@@ -99,6 +102,6 @@ export async function AdminDashboardMetrics({
           <RecentQuotesList recent={recent} />
         </div>
       ) : null}
-    </>
+    </AdminDashboardReveal>
   );
 }
