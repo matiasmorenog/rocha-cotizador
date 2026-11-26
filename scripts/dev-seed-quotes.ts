@@ -1,9 +1,13 @@
 /**
- * Dev-only: wipe all quotes/remitos and seed random SUBMITTED quotes for testing
- * Cotizaciones (lista, PDF export, por producto).
+ * Dev-only: wipe all quotes/remitos and seed SUBMITTED quotes for testing
+ * Cotizaciones (lista, PDF export, por producto) + admin dashboard demo.
  *
  * Touches: Quote, QuoteItem, QuoteSequence, AdminInboxItem (cleared).
  * Does NOT touch: customers, products, price lists, users, stock, settings.
+ *
+ * Distribution (demo-friendly):
+ *   - MoM growth across months in range (counts + cart size → year chart rising)
+ *   - Dense today + last 7 Argentina days (KPIs / week chart not empty)
  *
  * Safety: assertSafeDestructiveDb() — Neon main blocked; needs SEED_TARGET=development
  * (or ALLOW_DESTRUCTIVE_DB=1 on non-prod).
@@ -69,6 +73,196 @@ function argentinaYmd(now = new Date()): string {
 function utcNoonFromYmd(ymd: string): Date {
   const [y, m, d] = ymd.split("-").map(Number);
   return new Date(Date.UTC(y!, m! - 1, d!, 15, 0, 0)); // ~12:00 AR (UTC-3)
+}
+
+function yearMonthOf(ymd: string): string {
+  return ymd.slice(0, 7);
+}
+
+/** Month keys from oldest day in range through today (inclusive). */
+function monthKeysInRange(todayYmd: string, daysBack: number): string[] {
+  const startYmd = addCalendarDaysYmd(todayYmd, -(daysBack - 1));
+  const months: string[] = [];
+  let y = Number(startYmd.slice(0, 4));
+  let m = Number(startYmd.slice(5, 7));
+  const endY = Number(todayYmd.slice(0, 4));
+  const endM = Number(todayYmd.slice(5, 7));
+  while (y < endY || (y === endY && m <= endM)) {
+    months.push(`${y}-${String(m).padStart(2, "0")}`);
+    m += 1;
+    if (m > 12) {
+      m = 1;
+      y += 1;
+    }
+  }
+  return months;
+}
+
+/** Growing integer allocation across months (commerce MoM up). */
+function allocateCountsByMonth(
+  months: readonly string[],
+  total: number,
+): Map<string, number> {
+  if (months.length === 0) return new Map();
+  // Power curve: early months thin, latest months thick.
+  const weights = months.map((_, i) => Math.pow(i + 1, 1.55));
+  const weightSum = weights.reduce((a, b) => a + b, 0);
+  const counts = weights.map((w) => Math.floor((w / weightSum) * total));
+  let remaining = total - counts.reduce((a, b) => a + b, 0);
+  // Remainder → newest months first (stronger growth tip).
+  for (let i = counts.length - 1; remaining > 0; i -= 1, remaining -= 1) {
+    counts[Math.max(0, i)]! += 1;
+  }
+  return new Map(months.map((ym, i) => [ym, counts[i]!]));
+}
+
+/**
+ * Day offsets (0 = today) for every quote, biased for demo UI:
+ * - MoM rising counts across the year window (no empty early months)
+ * - Guaranteed today + dense last 7 days (taken from current-month surplus)
+ */
+function buildBiasedDayOffsets(quoteCount: number, daysBack: number, todayYmd: string): number[] {
+  const months = monthKeysInRange(todayYmd, daysBack);
+  const byMonth = allocateCountsByMonth(months, quoteCount);
+  const currentYm = yearMonthOf(todayYmd);
+
+  // Floor so year chart never shows blank early months after recent bias.
+  const minPerMonth = Math.max(
+    3,
+    Math.min(8, Math.floor(quoteCount / Math.max(months.length * 4, 1))),
+  );
+  for (const ym of months) {
+    const cur = byMonth.get(ym) ?? 0;
+    if (cur < minPerMonth) byMonth.set(ym, minPerMonth);
+  }
+  // Re-normalize to quoteCount after floors.
+  // Trim surplus from older months first — keep tip (current month) strongest.
+  let sum = [...byMonth.values()].reduce((a, b) => a + b, 0);
+  if (sum > quoteCount) {
+    let overflow = sum - quoteCount;
+    for (let i = 0; i < months.length && overflow > 0; i++) {
+      const ym = months[i]!;
+      if (ym === currentYm) continue;
+      const cur = byMonth.get(ym) ?? 0;
+      const canCut = Math.max(0, cur - minPerMonth);
+      const cut = Math.min(canCut, overflow);
+      byMonth.set(ym, cur - cut);
+      overflow -= cut;
+    }
+    // Last resort: trim current month above floor.
+    if (overflow > 0) {
+      const cur = byMonth.get(currentYm) ?? 0;
+      const cut = Math.min(Math.max(0, cur - minPerMonth), overflow);
+      byMonth.set(currentYm, cur - cut);
+    }
+  } else if (sum < quoteCount) {
+    // Extra → current month (feeds today/last-7).
+    byMonth.set(currentYm, (byMonth.get(currentYm) ?? 0) + (quoteCount - sum));
+  }
+
+  const minToday = Math.min(
+    quoteCount,
+    Math.max(10, Math.round(quoteCount * 0.05)),
+  );
+  const minLast7 = Math.min(
+    quoteCount,
+    Math.max(minToday + 16, Math.round(quoteCount * 0.16)),
+  );
+
+  // Ensure current month can cover today + last-7 without emptying older months.
+  const currentNeed = Math.max(minLast7, byMonth.get(currentYm) ?? 0);
+  let currentHave = byMonth.get(currentYm) ?? 0;
+  if (currentHave < currentNeed) {
+    let need = currentNeed - currentHave;
+    for (let i = 0; i < months.length && need > 0; i++) {
+      const ym = months[i]!;
+      if (ym === currentYm) continue;
+      const cur = byMonth.get(ym) ?? 0;
+      const canGive = Math.max(0, cur - minPerMonth);
+      const give = Math.min(canGive, need);
+      if (give > 0) {
+        byMonth.set(ym, cur - give);
+        need -= give;
+      }
+    }
+    byMonth.set(currentYm, currentHave + (currentNeed - currentHave - need));
+  }
+
+  const daysInMonth = (ym: string): number[] => {
+    const offsets: number[] = [];
+    for (let offset = 0; offset < daysBack; offset++) {
+      if (yearMonthOf(addCalendarDaysYmd(todayYmd, -offset)) === ym) {
+        offsets.push(offset);
+      }
+    }
+    return offsets;
+  };
+
+  const pickWeightedOffset = (candidates: readonly number[]): number => {
+    if (candidates.length === 0) return 0;
+    const weights = candidates.map((offset) => {
+      let w = 1;
+      if (offset === 0) w = 14;
+      else if (offset <= 2) w = 7;
+      else if (offset <= 6) w = 4;
+      else if (offset <= 13) w = 2;
+      return w;
+    });
+    const sumW = weights.reduce((a, b) => a + b, 0);
+    let r = Math.random() * sumW;
+    for (let i = 0; i < candidates.length; i++) {
+      r -= weights[i]!;
+      if (r <= 0) return candidates[i]!;
+    }
+    return candidates[candidates.length - 1]!;
+  };
+
+  const offsets: number[] = [];
+  for (const ym of months) {
+    const n = byMonth.get(ym) ?? 0;
+    const candidates = daysInMonth(ym);
+    if (candidates.length === 0 || n === 0) continue;
+
+    if (ym === currentYm) {
+      // Pin today + recent days first, then fill rest of month.
+      const pinned: number[] = [];
+      for (let t = 0; t < minToday && pinned.length < n; t++) pinned.push(0);
+      const recentPool = candidates.filter((o) => o >= 1 && o <= 6);
+      while (pinned.length < Math.min(n, minLast7) && recentPool.length > 0) {
+        pinned.push(recentPool[randInt(0, recentPool.length - 1)]!);
+      }
+      while (pinned.length < n) {
+        pinned.push(pickWeightedOffset(candidates));
+      }
+      offsets.push(...pinned);
+    } else {
+      for (let i = 0; i < n; i++) {
+        offsets.push(pickWeightedOffset(candidates));
+      }
+    }
+  }
+
+  // If total drifted (edge), trim or pad to quoteCount.
+  while (offsets.length > quoteCount) offsets.pop();
+  while (offsets.length < quoteCount) {
+    const curDays = daysInMonth(currentYm);
+    offsets.push(pickWeightedOffset(curDays.length ? curDays : [0]));
+  }
+
+  // Shuffle so create order ≠ chronological dump.
+  for (let i = offsets.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [offsets[i], offsets[j]] = [offsets[j]!, offsets[i]!];
+  }
+  return offsets;
+}
+
+/** Cart size / qty scale by month index (0..1) — revenue MoM growth. */
+function monthCommerceScale(monthIndex: number, monthCount: number): number {
+  if (monthCount <= 1) return 1;
+  const t = monthIndex / (monthCount - 1);
+  // ~0.55 early year → ~1.15 current month
+  return 0.55 + 0.6 * t;
 }
 
 async function nextQuoteNumber(tx: Prisma.TransactionClient): Promise<string> {
@@ -144,13 +338,22 @@ async function main() {
     throw new Error("Need at least 2 available products");
   }
 
+  const todayYmd = argentinaYmd();
+  const months = monthKeysInRange(todayYmd, daysBack);
+  const monthIndex = new Map(months.map((ym, i) => [ym, i]));
+  const dayOffsets = buildBiasedDayOffsets(quoteCount, daysBack, todayYmd);
+  const todayPlanned = dayOffsets.filter((o) => o === 0).length;
+  const last7Planned = dayOffsets.filter((o) => o <= 6).length;
+
   console.log(
     `Seeding ${quoteCount} quotes over last ${daysBack} days · customers=${customers.length} products=${products.length}`,
+  );
+  console.log(
+    `  bias: MoM growth across ${months.length} months · planned today=${todayPlanned} last7=${last7Planned}`,
   );
 
   await wipeQuotes();
 
-  const todayYmd = argentinaYmd();
   const listPriceCache = new Map<string, Map<string, Decimal> | null>();
 
   async function pricesForCustomer(priceListId: string | null) {
@@ -168,11 +371,20 @@ async function main() {
   for (let i = 0; i < quoteCount; i++) {
     const customer = customers[randInt(0, customers.length - 1)]!;
     const listPrices = await pricesForCustomer(customer.priceListId);
-    const lineCount = randInt(2, Math.min(14, products.length));
+
+    const dayOffset = dayOffsets[i] ?? randInt(0, daysBack - 1);
+    const orderYmd = addCalendarDaysYmd(todayYmd, -dayOffset);
+    const ym = yearMonthOf(orderYmd);
+    const scale = monthCommerceScale(monthIndex.get(ym) ?? 0, months.length);
+
+    const maxLines = Math.min(14, products.length);
+    const baseLines = randInt(2, maxLines);
+    const lineCount = Math.min(
+      maxLines,
+      Math.max(2, Math.round(baseLines * (0.75 + 0.5 * scale))),
+    );
     const picked = pickN(products, lineCount);
 
-    const dayOffset = randInt(0, daysBack - 1);
-    const orderYmd = addCalendarDaysYmd(todayYmd, -dayOffset);
     const deliveryYmd = addCalendarDaysYmd(orderYmd, randInt(0, 2));
     const createdAt = utcNoonFromYmd(orderYmd);
     createdAt.setUTCHours(
@@ -189,11 +401,17 @@ async function main() {
       const items = picked.map((p) => {
         const orderByUnit =
           p.allowsUnitOrder && Math.random() < 0.35;
-        const qty = orderByUnit
-          ? new Decimal(randInt(1, 24))
+        const qtyRaw = orderByUnit
+          ? randInt(1, 24)
           : p.allowsUnitOrder
-            ? new Decimal((randInt(5, 80) / 10).toFixed(1))
-            : new Decimal(randInt(1, 20));
+            ? randInt(5, 80) / 10
+            : randInt(1, 20);
+        const qtyScaled = qtyRaw * scale;
+        const qty = orderByUnit
+          ? new Decimal(Math.max(1, Math.round(qtyScaled)))
+          : p.allowsUnitOrder
+            ? new Decimal(Math.max(0.1, qtyScaled).toFixed(1))
+            : new Decimal(Math.max(1, Math.round(qtyScaled)));
 
         const unitPrice = orderByUnit
           ? new Decimal(0)
