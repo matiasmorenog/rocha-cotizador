@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UserPlus } from "lucide-react";
 import { FormSection } from "@/components/admin/form-section";
@@ -24,12 +24,12 @@ import {
   CUSTOMER_MODULE_DESCRIPTIONS,
   CUSTOMER_MODULE_LABELS,
   CUSTOMER_MODULES,
-  DEFAULT_CUSTOMER_MODULE_FLAGS,
   type CustomerModuleFlags,
 } from "@/lib/customer-modules";
 import { FOCUS_BRAND_BORDER } from "@/lib/focus-styles";
 import { dispatchAdminInAppToast } from "@/lib/push-sw-client";
 import { cn } from "@/lib/utils";
+import { useModalDraftStore } from "@/stores/modal-draft-store";
 
 type PriceListOption = {
   id: string;
@@ -55,23 +55,38 @@ export function CustomerAdminCreateModal({
   const router = useRouter();
   const baseListId =
     priceLists.find((l) => l.isBase)?.id ?? priceLists[0]?.id ?? "";
+  const draft = useModalDraftStore((s) => s.customerCreate);
+  const patchCustomerCreate = useModalDraftStore((s) => s.patchCustomerCreate);
+  const clearCustomerCreate = useModalDraftStore((s) => s.clearCustomerCreate);
+
+  const {
+    code,
+    name,
+    nameNote,
+    priceListId,
+    address,
+    phone,
+    email,
+    paymentTerms,
+    deliveryHours,
+    notes,
+    active,
+    modules,
+    sessionActive,
+  } = draft;
+
   const [formKey, setFormKey] = useState(0);
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [nameNote, setNameNote] = useState("");
-  const [priceListId, setPriceListId] = useState(baseListId);
-  const [address, setAddress] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [paymentTerms, setPaymentTerms] = useState("");
-  const [deliveryHours, setDeliveryHours] = useState("");
-  const [notes, setNotes] = useState("");
-  const [active, setActive] = useState(true);
-  const [modules, setModules] = useState<CustomerModuleFlags>(
-    DEFAULT_CUSTOMER_MODULE_FLAGS,
-  );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Seed base price list when store is empty / list catalog loaded.
+  useEffect(() => {
+    if (!baseListId) return;
+    const current = useModalDraftStore.getState().customerCreate.priceListId;
+    if (!current) {
+      patchCustomerCreate({ priceListId: baseListId });
+    }
+  }, [baseListId, patchCustomerCreate]);
 
   const dirtyCount = useMemo(() => {
     let n = 0;
@@ -98,21 +113,13 @@ export function CustomerAdminCreateModal({
     onOpenChange,
     itemCount: dirtyCount,
     onDraftChange,
+    sessionActive,
+    onSessionActiveChange: (activeSession) =>
+      patchCustomerCreate({ sessionActive: activeSession }),
   });
 
   function resetFields() {
-    setCode("");
-    setName("");
-    setNameNote("");
-    setPriceListId(baseListId);
-    setAddress("");
-    setPhone("");
-    setEmail("");
-    setPaymentTerms("");
-    setDeliveryHours("");
-    setNotes("");
-    setActive(true);
-    setModules(DEFAULT_CUSTOMER_MODULE_FLAGS);
+    clearCustomerCreate(baseListId);
     setError(null);
     setFormKey((k) => k + 1);
   }
@@ -238,7 +245,9 @@ export function CustomerAdminCreateModal({
                 <Input
                   id="customer-create-code"
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
+                  onChange={(e) =>
+                    patchCustomerCreate({ code: e.target.value })
+                  }
                   required
                   inputMode="numeric"
                   maxLength={3}
@@ -250,7 +259,9 @@ export function CustomerAdminCreateModal({
                 <Input
                   id="customer-create-name"
                   value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  onChange={(e) =>
+                    patchCustomerCreate({ name: e.target.value })
+                  }
                   required
                 />
               </div>
@@ -259,7 +270,9 @@ export function CustomerAdminCreateModal({
                 <Input
                   id="customer-create-name-note"
                   value={nameNote}
-                  onChange={(e) => setNameNote(e.target.value)}
+                  onChange={(e) =>
+                    patchCustomerCreate({ nameNote: e.target.value })
+                  }
                   placeholder="Opcional — ej. contacto o sucursal"
                 />
               </div>
@@ -274,7 +287,9 @@ export function CustomerAdminCreateModal({
                   id="customer-create-email"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) =>
+                    patchCustomerCreate({ email: e.target.value })
+                  }
                 />
               </div>
               <div className="space-y-1">
@@ -282,7 +297,9 @@ export function CustomerAdminCreateModal({
                 <Input
                   id="customer-create-phone"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
+                  onChange={(e) =>
+                    patchCustomerCreate({ phone: e.target.value })
+                  }
                 />
               </div>
             </div>
@@ -298,7 +315,9 @@ export function CustomerAdminCreateModal({
                 <Input
                   id="customer-create-address"
                   value={address}
-                  onChange={(e) => setAddress(e.target.value)}
+                  onChange={(e) =>
+                    patchCustomerCreate({ address: e.target.value })
+                  }
                 />
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -307,7 +326,9 @@ export function CustomerAdminCreateModal({
                   <Input
                     id="customer-create-payment"
                     value={paymentTerms}
-                    onChange={(e) => setPaymentTerms(e.target.value)}
+                    onChange={(e) =>
+                      patchCustomerCreate({ paymentTerms: e.target.value })
+                    }
                     placeholder="Ej. CC / Mensual / Efectivo"
                   />
                 </div>
@@ -316,7 +337,9 @@ export function CustomerAdminCreateModal({
                   <Input
                     id="customer-create-delivery"
                     value={deliveryHours}
-                    onChange={(e) => setDeliveryHours(e.target.value)}
+                    onChange={(e) =>
+                      patchCustomerCreate({ deliveryHours: e.target.value })
+                    }
                     placeholder="Ej. 8:00 hs"
                   />
                 </div>
@@ -327,8 +350,8 @@ export function CustomerAdminCreateModal({
                 </Label>
                 <AppSelect
                   id="customer-create-price-list"
-                  value={priceListId}
-                  onChange={setPriceListId}
+                  value={priceListId || baseListId}
+                  onChange={(v) => patchCustomerCreate({ priceListId: v })}
                   options={activeLists.map((l) => ({
                     value: l.id,
                     label: l.name,
@@ -348,7 +371,7 @@ export function CustomerAdminCreateModal({
               id="customer-create-notes"
               rows={3}
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) => patchCustomerCreate({ notes: e.target.value })}
               className={cn(
                 "flex w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm",
                 FOCUS_BRAND_BORDER,
@@ -379,10 +402,12 @@ export function CustomerAdminCreateModal({
                     description={CUSTOMER_MODULE_DESCRIPTIONS[module]}
                     checked={modules[module]}
                     onChange={(checked) =>
-                      setModules((prev) => ({
-                        ...prev,
-                        [module]: checked,
-                      }))
+                      patchCustomerCreate({
+                        modules: {
+                          ...modules,
+                          [module]: checked,
+                        } satisfies CustomerModuleFlags,
+                      })
                     }
                   />
                 ))}
@@ -401,7 +426,9 @@ export function CustomerAdminCreateModal({
                 }
                 description="Si está deshabilitada, no puede iniciar sesión ni cotizar."
                 checked={active}
-                onChange={setActive}
+                onChange={(checked) =>
+                  patchCustomerCreate({ active: checked })
+                }
               />
             </div>
           </FormSection>

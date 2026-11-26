@@ -8,10 +8,7 @@ import {
   AdminTableActions,
   AdminTableIconAction,
 } from "@/components/admin/admin-table";
-import {
-  ProductAdminForm,
-  type PriceListOption,
-} from "@/components/admin/product-admin-form";
+import type { PriceListOption } from "@/components/admin/product-admin-form";
 import { ProductTipoField } from "@/components/admin/product-tipo-field";
 import {
   productOrderModeBadge,
@@ -32,8 +29,8 @@ import { DataTableScroll } from "@/components/ui/data-table";
 import { SortableTh } from "@/components/ui/sortable-th";
 import { AppSelect } from "@/components/ui/app-select";
 import { TableColumnPicker } from "@/components/ui/table-column-picker";
-import type { DraftSessionInfo } from "@/hooks/use-draft-session";
 import { sortRows, useTableSort } from "@/hooks/use-table-sort";
+import { useModalDraftStore } from "@/stores/modal-draft-store";
 import {
   useTableColumnVisibility,
   type TableColumnDef,
@@ -508,11 +505,24 @@ export function ProductAdminTable({
 }) {
   const { data: session } = useSession();
   const [query, setQuery] = useState("");
-  const [creating, setCreating] = useState(false);
-  const [createDraft, setCreateDraft] = useState<DraftSessionInfo>({
-    pending: false,
-    itemCount: 0,
-  });
+  const productSessionActive = useModalDraftStore(
+    (s) => s.productCreate.sessionActive,
+  );
+  const productDraft = useModalDraftStore((s) => s.productCreate);
+  const patchProductCreate = useModalDraftStore((s) => s.patchProductCreate);
+  const productDirtyCount =
+    (productDraft.code.trim() ? 1 : 0) +
+    (productDraft.name.trim() ? 1 : 0) +
+    (productDraft.rubro.trim() ? 1 : 0) +
+    (productDraft.basePrice.trim() ? 1 : 0);
+  const createDraft = {
+    pending: productSessionActive && productDirtyCount > 0,
+    itemCount: productDirtyCount,
+  };
+  const toggleCreating = useCallback(() => {
+    const prev = useModalDraftStore.getState().productCreate.open;
+    patchProductCreate({ open: !prev });
+  }, [patchProductCreate]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const activeLists = priceLists.filter((l) => l.active);
   const tableColumns = useMemo(
@@ -534,9 +544,6 @@ export function ProductAdminTable({
   );
   const isBusy = editingId !== null;
   const { sort, toggle } = useTableSort<string>();
-  const onCreateDraftChange = useCallback((next: DraftSessionInfo) => {
-    setCreateDraft(next);
-  }, []);
 
   const filtered = useMemo(
     () =>
@@ -597,12 +604,6 @@ export function ProductAdminTable({
 
   return (
     <div className="space-y-3">
-      <ProductAdminForm
-        rubros={rubros}
-        open={creating}
-        onOpenChange={setCreating}
-        onDraftChange={onCreateDraftChange}
-      />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <Input
           value={query}
@@ -620,7 +621,7 @@ export function ProductAdminTable({
             hiddenCount={hiddenCount}
           />
           <AdminDraftTrigger
-            onClick={() => setCreating((v) => !v)}
+            onClick={toggleCreating}
             pending={createDraft.pending}
             itemCount={createDraft.itemCount}
             idleLabel="Nuevo producto"

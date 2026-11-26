@@ -587,6 +587,13 @@ select:not([multiple]):disabled {
   animation: admin-toast-exit 0.28s ease-in forwards;
 }
 
+/* Bottom stack slots (toast + draft chip): height eases with grid rows */
+@media (prefers-reduced-motion: reduce) {
+  .admin-bottom-stack-slot {
+    transition: none !important;
+  }
+}
+
 /* Admin dashboard quote activity chart (ported from nexus SVG chart) */
 @keyframes admin-stat-land {
   0% {

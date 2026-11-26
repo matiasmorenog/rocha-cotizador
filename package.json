@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "prisma generate && next dev",
+    "dev": "prisma generate && next dev --hostname localhost",
     "dev:clean": "bash scripts/dev-clean.sh",
     "dev:kill": "bash scripts/dev-clean.sh --kill-only",
     "dev:log": "bash scripts/dev-with-logs.sh",

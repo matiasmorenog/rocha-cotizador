@@ -1,62 +1,54 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { AdminModulePageHeader } from "@/components/admin/admin-module-page-header";
-import { StockRecountForm, StockRecountTrigger } from "./stock-recount-form";
-import type { StockRecountCustomer } from "./stock-recount-form";
+import { StockRecountTrigger } from "./stock-recount-form";
+import {
+  stockDraftKey,
+  useModalDraftStore,
+} from "@/stores/modal-draft-store";
 
 export function StockPageHeader({
   title,
   description,
-  formTitle,
-  formDescription,
-  apiPath,
-  customers,
   stockModule,
 }: {
   title: string;
   description: string;
-  formTitle: string;
-  formDescription: string;
-  apiPath: string;
-  customers: StockRecountCustomer[];
+  /** @deprecated form props live in AdminDraftModalsHost */
+  formTitle?: string;
+  formDescription?: string;
+  apiPath?: string;
+  customers?: unknown;
   stockModule: "DESPERDICIOS" | "CONSUMABLES" | "ACTIVOS";
 }) {
-  const [open, setOpen] = useState(false);
-  const [draft, setDraft] = useState({ pending: false, itemCount: 0 });
-  const onDraftChange = useCallback(
-    (next: { pending: boolean; itemCount: number }) => {
-      setDraft(next);
-    },
-    [],
+  const draftKey = stockDraftKey("admin", stockModule);
+  const sessionActive = useModalDraftStore(
+    (s) => s.stock[draftKey]?.sessionActive ?? false,
   );
+  const itemCount = useModalDraftStore(
+    (s) => s.stock[draftKey]?.lines.length ?? 0,
+  );
+  const pending = sessionActive && itemCount > 0;
+  const patchStock = useModalDraftStore((s) => s.patchStock);
+
+  const toggleOpen = useCallback(() => {
+    const prev = useModalDraftStore.getState().stock[draftKey]?.open ?? false;
+    patchStock(draftKey, { open: !prev });
+  }, [draftKey, patchStock]);
 
   return (
-    <>
-      <AdminModulePageHeader
-        title={title}
-        description={description}
-        titleClassName="text-xl font-semibold text-neutral-900"
-        actions={
-          <StockRecountTrigger
-            pending={draft.pending}
-            itemCount={draft.itemCount}
-            onClick={() => setOpen((v) => !v)}
-          />
-        }
-      />
-
-      <StockRecountForm
-        key={stockModule}
-        title={formTitle}
-        description={formDescription}
-        apiPath={apiPath}
-        customers={customers}
-        stockModule={stockModule}
-        open={open}
-        onOpenChange={setOpen}
-        onDraftChange={onDraftChange}
-      />
-    </>
+    <AdminModulePageHeader
+      title={title}
+      description={description}
+      titleClassName="text-xl font-semibold text-neutral-900"
+      actions={
+        <StockRecountTrigger
+          pending={pending}
+          itemCount={itemCount}
+          onClick={toggleOpen}
+        />
+      }
+    />
   );
 }

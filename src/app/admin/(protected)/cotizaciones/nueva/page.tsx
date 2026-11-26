@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { AdminModulePageHeader } from "@/components/admin/admin-module-page-header";
 import { AdminNewQuoteForm } from "@/components/admin/admin-new-quote-form";
 import { CotizacionesTransitionLink } from "@/components/admin/cotizaciones-route-transition";
@@ -24,7 +25,9 @@ export default async function AdminNuevaCotizacionPage() {
           </CotizacionesTransitionLink>
         }
       />
-      <AdminNewQuoteForm orderCutoffHourAr={orderCutoffHourAr} />
+      <Suspense fallback={<p className="text-sm text-neutral-500">Cargando…</p>}>
+        <AdminNewQuoteForm orderCutoffHourAr={orderCutoffHourAr} />
+      </Suspense>
     </div>
   );
 }

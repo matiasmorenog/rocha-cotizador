@@ -43,7 +43,7 @@ export FORCE_COLOR="${FORCE_COLOR:-1}"
 export CI="${CI:-false}"
 
 (
-  exec npx next dev
+  exec npx next dev --hostname localhost
 ) > >(tee -a "$LOG_FILE") 2> >(tee -a "$LOG_FILE" >&2) &
 DEV_PID=$!
 echo "$DEV_PID" > "$PID_FILE"

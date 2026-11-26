@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import { ClipboardPlus } from "lucide-react";
 import { AdminDashboardKpiPicker } from "@/components/admin/admin-dashboard-kpi-picker";
+import {
+  AdminNewQuoteTrigger,
+  useAdminNewQuoteTriggerState,
+} from "@/components/admin/admin-new-quote-modal";
 import { useDashboardKpiSelection } from "@/hooks/use-dashboard-kpi-selection";
-import { FOCUS_BRAND_PRIMARY } from "@/lib/focus-styles";
-import { cn } from "@/lib/utils";
 
 type Props = {
   canQuotes: boolean;
@@ -25,6 +25,7 @@ export function AdminDashboardHeaderActions({ canQuotes, userId }: Props) {
     maxCount,
     selectedCount,
   } = useDashboardKpiSelection(userId);
+  const quoteTrigger = useAdminNewQuoteTriggerState();
 
   if (!canQuotes) return null;
 
@@ -39,16 +40,11 @@ export function AdminDashboardHeaderActions({ canQuotes, userId }: Props) {
         maxCount={maxCount}
         atMax={atMax}
       />
-      <Link
-        href="/admin/cotizaciones/nueva"
-        className={cn(
-          "inline-flex h-10 items-center rounded-md bg-[var(--brand-primary)] px-4 text-sm font-medium text-white shadow-sm hover:opacity-90",
-          FOCUS_BRAND_PRIMARY,
-        )}
-      >
-        <ClipboardPlus className="mr-1.5 h-4 w-4" aria-hidden />
-        Nueva cotización
-      </Link>
+      <AdminNewQuoteTrigger
+        pending={quoteTrigger.pending}
+        itemCount={quoteTrigger.itemCount}
+        onClick={quoteTrigger.toggle}
+      />
     </div>
   );
 }
