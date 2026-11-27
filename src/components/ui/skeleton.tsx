@@ -641,6 +641,13 @@ function SkeletonAdminConfigCuentaSection() {
           submitButton
           fieldsFullWidth
         />
+        <SkeletonConfigNestedCard
+          titleWidth="w-44"
+          descLines={2}
+          fields={1}
+          submitButton
+          fieldsFullWidth
+        />
       </div>
     </section>
   );

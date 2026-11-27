@@ -11,8 +11,10 @@ import { SubscriptionStatusSection } from "@/components/admin/subscription-statu
 import { WhatsAppSettingsSection } from "@/components/admin/whatsapp-settings-section";
 import { WhatsAppSettingsSectionSkeleton } from "@/components/admin/whatsapp-settings-section-skeleton";
 import { AdminChangeEmailForm } from "@/components/account/admin-change-email-form";
+import { AdminPasskeysPanel } from "@/components/account/admin-passkeys-panel";
 import { ChangePasswordForm } from "@/components/account/change-password-form";
 import { PwaInstallSettingsCard } from "@/components/pwa/pwa-install-settings-card";
+import { listPasskeysForOwner } from "@/lib/webauthn/credentials";
 
 type SearchParams = Promise<{ tab?: string }>;
 
@@ -32,6 +34,10 @@ export default async function AdminConfigPage({
     tab === "servicio" && isSubscriptionBillingEnabled()
       ? await getRochaSubscriptionStatus()
       : null;
+  const passkeys =
+    tab === "cuenta"
+      ? await listPasskeysForOwner("USER", session.user.id)
+      : [];
 
   if (tab === "cotizaciones") {
     // Reachable only while ORDER_CUTOFF_ENFORCEMENT_ENABLED is true
@@ -124,6 +130,22 @@ export default async function AdminConfigPage({
             />
           </div>
         </div>
+        <AdminPasskeysPanel
+          initialPasskeys={passkeys.map((p) => ({
+            id: p.id,
+            friendlyName: p.friendlyName,
+            deviceType: p.deviceType,
+            backedUp: p.backedUp,
+            createdAt: p.createdAt.toISOString(),
+            lastUsedAt: p.lastUsedAt?.toISOString() ?? null,
+          }))}
+          registrationBlocked={Boolean(session.user.mustChangePassword)}
+          registrationBlockedReason={
+            session.user.mustChangePassword
+              ? "Cambiá tu contraseña (PIN inicial) antes de agregar un acceso biométrico."
+              : undefined
+          }
+        />
       </div>
     </section>
   );

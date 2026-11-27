@@ -326,6 +326,55 @@ model LocalAssetCountLine {
   @@index([productId])
 }
 
+/// Who owns a WebAuthn credential. CUSTOMER rows reserved for a later PR —
+/// admin passkeys only wire `USER` today.
+enum PasskeyOwnerType {
+  USER
+  CUSTOMER
+}
+
+/// Platform authenticator passkey (fingerprint / Face ID / device PIN).
+/// Polymorphic owner: User.id or Customer.id depending on ownerType.
+model PasskeyCredential {
+  id           String          @id @default(cuid())
+  ownerType    PasskeyOwnerType
+  /// User.id or Customer.id depending on ownerType.
+  ownerId      String
+  /// base64url credential id
+  credentialId String          @unique
+  publicKey    Bytes
+  counter      BigInt          @default(0)
+  /// "singleDevice" | "multiDevice"
+  deviceType   String
+  backedUp     Boolean         @default(false)
+  /// Comma-separated AuthenticatorTransport values, or null.
+  transports   String?
+  friendlyName String?
+  aaguid       String?
+  lastUsedAt   DateTime?
+  createdAt    DateTime        @default(now())
+
+  @@index([ownerType, ownerId])
+}
+
+/// Short-lived WebAuthn challenges + one-time session tickets after assertion.
+model PasskeyChallenge {
+  id         String           @id @default(cuid())
+  /// REGISTRATION | AUTHENTICATION | SESSION_TICKET
+  type       String
+  challenge  String
+  ownerType  PasskeyOwnerType?
+  ownerId    String?
+  /// For SESSION_TICKET: staff User.id that may sign in once.
+  userId     String?
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime         @default(now())
+
+  @@index([expiresAt])
+  @@index([challenge])
+}
+
 /// Monthly SaaS fee Rocha pays the developer. Owner-only writes.
 model SubscriptionPayment {
   id          String    @id @default(cuid())

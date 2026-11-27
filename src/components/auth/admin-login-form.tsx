@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Spinner } from "@/components/ui/spinner";
+import { AdminPasskeyLoginButton } from "@/components/auth/admin-passkey-login-button";
 import { useLoginShake } from "@/components/auth/login-card";
 import { safeCallbackUrl } from "@/lib/callback-url";
 import {
@@ -61,44 +62,55 @@ export function AdminLoginForm() {
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
-      className="mx-auto flex w-full max-w-sm flex-col gap-4"
-    >
-      <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="username"
-          value={email}
-          onChange={(e) => setEmailDraft(e.target.value)}
-          required
-        />
+    <div className="mx-auto flex w-full max-w-sm flex-col gap-4">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="username webauthn"
+            value={email}
+            onChange={(e) => setEmailDraft(e.target.value)}
+            required
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="password">Contraseña</Label>
+          <PasswordInput
+            id="password"
+            name="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        {error ? <p className="text-sm text-red-600">{error}</p> : null}
+        <Button type="submit" disabled={loading}>
+          {loading ? (
+            <>
+              <Spinner className="mr-2 text-white" />
+              Ingresando…
+            </>
+          ) : (
+            "Ingresar"
+          )}
+        </Button>
+      </form>
+
+      <div className="relative flex items-center gap-3">
+        <div className="h-px flex-1 bg-neutral-200" />
+        <span className="text-xs text-neutral-500">o</span>
+        <div className="h-px flex-1 bg-neutral-200" />
       </div>
-      <div className="space-y-1.5">
-        <Label htmlFor="password">Contraseña</Label>
-        <PasswordInput
-          id="password"
-          name="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-      </div>
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
-      <Button type="submit" disabled={loading}>
-        {loading ? (
-          <>
-            <Spinner className="mr-2 text-white" />
-            Ingresando…
-          </>
-        ) : (
-          "Ingresar"
-        )}
-      </Button>
-    </form>
+
+      <AdminPasskeyLoginButton
+        callbackUrl={callbackUrl}
+        email={email}
+        onError={(msg) => setError(msg || null)}
+      />
+    </div>
   );
 }

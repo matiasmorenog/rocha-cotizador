@@ -68,13 +68,21 @@ DATABASE_URL=postgresql://...-pooler...?sslmode=require&pgbouncer=true&connectio
 AUTH_SECRET=                    # openssl rand -base64 32
 AUTH_URL=https://rocha-cotizador.vercel.app
 
+# WebAuthn / admin passkeys — RP ID + origin from AUTH_URL by default.
+# Prod and demo are SEPARATE RPs (credentials do not transfer).
+# Optional overrides if AUTH_URL ≠ browser origin:
+# WEBAUTHN_RP_ID=rocha-cotizador.vercel.app
+# WEBAUTHN_ORIGIN=https://rocha-cotizador.vercel.app
+# Demo project: AUTH_URL=https://rocha-cotizador-dev.vercel.app
+#   (RP ID becomes rocha-cotizador-dev.vercel.app)
+
 # Web Push (admin notificaciones de cotización nueva) — mismas keys en Preview + Production + local
 NEXT_PUBLIC_VAPID_PUBLIC_KEY=   # npx web-push generate-vapid-keys
 VAPID_PRIVATE_KEY=              # nunca commitear
 VAPID_SUBJECT=https://rocha-cotizador.vercel.app
 ```
 
-En Vercel: **Production** → Neon `main` (pooled) + secrets prod. **Preview ≡ Development** → Neon `development` (pooled) + mismos `AUTH_*`. Local `.env` (gitignored): Neon `development` **direct** + `AUTH_URL=http://localhost:3000` + `SEED_TARGET=development`.
+En Vercel: **Production** → Neon `main` (pooled) + secrets prod. **Preview ≡ Development** → Neon `development` (pooled) + mismos `AUTH_*`. Local `.env` (gitignored): Neon `development` **direct** + `AUTH_URL=http://localhost:3000` + `SEED_TARGET=development`. Demo (`rocha-cotizador-dev`) must set its own `AUTH_URL` so passkey RP ID matches that hostname.
 
 ### Web Push (notificaciones admin)
 
