@@ -25,10 +25,51 @@ import {
   isPlatformOwnerEmail,
   isSuperuserRole,
 } from "@/lib/platform-owner";
+import { consumeSessionTicket } from "@/lib/webauthn/challenges";
 import type { AppRole, StaffRole } from "@/types/auth";
 import type { JWT } from "next-auth/jwt";
 
 export type { AppRole };
+
+async function authorizeStaffUserById(userId: string) {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      canQuotes: true,
+      canStock: true,
+      active: true,
+      inAppNotificationsEnabled: true,
+      isSuperuser: true,
+    },
+  });
+  if (!user?.active || !isAdminPanelRole(user.role)) return null;
+
+  const effectiveRole = await ensureSuperuserRole(user);
+  const permissions = isSuperuserRole(effectiveRole)
+    ? []
+    : staffPermissionsFromProfile({
+        role: effectiveRole,
+        canQuotes: user.canQuotes,
+        canStock: user.canStock,
+      });
+
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: effectiveRole,
+    customerId: null,
+    customerCode: null,
+    mustChangePassword: false,
+    inAppNotificationsEnabled: user.inAppNotificationsEnabled !== false,
+    modules: [],
+    permissions,
+  };
+}
 
 async function ensureSuperuserRole(user: {
   id: string;
@@ -301,6 +342,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           modules: [],
           permissions,
         };
+      },
+    }),
+    Credentials({
+      id: "passkey",
+      name: "Passkey",
+      credentials: {
+        ticket: { label: "Ticket", type: "text" },
+      },
+      async authorize(credentials) {
+        const ticket = String(credentials?.ticket ?? "").trim();
+        if (!ticket) return null;
+
+        try {
+          const userId = await consumeSessionTicket(ticket);
+          if (!userId) return null;
+          return authorizeStaffUserById(userId);
+        } catch (err) {
+          console.error("[auth] passkey authorize failed", err);
+          return null;
+        }
       },
     }),
     Credentials({
